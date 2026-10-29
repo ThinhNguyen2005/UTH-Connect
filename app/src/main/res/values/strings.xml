@@ -49,4 +49,10 @@
     <!-- Cá nhân -->
     <string name="profile_wip_title">Chưa đăng nhập</string>
     <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
+
+
+    <!-- Thời khóa biểu (CourseClassCard) -->
+    <string name="schedule_period_format">Tiết %1$d–%2$d</string>
+    <string name="schedule_class_code_format">Mã LHP: %1$s • %2$d TC</string>
+    <string name="schedule_room_format">Phòng %1$s</string>
 </resources>
