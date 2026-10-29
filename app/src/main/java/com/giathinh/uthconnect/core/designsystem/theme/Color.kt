@@ -3,7 +3,7 @@ package com.giathinh.uthconnect.core.designsystem.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Bảng màu UTH Connect — nguồn sự thật: `Design-system.md` mục 1.
+ * Bảng màu UTH Connect — nguồn sự thật: `docs/Design-system.md` mục 1.
  *
  * KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
  * `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).

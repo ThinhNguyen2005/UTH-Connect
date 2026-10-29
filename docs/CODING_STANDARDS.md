@@ -1,17 +1,17 @@
 # UTH Connect — Coding Standards
 
 > **Phiên bản:** v1.2 · **Phạm vi:** *cách viết code* — đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, navigation type-safe, test, tài nguyên.
-> **Không chứa:** nghiệp vụ & phạm vi (xem `Design.md`), token màu/chữ/spacing (xem `Design-system.md`), nhánh & phân quyền Git (xem `docs/GIT_WORKFLOW.md`), cây thư mục & quyền sở hữu file (xem `REPO_TREE.md`), spec từng module (xem `README.md`).
+> **Không chứa:** nghiệp vụ & phạm vi (xem `docs/Design.md`), token màu/chữ/spacing (xem `docs/Design-system.md`), nhánh & phân quyền Git (xem `docs/GIT_WORKFLOW.md`), cây thư mục & quyền sở hữu file (xem `docs/REPO_TREE.md`), spec từng module (xem `README.md`).
 > **Ép thực hiện:** chưa có ktlint/spotless/CI — mọi mục dưới đây đang là chuẩn **review bằng mắt**. Khi CI vào (M0), mục 12 đổi thành chuẩn **bắt buộc bởi máy**.
 
 ## 0. Quyền ưu tiên khi mâu thuẫn
 
 | Câu hỏi thuộc về | File quyết |
 |---|---|
-| "Có làm tính năng này không, ai được làm?" | `Design.md` |
-| "Màu này, bo góc này, tương phản này đúng không?" | `Design-system.md` |
+| "Có làm tính năng này không, ai được làm?" | `docs/Design.md` |
+| "Màu này, bo góc này, tương phản này đúng không?" | `docs/Design-system.md` |
 | "Đặt file ở đâu, đặt tên ra sao, tầng nào được gọi tầng nào?" | **tài liệu này** |
-| "File này của ai, tôi được tạo/sửa những gì?" | `REPO_TREE.md` |
+| "File này của ai, tôi được tạo/sửa những gì?" | `docs/REPO_TREE.md` |
 | "Nhánh nào, PR vào đâu, ai approve?" | `docs/GIT_WORKFLOW.md` |
 
 Code và tài liệu này lệch nhau → **sửa code trước, chỉ sửa tài liệu khi có quyết định mới được ghi rõ ở PR.**
@@ -73,7 +73,7 @@ Quy tắc nén lại một dòng: `presentation → domain ← data`, và trong 
 
 ### 3.2. Một module mới gồm đúng 5 file
 
-Copy nguyên `presentation/utilities/` (đang có test, đạt checklist `Design-system.md` mục 8):
+Copy nguyên `presentation/utilities/` (đang có test, đạt checklist `docs/Design-system.md` mục 8):
 
 ```
 <Module>Screen.kt            stateless: nhận UiState, phát Action
@@ -92,7 +92,7 @@ data/di/<Module>DataModule.kt            @Binds interface→impl (chỉ khi có 
 presentation/<module>/<Module>Navigation.kt   graph route con type-safe (`composable<…>`); UthApp.kt chỉ nhận thêm một dòng
 ```
 
-Thêm module mới **không** phải sửa file DI của người khác và không cần xin thêm dependency: KSP + Hilt + serialization đã bật ở `app/build.gradle.kts`. Quyền sở hữu cây file theo `REPO_TREE.md` mục 3–5.
+Thêm module mới **không** phải sửa file DI của người khác và không cần xin thêm dependency: KSP + Hilt + serialization đã bật ở `app/build.gradle.kts`. Quyền sở hữu cây file theo `docs/REPO_TREE.md` mục 3–5.
 
 ### 3.2.1. Route là type-safe, không phải chuỗi
 
@@ -166,7 +166,7 @@ Destination cấp 1 khai ở `presentation/navigation/UthDestination.kt` dưới
 
 ## 7. Thiết kế giao diện trong code
 
-Tóm tắt; chi tiết và số đo tương phản ở `Design-system.md`.
+Tóm tắt; chi tiết và số đo tương phản ở `docs/Design-system.md`.
 
 | Cấm | Thay bằng |
 |---|---|
@@ -189,7 +189,7 @@ Get-ChildItem -Recurse -Filter *.kt | Where-Object Name -notin 'Dimens.kt','Colo
 
 Icon: `material-icons-core 1.7.8` đã đóng băng, chỉ dùng cho khung nav/badge. Icon thiết kế riêng vào `res/drawable` và gọi qua `painterResource`, không thêm dependency icon mới.
 
-Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBadge`, không `Size14`), có comment nói dùng ở đâu, và cập nhật bảng tương ứng trong `Design-system.md` mục 3.
+Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBadge`, không `Size14`), có comment nói dùng ở đâu, và cập nhật bảng tương ứng trong `docs/Design-system.md` mục 3.
 
 ---
 
@@ -226,7 +226,7 @@ Chuẩn viết test:
 
 - Comment giải thích **vì sao**, không giải thích **cái gì**. Code tự mô tả được thì xoá comment.
 - KDoc bắt buộc cho: mọi public API trong `core/`, mọi file tầng trong `presentation/<module>/`, quy tắc tương phản/elevation trong token.
-- Tỷ lệ: code mới phải có comment đặc tả ở các điểm dễ hiểu sai (bo màu Gold, saveState của tab, `popUpTo`) — tài liệu `Design.md`/`Design-system.md` là chỗ dẫn nguồn, ghi `Xem Design-system.md mục 1.4`.
+- Tỷ lệ: code mới phải có comment đặc tả ở các điểm dễ hiểu sai (bo màu Gold, saveState của tab, `popUpTo`) — tài liệu `docs/Design.md`/`docs/Design-system.md` là chỗ dẫn nguồn, ghi `Xem docs/Design-system.md mục 1.4`.
 - `TODO(<tên>): <việc> — <issue/PR>` — không có tên người thì không được merge.
 - Không commit code bị comment-out, không giữ `println`/`Log.d` tạm (dùng `Log` có tag khi thật sự cần chẩn đoán, và ghi rõ lý do).
 - Mỗi folder module có `README.md` ngắn: luồng chính, ai phụ trách, màn hình nào chưa làm.
@@ -264,7 +264,7 @@ cd "d:\UTH Connect"
 - [ ] Test: success / failure / retry, chạy không cần mạng
 - [ ] `:app:assembleDebug` + `:app:testDebugUnitTest` xanh trên máy mình
 - [ ] Không đổi file nóng (`UthApp.kt`, `libs.versions.toml`, `strings.xml`, theme, `MainActivity.kt`, `UTHConnectApplication.kt`) quá mức cần thiết — mỗi file một dòng cộng
-- [ ] Đổi cấu trúc thư mục (thêm/xoá package, tầng, file chung) → đã cập nhật `REPO_TREE.md` mục 2/3/8 trong cùng commit
+- [ ] Đổi cấu trúc thư mục (thêm/xoá package, tầng, file chung) → đã cập nhật `docs/REPO_TREE.md` mục 2/3/8 trong cùng commit
 
 ---
 
@@ -277,6 +277,6 @@ cd "d:\UTH Connect"
 | 3 | Event một lần **đã chốt**: `Channel` + `receiveAsFlow()` thu bằng `LaunchedEffect` (mẫu ở mục 6) | screen thật sự có snackbar/dẫn đường mới thêm kênh; slice `utilities` chưa có nên chưa thêm — đừng thêm code chết |
 | 4 | Navigation **đã chuyển type-safe**: 4 destination là `@Serializable object`, plugin serialization + `kotlinx-serialization-json` đã bật | khi module có route con kèm tham số, khai `@Serializable data class` trong `<Module>Navigation.kt` của module đó |
 | 5 | `kotlinx-coroutines` dùng bản resolve qua BOM (1.9.0), chưa khai trong catalog | khai tường minh để tránh bị BOM đổi bản âm thầm |
-| 6 | Icon từ `material-icons-core` đã đóng băng | thay toàn bộ bằng vector drawable hay giữ cho khung app (`Design-system.md` mục 10) |
-| 7 | `CODING_STANDARDS.md` chưa có `docs/adr/` | ADR đầu tiên nên là quyết định #3 hoặc #4 |
+| 6 | Icon từ `material-icons-core` đã đóng băng | thay toàn bộ bằng vector drawable hay giữ cho khung app (`docs/Design-system.md` mục 10) |
+| 7 | `docs/CODING_STANDARDS.md` chưa có `docs/adr/` | ADR đầu tiên nên là quyết định #3 hoặc #4 |
 | 8 | `hiltViewModel()` đã dời package sang `androidx.hilt.lifecycle.viewmodel.compose`; bản trong `hilt-navigation-compose` bị deprecated | nếu Android Studio gợi ý import cũ (navigation-compose), sửa lại import — code này chỉ dùng artifact mới |

@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Token khoảng cách / bo góc / kích thước / chuyển động.
- * Nguồn sự thật: `Design-system.md` mục 3 và mục 5.
+ * Nguồn sự thật: `docs/Design-system.md` mục 3 và mục 5.
  *
  * Quy tắc: Composable không được phép xuất hiện `.dp` tự do ngoài object này.
  */

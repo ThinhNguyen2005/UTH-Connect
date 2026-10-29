@@ -13,14 +13,14 @@ import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
 
 // 4 route cấp 1 — @Serializable object, không có tham số. Navigation dựng
-// đường dẫn từ tên class, không còn chuỗi route tự do (Design.md mục 8.1).
+// đường dẫn từ tên class, không còn chuỗi route tự do (docs/Design.md mục 8.1).
 @Serializable object HomeDestination
 @Serializable object ScheduleDestination
 @Serializable object UtilitiesDestination
 @Serializable object ProfileDestination
 
 /**
- * 4 tab cấp 1 của app — khung Navigation theo `Design.md` mục 8.
+ * 4 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
  *
  * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon.
  * Thêm màn hình chi tiết trong một module thì khai báo ở `navigation/` của

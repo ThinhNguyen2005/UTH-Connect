@@ -17,7 +17,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 
 /**
- * Tab Thời khóa biểu — khung chờ cho module Phase 2 (`Design.md` mục 3).
+ * Tab Thời khóa biểu — khung chờ cho module Phase 2 (`docs/Design.md` mục 3).
  * Người nhận branch `feature/timetable-<tên>` thay màn hình này bằng màn hình thật.
  */
 @Composable

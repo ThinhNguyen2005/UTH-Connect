@@ -25,7 +25,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
 /**
  * Tone trạng thái. Mỗi tone là một **cặp** nền + chữ đã đo tương phản
- * (`Design-system.md` mục 1.4) — không tự phối tay.
+ * (`docs/Design-system.md` mục 1.4) — không tự phối tay.
  */
 enum class BadgeTone { Success, Warning, Danger, Info, Accent, Neutral }
 

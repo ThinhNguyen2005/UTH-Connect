@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
  * `dynamicColor` mặc định **false**: nếu bật, Material You (Android 12+ = mọi
  * thiết bị app hỗ trợ vì minSdk 31) sẽ ghi đè Navy/Gold bằng màu hình nền của
  * máy, khiến nhận diện trường và các cặp tương phản đã đo bị vô hiệu.
- * Chi tiết: `Design-system.md` mục 1.5.
+ * Chi tiết: `docs/Design-system.md` mục 1.5.
  */
 
 /**

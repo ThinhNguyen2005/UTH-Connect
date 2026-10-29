@@ -2,7 +2,7 @@
 
 > **Phiên bản:** v0.3.1 · **Trạng thái:** đã áp dụng vào code (`core/designsystem/theme/`) — còn mục component nâng cao (skeleton, bottom sheet) chờ module
 > **Phạm vi:** token màu, chữ, khoảng cách, bo góc, component, dark mode, khả năng truy cập.
-> **Không chứa:** quy ước viết code (xem `CODING_STANDARDS.md`), mô tả nghiệp vụ (xem `Design.md`).
+> **Không chứa:** quy ước viết code (xem `docs/CODING_STANDARDS.md`), mô tả nghiệp vụ (xem `docs/Design.md`).
 > **Nguồn:** chuyển thể từ spec *CampusHub Design System* + nhận diện thương hiệu UTH (Navy `#003366`, Gold `#F5A623`, Trắng `#FFFFFF`).
 
 ---
@@ -302,7 +302,7 @@ Toàn bộ màu phải đi qua `MaterialTheme.colorScheme.*`; token chưa có ch
 
 ## 8. Definition of Done cho UI
 
-Checklist dưới đây kiểm tra **kết quả thị giác**; cách viết code để đạt được nó (lệnh grep quét literal, ranh giới tầng, quy ước token) ở `CODING_STANDARDS.md` mục 7 và mục 12.
+Checklist dưới đây kiểm tra **kết quả thị giác**; cách viết code để đạt được nó (lệnh grep quét literal, ranh giới tầng, quy ước token) ở `docs/CODING_STANDARDS.md` mục 7 và mục 12.
 
 - [ ] Không có `.dp`, `hex`, `.sp` hardcode trong Composable mới (ngoại trừ file token)
 - [ ] `@Preview` cho 4 trạng thái: loading / empty / error / có dữ liệu, cả light + dark
@@ -358,4 +358,4 @@ Checklist dưới đây kiểm tra **kết quả thị giác**; cách viết cod
 3. `material-icons-core` đã đóng băng — chấp nhận cho khung app, hay thay hết bằng vector drawable ngay từ đầu?
 4. Admin Dashboard (web) dùng lại token này qua CSS variables hay thiết kế riêng theo thư viện của nó?
 5. `#10B981`/`#F59E0B`/`#EF4444` là bảng Tailwind — có muốn đồng bộ sang Material 3 tonal palette (tone 40/80) để thống nhất với `ColorScheme` không?
-6. Tab Cá nhân đã đăng nhập thì bottom nav giữ 4 tab hay thêm tab "Quản lý" cho organizer (hiện: organizer vào qua màn hình Quản lý trong tab Cá nhân — xem `Design.md` mục 8)?
+6. Tab Cá nhân đã đăng nhập thì bottom nav giữ 4 tab hay thêm tab "Quản lý" cho organizer (hiện: organizer vào qua màn hình Quản lý trong tab Cá nhân — xem `docs/Design.md` mục 8)?
