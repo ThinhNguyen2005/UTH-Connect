@@ -14,7 +14,4 @@
 .externalNativeBuild
 .cxx
 local.properties
-# JVM crash dump (Kotlin daemon hết nhớ trên máy RAM thấp) và log build tạm
-hs_err_pid*.log
-replay_pid*.log
-build-check.log
+
