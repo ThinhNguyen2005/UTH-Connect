@@ -1,6 +1,6 @@
 # UTH Connect — Quy trình Git cho nhóm 6 người
 
-> Áp dụng từ milestone M0. Mâu thuẫn về **phạm vi** → xem `Design.md`; về **giao diện** → `Design-system.md`; về **quy trình Git** → file này.
+> Áp dụng từ milestone M0. Mâu thuẫn về **phạm vi** → xem `docs/Design.md`; về **giao diện** → `docs/Design-system.md`; về **quy trình Git** → file này.
 > Shell của nhóm là Windows PowerShell → **dùng `;` để nối lệnh, không dùng `&&`**.
 
 ---
@@ -82,7 +82,7 @@ git tag v0.1.0; git push origin v0.1.0
 
 ## 3. Bảng phân công (điền tên 5 bạn vào)
 
-| Module / phần việc | Giai đoạn (`Design.md` mục 3) | Tên nhánh | Người | File được đụng chính |
+| Module / phần việc | Giai đoạn (`docs/Design.md` mục 3) | Tên nhánh | Người | File được đụng chính |
 |---|---|---|---|---|
 | Sự kiện: danh sách + chi tiết + đăng ký | MVP | `feature/events-<tên>` | … | `presentation/home/`, `presentation/events/` |
 | Vé QR + máy quét điểm danh | MVP | `feature/checkin-<tên>` | … | `presentation/tickets/`, `presentation/scanner/` |
@@ -103,7 +103,7 @@ git tag v0.1.0; git push origin v0.1.0
 | `UTHConnectApplication.kt` · `MainActivity.kt` | gốc DI của toàn app | **không** thêm `@Provides`/`@Binds` nghiệp vụ vào đây; binding của module để trong `data/di/<Module>DataModule.kt` của chính module |
 | `core/designsystem/component/*` · `theme/*` | ai cũng muốn dùng component đẹp | dùng lại token có sẵn; cần component mới thì mở PR `chore/` riêng, không sửa file cũ trong PR feature |
 
-**Không còn điểm đăng ký DI chung.** Trước đây `core/di/AppContainer.kt` là file nóng nhất (mọi module phải thêm một `val`); file đó đã bị xoá khi chuyển sang Hilt, và `ViewModelFactory` của từng module cũng vậy. Nay mỗi module tự khai binding trong `data/di/<Module>DataModule.kt` — không đụng file của ai khác. Quy ước phạm vi file theo từng người: `REPO_TREE.md` mục 3 và 5.
+**Không còn điểm đăng ký DI chung.** Trước đây `core/di/AppContainer.kt` là file nóng nhất (mọi module phải thêm một `val`); file đó đã bị xoá khi chuyển sang Hilt, và `ViewModelFactory` của từng module cũng vậy. Nay mỗi module tự khai binding trong `data/di/<Module>DataModule.kt` — không đụng file của ai khác. Quy ước phạm vi file theo từng người: `docs/REPO_TREE.md` mục 3 và 5.
 
 ### 3.1. Một module mới gồm những file nào (sườn MVVM đã chốt)
 
@@ -123,7 +123,7 @@ data/di/<Module>DataModule.kt                         # @Binds interface→impl 
 test/…/presentation/<module>/<Module>ViewModelTest.kt # ít nhất: success / failure / retry
 ```
 
-Đúng **5 file** cho một module (`CODING_STANDARDS.md` mục 3.2) — thêm file factory thứ sáu là sai chuẩn. Route là **type-safe** (`@Serializable`, xem `CODING_STANDARDS.md` mục 3.2.1). Việc phải làm ở file chung chỉ còn **một dòng** `composable<XDestination> { <Module>Route() }` trong `UthNavHost` (ViewModel do `hiltViewModel()` tự dựng, không cần đăng ký ở đâu khác). Nếu module cần route con, khai hết trong `<Module>Navigation.kt` của bạn, đừng viết dài trong `UthApp.kt`.
+Đúng **5 file** cho một module (`docs/CODING_STANDARDS.md` mục 3.2) — thêm file factory thứ sáu là sai chuẩn. Route là **type-safe** (`@Serializable`, xem `docs/CODING_STANDARDS.md` mục 3.2.1). Việc phải làm ở file chung chỉ còn **một dòng** `composable<XDestination> { <Module>Route() }` trong `UthNavHost` (ViewModel do `hiltViewModel()` tự dựng, không cần đăng ký ở đâu khác). Nếu module cần route con, khai hết trong `<Module>Navigation.kt` của bạn, đừng viết dài trong `UthApp.kt`.
 
 ---
 
@@ -191,7 +191,7 @@ docs(design-system): bổ sung bảng đo tương phản Navy/Gold
 Scope = tên module, khớp với nhánh. Một PR phải có:
 
 - Tiêu đề `feat(<module>): <một câu mô tả kết quả>`, không viết hoa toàn bộ.
-- Phần mô tả: **Làm gì · Vì sao · Cách thử (`.\gradlew.bat :app:assembleDebug`) · Ảnh/ghi chú màn hình · Checklist DoD** (`README.md` mục 10.2, `Design-system.md` mục 8).
+- Phần mô tả: **Làm gì · Vì sao · Cách thử (`.\gradlew.bat :app:assembleDebug`) · Ảnh/ghi chú màn hình · Checklist DoD** (`README.md` mục 10.2, `docs/Design-system.md` mục 8).
 - Không có `TODO` mơ hồ; muốn để lại việc thì mở issue và link trong PR.
 - Reviewer kiểm tra: không hardcode hex/`.dp`/`.sp`, có `@Preview` light + dark, chuỗi đủ `values` + `values-en`, domain không import `androidx`.
 

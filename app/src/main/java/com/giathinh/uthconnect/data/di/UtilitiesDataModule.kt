@@ -19,7 +19,7 @@ import dagger.hilt.components.SingletonComponent
  * binding @Binds trả chính instance đã được scope đó.
  *
  * **Mỗi module một file** (`<Module>DataModule.kt`, đặt theo quyền sở hữu ở
- * `REPO_TREE.md`). Không gộp các module vào một file DI chung — đó sẽ thành file
+ * `docs/REPO_TREE.md`). Không gộp các module vào một file DI chung — đó sẽ thành file
  * mà cả 6 người cùng sửa và sinh conflict mỗi lần merge.
  */
 @Module

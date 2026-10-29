@@ -32,7 +32,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
 /**
- * Card chuẩn theo `Design-system.md` mục 4.2: nền `surface`, bo 16dp,
+ * Card chuẩn theo `docs/Design-system.md` mục 4.2: nền `surface`, bo 16dp,
  * bóng 1dp + viền 1dp `outline`, padding trong 16dp.
  */
 @Composable
@@ -81,7 +81,7 @@ fun UthSectionHeader(
 }
 
 /**
- * Nút chính cao 48dp, bo 8dp — `Design-system.md` mục 4.1.
+ * Nút chính cao 48dp, bo 8dp — `docs/Design-system.md` mục 4.1.
  * `loading = true` đổi chữ thành spinner và chặn chạm (chống double-submit).
  */
 @Composable

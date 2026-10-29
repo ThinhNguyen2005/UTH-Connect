@@ -1,7 +1,7 @@
 package com.giathinh.uthconnect.domain.model
 
 /**
- * Tiến độ giao module theo `Design.md` mục 3. Domain chỉ mang tính định tuyến
+ * Tiến độ giao module theo `docs/Design.md` mục 3. Domain chỉ mang tính định tuyến
  * UI (nhãn + màu badge), không quyết định kỹ thuật.
  */
 enum class DeliveryPhase {

@@ -24,12 +24,12 @@ Không làm báo chí, không làm mạng xã hội tổng hợp — mỗi phân
 
 | File | Chứa | Thắng về |
 |---|---|---|
-| `Design.md` | phạm vi, giai đoạn, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | scope & nghiệp vụ |
-| `Design-system.md` | token màu/chữ/spacing/bo góc, component, dark mode, accessibility, motion | giao diện |
+| `docs/Design.md` | phạm vi, giai đoạn, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | scope & nghiệp vụ |
+| `docs/Design-system.md` | token màu/chữ/spacing/bo góc, component, dark mode, accessibility, motion | giao diện |
 | `README.md` (bạn đang đọc) | spec chi tiết từng module, wireframe, API, roadmap, metrics, contributing | — |
 | `docs/GIT_WORKFLOW.md` | nhánh `main`/`develop`/`feature/<module>-<tên>`, phân quyền, branch protection, mẫu commit/PR | quy trình Git |
-| `CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test | cách viết code |
-| `REPO_TREE.md` | cây thư mục, ai sở hữu package nào, file chung được sửa ra sao, nghi thức gộp cây | cấu trúc & phân quyền file |
+| `docs/CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test | cách viết code |
+| `docs/REPO_TREE.md` | cây thư mục, ai sở hữu package nào, file chung được sửa ra sao, nghi thức gộp cây | cấu trúc & phân quyền file |
 
 ---
 
@@ -92,7 +92,7 @@ Một tính năng chỉ được vào UTH Connect khi hội đủ **cả 4** đi
 
 ## 3. Preview chi tiết các phân hệ
 
-Thứ tự ưu tiên lấy theo **giai đoạn trong `Design.md` mục 3** (nguồn quyết định scope):
+Thứ tự ưu tiên lấy theo **giai đoạn trong `docs/Design.md` mục 3** (nguồn quyết định scope):
 
 | Giai đoạn | Module | Nhãn |
 |---|---|---|
@@ -185,7 +185,7 @@ sequenceDiagram
 - Hai thiết bị quét cùng một vé → chỉ **một** lần ghi nhận (chống race bằng transaction).
 - Sự kiện 300 sinh viên: bảng tổng kết load < 2 s, export CSV đủ cột `Họ tên, MSSV, Lớp, Giờ vào`.
 
-**Rủi ro & giảm thiểu.** QR chụp màn hình gửi cho bạn → **token động đổi sau ~60 s** (thuộc MVP, `Design.md` mục 4.2); Cloud Functions cần gói Blaze → fallback QR tĩnh + mã 6 số; camera bị từ chối quyền → nhập mã 6 số.
+**Rủi ro & giảm thiểu.** QR chụp màn hình gửi cho bạn → **token động đổi sau ~60 s** (thuộc MVP, `docs/Design.md` mục 4.2); Cloud Functions cần gói Blaze → fallback QR tĩnh + mã 6 số; camera bị từ chối quyền → nhập mã 6 số.
 
 ---
 
@@ -396,7 +396,7 @@ Lọc:  Mã môn ▾   Tình trạng ▾   Chỉ trao đổi ▾  CS ▾
 
 ## 5. Kiến trúc
 
-> Quyết định kiến trúc và phạm vi nghiệp vụ nằm trong `Design.md` (mục 3, 4, 5). Hệ thống token giao diện/component nằm trong `Design-system.md`. Mục này chỉ tóm tắt + đối chiếu với mã nguồn thật.
+> Quyết định kiến trúc và phạm vi nghiệp vụ nằm trong `docs/Design.md` (mục 3, 4, 5). Hệ thống token giao diện/component nằm trong `docs/Design-system.md`. Mục này chỉ tóm tắt + đối chiếu với mã nguồn thật.
 
 ### 5.1. Tổng quan
 
@@ -435,7 +435,7 @@ flowchart LR
 | `data` | `data/repository` · `data/di` | Repository, Firestore/Firebase mapper, cache Room, `@Binds` module của **từng module** | Ẩn toàn bộ chi tiết backend khỏi domain |
 | `core` | `core/designsystem` | Design system | Feature không import lẫn nhau |
 
-**Pattern:** Clean Architecture + **MVVM/UDF** (Screen nhận `UiState`/phát `Action`, ViewModel giữ `StateFlow`, UseCase mới được gọi Repository), single-activity, `StateFlow` một nguồn sự thật, **Hilt** cho DI (đã vào, xem `REPO_TREE.md` mục 4), `Room` cache cục bộ cho thời khóa biểu (offline-first). Sườn đã dựng xong và có **một slice mẫu đi đủ đường** — tab Tiện ích (`presentation/utilities/`, 5 file + test). Module nào cũng bắt đầu bằng cách copy đúng cấu trúc đó; chi tiết mục 5.1.1 của `Design.md` và `CODING_STANDARDS.md` mục 3.2.
+**Pattern:** Clean Architecture + **MVVM/UDF** (Screen nhận `UiState`/phát `Action`, ViewModel giữ `StateFlow`, UseCase mới được gọi Repository), single-activity, `StateFlow` một nguồn sự thật, **Hilt** cho DI (đã vào, xem `docs/REPO_TREE.md` mục 4), `Room` cache cục bộ cho thời khóa biểu (offline-first). Sườn đã dựng xong và có **một slice mẫu đi đủ đường** — tab Tiện ích (`presentation/utilities/`, 5 file + test). Module nào cũng bắt đầu bằng cách copy đúng cấu trúc đó; chi tiết mục 5.1.1 của `docs/Design.md` và `docs/CODING_STANDARDS.md` mục 3.2.
 
 ### 5.3. Tech stack (theo mã nguồn hiện tại)
 
@@ -455,19 +455,19 @@ flowchart LR
 | Java compatibility | đang `VERSION_11` và build xanh; tài liệu Hilt khuyến nghị 17 — chỉ đổi khi gặp lỗi thật từ code Hilt sinh ra | `app/build.gradle.kts` |
 | Async | Kotlin Coroutines `1.9.0` (resolve qua BOM, chưa khai báo tường minh trong catalog) | `gradlew :app:dependencies` |
 | Test | JUnit 4.13.2, `kotlinx-coroutines-test 1.9.0` (`MainDispatcherRule` cho ViewModel), Compose UI Test, Espresso 3.7.0 | catalog; 4 test ViewModel đang chạy xanh |
-| Test *(bổ sung dự kiến)* | MockK, Turbine, Firebase Emulator Suite | `Design.md` mục 5.2 |
+| Test *(bổ sung dự kiến)* | MockK, Turbine, Firebase Emulator Suite | `docs/Design.md` mục 5.2 |
 | Backend *(dự kiến)* | Firebase Auth, Firestore, Storage, Cloud Functions, FCM | kế thừa từ UTH Social |
 | QR *(dự kiến)* | CameraX + ML Kit Barcode; tạo mã bằng ZXing | chưa thêm vào build |
 | Room / DataStore *(dự kiến)* | Room, DataStore | chưa thêm vào build (DI **đã** thêm — xem dòng DI ở trên) |
 | Navigation | **Navigation Compose `2.10.2`** — đã thêm, đang chạy 4 tab **type-safe** (`@Serializable object` · `composable<T>` · `hasRoute`) | `presentation/navigation/UthApp.kt` · `UthDestination.kt` |
 | Icon | `material-icons-core 1.7.8` (đã đóng băng, chỉ dùng cho khung nav/badge) | icon thiết kế riêng sẽ là vector drawable |
 | Crash / perf *(dự kiến)* | Firebase Crashlytics, Macrobenchmark | phục vụ metrics mục 12 |
-| CI *(dự kiến)* | GitHub Actions (build, lint, unit test) | `Design.md` mục 5.2 |
-| Design tokens | Material 3 `ColorScheme` + `Typography` + `Shapes`, token theo `Design-system.md` | `core/designsystem/theme/Color.kt` · `Type.kt` · `Dimens.kt` · `Theme.kt` |
+| CI *(dự kiến)* | GitHub Actions (build, lint, unit test) | `docs/Design.md` mục 5.2 |
+| Design tokens | Material 3 `ColorScheme` + `Typography` + `Shapes`, token theo `docs/Design-system.md` | `core/designsystem/theme/Color.kt` · `Type.kt` · `Dimens.kt` · `Theme.kt` |
 
 > **Trạng thái mã nguồn (đã kiểm chứng):** `:app:assembleDebug` và `:app:testDebugUnitTest` **BUILD SUCCESSFUL** (5 test, 0 lỗi, KSP chạy sạch không warning). Đã có: design system (màu Navy/Gold + 11 role chữ + `UthDimens`), component dùng chung (`UthCard`, `UthPrimaryButton`, `UthStatusBadge`, `UthEmptyState`), 4 tab `Trang chủ · Thời khóa biểu · Tiện ích · Cá nhân` với `NavHost` + `NavigationBar`, cấu trúc `core/ · data/ · domain/ · presentation/`, **sườn MVVM** với slice mẫu ở tab Tiện ích (`Screen/Route/ViewModel/UiState/Action` + `GetUtilityModulesUseCase` + `UtilitiesDataModule`), và **DI bằng Hilt** (`@HiltAndroidApp` · `@AndroidEntryPoint` · `@Binds` · `@HiltViewModel` · `hiltViewModel()`) — `AppContainer`/`CompositionLocal` DI và các `ViewModelFactory` đã bị xoá, không còn đường code cũ; 4 tab NavHost đã chuyển **route type-safe** (`@Serializable object` + plugin serialization, không còn chuỗi route trần). Ba tab còn lại vẫn là Screen placeholder — chưa phải MVVM cho tới khi branch của module đó thêm ViewModel. Các mục còn lại của phần 5–7 vẫn là **kiến trúc đích**; cột "dự kiến" ở bảng trên là dependency cần thêm khi bắt đầu từng feature.
 >
-> **`dynamicColor` đã tắt:** `Theme.kt` hiện có `dynamicColor: Boolean = false`. Trước đây để `true` nên Material You (mọi máy Android 12+, vì `minSdk = 31`) sẽ ghi đè màu thương hiệu; từ v0.3 màu nhận diện là Navy `#003366` + Gold `#F5A623` theo `Design-system.md` mục 1.5.
+> **`dynamicColor` đã tắt:** `Theme.kt` hiện có `dynamicColor: Boolean = false`. Trước đây để `true` nên Material You (mọi máy Android 12+, vì `minSdk = 31`) sẽ ghi đè màu thương hiệu; từ v0.3 màu nhận diện là Navy `#003366` + Gold `#F5A623` theo `docs/Design-system.md` mục 1.5.
 
 ---
 
@@ -494,7 +494,7 @@ erDiagram
   TRIP ||--o{ TRIP_SEAT : offers
 ```
 
-> **QR không phải một entity.** Token điểm danh chỉ sống ~60 giây và do Cloud Function ký, không lưu vào Firestore; trạng thái "đã điểm danh" lấy từ `attendance` (theo `Design.md` mục 4.2).
+> **QR không phải một entity.** Token điểm danh chỉ sống ~60 giây và do Cloud Function ký, không lưu vào Firestore; trạng thái "đã điểm danh" lấy từ `attendance` (theo `docs/Design.md` mục 4.2).
 >
 > 3.2 ghép trọ và 3.6 chợ sách dùng chung một mô hình `LISTING` (chỉ khác `kind` và trường mở rộng) → chỉ cần **một listing engine** cho cả hai. 3.5 ghép xe giữ collection riêng `trips` vì có ngữ nghĩa số ghế/lịch trình.
 
@@ -513,7 +513,7 @@ erDiagram
 | `listings/{listingId}` | UUID | `kind` (`room`/`book`), `userId`, `price`, `geo`, `distanceM`, `isbn`, `courseRefs[]`, `status`, `reportCount` | Backlog |
 | `trips/{tripId}` | UUID | `driverId`, `from`, `to`, `departAt`, `seats`, `priceShare`, `status` | Backlog |
 
-Subcollection theo `events/{eventId}` giúp một sự kiện không phải scan cả collection; nếu sau này cần query "mọi sự kiện của một sinh viên" mới tách ra collection phẳng kèm chỉ mục (`Design.md` mục 6).
+Subcollection theo `events/{eventId}` giúp một sự kiện không phải scan cả collection; nếu sau này cần query "mọi sự kiện của một sinh viên" mới tách ra collection phẳng kèm chỉ mục (`docs/Design.md` mục 6).
 
 **Quy tắc bảo mật (Storage + Firestore Rules).**
 - Vai trò lấy từ **custom claims** (`role`, `orgIds`), do Cloud Function/Admin SDK ghi sau khi Admin duyệt — rules **không** đọc role từ tài liệu `users/{uid}`.
@@ -522,7 +522,7 @@ Subcollection theo `events/{eventId}` giúp một sự kiện không phải scan
 - Organizer chỉ sửa `events` thuộc `orgId` đã `approved` của mình; `status(draft→published)` cần Admin.
 - Ảnh upload vào `users/{uid}/…`, giới hạn 8 MB, MIME `image/*`; PDF tài liệu vào `courses/{courseId}/materials`.
 - Mọi query phải có `limit` (mặc định 25) và chỉ mục cho `campus + status + startAt`; index khai trong `firestore.indexes.json` và commit vào repo.
-- Rules phải có **test bằng Firebase Emulator** cho từng collection (`Design.md` mục 7).
+- Rules phải có **test bằng Firebase Emulator** cho từng collection (`docs/Design.md` mục 7).
 
 ---
 
@@ -557,11 +557,11 @@ UTH Connect/
 │   └── values-en/strings.xml        # bản dịch tiếng Anh
 ├── app/src/{test,androidTest}/      # JUnit + Compose UI Test
 ├── docs/GIT_WORKFLOW.md             # quy trình nhánh + phân quyền
-├── REPO_TREE.md                     # cây thư mục + ai sở hữu package nào (bắt buộc cập nhật khi đổi cấu trúc)
-├── CODING_STANDARDS.md              # quy ước viết code
+├── docs/REPO_TREE.md                     # cây thư mục + ai sở hữu package nào (bắt buộc cập nhật khi đổi cấu trúc)
+├── docs/CODING_STANDARDS.md              # quy ước viết code
 ├── gradle/libs.versions.toml        # version catalog
 ├── build.gradle.kts · settings.gradle.kts · gradle.properties
-├── Design.md · Design-system.md · README.md
+├── docs/Design.md · docs/Design-system.md · README.md
 └── local.properties                 # không commit (đã .gitignore)
 ```
 
@@ -662,7 +662,7 @@ Script này dựng: 3 organizer đã duyệt + 4 CLB, 12 sự kiện (2 đã k�
 
 ## 10. Phạm vi học kỳ doanh nghiệp
 
-### 10.1. Cắt / giữ (theo `Design.md` mục 3)
+### 10.1. Cắt / giữ (theo `docs/Design.md` mục 3)
 
 | Nhóm | Nội dung | Quyết định |
 |---|---|---|
@@ -676,7 +676,7 @@ Script này dựng: 3 organizer đã duyệt + 4 CLB, 12 sự kiện (2 đã k�
 
 - [ ] Dùng token + component đã có trong `core/designsystem/` (`UthCard`, `UthPrimaryButton`, `UthStatusBadge`, `UthEmptyState`) — không tự khai màu/bo góc mới trong màn hình
 - [ ] UI có `@Preview` cho trạng thái loading / empty / error, cả light + dark (dùng `UthPreview`)
-- [ ] Đạt checklist design token & accessibility trong `Design-system.md` mục 8 (không hardcode `.dp`/hex/`.sp`, tương phản đạt, trạng thái có icon + chữ)
+- [ ] Đạt checklist design token & accessibility trong `docs/Design-system.md` mục 8 (không hardcode `.dp`/hex/`.sp`, tương phản đạt, trạng thái có icon + chữ)
 - [ ] UseCase + Repository có unit test; luồng chính có Compose UI test
 - [ ] Firestore/Storage Rules đã cập nhật **và có test emulator**
 - [ ] Hỗ trợ offline hoặc thông báo mất kết nối rõ ràng
@@ -690,11 +690,11 @@ Script này dựng: 3 organizer đã duyệt + 4 CLB, 12 sự kiện (2 đã k�
 
 ## 11. Lộ trình (Roadmap)
 
-Lộ trình này ánh xạ các giai đoạn trong `Design.md` mục 3 sang 12 tuần của học kỳ doanh nghiệp.
+Lộ trình này ánh xạ các giai đoạn trong `docs/Design.md` mục 3 sang 12 tuần của học kỳ doanh nghiệp.
 
 | Mốc | Tuần | Kết quả cần đạt |
 |---|---|---|
-| **M0** | 1 | ✅ **Đã xong:** cấu trúc package Clean Architecture (`core/ · data/ · domain/ · presentation/`), design token Navy/Gold theo `Design-system.md` (tắt `dynamicColor`), component dùng chung, khung navigation 4 tab, **sườn MVVM + slice mẫu Tiện ích** (`MainDispatcherRule` + 4 test ViewModel), **DI bằng Hilt + KSP** (đã xoá `AppContainer` và toàn bộ `ViewModelFactory`), `CODING_STANDARDS.md`, `REPO_TREE.md` (cây thư mục + phân quyền sở hữu), nhánh `develop` + `docs/GIT_WORKFLOW.md`. ⏳ **Còn lại:** CI (build + test) + ktlint/spotless, `hilt-android-testing` cho Compose UI test, login + verify email/MSSV + custom claims. Tách multi-module **chưa** làm (mục 7.2) — đang ở single-module. |
+| **M0** | 1 | ✅ **Đã xong:** cấu trúc package Clean Architecture (`core/ · data/ · domain/ · presentation/`), design token Navy/Gold theo `docs/Design-system.md` (tắt `dynamicColor`), component dùng chung, khung navigation 4 tab, **sườn MVVM + slice mẫu Tiện ích** (`MainDispatcherRule` + 4 test ViewModel), **DI bằng Hilt + KSP** (đã xoá `AppContainer` và toàn bộ `ViewModelFactory`), `docs/CODING_STANDARDS.md`, `docs/REPO_TREE.md` (cây thư mục + phân quyền sở hữu), nhánh `develop` + `docs/GIT_WORKFLOW.md`. ⏳ **Còn lại:** CI (build + test) + ktlint/spotless, `hilt-android-testing` cho Compose UI test, login + verify email/MSSV + custom claims. Tách multi-module **chưa** làm (mục 7.2) — đang ở single-module. |
 | **M1** | 2–4 | 3.1 tạo/đăng ký sự kiện, `getTicketToken` + `TicketQr` QR động, callable `checkIn` chống trùng |
 | **M2** | 5–6 | `AttendanceScanner` hoàn thiện (haptic/queue khi mất mạng), `EventStats` + export CSV, Admin Dashboard duyệt Organizer |
 | **M3** | 7–8 | Pilot 1 CLB + 60 sinh viên chạy **một sự kiện thật**; sửa lỗi bảo mật/hiệu năng ghi nhận từ pilot |
@@ -718,7 +718,7 @@ Lộ trình này ánh xạ các giai đoạn trong `Design.md` mục 3 sang 12 t
 | Thời gian quét một QR (p95) | ≤ 1.5 s | đo trên device tầm trung |
 | Crash-free sessions | ≥ 99.5 % | Firebase Crashlytics |
 | App cold start (p90) | ≤ 2 s | Macrobenchmark |
-| Màn hình đạt checklist a11y/token | 100 % UI MVP | `Design-system.md` mục 8 |
+| Màn hình đạt checklist a11y/token | 100 % UI MVP | `docs/Design-system.md` mục 8 |
 
 **Metric cho module có nội dung do người dùng đăng** (3.2, 3.4, 3.6 — chỉ đo khi đã mở): tin còn mở ≥ 90, tỷ lệ tin đã giải quyết ≥ 40 %, số tin bị báo cáo chưa xử lý ≤ 2 %.
 
@@ -748,15 +748,15 @@ Phạm vi trong ngoặc: `(events) (housing) (schedule) (lostfound) (rideshare) 
 
 ### 13.3. Quy ước code
 
-Chi tiết đầy đủ (đặt tên, ranh giới import từng tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra): **`CODING_STANDARDS.md`**. Ai sở hữu file nào, được tạo những gì: **`REPO_TREE.md`**. Dưới đây là những quy ước hay bị quên nhất:
+Chi tiết đầy đủ (đặt tên, ranh giới import từng tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra): **`docs/CODING_STANDARDS.md`**. Ai sở hữu file nào, được tạo những gì: **`docs/REPO_TREE.md`**. Dưới đây là những quy ước hay bị quên nhất:
 
 - Composable: **PascalCase**, stateless khi có thể; `modifier` đặt ngay sau tham số bắt buộc
 - Bộ 5 file cho một module: `Screen` (stateless) · `Route` (nối ViewModel bằng `hiltViewModel()`) · `ViewModel` (`@HiltViewModel`, `StateFlow<UiState>`) · `UiState` (bất biến, loading ≠ empty) · `Action` (sealed interface). Không còn `ViewModelFactory`
-- Route **type-safe**: destination là `@Serializable object`/`data class`, đăng ký bằng `composable<T>`, chuyển hướng bằng `navigate(T)`; tab đang chọn suy ra bằng `hasRoute(T::class)`, không so chuỗi. Event một lần (nếu màn hình cần) đi qua `Channel` + `receiveAsFlow()` thu bằng `LaunchedEffect` (`CODING_STANDARDS.md` mục 3.2.1 và 6)
+- Route **type-safe**: destination là `@Serializable object`/`data class`, đăng ký bằng `composable<T>`, chuyển hướng bằng `navigate(T)`; tab đang chọn suy ra bằng `hasRoute(T::class)`, không so chuỗi. Event một lần (nếu màn hình cần) đi qua `Channel` + `receiveAsFlow()` thu bằng `LaunchedEffect` (`docs/CODING_STANDARDS.md` mục 3.2.1 và 6)
 - Binding interface→impl để trong `data/di/<Module>DataModule.kt` của **chính module**; không có file DI chung cho cả nhóm
 - `Screen` dựng UI, `ViewModel` giữ `StateFlow`, `UseCase` chứa nghiệp vụ, `Repository` trả `Result<T>`; không tầng nào nhảy cóc
 - Thất bại hiển thị bằng enum trong `UiState`, UI map ra chuỗi — ViewModel không cầm `@StringRes`
-- Không `runBlocking` trên main thread; IoC qua Hilt (`CODING_STANDARDS.md` mục 3–4), không singleton toàn cục, không `CompositionLocal` mang dependency
+- Không `runBlocking` trên main thread; IoC qua Hilt (`docs/CODING_STANDARDS.md` mục 3–4), không singleton toàn cục, không `CompositionLocal` mang dependency
 - Chuỗi nằm trong `res/values/strings.xml` (vi) + `res/values-en/strings.xml` (en); màu/typography/spacing lấy từ `core/designsystem/theme`
 - Mỗi feature folder có `README.md` mô tả luồng riêng; quyết định kiến trúc lớn ghi thành ADR trong `docs/adr/`
 

@@ -8,12 +8,12 @@
 
 | File | Chứa | Thắng khi mâu thuẫn về |
 |---|---|---|
-| `Design.md` (tài liệu này) | phạm vi, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | phạm vi & nghiệp vụ |
-| `Design-system.md` | token màu/chữ/spacing, component, dark mode, accessibility | giao diện |
+| `docs/Design.md` (tài liệu này) | phạm vi, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | phạm vi & nghiệp vụ |
+| `docs/Design-system.md` | token màu/chữ/spacing, component, dark mode, accessibility | giao diện |
 | `README.md` | spec chi tiết từng module (API, tiêu chí nghiệm thu, wireframe), roadmap, metrics, contributing | không quyết định scope |
 | `docs/GIT_WORKFLOW.md` | nhánh, quyền push, mẫu commit, quy trình review cho nhóm 6 người | quy trình Git |
-| `CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra | cách viết code |
-| `REPO_TREE.md` | cây thư mục đang có, mỗi người sở hữu package nào, file chung sửa ra sao, nghi thức gộp cây | cấu trúc thư mục & quyền sở hữu file |
+| `docs/CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra | cách viết code |
+| `docs/REPO_TREE.md` | cây thư mục đang có, mỗi người sở hữu package nào, file chung sửa ra sao, nghi thức gộp cây | cấu trúc thư mục & quyền sở hữu file |
 
 ---
 
@@ -51,7 +51,7 @@ Vai trò lưu bằng **Firebase custom claims** (không tin dữ liệu role do 
 
 Ứng dụng chia thành các **module độc lập** (feature module), cùng dùng chung Auth, Profile, Notification, Design System.
 
-Ghi chú nhãn: `Design.md` (file này) là nguồn của **thứ tự giai đoạn**; `README.md` mục 3 mô tả chi tiết bài toán/API/tiêu chí nghiệm thu cho từng module và dùng cùng nhãn P0–P2 như bảng dưới.
+Ghi chú nhãn: `docs/Design.md` (file này) là nguồn của **thứ tự giai đoạn**; `README.md` mục 3 mô tả chi tiết bài toán/API/tiêu chí nghiệm thu cho từng module và dùng cùng nhãn P0–P2 như bảng dưới.
 
 | Giai đoạn | Module | Nhãn trong `README.md` | Mục tiêu | Ghi chú |
 |---|---|---|---|---|
@@ -92,7 +92,7 @@ Ghi chú nhãn: `Design.md` (file này) là nguồn của **thứ tự giai đo�
 2. Token chứa `eventId`, `uid`, thời điểm hết hạn (≈ 60 giây), được **ký ở server** (Cloud Function). App hiển thị token dưới dạng QR và tự làm mới.
 3. Organizer quét QR bằng app → gửi token lên callable function `checkIn`.
 4. Server kiểm tra: chữ ký, hạn dùng, sinh viên đã đăng ký, chưa check-in, sự kiện đang trong khung giờ cho phép → ghi bản ghi `attendance`.
-5. Trả kết quả cho Organizer; giao diện kết quả theo `Design-system.md` mục 4.7 (màu + icon + haptic).
+5. Trả kết quả cho Organizer; giao diện kết quả theo `docs/Design-system.md` mục 4.7 (màu + icon + haptic).
 
 **Vì sao dùng QR động phía sinh viên:** chống chụp màn hình gửi cho bạn điểm danh hộ. Kiểm tra hoàn toàn ở server nên client không thể tự "ghi" điểm danh.
 
@@ -133,7 +133,7 @@ flowchart LR
   ADMIN[Admin Dashboard - web] --> FB
 ```
 
-- **Clean Architecture + Feature Packaging** (cấu trúc package đã dựng ở mục 5.1.1; cấu trúc Gradle đa module đích ở `README.md` mục 7.2; quy ước code chi tiết ở `CODING_STANDARDS.md` mục 3).
+- **Clean Architecture + Feature Packaging** (cấu trúc package đã dựng ở mục 5.1.1; cấu trúc Gradle đa module đích ở `README.md` mục 7.2; quy ước code chi tiết ở `docs/CODING_STANDARDS.md` mục 3).
 - **MVVM + UDF đã dựng sườn và có slice mẫu:** tab Tiện ích đi đủ một chiều `UiState → Screen → Action → ViewModel → UseCase → Repository` (`presentation/utilities/`), ViewModel do **Hilt** dựng. Các module khác làm theo đúng 5 file của slice đó.
 - **UDF:** Screen nhận `UiState`, phát `Action`; ViewModel giữ trạng thái. Screen **không** gọi repository.
 - **Offline-first ở mức vừa đủ:** Room làm cache cho danh sách đã xem và thời khóa biểu; Firestore persistence cho dữ liệu cần offline.
@@ -195,7 +195,7 @@ Không còn file factory: `AppContainer` + `CompositionLocal` DI + `ViewModelFac
 
 Một màn hình mới cần có: (1) model + repository interface + use case (`@Inject constructor`) ở `domain`, (2) implementation + datasource ở `data`, (3) bộ 5 file `Screen/Route/ViewModel/UiState/Action` trong `presentation/<module>/`, (4) `data/di/<Module>DataModule.kt` với `@Binds` nếu có interface repository — **không** đăng ký ở file DI chung nào, (5) unit test ViewModel theo mẫu `UtilitiesViewModelTest` (new trực tiếp bằng fake, không cần rule Hilt) + `@Preview` đủ 4 trạng thái light/dark, (6) token/component dùng lại từ `core/designsystem` — không tự khai màu/`.dp` riêng.
 
-Phạm vi file từng người được tạo/sửa: `REPO_TREE.md` mục 3–5.
+Phạm vi file từng người được tạo/sửa: `docs/REPO_TREE.md` mục 3–5.
 
 ### 5.3. Xác thực "là người UTH"
 - Đăng nhập bằng email trường (tên miền do trường cấp) và xác minh email.
@@ -292,7 +292,7 @@ Trong tab Tiện ích:    LostFound · Books · Housing · RideShare (mở dần
 (*) chỉ hiện với Organizer
 ```
 
-Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `Design-system.md`; Figma là nguồn tham chiếu cho bố cục, **không** được override các token tương phản đã đo.
+Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `docs/Design-system.md`; Figma là nguồn tham chiếu cho bố cục, **không** được override các token tương phản đã đo.
 
 ---
 
@@ -300,7 +300,7 @@ Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `Design
 
 - **Hiệu năng:** màn hình danh sách hiển thị dữ liệu cache dưới 1 giây khi mở lại; phân trang danh sách; cold start p90 ≤ 2 s.
 - **Độ tin cậy:** check-in có phản hồi rõ ràng trong 2 giây ở điều kiện mạng bình thường; crash-free sessions ≥ 99.5 %.
-- **Khả năng tiếp cận:** theo `Design-system.md` mục 6 — touch target ≥ 48.dp, TalkBack, font scale tới 200 %, không truyền trạng thái chỉ bằng màu.
+- **Khả năng tiếp cận:** theo `docs/Design-system.md` mục 6 — touch target ≥ 48.dp, TalkBack, font scale tới 200 %, không truyền trạng thái chỉ bằng màu.
 - **Đa ngôn ngữ:** Tiếng Việt (mặc định) và Tiếng Anh; mọi chuỗi nằm trong `res/values{,-en}/strings.xml`.
 - **Hỗ trợ thiết bị:** `minSdk = 31` (Android 12) như `app/build.gradle.kts`; compileSdk 37.1, targetSdk 36. Muốn hỗ trợ Android 8–11 phải hạ `minSdk` có chủ đích và kiểm thử lại quyền camera/thông báo.
 
@@ -336,4 +336,4 @@ Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `Design
 4. Admin Dashboard trong repo cũ dùng công nghệ nào, giữ lại hay viết mới?
 5. Có CLB nào sẵn sàng làm đối tác chạy thử không?
 6. Chốt gói Blaze cho Cloud Functions (quyết định QR động hay phương án dự phòng mục 4.2)?
-7. Font Roboto hay Inter; giữ brand `#4F46E5` hay theo nhận diện Đoàn–Hội (xem `Design-system.md` mục 10)?
+7. Font Roboto hay Inter; giữ brand `#4F46E5` hay theo nhận diện Đoàn–Hội (xem `docs/Design-system.md` mục 10)?

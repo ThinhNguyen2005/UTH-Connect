@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Danh sách module khai báo theo đúng tiến độ trong `Design.md` mục 3.
+ * Danh sách module khai báo theo đúng tiến độ trong `docs/Design.md` mục 3.
  * Đây là nguồn tĩnh tạm thời cho tới khi có Firestore + repository thật (M0).
  *
  * `@Singleton` vì repository không giữ trạng thái và chỉ cần một instance cho cả

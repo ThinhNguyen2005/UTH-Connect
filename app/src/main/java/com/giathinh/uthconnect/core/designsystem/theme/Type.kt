@@ -8,7 +8,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 
 /**
- * Typography UTH Connect — nguồn sự thật: `Design-system.md` mục 2.
+ * Typography UTH Connect — nguồn sự thật: `docs/Design-system.md` mục 2.
  *
  * Font: Roboto (`FontFamily.Default`), không cần nhúng file.
  * Quy tắc: chỉ dùng 11 role ở dưới qua `MaterialTheme.typography.*`;

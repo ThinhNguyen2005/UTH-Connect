@@ -17,7 +17,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 
 /**
- * Tab Cá nhân — chờ module xác thực email trường (`Design.md` mục 6).
+ * Tab Cá nhân — chờ module xác thực email trường (`docs/Design.md` mục 6).
  * Vé của tôi / điểm danh của tôi sẽ nằm trong màn hình này sau khi đăng nhập.
  */
 @Composable

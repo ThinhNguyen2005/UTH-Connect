@@ -2,9 +2,9 @@
 
 > **Phiên bản:** v1.1 · **Cập nhật cấu trúc lúc:** 29/10/2026 · **Người giữ tài liệu:** chủ repo (`@giathinh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
-> **Không chứa:** quy ước viết code (`CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `Design.md`), token UI (`Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
+> **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
 >
-> **⚠ Luật bảo trì — đây là điều kiện merge, không phải lời khuyên:** mọi PR làm **thay đổi cấu trúc thư mục** (thêm/xoá package, thêm/xoá file thuộc một tầng, đổi chủ sở hữu, thêm dependency build làm đổi cây) **bắt buộc** phải cập nhật file này trong cùng commit: sửa mục 2 (cây thật), mục 3 (bảng phân công), thêm một dòng vào nhật ký mục 8. PR đổi cấu trúc mà không đổi `REPO_TREE.md` → review từ chối, không cần lý do khác.
+> **⚠ Luật bảo trì — đây là điều kiện merge, không phải lời khuyên:** mọi PR làm **thay đổi cấu trúc thư mục** (thêm/xoá package, thêm/xoá file thuộc một tầng, đổi chủ sở hữu, thêm dependency build làm đổi cây) **bắt buộc** phải cập nhật file này trong cùng commit: sửa mục 2 (cây thật), mục 3 (bảng phân công), thêm một dòng vào nhật ký mục 8. PR đổi cấu trúc mà không đổi `docs/REPO_TREE.md` → review từ chối, không cần lý do khác.
 
 ---
 
@@ -67,7 +67,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
 
-Quy tắc đặt tên file trong cây: theo `CODING_STANDARDS.md` mục 2 và 3.2 — một module có đúng **5 file** trong `presentation/<module>/` (Hilt đã xoá bỏ file factory thứ sáu), thêm `<Module>Navigation.kt` khi module có route con.
+Quy tắc đặt tên file trong cây: theo `docs/CODING_STANDARDS.md` mục 2 và 3.2 — một module có đúng **5 file** trong `presentation/<module>/` (Hilt đã xoá bỏ file factory thứ sáu), thêm `<Module>Navigation.kt` khi module có route con.
 
 Module nào cũng bắt đầu bằng 5 file đã chốt, copy nguyên `presentation/utilities/`:
 
@@ -104,13 +104,13 @@ Cấm: `@Component`/`@Subcomponent` tự chế, `ServiceLocator` dạng `object`
 | `presentation/navigation/UthApp.kt` | chủ repo | nhờ thêm **một dòng** `composable<XDestination> { XRoute() }` khi route của bạn đủ chín | đổi `Scaffold`, `popUpTo`, transition, hay tự ý thêm route |
 | `presentation/navigation/UthDestination.kt` | chủ repo | gửi tên `@Serializable object`/tab cần thêm | sửa route của module khác; đổi cơ chế type-safe |
 | `UTHConnectApplication.kt` · `MainActivity.kt` | chủ repo | — | sửa. Cần khởi tạo cấp app (WorkManager, push) → mở issue |
-| `core/designsystem/theme/*` (Color/Dimens/Type/Theme) | chủ repo | **xin thêm token** nếu thiếu, kèm lý do dùng ở đâu | viết số `.dp`/`.sp`/hex ở ngoài 3 file token (`CODING_STANDARDS.md` mục 7) |
+| `core/designsystem/theme/*` (Color/Dimens/Type/Theme) | chủ repo | **xin thêm token** nếu thiếu, kèm lý do dùng ở đâu | viết số `.dp`/`.sp`/hex ở ngoài 3 file token (`docs/CODING_STANDARDS.md` mục 7) |
 | `core/designsystem/component/*` | chủ repo | dùng; bug component → mở issue + test tái hiện | thêm variant mới "cho riêng" module mình — cái đó thành composable trong `presentation/<module>/` |
 | `app/src/main/res/values/strings.xml` + `values-en/` | chủ repo merge | **thêm key có prefix module** (`events_…`, `timetable_…`), cộng dòng ở cuối file, luôn đủ cả vi + en | sửa key của module khác; dịch lại chuỗi người khác; xoá key |
 | `app/src/main/res/drawable/` | chủ repo merge | thêm `ic_<module>_<tên>.xml` (vector tự vẽ) | đổi icon design-system của người khác |
 | `gradle/libs.versions.toml` · `build.gradle.kts` (gốc & app) · `gradle.properties` | chủ repo | yêu cầu dependency + mục đích | tự thêm plugin/annotation processor — KSP, Hilt, serialization đã bật sẵn, chỉ việc dùng |
 | `test/testing/MainDispatcherRule.kt` | chủ repo | dùng trong test của bạn | sửa; cần rule khác → tạo trong `test/presentation/<module>/` |
-| `REPO_TREE.md` (file này) | chủ repo | cập nhật mục 2/3 khi cây bạn đổi (bắt buộc, xem header) | tạo một tài liệu phân công thứ hai song song |
+| `docs/REPO_TREE.md` (file này) | chủ repo | cập nhật mục 2/3 khi cây bạn đổi (bắt buộc, xem header) | tạo một tài liệu phân công thứ hai song song |
 
 Không gian tên `res/` là chung nên dễ trùng nhất: tên file resource **phải unique toàn app**; prefix module là cách rẻ nhất để đạt điều đó.
 
@@ -132,7 +132,7 @@ Select-String -Path app\src\main\java\com\giathinh\uthconnect\presentation -Patt
 # 3. build + test (ksp chạy lại toàn bộ graph DI)
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest '-Pkotlin.compiler.execution.strategy=in-process'
 # 4. cộng đúng một dòng route vào UthApp.kt / UthDestination.kt (nếu PR chưa làm)
-# 5. cập nhật REPO_TREE.md mục 2 + 3 + nhật ký 8
+# 5. cập nhật docs/REPO_TREE.md mục 2 + 3 + nhật ký 8
 # 6. git push origin develop
 ```
 
