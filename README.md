@@ -27,7 +27,9 @@ Không làm báo chí, không làm mạng xã hội tổng hợp — mỗi phân
 | `Design.md` | phạm vi, giai đoạn, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | scope & nghiệp vụ |
 | `Design-system.md` | token màu/chữ/spacing/bo góc, component, dark mode, accessibility, motion | giao diện |
 | `README.md` (bạn đang đọc) | spec chi tiết từng module, wireframe, API, roadmap, metrics, contributing | — |
-| `CODING_STANDARDS.md` | *(chưa tạo — kế hoạch M0)* quy ước code, kiến trúc thư mục | cách viết code |
+| `docs/GIT_WORKFLOW.md` | nhánh `main`/`develop`/`feature/<module>-<tên>`, phân quyền, branch protection, mẫu commit/PR | quy trình Git |
+| `CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test | cách viết code |
+| `REPO_TREE.md` | cây thư mục, ai sở hữu package nào, file chung được sửa ra sao, nghi thức gộp cây | cấu trúc & phân quyền file |
 
 ---
 
@@ -424,15 +426,16 @@ flowchart LR
 
 ### 5.2. Layer và quy ước
 
-| Layer | Vị trí | Vai trò | Ràng buộc |
+| Layer | Vị trí (hiện tại → đích) | Vai trò | Ràng buộc |
 |---|---|---|---|
-| `ui` | `feature/<ten>/ui` | Composable, `@Preview`, stateless | Không gọi repository, không logic nghiệp vụ |
-| `viewmodel` | `feature/<ten>/` | Giữ `StateFlow<UiState>`, điều phối use case | Không tham chiếu `Context`/`Modifier` |
-| `domain` | `domain/` | UseCase + entity thuần Kotlin | Không import `android.*` |
-| `data` | `data/` | Repository, Firestore/Firebase mapper, cache Room | Ẩn toàn bộ chi tiết backend khỏi domain |
-| `core` | `core/` | Design system, network, util, DI | Feature không import lẫn nhau |
+| `ui` | `presentation/<module>/Screen.kt` → `feature/<ten>/ui` | Composable, `@Preview`, stateless | Không gọi repository, không `hiltViewModel()`, không logic nghiệp vụ |
+| `route` | `presentation/<module>/Route.kt` | nối ViewModel với Screen, collect state bằng `collectAsStateWithLifecycle()` | Chỗ **duy nhất** trong module được chạm `hiltViewModel()` |
+| `viewmodel` | `presentation/<module>/ViewModel.kt` | `@HiltViewModel` + `@Inject constructor`, giữ `StateFlow<UiState>`, điều phối use case | Không tham chiếu `Context`/`Modifier`/`@StringRes` |
+| `domain` | `domain/model` · `domain/repository` · `domain/usecase` | UseCase + entity thuần Kotlin, `suspend` trả `Result<T>` | Không import `android.*`/`androidx.*` (chỉ thêm `javax.inject`) |
+| `data` | `data/repository` · `data/di` | Repository, Firestore/Firebase mapper, cache Room, `@Binds` module của **từng module** | Ẩn toàn bộ chi tiết backend khỏi domain |
+| `core` | `core/designsystem` | Design system | Feature không import lẫn nhau |
 
-**Pattern:** Clean Architecture + Feature Packaging theo `Design.md` mục 5.1, trình bày UI theo **UDF** (Screen nhận `UiState`/phát `Action`, ViewModel giữ trạng thái), single-activity, type-safe navigation, `StateFlow` một nguồn sự thật, `Hilt` cho DI, `Room` cache cục bộ cho thời khóa biểu (offline-first).
+**Pattern:** Clean Architecture + **MVVM/UDF** (Screen nhận `UiState`/phát `Action`, ViewModel giữ `StateFlow`, UseCase mới được gọi Repository), single-activity, `StateFlow` một nguồn sự thật, **Hilt** cho DI (đã vào, xem `REPO_TREE.md` mục 4), `Room` cache cục bộ cho thời khóa biểu (offline-first). Sườn đã dựng xong và có **một slice mẫu đi đủ đường** — tab Tiện ích (`presentation/utilities/`, 5 file + test). Module nào cũng bắt đầu bằng cách copy đúng cấu trúc đó; chi tiết mục 5.1.1 của `Design.md` và `CODING_STANDARDS.md` mục 3.2.
 
 ### 5.3. Tech stack (theo mã nguồn hiện tại)
 
@@ -441,24 +444,30 @@ flowchart LR
 | Android Gradle Plugin | `9.3.3` | `gradle/libs.versions.toml` |
 | Kotlin | `2.2.10` (+ `org.jetbrains.kotlin.plugin.compose`) | `gradle/libs.versions.toml` |
 | Compose BOM | `2026.02.01`, Material 3 | `app/build.gradle.kts` |
-| `compileSdk` / `targetSdk` | `36` (minor API level 1) | `app/build.gradle.kts` |
+| `compileSdk` | `37.1` (minor API level 1) — cần vì core-ktx 1.19.1/lifecycle 2.11.0/navigation 2.10.2 đòi API 37 | `app/build.gradle.kts` |
+| `targetSdk` | `36` | `app/build.gradle.kts` |
 | `minSdk` | `31` (Android 12) | `app/build.gradle.kts` |
-| Java compatibility | `VERSION_11` | `app/build.gradle.kts` |
 | Namespace / applicationId | `com.giathinh.uthconnect` | `app/build.gradle.kts` |
 | UI | Jetpack Compose + Material 3, single activity, edge-to-edge | `MainActivity.kt` |
-| Lifecycle | `androidx.lifecycle.runtime.ktx 2.11.0`, `activity-compose 1.13.0` | catalog |
-| Test | JUnit 4.13.2, Compose UI Test, Espresso 3.7.0 | catalog |
+| Lifecycle | `runtime-ktx` + `viewmodel-compose` + `runtime-compose` `2.11.0` (`collectAsStateWithLifecycle()`; `viewModel()` không còn dùng vì Route đã chuyển sang `hiltViewModel()`), `activity-compose 1.13.0` | catalog — hai artifact compose khai tường minh để ghim bản, không để BOM/Navigate kéo xuống bản cũ |
+| **DI** | **Hilt `2.60.1`** chạy trên **KSP `2.3.12`**, plugin `com.google.dagger.hilt.android`; `androidx.hilt:hilt-lifecycle-viewmodel-compose 1.4.0` cho `hiltViewModel()` | catalog · `app/build.gradle.kts` · `UTHConnectApplication.kt` |
+| **Serialization** | plugin `org.jetbrains.kotlin.plugin.serialization` (`2.2.10`, khớp Kotlin) + `kotlinx-serialization-json 1.9.0` — bật cho route `@Serializable` type-safe | catalog · `app/build.gradle.kts` |
+| Java compatibility | đang `VERSION_11` và build xanh; tài liệu Hilt khuyến nghị 17 — chỉ đổi khi gặp lỗi thật từ code Hilt sinh ra | `app/build.gradle.kts` |
+| Async | Kotlin Coroutines `1.9.0` (resolve qua BOM, chưa khai báo tường minh trong catalog) | `gradlew :app:dependencies` |
+| Test | JUnit 4.13.2, `kotlinx-coroutines-test 1.9.0` (`MainDispatcherRule` cho ViewModel), Compose UI Test, Espresso 3.7.0 | catalog; 4 test ViewModel đang chạy xanh |
 | Test *(bổ sung dự kiến)* | MockK, Turbine, Firebase Emulator Suite | `Design.md` mục 5.2 |
 | Backend *(dự kiến)* | Firebase Auth, Firestore, Storage, Cloud Functions, FCM | kế thừa từ UTH Social |
 | QR *(dự kiến)* | CameraX + ML Kit Barcode; tạo mã bằng ZXing | chưa thêm vào build |
-| DI / Nav / Room *(dự kiến)* | Hilt, Navigation Compose + kotlinx-serialization, Room, DataStore | chưa thêm vào build |
+| Room / DataStore *(dự kiến)* | Room, DataStore | chưa thêm vào build (DI **đã** thêm — xem dòng DI ở trên) |
+| Navigation | **Navigation Compose `2.10.2`** — đã thêm, đang chạy 4 tab **type-safe** (`@Serializable object` · `composable<T>` · `hasRoute`) | `presentation/navigation/UthApp.kt` · `UthDestination.kt` |
+| Icon | `material-icons-core 1.7.8` (đã đóng băng, chỉ dùng cho khung nav/badge) | icon thiết kế riêng sẽ là vector drawable |
 | Crash / perf *(dự kiến)* | Firebase Crashlytics, Macrobenchmark | phục vụ metrics mục 12 |
 | CI *(dự kiến)* | GitHub Actions (build, lint, unit test) | `Design.md` mục 5.2 |
-| Design tokens | Material 3 `ColorScheme` + `Typography`, token màu/spacing theo `Design-system.md` | `ui/theme/Color.kt` · `Type.kt` · `Theme.kt` |
+| Design tokens | Material 3 `ColorScheme` + `Typography` + `Shapes`, token theo `Design-system.md` | `core/designsystem/theme/Color.kt` · `Type.kt` · `Dimens.kt` · `Theme.kt` |
 
-> **Trạng thái mã nguồn:** repo đang ở nền tảng template Compose (`MainActivity` + `ui/theme`). Các mục 5–7 là **kiến trúc đích**; cột "dự kiến" ở bảng trên là những dependency cần thêm khi bắt đầu từng feature.
+> **Trạng thái mã nguồn (đã kiểm chứng):** `:app:assembleDebug` và `:app:testDebugUnitTest` **BUILD SUCCESSFUL** (5 test, 0 lỗi, KSP chạy sạch không warning). Đã có: design system (màu Navy/Gold + 11 role chữ + `UthDimens`), component dùng chung (`UthCard`, `UthPrimaryButton`, `UthStatusBadge`, `UthEmptyState`), 4 tab `Trang chủ · Thời khóa biểu · Tiện ích · Cá nhân` với `NavHost` + `NavigationBar`, cấu trúc `core/ · data/ · domain/ · presentation/`, **sườn MVVM** với slice mẫu ở tab Tiện ích (`Screen/Route/ViewModel/UiState/Action` + `GetUtilityModulesUseCase` + `UtilitiesDataModule`), và **DI bằng Hilt** (`@HiltAndroidApp` · `@AndroidEntryPoint` · `@Binds` · `@HiltViewModel` · `hiltViewModel()`) — `AppContainer`/`CompositionLocal` DI và các `ViewModelFactory` đã bị xoá, không còn đường code cũ; 4 tab NavHost đã chuyển **route type-safe** (`@Serializable object` + plugin serialization, không còn chuỗi route trần). Ba tab còn lại vẫn là Screen placeholder — chưa phải MVVM cho tới khi branch của module đó thêm ViewModel. Các mục còn lại của phần 5–7 vẫn là **kiến trúc đích**; cột "dự kiến" ở bảng trên là dependency cần thêm khi bắt đầu từng feature.
 >
-> **Một xung đột cần sửa ngay trong code:** `Theme.kt` đang đặt `dynamicColor = Boolean = true`. Vì `minSdk = 31`, Material You sẽ ghi đè brand color trên **mọi** thiết bị được hỗ trợ, làm `#4F46E5` của design system không bao giờ hiện ra → phải tắt theo `Design-system.md` mục 1.5.
+> **`dynamicColor` đã tắt:** `Theme.kt` hiện có `dynamicColor: Boolean = false`. Trước đây để `true` nên Material You (mọi máy Android 12+, vì `minSdk = 31`) sẽ ghi đè màu thương hiệu; từ v0.3 màu nhận diện là Navy `#003366` + Gold `#F5A623` theo `Design-system.md` mục 1.5.
 
 ---
 
@@ -519,21 +528,48 @@ Subcollection theo `events/{eventId}` giúp một sự kiện không phải scan
 
 ## 7. Cấu trúc thư mục
 
-### 7.1. Hiện tại
+### 7.1. Hiện tại (đã dựng, build xanh)
 
 ```
 UTH Connect/
 ├── app/src/main/java/com/giathinh/uthconnect/
-│   ├── MainActivity.kt              # single activity, edge-to-edge
-│   └── ui/theme/                    # Color.kt · Theme.kt · Type.kt
-├── app/src/main/res/                 # mipmap, values, xml backup rules
+│   ├── MainActivity.kt              # single activity, edge-to-edge, @AndroidEntryPoint
+│   ├── UTHConnectApplication.kt     # @HiltAndroidApp — gốc SingletonComponent
+│   ├── core/
+│   │   ├── designsystem/theme/      # Color.kt · Type.kt · Dimens.kt · Theme.kt
+│   │   └── designsystem/component/  # UthComponents.kt · UthStatusBadge.kt
+│   ├── data/
+│   │   ├── repository/              # StaticUtilityModuleRepository (@Inject, @Singleton)
+│   │   └── di/                      # UtilitiesDataModule.kt — @Binds của riêng module Tiện ích
+│   ├── domain/
+│   │   ├── model/                   # UtilityModule · DeliveryPhase · UtilityModuleId
+│   │   ├── repository/              # interface, suspend + Result<T>
+│   │   └── usecase/                 # GetUtilityModulesUseCase (@Inject constructor)
+│   └── presentation/
+│       ├── navigation/              # UthDestination.kt · UthApp.kt (Scaffold + NavHost + 4 tab)
+│       ├── utilities/               # slice MVVM mẫu: Screen · Route · ViewModel · UiState · Action
+│       └── home/ · schedule/ · profile/   # placeholder, chưa có ViewModel
+├── app/src/test/java/com/giathinh/uthconnect/
+│   ├── testing/MainDispatcherRule.kt        # đổi Dispatchers.Main cho test ViewModel
+│   └── presentation/utilities/UtilitiesViewModelTest.kt   # 4 test
+├── app/src/main/res/
+│   ├── values/strings.xml           # chuỗi tiếng Việt (mặc định)
+│   └── values-en/strings.xml        # bản dịch tiếng Anh
 ├── app/src/{test,androidTest}/      # JUnit + Compose UI Test
+├── docs/GIT_WORKFLOW.md             # quy trình nhánh + phân quyền
+├── REPO_TREE.md                     # cây thư mục + ai sở hữu package nào (bắt buộc cập nhật khi đổi cấu trúc)
+├── CODING_STANDARDS.md              # quy ước viết code
 ├── gradle/libs.versions.toml        # version catalog
 ├── build.gradle.kts · settings.gradle.kts · gradle.properties
+├── Design.md · Design-system.md · README.md
 └── local.properties                 # không commit (đã .gitignore)
 ```
 
+Chiều phụ thuộc đang áp dụng: `presentation → domain ← data`, và trong `presentation`: `Route → ViewModel → UseCase`. `domain` không import `androidx`. `core/designsystem` dùng được bởi mọi tầng.
+
 ### 7.2. Đích (multi-module)
+
+Khi số module tăng lên, tách các package `presentation/<module>/` thành Gradle module thật như sơ đồ dưới. Bước này **chưa** làm — nhóm đang ở single-module với cấu trúc package đã chuẩn hoá ở 7.1.
 
 ```
 app/                    # shell: navigation, DI graph, theme
@@ -561,7 +597,7 @@ docs/                   # ADR, thiết kế UI, test plan
 
 ### 8.1. Yêu cầu
 
-- Android Studio (Narwhal trở lên) với SDK Android 36
+- Android Studio (Narwhal trở lên) với **SDK platform Android 37.1** (`compileSdk = 37.1`)
 - JDK 17+
 - Thiết bị/emulator **Android 12 (API 31)** trở lên
 - Một project Firebase (hoặc dùng mode demo — xem mục 9)
@@ -638,7 +674,8 @@ Script này dựng: 3 organizer đã duyệt + 4 CLB, 12 sự kiện (2 đã k�
 
 ### 10.2. Definition of Done của một feature
 
-- [ ] UI có `@Preview` cho trạng thái loading / empty / error, cả light + dark
+- [ ] Dùng token + component đã có trong `core/designsystem/` (`UthCard`, `UthPrimaryButton`, `UthStatusBadge`, `UthEmptyState`) — không tự khai màu/bo góc mới trong màn hình
+- [ ] UI có `@Preview` cho trạng thái loading / empty / error, cả light + dark (dùng `UthPreview`)
 - [ ] Đạt checklist design token & accessibility trong `Design-system.md` mục 8 (không hardcode `.dp`/hex/`.sp`, tương phản đạt, trạng thái có icon + chữ)
 - [ ] UseCase + Repository có unit test; luồng chính có Compose UI test
 - [ ] Firestore/Storage Rules đã cập nhật **và có test emulator**
@@ -646,7 +683,8 @@ Script này dựng: 3 organizer đã duyệt + 4 CLB, 12 sự kiện (2 đã k�
 - [ ] Chuỗi tiếng Việt + tiếng Anh đầy đủ trong `res/values{,-en}/strings.xml`, không hardcode trong Composable
 - [ ] Layout không vỡ ở font scale 200 % (preview `fontScale = 1.3f` trở lên)
 - [ ] Có screenshot/GIF demo trong PR và cập nhật `docs/`
-- [ ] Reviewer thứ hai approve; `./gradlew check` xanh
+- [ ] Nhánh đặt theo `feature/<module>-<tên>`, PR nhắm vào `develop` (`docs/GIT_WORKFLOW.md`)
+- [ ] Reviewer thứ hai approve; `.\gradlew.bat assembleDebug` xanh trên máy reviewer
 
 ---
 
@@ -656,7 +694,7 @@ Lộ trình này ánh xạ các giai đoạn trong `Design.md` mục 3 sang 12 t
 
 | Mốc | Tuần | Kết quả cần đạt |
 |---|---|---|
-| **M0** | 1 | Dựng multi-module, CI (build + test), design token theo `Design-system.md` (tắt `dynamicColor`, thay `Color.kt`/`Type.kt`), navigation, login + verify email/MSSV + custom claims |
+| **M0** | 1 | ✅ **Đã xong:** cấu trúc package Clean Architecture (`core/ · data/ · domain/ · presentation/`), design token Navy/Gold theo `Design-system.md` (tắt `dynamicColor`), component dùng chung, khung navigation 4 tab, **sườn MVVM + slice mẫu Tiện ích** (`MainDispatcherRule` + 4 test ViewModel), **DI bằng Hilt + KSP** (đã xoá `AppContainer` và toàn bộ `ViewModelFactory`), `CODING_STANDARDS.md`, `REPO_TREE.md` (cây thư mục + phân quyền sở hữu), nhánh `develop` + `docs/GIT_WORKFLOW.md`. ⏳ **Còn lại:** CI (build + test) + ktlint/spotless, `hilt-android-testing` cho Compose UI test, login + verify email/MSSV + custom claims. Tách multi-module **chưa** làm (mục 7.2) — đang ở single-module. |
 | **M1** | 2–4 | 3.1 tạo/đăng ký sự kiện, `getTicketToken` + `TicketQr` QR động, callable `checkIn` chống trùng |
 | **M2** | 5–6 | `AttendanceScanner` hoàn thiện (haptic/queue khi mất mạng), `EventStats` + export CSV, Admin Dashboard duyệt Organizer |
 | **M3** | 7–8 | Pilot 1 CLB + 60 sinh viên chạy **một sự kiện thật**; sửa lỗi bảo mật/hiệu năng ghi nhận từ pilot |
@@ -693,12 +731,14 @@ Lộ trình này ánh xạ các giai đoạn trong `Design.md` mục 3 sang 12 t
 ### 13.1. Workflow
 
 ```bash
-git checkout -b feat/events-qr-checkin     # type/tên-ngắn-gọn
+git checkout develop; git pull origin develop
+git checkout -b feature/events-qr-checkin-anh   # feature/<module>-<tên-bạn> — xem docs/GIT_WORKFLOW.md
 # … code + test …
-.\gradlew.bat check                       # test + static analysis trước khi push
-# (cấu hình spotless ở M0 để thêm `spotlessApply` vào bước này)
+.\gradlew.bat assembleDebug                   # build xanh trước khi push
+# (`check` + spotless sẽ thêm ở bước CI; máy RAM thấp thì nối
+#  '-Pkotlin.compiler.execution.strategy=in-process' — docs/GIT_WORKFLOW.md mục 6)
 git commit -m "feat(events): add QR check-in with duplicate guard"
-git push -u origin feat/events-qr-checkin   # rồi mở Pull Request
+git push -u origin feature/events-qr-checkin-anh   # rồi mở Pull Request vào develop
 ```
 
 ### 13.2. Quy ước commit (Conventional Commits)
@@ -708,10 +748,16 @@ Phạm vi trong ngoặc: `(events) (housing) (schedule) (lostfound) (rideshare) 
 
 ### 13.3. Quy ước code
 
-- Composable: **PascalCase**, stateless khi có thể, nhận `modifier: Modifier = Modifier` cuối tham số
-- `Screen` dựng UI, `ViewModel` giữ `StateFlow`, `Repository` trả `Result<T>`
-- Không `runBlocking` trên main thread; IoC qua Hilt, không singleton toàn cục
-- Chuỗi nằm trong `res/values/strings.xml`; màu/typography lấy từ `ui/theme`
+Chi tiết đầy đủ (đặt tên, ranh giới import từng tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra): **`CODING_STANDARDS.md`**. Ai sở hữu file nào, được tạo những gì: **`REPO_TREE.md`**. Dưới đây là những quy ước hay bị quên nhất:
+
+- Composable: **PascalCase**, stateless khi có thể; `modifier` đặt ngay sau tham số bắt buộc
+- Bộ 5 file cho một module: `Screen` (stateless) · `Route` (nối ViewModel bằng `hiltViewModel()`) · `ViewModel` (`@HiltViewModel`, `StateFlow<UiState>`) · `UiState` (bất biến, loading ≠ empty) · `Action` (sealed interface). Không còn `ViewModelFactory`
+- Route **type-safe**: destination là `@Serializable object`/`data class`, đăng ký bằng `composable<T>`, chuyển hướng bằng `navigate(T)`; tab đang chọn suy ra bằng `hasRoute(T::class)`, không so chuỗi. Event một lần (nếu màn hình cần) đi qua `Channel` + `receiveAsFlow()` thu bằng `LaunchedEffect` (`CODING_STANDARDS.md` mục 3.2.1 và 6)
+- Binding interface→impl để trong `data/di/<Module>DataModule.kt` của **chính module**; không có file DI chung cho cả nhóm
+- `Screen` dựng UI, `ViewModel` giữ `StateFlow`, `UseCase` chứa nghiệp vụ, `Repository` trả `Result<T>`; không tầng nào nhảy cóc
+- Thất bại hiển thị bằng enum trong `UiState`, UI map ra chuỗi — ViewModel không cầm `@StringRes`
+- Không `runBlocking` trên main thread; IoC qua Hilt (`CODING_STANDARDS.md` mục 3–4), không singleton toàn cục, không `CompositionLocal` mang dependency
+- Chuỗi nằm trong `res/values/strings.xml` (vi) + `res/values-en/strings.xml` (en); màu/typography/spacing lấy từ `core/designsystem/theme`
 - Mỗi feature folder có `README.md` mô tả luồng riêng; quyết định kiến trúc lớn ghi thành ADR trong `docs/adr/`
 
 ### 13.4. Pull Request

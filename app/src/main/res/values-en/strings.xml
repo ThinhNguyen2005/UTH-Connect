@@ -1,0 +1,45 @@
+<resources>
+    <!-- Bản dịch tiếng Anh. Mặc định của app là tiếng Việt (values/strings.xml). -->
+
+    <string name="common_retry">Retry</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_schedule">Schedule</string>
+    <string name="tab_utilities">Utilities</string>
+    <string name="tab_profile">Profile</string>
+
+    <string name="home_title">UTH Connect</string>
+    <string name="home_subtitle">A narrow app that UTH students actually use.</string>
+    <string name="home_section_upcoming">Upcoming events</string>
+    <string name="home_events_empty_title">No events yet</string>
+    <string name="home_events_empty_body">Once your club publishes an event on UTH Connect, it shows up here.</string>
+
+    <string name="schedule_wip_title">Schedule</string>
+    <string name="schedule_wip_body">Phase 2 module. This screen is waiting for the feature/timetable-&lt;your-name&gt; branch.</string>
+
+    <string name="utilities_title">Utilities</string>
+    <string name="utilities_subtitle">Every UTH Connect module in one place.</string>
+    <string name="utilities_loading">Loading modules…</string>
+    <string name="utilities_error_title">Could not load the list</string>
+    <string name="utilities_error_body">Check your connection and press Retry. This list holds no personal data.</string>
+    <string name="utilities_empty_title">No modules yet</string>
+    <string name="utilities_empty_body">The first enabled module will show up here.</string>
+    <string name="module_events_title">Events &amp; clubs</string>
+    <string name="module_events_desc">Registration, QR tickets and attendance for clubs.</string>
+    <string name="module_timetable_title">Timetable</string>
+    <string name="module_timetable_desc">Class schedule, deadlines and reminders per subject.</string>
+    <string name="module_lost_found_title">Lost &amp; found</string>
+    <string name="module_lost_found_desc">Post photos with campus locations to recover lost items.</string>
+    <string name="module_books_title">Textbook market</string>
+    <string name="module_books_desc">Buy, sell and swap books between UTH students.</string>
+    <string name="module_housing_title">Roommate match</string>
+    <string name="module_housing_desc">Find housemates and rooms near campus.</string>
+    <string name="module_rideshare_title">Ride sharing</string>
+    <string name="module_rideshare_desc">Share rides between campuses or home for holidays.</string>
+    <string name="phase_mvp">MVP</string>
+    <string name="phase_2">Phase 2</string>
+    <string name="phase_3">Phase 3</string>
+    <string name="phase_backlog">Backlog</string>
+
+    <string name="profile_wip_title">Not signed in</string>
+    <string name="profile_wip_body">Sign-in with a university email (@uth.edu.vn) unlocks when the account verification module lands in M0.</string>
+</resources>
