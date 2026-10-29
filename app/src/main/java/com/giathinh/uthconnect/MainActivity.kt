@@ -4,44 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.giathinh.uthconnect.ui.theme.UTHConnectTheme
+import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
+import com.giathinh.uthconnect.presentation.navigation.UthApp
+import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Single activity duy nhất của app. Mọi màn hình là Composable nằm trong
+ * `NavHost` của [UthApp]; activity không chứa logic nghiệp vụ.
+ *
+ * `@AndroidEntryPoint` biến activity này thành **điểm vào DI duy nhất** của cả
+ * cây Compose: Hilt thay `ViewModelProvider.Factory` mặc định bằng factory của nó,
+ * nên `hiltViewModel()` trong các `…Route.kt` lấy được ViewModel mà không cần
+ * truyền container thủ công.
+ */
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             UTHConnectTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                UthApp()
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    UTHConnectTheme {
-        Greeting("Android")
     }
 }

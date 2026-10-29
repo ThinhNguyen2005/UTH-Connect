@@ -1,3 +1,52 @@
 <resources>
     <string name="app_name">UTH Connect</string>
+
+    <!-- Chuỗi dùng chung cho mọi module -->
+    <string name="common_retry">Thử lại</string>
+
+    <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_schedule">Thời khóa biểu</string>
+    <string name="tab_utilities">Tiện ích</string>
+    <string name="tab_profile">Cá nhân</string>
+
+    <!-- Trang chủ -->
+    <string name="home_title">UTH Connect</string>
+    <string name="home_subtitle">Một app hẹp mà dùng được thật cho sinh viên UTH.</string>
+    <string name="home_section_upcoming">Sự kiện sắp diễn ra</string>
+    <string name="home_events_empty_title">Chưa có sự kiện nào</string>
+    <string name="home_events_empty_body">Khi CLB của bạn đăng sự kiện lên UTH Connect, danh sách sẽ xuất hiện ở đây.</string>
+
+    <!-- Thời khóa biểu (Phase 2) -->
+    <string name="schedule_wip_title">Thời khóa biểu</string>
+    <string name="schedule_wip_body">Module thuộc Phase 2. Màn hình này chờ branch feature/timetable-&lt;tên bạn&gt;.</string>
+
+    <!-- Tiện ích -->
+    <string name="utilities_title">Tiện ích</string>
+    <string name="utilities_subtitle">Mọi module của UTH Connect nằm ở một chỗ.</string>
+    <string name="utilities_loading">Đang tải danh sách module…</string>
+    <string name="utilities_error_title">Không tải được danh sách</string>
+    <string name="utilities_error_body">Kiểm tra kết nối rồi bấm Thử lại. Danh sách này không chứa dữ liệu của bạn.</string>
+    <string name="utilities_empty_title">Chưa có module nào</string>
+    <string name="utilities_empty_body">Khi module đầu tiên được bật, nó sẽ xuất hiện ở đây.</string>
+    <string name="module_events_title">Sự kiện &amp; CLB</string>
+    <string name="module_events_desc">Đăng ký, vé QR và điểm danh cho CLB.</string>
+    <string name="module_timetable_title">Thời khóa biểu</string>
+    <string name="module_timetable_desc">Lịch học, deadline và nhắc hạn theo môn.</string>
+    <string name="module_lost_found_title">Đồ thất lạc</string>
+    <string name="module_lost_found_desc">Đăng ảnh kèm vị trí, tìm lại đồ trong khuôn viên.</string>
+    <string name="module_books_title">Chợ sách giáo trình</string>
+    <string name="module_books_desc">Mua bán, trao đổi sách giữa sinh viên UTH.</string>
+    <string name="module_housing_title">Ghép trọ</string>
+    <string name="module_housing_desc">Tìm bạn ở ghép, phòng trọ quanh trường.</string>
+    <string name="module_rideshare_title">Ghép xe</string>
+    <string name="module_rideshare_desc">Đi chung giữa các cơ sở hoặc về quê dịp lễ.</string>
+    <string name="phase_mvp">MVP</string>
+    <string name="phase_2">Phase 2</string>
+    <string name="phase_3">Phase 3</string>
+    <string name="phase_backlog">Backlog</string>
+
+    <!-- Cá nhân -->
+    <string name="profile_wip_title">Chưa đăng nhập</string>
+    <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
 </resources>
