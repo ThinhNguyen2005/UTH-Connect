@@ -42,4 +42,38 @@
 
     <string name="profile_wip_title">Not signed in</string>
     <string name="profile_wip_body">Sign-in with a university email (@uth.edu.vn) unlocks when the account verification module lands in M0.</string>
+    <!-- Authentication & Profile -->
+    <string name="auth_brand">UTH Connect</string>
+    <string name="auth_subtitle">Sign in to your student account</string>
+    <string name="auth_title">Welcome back</string>
+    <string name="auth_identifier_label">Student ID or University Email (@ut.edu.vn)</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_remember">Remember me</string>
+    <string name="auth_forgot">Forgot password?</string>
+    <string name="auth_hide">Hide</string>
+    <string name="auth_show">Show</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_required">This field is required.</string>
+    <string name="auth_invalid_identifier">Use an 8–12 digit ID or a valid @ut.edu.vn email.</string>
+    <string name="auth_invalid_credentials">Incorrect ID/email or password.</string>
+    <string name="auth_unexpected">Could not sign in. Please try again.</string>
+    <string name="auth_restore_failed">Could not restore the old session. Sign in again.</string>
+    <string name="auth_forgot_title">Forgot password</string>
+    <string name="auth_forgot_message">This student project uses a demo account; password recovery has not been connected to an API.</string>
+    <string name="auth_ok">OK</string>
+    <string name="auth_demo_notice">Demo mode – not connected to UTH student authentication.</string>
+    <string name="auth_profile_title">Personal profile</string>
+    <string name="auth_profile_name">Full name</string>
+    <string name="auth_profile_student_id">Student ID</string>
+    <string name="auth_profile_email">Student email</string>
+    <string name="auth_profile_class">Class</string>
+    <string name="auth_profile_major">Major</string>
+    <string name="auth_profile_faculty">Faculty</string>
+    <string name="auth_profile_empty">No profile</string>
+    <string name="auth_profile_empty_body">Sign in to view your student profile.</string>
+    <string name="auth_profile_error">Cannot load profile</string>
+    <string name="auth_profile_try_again">Try reopening the screen or signing in again.</string>
+    <string name="auth_demo_profile">Demo profile</string>
+    <string name="auth_logout">Sign out</string>
+    <string name="auth_logout_failed">Could not sign out. Try again.</string>
 </resources>
