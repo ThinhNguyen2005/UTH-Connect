@@ -55,4 +55,18 @@
     <string name="schedule_period_format">Tiết %1$d–%2$d</string>
     <string name="schedule_class_code_format">Mã LHP: %1$s • %2$d TC</string>
     <string name="schedule_room_format">Phòng %1$s</string>
+    <string name="schedule_sample_note">Dữ liệu mẫu • Tuần 26/10–01/11/2026 • Chưa đồng bộ cổng đào tạo</string>
+    <string name="schedule_classes">Lịch học</string>
+    <string name="schedule_exams">Lịch thi</string>
+    <string name="schedule_day">Theo ngày</string>
+    <string name="schedule_week">Cả tuần</string>
+    <string name="schedule_previous">Tuần trước</string>
+    <string name="schedule_next">Tuần sau</string>
+    <string name="schedule_today">Hôm nay</string>
+    <string name="schedule_week_range">%1$s – %2$s</string>
+    <string name="schedule_empty_title">Không có lịch học</string>
+    <string name="schedule_empty_body">Chưa có buổi học trong dữ liệu mẫu cho ngày này.</string>
+    <string name="schedule_exam_date">Ngày thi: %1$s</string>
+    <string name="schedule_exam_method">Hình thức: %1$s</string>
+    <string name="schedule_lecturer">Giảng viên: %1$s</string>
 </resources>

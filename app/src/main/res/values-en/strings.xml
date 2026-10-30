@@ -47,4 +47,20 @@
     <string name="schedule_period_format">Period %1$d–%2$d</string>
     <string name="schedule_class_code_format">Class Code: %1$s • %2$d Credits</string>
     <string name="schedule_room_format">Room %1$s</string>
+    <!-- Schedule: keep the same resource names as values/strings.xml. -->
+    <string name="app_name">UTH Connect</string>
+    <string name="schedule_sample_note">Sample data • Week of 26/10–01/11/2026 • Not synced with the student portal</string>
+    <string name="schedule_classes">Classes</string>
+    <string name="schedule_exams">Exams</string>
+    <string name="schedule_day">Day</string>
+    <string name="schedule_week">Week</string>
+    <string name="schedule_previous">Previous week</string>
+    <string name="schedule_next">Next week</string>
+    <string name="schedule_today">Today</string>
+    <string name="schedule_week_range">%1$s – %2$s</string>
+    <string name="schedule_empty_title">No classes</string>
+    <string name="schedule_empty_body">No sample classes are available for this date.</string>
+    <string name="schedule_exam_date">Exam date: %1$s</string>
+    <string name="schedule_exam_method">Exam format: %1$s</string>
+    <string name="schedule_lecturer">Lecturer: %1$s</string>
 </resources>
