@@ -22,7 +22,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.presentation.home.HomeScreen
-import com.giathinh.uthconnect.presentation.profile.ProfileScreen
+import com.giathinh.uthconnect.presentation.profile.ProfileRoute
+import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
@@ -35,8 +36,13 @@ import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
  * File không còn giữ vai trò DI: trước đây nó cấp `AppContainer` cho cả cây,
  * nay Hilt lo việc đó qua `@AndroidEntryPoint` trên `MainActivity`.
  */
+/** Login -> Home -> Profile: chỉ mở 4 tab sau khi xác thực demo. */
 @Composable
-fun UthApp(
+fun UthApp() {
+    AuthRoute(signedInContent = { SignedInUthApp() })
+}
+@Composable
+private fun SignedInUthApp(
     navController: NavHostController = rememberNavController(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -85,7 +91,7 @@ private fun UthNavHost(
         composable<HomeDestination> { HomeScreen() }
         composable<ScheduleDestination> { ScheduleScreen() }
         composable<UtilitiesDestination> { UtilitiesRoute() }
-        composable<ProfileDestination> { ProfileScreen() }
+        composable<ProfileDestination> { ProfileRoute() }
     }
 }
 

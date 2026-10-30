@@ -49,4 +49,38 @@
     <!-- Cá nhân -->
     <string name="profile_wip_title">Chưa đăng nhập</string>
     <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
+    <!-- Authentication & Profile -->
+    <string name="auth_brand">UTH Connect</string>
+    <string name="auth_subtitle">Đăng nhập vào tài khoản sinh viên</string>
+    <string name="auth_title">Chào mừng trở lại</string>
+    <string name="auth_identifier_label">MSSV hoặc Email sinh viên (@ut.edu.vn)</string>
+    <string name="auth_password_label">Mật khẩu</string>
+    <string name="auth_remember">Ghi nhớ đăng nhập</string>
+    <string name="auth_forgot">Quên mật khẩu?</string>
+    <string name="auth_hide">Ẩn</string>
+    <string name="auth_show">Hiện</string>
+    <string name="auth_sign_in">Đăng nhập</string>
+    <string name="auth_required">Vui lòng không để trống trường này.</string>
+    <string name="auth_invalid_identifier">MSSV phải có 8–12 chữ số hoặc email @ut.edu.vn hợp lệ.</string>
+    <string name="auth_invalid_credentials">Sai MSSV/email hoặc mật khẩu.</string>
+    <string name="auth_unexpected">Không thể đăng nhập. Vui lòng thử lại.</string>
+    <string name="auth_restore_failed">Không đọc được phiên đăng nhập cũ. Vui lòng đăng nhập lại.</string>
+    <string name="auth_forgot_title">Quên mật khẩu</string>
+    <string name="auth_forgot_message">Bản đồ án đang dùng tài khoản demo, chưa tích hợp API khôi phục mật khẩu.</string>
+    <string name="auth_ok">Đồng ý</string>
+    <string name="auth_demo_notice">Chế độ demo – không xác thực với hệ thống đào tạo UTH.</string>
+    <string name="auth_profile_title">Thông tin cá nhân</string>
+    <string name="auth_profile_name">Họ và tên</string>
+    <string name="auth_profile_student_id">Mã số sinh viên</string>
+    <string name="auth_profile_email">Email sinh viên</string>
+    <string name="auth_profile_class">Lớp sinh hoạt</string>
+    <string name="auth_profile_major">Ngành</string>
+    <string name="auth_profile_faculty">Khoa</string>
+    <string name="auth_profile_empty">Chưa có hồ sơ</string>
+    <string name="auth_profile_empty_body">Hãy đăng nhập để xem hồ sơ sinh viên.</string>
+    <string name="auth_profile_error">Không tải được hồ sơ</string>
+    <string name="auth_profile_try_again">Vui lòng mở lại màn hình hoặc thử đăng nhập lại.</string>
+    <string name="auth_demo_profile">Hồ sơ demo</string>
+    <string name="auth_logout">Đăng xuất</string>
+    <string name="auth_logout_failed">Đăng xuất thất bại. Vui lòng thử lại.</string>
 </resources>
