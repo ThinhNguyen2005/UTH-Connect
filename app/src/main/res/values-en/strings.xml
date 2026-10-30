@@ -1,12 +1,54 @@
 <resources>
     <!-- Bản dịch tiếng Anh. Mặc định của app là tiếng Việt (values/strings.xml). -->
 
+    <string name="app_name">UTH Connect</string>
+
     <string name="common_retry">Retry</string>
+    <string name="common_meta_separator">•</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
 
+    <string name="home_uni_name">University of Transport and Communications</string>
+    <string name="home_uni_tagline">Connected student portal</string>
+    <string name="home_logo_abbr">UTH</string>
+    <string name="home_greeting_hello">Hello,</string>
+    <string name="home_greeting_name">UTH student</string>
+    <string name="home_greeting_subtitle">Catch up on the latest updates from your university.</string>
+    <string name="home_notifications">Notifications</string>
+    <string name="home_notifications_unread">Notifications, %1$d unread</string>
+    <string name="home_banner_briefing">Quick brief</string>
+    <string name="home_highlights">Official highlights</string>
+    <string name="home_banner_counter">%1$d / %2$d notices</string>
+    <string name="home_banner_document_code">Document no. %1$s</string>
+    <string name="home_banner_mandatory">Required</string>
+    <string name="home_banner_detail">Details</string>
+    <string name="home_open_banner">Open notice</string>
+    <string name="home_new_count">%1$d new</string>
+    <string name="home_feed_title">News feed</string>
+    <string name="home_feed_subtitle">Official notices from campus departments</string>
+    <string name="home_filter">Filter</string>
+    <string name="home_category_all">All</string>
+    <string name="home_category_training">Academic affairs</string>
+    <string name="home_category_student_affairs">Student services</string>
+    <string name="home_category_tuition">Tuition</string>
+    <string name="home_category_youth_union">Youth union</string>
+    <string name="home_chip_count">%1$s (%2$d)</string>
+    <string name="home_badge_new">New</string>
+    <string name="home_archive">Browse notice archive</string>
+    <string name="home_loading">Loading the feed…</string>
+    <string name="home_error_title">Could not load the feed</string>
+    <string name="home_error_body">Check your connection and press Retry. The feed holds no personal data.</string>
+    <string name="home_empty_title">No notices yet</string>
+    <string name="home_empty_body">New notices from the university will show up here. If a category filter is on, pick All to see everything.</string>
+    <plurals name="home_feed_count">
+        <item quantity="one">Showing %1$d latest notice</item>
+        <item quantity="other">Showing %1$d latest notices</item>
+    </plurals>
+
+    <!-- Legacy keys of the Home placeholder (events branch): REPO_TREE mục 5 forbids
+         deleting another module's keys, so they stay although the feed no longer uses them. -->
     <string name="home_title">UTH Connect</string>
     <string name="home_subtitle">A narrow app that UTH students actually use.</string>
     <string name="home_section_upcoming">Upcoming events</string>
@@ -42,4 +84,28 @@
 
     <string name="profile_wip_title">Not signed in</string>
     <string name="profile_wip_body">Sign-in with a university email (@uth.edu.vn) unlocks when the account verification module lands in M0.</string>
+
+    <!-- Notice detail (presentation/announcement). Category labels reuse home_category_*
+         because they belong to AnnouncementCategory itself, not to one screen. -->
+    <string name="announcement_detail_title">Notice details</string>
+    <string name="announcement_back">Back</string>
+    <string name="announcement_share">Share this notice</string>
+    <string name="announcement_share_chooser">Share this notice via</string>
+    <string name="announcement_share_body">%1$s\n\n%2$s</string>
+    <string name="announcement_updated_at">Updated %1$s</string>
+    <string name="announcement_attachments_title">Attachments (%1$d)</string>
+    <string name="announcement_attachment_meta">%1$s · %2$s</string>
+    <string name="announcement_attachment_kind_pdf">PDF</string>
+    <string name="announcement_attachment_kind_docx">Word</string>
+    <string name="announcement_attachment_kind_image">Image</string>
+    <string name="announcement_attachment_kind_other">File</string>
+    <string name="announcement_loading">Loading this notice…</string>
+    <string name="announcement_error_title">Could not load this notice</string>
+    <string name="announcement_error_body">Check your connection and press Retry. The notice holds no personal data.</string>
+    <string name="announcement_missing_title">This notice is gone</string>
+    <string name="announcement_missing_body">It may have been removed or the link is no longer valid. Go back to the news feed for other notices.</string>
+    <plurals name="announcement_read_minutes">
+        <item quantity="one">%1$d min read</item>
+        <item quantity="other">%1$d min read</item>
+    </plurals>
 </resources>

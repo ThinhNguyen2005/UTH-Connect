@@ -3,6 +3,7 @@
 
     <!-- Chuỗi dùng chung cho mọi module -->
     <string name="common_retry">Thử lại</string>
+    <string name="common_meta_separator">•</string>
 
     <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
     <string name="tab_home">Trang chủ</string>
@@ -10,7 +11,45 @@
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
 
-    <!-- Trang chủ -->
+    <!-- Trang chủ / bảng tin (presentation/home) -->
+    <string name="home_uni_name">ĐH Giao thông Vận tải TP.HCM</string>
+    <string name="home_uni_tagline">Cổng thông tin sinh viên kết nối</string>
+    <string name="home_logo_abbr">UTH</string>
+    <string name="home_greeting_hello">Xin chào,</string>
+    <string name="home_greeting_name">Sinh viên UTH</string>
+    <string name="home_greeting_subtitle">Cùng cập nhật những thông tin mới nhất nhé!</string>
+    <string name="home_notifications">Thông báo</string>
+    <string name="home_notifications_unread">Thông báo, %1$d chưa đọc</string>
+    <string name="home_banner_briefing">Bản tin nhanh</string>
+    <string name="home_highlights">Tiêu điểm chỉ đạo</string>
+    <string name="home_banner_counter">%1$d / %2$d thông báo</string>
+    <string name="home_banner_document_code">Văn bản số: %1$s</string>
+    <string name="home_banner_mandatory">Bắt buộc</string>
+    <string name="home_banner_detail">Chi tiết</string>
+    <string name="home_open_banner">Mở thông báo</string>
+    <string name="home_new_count">%1$d mới</string>
+    <string name="home_feed_title">Bảng tin</string>
+    <string name="home_feed_subtitle">Thông báo chính thức từ các phòng ban</string>
+    <string name="home_filter">Bộ lọc</string>
+    <string name="home_category_all">Tất cả</string>
+    <string name="home_category_training">Đào tạo</string>
+    <string name="home_category_student_affairs">Công tác sinh viên</string>
+    <string name="home_category_tuition">Học phí</string>
+    <string name="home_category_youth_union">Đoàn – Hội</string>
+    <string name="home_chip_count">%1$s (%2$d)</string>
+    <string name="home_badge_new">Mới</string>
+    <string name="home_archive">Xem lưu trữ thông báo</string>
+    <string name="home_loading">Đang tải bảng tin…</string>
+    <string name="home_error_title">Không tải được bảng tin</string>
+    <string name="home_error_body">Kiểm tra kết nối rồi bấm Thử lại. Bảng tin không chứa dữ liệu cá nhân của bạn.</string>
+    <string name="home_empty_title">Chưa có thông báo nào</string>
+    <string name="home_empty_body">Thông báo mới từ nhà trường sẽ xuất hiện ở đây. Nếu đang lọc theo nhóm, chọn Tất cả để xem hết.</string>
+    <plurals name="home_feed_count">
+        <item quantity="other">Hiển thị %1$d thông báo mới nhất</item>
+    </plurals>
+
+    <!-- Khoá cũ của placeholder Trang chủ (nhánh events): REPO_TREE mục 5 cấm xoá key của
+         module khác, nên giữ lại dù bảng tin hiện chưa dùng. Module Sự kiện sẽ dùng lại. -->
     <string name="home_title">UTH Connect</string>
     <string name="home_subtitle">Một app hẹp mà dùng được thật cho sinh viên UTH.</string>
     <string name="home_section_upcoming">Sự kiện sắp diễn ra</string>
@@ -49,4 +88,27 @@
     <!-- Cá nhân -->
     <string name="profile_wip_title">Chưa đăng nhập</string>
     <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
+
+    <!-- Chi tiết thông báo (presentation/announcement). Nhãn nhóm dùng lại home_category_*
+         vì đó là nhãn của chính AnnouncementCategory, không dịch hai lần. -->
+    <string name="announcement_detail_title">Chi tiết thông báo</string>
+    <string name="announcement_back">Quay lại</string>
+    <string name="announcement_share">Chia sẻ thông báo</string>
+    <string name="announcement_share_chooser">Chia sẻ thông báo qua</string>
+    <string name="announcement_share_body">%1$s\n\n%2$s</string>
+    <string name="announcement_updated_at">Cập nhật %1$s</string>
+    <string name="announcement_attachments_title">Tài liệu đính kèm (%1$d)</string>
+    <string name="announcement_attachment_meta">%1$s · %2$s</string>
+    <string name="announcement_attachment_kind_pdf">PDF</string>
+    <string name="announcement_attachment_kind_docx">Word</string>
+    <string name="announcement_attachment_kind_image">Ảnh</string>
+    <string name="announcement_attachment_kind_other">Tệp</string>
+    <string name="announcement_loading">Đang tải thông báo…</string>
+    <string name="announcement_error_title">Không tải được thông báo</string>
+    <string name="announcement_error_body">Kiểm tra kết nối rồi bấm Thử lại. Nội dung thông báo không chứa dữ liệu cá nhân của bạn.</string>
+    <string name="announcement_missing_title">Thông báo không còn tồn tại</string>
+    <string name="announcement_missing_body">Thông báo có thể đã bị gỡ hoặc đường dẫn không còn đúng. Quay lại Bảng tin để xem các thông báo khác.</string>
+    <plurals name="announcement_read_minutes">
+        <item quantity="other">%1$d phút đọc</item>
+    </plurals>
 </resources>
