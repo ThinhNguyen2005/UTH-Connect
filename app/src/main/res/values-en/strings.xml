@@ -164,4 +164,5 @@
     <string name="timetable_android">Android development</string>
     <string name="timetable_database">Databases</string>
     <string name="timetable_english">English</string>
+    <string name="timetable_title">Timetable</string>
 </resources>
