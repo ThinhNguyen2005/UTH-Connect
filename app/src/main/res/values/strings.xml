@@ -6,6 +6,7 @@
     <string name="common_meta_separator">•</string>
 
     <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
+    <string name="utilities_not_available">Chưa sẵn sàng</string>
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
@@ -175,4 +176,89 @@
     <string name="timetable_label_course">Môn học</string>
     <string name="timetable_room">Phòng %1$s</string>
     <string name="timetable_add_content_description">Thêm deadline</string>
+
+    <!-- Auth/Profile V2 -->
+    <string name="auth_password_change_title">Đổi mật khẩu</string>
+    <string name="auth_password_current">Mật khẩu hiện tại</string>
+    <string name="auth_password_new">Mật khẩu mới</string>
+    <string name="auth_password_confirm">Xác nhận mật khẩu mới</string>
+    <string name="auth_password_policy">Mật khẩu dài 8–64 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt; không có khoảng trắng.</string>
+    <string name="auth_password_wrong_current">Mật khẩu hiện tại không chính xác.</string>
+    <string name="auth_password_weak">Mật khẩu chưa đáp ứng yêu cầu độ mạnh.</string>
+    <string name="auth_password_same">Mật khẩu mới phải khác mật khẩu hiện tại.</string>
+    <string name="auth_password_mismatch">Xác nhận mật khẩu không khớp.</string>
+    <string name="auth_password_changed">Đã đổi mật khẩu demo trên thiết bị này. Lần đăng nhập sau hãy dùng mật khẩu mới.</string>
+    <string name="auth_contact_edit_title">Chỉnh sửa thông tin liên hệ</string>
+    <string name="auth_contact_phone">Số điện thoại</string>
+    <string name="auth_contact_email">Email cá nhân</string>
+    <string name="auth_contact_address">Địa chỉ trọ hiện tại</string>
+    <string name="auth_contact_not_set">Chưa cập nhật</string>
+    <string name="auth_contact_invalid_phone">Số điện thoại không hợp lệ (VD: 0912345678).</string>
+    <string name="auth_contact_invalid_email">Email cá nhân không hợp lệ.</string>
+    <string name="auth_contact_invalid_address">Địa chỉ không được vượt quá 200 ký tự.</string>
+    <string name="auth_contact_saved">Đã lưu thông tin liên hệ demo trên thiết bị này.</string>
+    <string name="auth_save_failed">Không lưu được dữ liệu. Vui lòng thử lại.</string>
+    <string name="auth_save">Lưu thay đổi</string>
+    <string name="auth_back">Quay lại</string>
+    <string name="auth_cancel">Hủy</string>
+    <string name="auth_biometric_enable">Bật đăng nhập bằng sinh trắc học</string>
+    <string name="auth_biometric_disable">Tắt đăng nhập bằng sinh trắc học</string>
+    <string name="auth_biometric_login">Đăng nhập bằng vân tay / khuôn mặt</string>
+    <string name="auth_biometric_subtitle">Xác thực sinh trắc học đã đăng ký trong cài đặt thiết bị</string>
+    <string name="auth_biometric_note">Chỉ hoạt động khi thiết bị hỗ trợ và đã đăng ký sinh trắc học mạnh. Chức năng chỉ mở phiên demo trên thiết bị.</string>
+    <string name="auth_biometric_error">Sinh trắc học không khả dụng hoặc xác thực bị hủy. Hãy cài đặt vân tay hoặc đăng nhập bằng mật khẩu.</string>
+    <string name="auth_biometric_enabled">Đã bật sinh trắc học. Lần mở ứng dụng sau, hãy bấm nút sinh trắc học để đăng nhập.</string>
+    <string name="auth_biometric_disabled">Đã tắt đăng nhập sinh trắc học.</string>
+    <string name="auth_logout_confirm_title">Xác nhận đăng xuất?</string>
+    <string name="auth_logout_confirm_body">Ứng dụng sẽ xóa phiên đã ghi nhớ và quyền đăng nhập sinh trắc học trên thiết bị. Bạn cần đăng nhập lại. Thông tin liên hệ đã lưu không bị xóa.</string>
+
+    <!-- Auth/Profile V3 -->
+    <string name="auth_verified_demo_badge">Đã xác minh (demo, không phải UTH)</string>
+    <string name="auth_unverified_badge">Chưa xác minh UTH</string>
+    <string name="auth_organizer_demo_badge">Ban tổ chức (demo)</string>
+    <string name="auth_logout_retry">Thử lại</string>
+    <!-- Auth/Profile V3.1: login retry -->
+    <string name="auth_login_retry">Thử đăng nhập lại</string>
+</resources>
+    <!-- Lost & Found -->
+    <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
+    <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>
+    <string name="lostfound_badge_lost">CẦN TÌM</string>
+    <string name="lostfound_badge_found">NHẶT ĐƯỢC</string>
+    <string name="lostfound_filter_all">Tất cả</string>
+    <string name="lostfound_filter_student_card">Thẻ SV / Thẻ xe</string>
+    <string name="lostfound_filter_electronics">Thiết bị điện tử</string>
+    <string name="lostfound_filter_wallet_papers">Ví / Giấy tờ</string>
+    <string name="lostfound_filter_personal_items">Đồ cá nhân</string>
+    <string name="lostfound_filter_other">Khác</string>
+    <string name="lostfound_post_action">Đăng tin</string>
+    <string name="lostfound_empty_list">Chưa có bài đăng nào trong mục này</string>
+    <string name="lostfound_empty_desc">Hãy thử chọn danh mục khác hoặc đăng bài mới</string>
+    <string name="lostfound_load_error_title">Không thể tải dữ liệu</string>
+    <string name="lostfound_load_error_desc">Đã có lỗi xảy ra khi lấy danh sách đồ thất lạc. Vui lòng thử lại.</string>
+    <string name="lostfound_dialog_title">Đăng tin đồ thất lạc</string>
+    <string name="lostfound_kind_lost_btn">Tôi bị mất đồ</string>
+    <string name="lostfound_kind_found_btn">Tôi nhặt được đồ</string>
+    <string name="lostfound_field_title">Tiêu đề tin đăng *</string>
+    <string name="lostfound_field_title_hint">Ví dụ: Rơi ví da màu đen tại CS1</string>
+    <string name="lostfound_field_desc">Mô tả chi tiết (tối thiểu 20 ký tự) *</string>
+    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, thời gian, hoàn cảnh thất lạc...</string>
+    <string name="lostfound_desc_counter">%1$d/20 ký tự tối thiểu</string>
+    <string name="lostfound_field_kind">Loại tin</string>
+    <string name="lostfound_field_category">Danh mục</string>
+    <string name="lostfound_field_location">Địa điểm (Cơ sở / Phòng)</string>
+    <string name="lostfound_field_location_hint">Ví dụ: Phòng B204 CS1</string>
+    <string name="lostfound_field_contact_name">Người liên hệ</string>
+    <string name="lostfound_field_contact_name_hint">Tên của bạn</string>
+    <string name="lostfound_field_contact_phone">Số điện thoại liên hệ</string>
+    <string name="lostfound_field_contact_phone_hint">Số điện thoại liên hệ</string>
+    <string name="lostfound_btn_submit">Đăng bài ngay</string>
+    <string name="lostfound_btn_cancel">Hủy</string>
+    <string name="lostfound_call_contact">Liên hệ</string>
+    <string name="lostfound_err_title_required">Tiêu đề không được để trống</string>
+    <string name="lostfound_err_desc_min_length">Mô tả phải có ít nhất 20 ký tự (hiện tại: %1$d)</string>
+    <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
+    <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
+    <string name="nav_back">Quay lại</string>
 </resources>

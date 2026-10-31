@@ -133,7 +133,7 @@ private fun UthModuleRow(
     val (tone, labelRes) = module.phase.badgeSpec()
     UthCard(
         modifier = modifier,
-        onClick = onClick,
+        onClick = if (module.enabled) onClick else null,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -147,6 +147,14 @@ private fun UthModuleRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = UthTheme.extendedColors.textSecondary,
                 )
+                if (!module.enabled) {
+                    Spacer(Modifier.height(UthDimens.Spacing.Xs))
+                    Text(
+                        text = stringResource(R.string.utilities_not_available),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = UthTheme.extendedColors.textSecondary,
+                    )
+                }
             }
             Spacer(Modifier.width(UthDimens.Spacing.Sm))
             UthStatusBadge(text = stringResource(labelRes), tone = tone)
