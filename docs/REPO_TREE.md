@@ -107,6 +107,8 @@ Phân công trên lấy từ Jira KAN-42–49 ngày 31/10/2026; tên nhánh là 
 
 **Cập nhật đồng bộ `develop`:** Lost & Found (Thắng) đã merge qua PR #20 tại `3f545c3`. Nhánh tích hợp CORE-1 đã merge commit đó tại `24117e7` và chuẩn bị graph; chờ Thắng xử lý review KAN-49 trước khi bật module. Chỉ đánh dấu ✅ DoD sau khi build/test tích hợp, review và smoke-test trên thiết bị.
 
+**Phụ thuộc Auth cho Events/Check-in (đối chiếu 31/10/2026):** `origin/feature/auth-phu` tại `bf38503` đã khai báo `StudentProfile.studentId`, `role: UserRole` và `uthVerified`; `UserRole` có `STUDENT`, `ORGANIZER`, `ADMIN`. Đây là role demo cục bộ, không thay thế kiểm tra quyền bằng server claims. `origin/develop` tại `3f545c3` có `studentId` nhưng chưa có `role` và `uthVerified` trong `StudentProfile`; không coi các trường này đã sẵn sàng trên nhánh tích hợp. PR Auth #16 còn review và nhánh có lỗi khôi phục session sau lỗi tạm thời; Events/Check-in cần đợi Auth được sửa, review và tích hợp trước khi phụ thuộc vào hợp đồng mới.
+
 Module nào cũng bắt đầu bằng 5 file đã chốt, copy nguyên `presentation/utilities/`:
 
 ```
