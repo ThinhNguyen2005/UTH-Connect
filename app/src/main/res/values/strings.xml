@@ -14,6 +14,21 @@
 
     <!-- Vé sự kiện / CHECKIN-1 -->
     <string name="tickets_title">Vé của tôi</string>
+    <string name="tickets_brand">UTH CONNECT</string>
+    <string name="tickets_logo_abbr">UTH</string>
+    <string name="tickets_subtitle">Tất cả vé sự kiện và hội thảo học thuật của bạn ở một nơi.</string>
+    <plurals name="tickets_count">
+        <item quantity="other">%1$d vé</item>
+    </plurals>
+    <string name="tickets_tab_upcoming">Sắp diễn ra</string>
+    <string name="tickets_tab_past">Đã qua</string>
+    <string name="tickets_card_code">Mã: %1$s</string>
+    <string name="tickets_upcoming_empty_title">Chưa có vé sắp diễn ra</string>
+    <string name="tickets_upcoming_empty_body">Đăng ký một sự kiện sắp tới, vé sẽ xuất hiện ở đây.</string>
+    <string name="tickets_past_empty_title">Chưa có vé đã qua</string>
+    <string name="tickets_past_empty_body">Vé của sự kiện đã kết thúc sẽ được lưu ở đây để bạn xem lại.</string>
+    <string name="tickets_stub_label">VÉ VÀO CỔNG</string>
+    <string name="tickets_stub_open">Mở vé</string>
     <string name="tickets_loading">Đang tải vé…</string>
     <string name="tickets_error_title">Không tải được vé</string>
     <string name="tickets_error_body">Kiểm tra kết nối rồi thử lại.</string>
@@ -22,12 +37,15 @@
     <string name="tickets_status_valid">Có hiệu lực</string>
     <string name="tickets_status_checked_in">Đã điểm danh</string>
     <string name="tickets_status_cancelled">Đã hủy</string>
-    <string name="tickets_open_qr">Mở vé và mã check-in</string>
-    <string name="tickets_qr_title">Vé check-in</string>
-    <string name="tickets_qr_placeholder">QR placeholder</string>
-    <string name="tickets_qr_text">■ □ ■ □ ■&#10;□ ■ ■ □ ■&#10;■ □ □ ■ ■</string>
-    <string name="tickets_qr_payload">Mã vé: %1$s</string>
-    <string name="tickets_fallback_code">Mã dự phòng: %1$s</string>
+    <string name="tickets_qr_title">Chi tiết vé</string>
+    <string name="tickets_detail_time">Thời gian</string>
+    <string name="tickets_detail_seat">Chỗ ngồi</string>
+    <string name="tickets_detail_seat_free">Khu vực tự do</string>
+    <string name="tickets_detail_location">Địa điểm tổ chức</string>
+    <string name="tickets_detail_student">Thông tin sinh viên</string>
+    <string name="tickets_detail_student_id">MSSV: %1$s</string>
+    <string name="tickets_detail_copy">Sao chép mã vé</string>
+    <string name="tickets_detail_copied">Đã sao chép mã vé %1$s</string>
     <string name="tickets_countdown">Mã làm mới sau %1$d giây</string>
     <string name="tickets_qr_notice">Mã QR thật sẽ được tích hợp sau khi backend cấp token.</string>
     <string name="tickets_qr_missing">Không tìm thấy dữ liệu vé. Hãy quay lại danh sách và mở vé lần nữa.</string>

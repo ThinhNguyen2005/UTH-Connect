@@ -42,6 +42,7 @@ fun TicketQrRoute(
     val ticketId = entry.toRoute<TicketQrDestination>().ticketId
     TicketQrScreen(
         ticket = state.selectedTicket?.takeIf { it.id == ticketId },
+        studentName = state.studentName,
         secondsRemaining = state.secondsRemaining,
         onBack = {
             viewModel.onAction(TicketsAction.CloseTicket)

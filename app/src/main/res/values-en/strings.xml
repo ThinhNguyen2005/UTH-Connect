@@ -12,6 +12,22 @@
     <string name="tab_tickets">My tickets</string>
 
     <string name="tickets_title">My tickets</string>
+    <string name="tickets_brand">UTH CONNECT</string>
+    <string name="tickets_logo_abbr">UTH</string>
+    <string name="tickets_subtitle">Every event and academic workshop ticket you hold, in one place.</string>
+    <plurals name="tickets_count">
+        <item quantity="one">%1$d ticket</item>
+        <item quantity="other">%1$d tickets</item>
+    </plurals>
+    <string name="tickets_tab_upcoming">Upcoming</string>
+    <string name="tickets_tab_past">Past</string>
+    <string name="tickets_card_code">Code: %1$s</string>
+    <string name="tickets_upcoming_empty_title">No upcoming tickets</string>
+    <string name="tickets_upcoming_empty_body">Register for an upcoming event and its ticket shows up here.</string>
+    <string name="tickets_past_empty_title">No past tickets yet</string>
+    <string name="tickets_past_empty_body">Tickets for events that already ended are kept here for you to look back on.</string>
+    <string name="tickets_stub_label">ENTRY PASS</string>
+    <string name="tickets_stub_open">Open ticket</string>
     <string name="tickets_loading">Loading tickets…</string>
     <string name="tickets_error_title">Could not load tickets</string>
     <string name="tickets_error_body">Check your connection and try again.</string>
@@ -20,12 +36,15 @@
     <string name="tickets_status_valid">Valid</string>
     <string name="tickets_status_checked_in">Checked in</string>
     <string name="tickets_status_cancelled">Cancelled</string>
-    <string name="tickets_open_qr">Open ticket and check-in code</string>
-    <string name="tickets_qr_title">Check-in ticket</string>
-    <string name="tickets_qr_placeholder">QR placeholder</string>
-    <string name="tickets_qr_text">■ □ ■ □ ■&#10;□ ■ ■ □ ■&#10;■ □ □ ■ ■</string>
-    <string name="tickets_qr_payload">Ticket code: %1$s</string>
-    <string name="tickets_fallback_code">Fallback code: %1$s</string>
+    <string name="tickets_qr_title">Ticket details</string>
+    <string name="tickets_detail_time">Time</string>
+    <string name="tickets_detail_seat">Seat</string>
+    <string name="tickets_detail_seat_free">Free seating</string>
+    <string name="tickets_detail_location">Venue</string>
+    <string name="tickets_detail_student">Student information</string>
+    <string name="tickets_detail_student_id">Student ID: %1$s</string>
+    <string name="tickets_detail_copy">Copy ticket code</string>
+    <string name="tickets_detail_copied">Ticket code %1$s copied</string>
     <string name="tickets_countdown">Code refreshes in %1$d seconds</string>
     <string name="tickets_qr_notice">A real QR code will be added when the backend issues tokens.</string>
     <string name="tickets_qr_missing">Ticket data is unavailable. Return to the list and open the ticket again.</string>
