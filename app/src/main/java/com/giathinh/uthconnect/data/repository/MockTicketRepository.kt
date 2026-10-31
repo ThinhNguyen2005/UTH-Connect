@@ -14,8 +14,30 @@ class MockTicketRepository @Inject constructor() : TicketRepository {
 
     private companion object {
         val mockTickets = listOf(
-            Ticket("ticket-sports", DEMO_STUDENT_ID, "event-sports", "Hội thao Sinh viên UTH 2026", "Cơ sở Quang Trung", "12/11/2026 · 07:00", TicketStatus.VALID, "482 917"),
-            Ticket("ticket-club", DEMO_STUDENT_ID, "event-club", "Giao lưu CLB Ánh Sáng", "Cơ sở Nguyễn Tất Thành", "15/11/2026 · 18:30", TicketStatus.CHECKED_IN, "105 638"),
+            Ticket(
+                id = "ticket-sports",
+                studentId = DEMO_STUDENT_ID,
+                eventId = "event-sports",
+                eventTitle = "Hội thao Sinh viên UTH 2026",
+                eventLocation = "Sân vận động Cơ sở 2",
+                eventStartsAt = "12/11/2026 · 07:00",
+                status = TicketStatus.VALID,
+                fallbackCode = "482 917",
+                organizerName = "CLB Thể Thao UTH",
+                seatLabel = "Ghế A-14",
+            ),
+            Ticket(
+                id = "ticket-club",
+                studentId = DEMO_STUDENT_ID,
+                eventId = "event-club",
+                eventTitle = "Giao lưu CLB Ánh Sáng",
+                eventLocation = "Hội trường A.102",
+                eventStartsAt = "15/11/2026 · 18:30",
+                status = TicketStatus.CHECKED_IN,
+                fallbackCode = "105 638",
+                organizerName = "Đội CTXH Ánh Sáng",
+                seatLabel = "Nhóm tự do",
+            ),
         )
         const val DEMO_STUDENT_ID = "2023040123"
     }

@@ -10,6 +10,10 @@ data class Ticket(
     val eventStartsAt: String,
     val status: TicketStatus,
     val fallbackCode: String,
+    /** Đơn vị tổ chức in dưới tên vé; null khi sự kiện chưa có dữ liệu này. */
+    val organizerName: String? = null,
+    /** Chỗ ngồi in trên vé; null với sự kiện không chia ghế. */
+    val seatLabel: String? = null,
 )
 
 /** Trạng thái nghiệp vụ của vé. */
