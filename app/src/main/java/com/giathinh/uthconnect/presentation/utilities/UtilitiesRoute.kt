@@ -1,38 +1,83 @@
 package com.giathinh.uthconnect.presentation.utilities
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.presentation.utilities.campuses.CampusesScreen
+import com.giathinh.uthconnect.presentation.utilities.settings.SettingsScreen
+import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointScreen
+import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionScreen
 
 /**
- * Tầng nối (route) của tab Tiện ích: chỗ **duy nhất** trong module lấy ViewModel ra
- * khỏi Hilt.
- *
- * Tách khỏi `UtilitiesScreen` vì:
- * - Screen nhận `UiState` + phát `Action` thì preview được mọi trạng thái mà không
- *   cần repository thật (điều kiện DoD trong `README.md` mục 10.2).
- * - ViewModel không được truyền xuống composable con — chỉ truyền dữ liệu và hàm
- *   (theo tài liệu Android: "access ViewModels at screen-level composables").
- *
- * `hiltViewModel()` scope ViewModel theo `NavBackStackEntry` của route (NavHost đặt
- * `LocalViewModelStoreOwner` theo entry), nên trở lại tab là gặp lại đúng trạng thái
- * cũ; activity gốc đã có `@AndroidEntryPoint` nên không cần factory thủ công.
+ * Tầng nối (route) của tab Tiện ích: Quản lý ViewModel và Navigation con
+ * giữa Hub Tiện ích với các màn hình con tương ứng.
  */
 @Composable
 fun UtilitiesRoute(
     modifier: Modifier = Modifier,
     viewModel: UtilitiesViewModel = hiltViewModel(),
+    navController: NavHostController = rememberNavController(),
 ) {
-    // collectAsStateWithLifecycle: ngừng nhận khi activity stop, không rò rỉ và
-    // không vẽ lại vô ích. Bản `collectAsState` không lifecycle-aware chỉ dành cho
-    // thư viện multiplatform; app Android thì dùng bản này.
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val tuitionState by viewModel.tuitionState.collectAsStateWithLifecycle()
+    val trainingPointState by viewModel.trainingPointState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
 
-    UtilitiesScreen(
-        uiState = uiState,
-        onAction = viewModel::onAction,
+    NavHost(
+        navController = navController,
+        startDestination = UtilitiesDestination.Hub,
         modifier = modifier,
-    )
+        enterTransition = { fadeIn(tween(UthDimens.Motion.RouteFadeMillis)) },
+        exitTransition = { fadeOut(tween(UthDimens.Motion.RouteFadeMillis)) },
+    ) {
+        composable<UtilitiesDestination.Hub> {
+            UtilitiesScreen(
+                uiState = uiState,
+                onAction = viewModel::onAction,
+                onNavigateToTuition = { navController.navigate(UtilitiesDestination.Tuition) },
+                onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
+                onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },
+                onNavigateToSettings = { navController.navigate(UtilitiesDestination.Settings) },
+            )
+        }
+
+        composable<UtilitiesDestination.Tuition> {
+            TuitionScreen(
+                uiState = tuitionState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.TrainingPoint> {
+            TrainingPointScreen(
+                uiState = trainingPointState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.Campuses> {
+            CampusesScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.Settings> {
+            SettingsScreen(
+                uiState = settingsState,
+                onToggleTuitionReminder = viewModel::onToggleTuitionReminder,
+                onToggleTrainingPointNotif = viewModel::onToggleTrainingPointNotif,
+                onBack = { navController.popBackStack() },
+            )
+        }
+    }
 }

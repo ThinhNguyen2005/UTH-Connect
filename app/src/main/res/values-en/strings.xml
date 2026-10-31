@@ -16,13 +16,70 @@
     <string name="schedule_wip_title">Schedule</string>
     <string name="schedule_wip_body">Phase 2 module. This screen is waiting for the feature/timetable-&lt;your-name&gt; branch.</string>
 
-    <string name="utilities_title">Utilities</string>
-    <string name="utilities_subtitle">Every UTH Connect module in one place.</string>
-    <string name="utilities_loading">Loading modules…</string>
+    <!-- Utilities -->
+    <string name="utilities_title">Utilities Center</string>
+    <string name="utilities_subtitle">Tuition lookup, training points, UTH campuses and settings.</string>
+    <string name="utilities_grid_tuition">Tuition lookup</string>
+    <string name="utilities_grid_tuition_desc">Payment status &amp; guide</string>
+    <string name="utilities_grid_training_point">Training points</string>
+    <string name="utilities_grid_training_point_desc">Score &amp; evaluation</string>
+    <string name="utilities_grid_campuses">Campuses &amp; Directory</string>
+    <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
+    <string name="utilities_grid_settings">Settings</string>
+    <string name="utilities_grid_settings_desc">Notifications &amp; version</string>
+    <string name="utilities_section_upcoming">Upcoming services</string>
+    <string name="utilities_loading">Loading modules.</string>
     <string name="utilities_error_title">Could not load the list</string>
     <string name="utilities_error_body">Check your connection and press Retry. This list holds no personal data.</string>
     <string name="utilities_empty_title">No modules yet</string>
     <string name="utilities_empty_body">The first enabled module will show up here.</string>
+
+    <!-- Tuition -->
+    <string name="tuition_title">Tuition Lookup</string>
+    <string name="tuition_semester">Semester 1 (Academic Year 2025 - 2026)</string>
+    <string name="tuition_status_paid">COMPLETED</string>
+    <string name="tuition_status_unpaid">PENDING PAYMENT</string>
+    <string name="tuition_total_amount">Total tuition fee</string>
+    <string name="tuition_paid_amount">Paid amount</string>
+    <string name="tuition_remaining_amount">Remaining amount</string>
+    <string name="tuition_credits_count">Enrolled credits: %1$d</string>
+    <string name="tuition_due_date">Payment deadline: %1$s</string>
+    <string name="tuition_courses_header">Enrolled courses</string>
+    <string name="tuition_payment_guide_header">Bank transfer information</string>
+    <string name="tuition_bank_account_name">Account name: Ho Chi Minh City University of Transport</string>
+    <string name="tuition_bank_account_number">Account number: 118000003666 - VietinBank (Gia Dinh branch)</string>
+    <string name="tuition_payment_syntax">Syntax: [StudentID] [Full Name] HP HK1</string>
+
+    <!-- Training points -->
+    <string name="training_point_title">Training Points</string>
+    <string name="training_point_semester">Evaluation Semester 1 (2025 - 2026)</string>
+    <string name="training_point_rank_excellent">EXCELLENT</string>
+    <string name="training_point_rank_good">GOOD</string>
+    <string name="training_point_rank_fair">FAIR</string>
+    <string name="training_point_criteria_header">Evaluation criteria breakdown</string>
+    <string name="training_point_total_label">Overall training score</string>
+
+    <!-- Campuses & Directory -->
+    <string name="campuses_title">Campuses &amp; Directory</string>
+    <string name="campuses_subtitle">Contact info for campuses and departments of UTH</string>
+    <string name="campuses_list_header">Campus locations</string>
+    <string name="campuses_departments_header">Support departments</string>
+    <string name="campuses_call_action">Call</string>
+    <string name="campuses_email_action">Email</string>
+
+    <!-- Settings -->
+    <string name="settings_title">App Settings</string>
+    <string name="settings_notification_header">Notifications</string>
+    <string name="settings_notif_tuition">Tuition payment reminder</string>
+    <string name="settings_notif_tuition_desc">Receive notifications near payment deadline</string>
+    <string name="settings_notif_training">Training points update</string>
+    <string name="settings_notif_training_desc">Receive notification when new score is published</string>
+    <string name="settings_app_info_header">Application Information</string>
+    <string name="settings_version_label">Version</string>
+    <string name="settings_version_value">1.0.0 (Build 2026.1)</string>
+    <string name="settings_team_label">Developed by</string>
+    <string name="settings_team_value">UTH Connect Project Team</string>
+
     <string name="module_events_title">Events &amp; clubs</string>
     <string name="module_events_desc">Registration, QR tickets and attendance for clubs.</string>
     <string name="module_timetable_title">Timetable</string>

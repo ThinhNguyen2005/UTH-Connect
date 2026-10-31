@@ -1,6 +1,9 @@
 package com.giathinh.uthconnect.presentation.utilities
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,19 +16,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
+import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
@@ -35,14 +47,17 @@ import com.giathinh.uthconnect.domain.model.UtilityModule
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 
 /**
- * Screen **stateless**: chỉ render [UtilitiesUiState] và phát [UtilitiesAction].
- * Không repository, không `hiltViewModel()` trong file này — đó là ràng buộc tầng
- * `ui` trong `README.md` mục 5.2 và là lý do mọi trạng thái dưới đây preview được.
+ * Screen **stateless**: chỉ render [UtilitiesUiState] và phát [UtilitiesAction]
+ * hoặc kích hoạt các callback điều hướng con.
  */
 @Composable
 fun UtilitiesScreen(
     uiState: UtilitiesUiState,
     onAction: (UtilitiesAction) -> Unit,
+    onNavigateToTuition: () -> Unit = {},
+    onNavigateToTrainingPoint: () -> Unit = {},
+    onNavigateToCampuses: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -55,6 +70,7 @@ fun UtilitiesScreen(
         Text(
             text = stringResource(R.string.utilities_title),
             style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xs))
         Text(
@@ -62,7 +78,55 @@ fun UtilitiesScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = UthTheme.extendedColors.textSecondary,
         )
+        Spacer(Modifier.height(UthDimens.Spacing.Lg))
+
+        // Lưới Grid 4 dịch vụ tiện ích sinh viên chính
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            UtilityGridCard(
+                title = stringResource(R.string.utilities_grid_tuition),
+                subtitle = stringResource(R.string.utilities_grid_tuition_desc),
+                icon = Icons.Filled.DateRange,
+                onClick = onNavigateToTuition,
+                modifier = Modifier.weight(1f),
+            )
+            UtilityGridCard(
+                title = stringResource(R.string.utilities_grid_training_point),
+                subtitle = stringResource(R.string.utilities_grid_training_point_desc),
+                icon = Icons.Filled.Star,
+                onClick = onNavigateToTrainingPoint,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            UtilityGridCard(
+                title = stringResource(R.string.utilities_grid_campuses),
+                subtitle = stringResource(R.string.utilities_grid_campuses_desc),
+                icon = Icons.Filled.Place,
+                onClick = onNavigateToCampuses,
+                modifier = Modifier.weight(1f),
+            )
+            UtilityGridCard(
+                title = stringResource(R.string.utilities_grid_settings),
+                subtitle = stringResource(R.string.utilities_grid_settings_desc),
+                icon = Icons.Filled.Settings,
+                onClick = onNavigateToSettings,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
         Spacer(Modifier.height(UthDimens.Spacing.Section))
+
+        // Khu vực các dịch vụ lộ trình tiếp theo
+        UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
 
         when {
             uiState.isLoading -> UtilitiesLoading()
@@ -83,6 +147,58 @@ fun UtilitiesScreen(
                 )
             }
         }
+
+        Spacer(Modifier.height(UthDimens.Spacing.Xl))
+    }
+}
+
+/**
+ * Card dịch vụ dạng ô lưới Grid.
+ */
+@Composable
+private fun UtilityGridCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(
+        modifier = modifier,
+        onClick = onClick,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Spacer(Modifier.height(UthDimens.Spacing.Xs))
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = UthTheme.extendedColors.textSecondary,
+        )
     }
 }
 
@@ -110,7 +226,6 @@ private fun UtilitiesLoading() {
 
 @Composable
 private fun UtilitiesError(onRetry: () -> Unit) {
-    // enum → chuỗi: phần tử map đặt ở UI, vì ViewModel không được cầm @StringRes.
     UthEmptyState(
         title = stringResource(R.string.utilities_error_title),
         body = stringResource(R.string.utilities_error_body),
@@ -120,10 +235,6 @@ private fun UtilitiesError(onRetry: () -> Unit) {
     )
 }
 
-/**
- * Card module. `onClick` chỉ phát action — xử lý gì (mở graph con, hiện "sắp ra
- * mắt") là quyết định của ViewModel và branch phụ trách module đó.
- */
 @Composable
 private fun UthModuleRow(
     module: UtilityModule,
@@ -181,7 +292,6 @@ private fun UtilityModuleId.descRes(): Int = when (this) {
     UtilityModuleId.RIDE_SHARE -> R.string.module_rideshare_desc
 }
 
-/** Dữ liệu giả cho preview — không phải nguồn thật, chỉ để dựng 4 trạng thái. */
 private val PreviewModules = listOf(
     UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = true),
     UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
@@ -191,7 +301,12 @@ private val PreviewModules = listOf(
 
 @Composable
 private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = false) =
-    UthPreview(darkTheme = darkTheme) { UtilitiesScreen(uiState = state, onAction = {}) }
+    UthPreview(darkTheme = darkTheme) {
+        UtilitiesScreen(
+            uiState = state,
+            onAction = {},
+        )
+    }
 
 @Preview(name = "content light", showBackground = true)
 @Composable
@@ -207,29 +322,8 @@ private fun UtilitiesContentDarkPreview() =
 @Composable
 private fun UtilitiesLoadingPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = true))
 
-@Preview(name = "loading dark", showBackground = true)
-@Composable
-private fun UtilitiesLoadingDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = true), darkTheme = true)
-
 @Preview(name = "error light", showBackground = true)
 @Composable
 private fun UtilitiesErrorPreview() = UtilitiesStatePreview(
     UtilitiesUiState(isLoading = false, failure = UtilitiesFailure.LoadFailed),
 )
-
-@Preview(name = "error dark", showBackground = true)
-@Composable
-private fun UtilitiesErrorDarkPreview() = UtilitiesStatePreview(
-    UtilitiesUiState(isLoading = false, failure = UtilitiesFailure.LoadFailed),
-    darkTheme = true,
-)
-
-@Preview(name = "empty light", showBackground = true)
-@Composable
-private fun UtilitiesEmptyPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false))
-
-@Preview(name = "empty dark", showBackground = true)
-@Composable
-private fun UtilitiesEmptyDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false), darkTheme = true)
