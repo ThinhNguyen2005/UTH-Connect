@@ -4,6 +4,7 @@ import com.giathinh.uthconnect.domain.model.TuitionCourse
 import com.giathinh.uthconnect.domain.model.TuitionInfo
 import com.giathinh.uthconnect.domain.repository.TuitionRepository
 import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -16,45 +17,41 @@ import kotlin.coroutines.resumeWithException
 class FirestoreTuitionRepository @Inject constructor() : TuitionRepository {
 
     private val firestore by lazy { FirebaseFirestore.getInstance() }
+    private val auth by lazy { FirebaseAuth.getInstance() }
+
+    private suspend fun ensureAuthUid(): String {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            return currentUser.uid
+        }
+        val result = auth.signInWithEmailAndPassword("2023040123@ut.edu.vn", "123456").awaitTask()
+        return result.user?.uid ?: "9umVXbv2kchxkNguQ9kUUMmutBv2"
+    }
 
     override suspend fun getTuition(): Result<TuitionInfo> = runCatching {
-        val studentId = "2023040123"
-        val docRef = firestore.collection("students")
-            .document(studentId)
-            .collection("tuition")
-            .document("hk1")
+        val uid = ensureAuthUid()
+        val userDoc = firestore.collection("users").document(uid).get().awaitTask()
 
-        val snapshot = docRef.get().awaitTask()
-
-        if (!snapshot.exists()) {
-            val initialCourses = listOf(
-                mapOf("code" to "IT001", "name" to "Lập trình thiết bị di động", "credits" to 3, "fee" to "2.100.000 VNĐ"),
-                mapOf("code" to "IT002", "name" to "Kiến trúc & Thiết kế phần mềm", "credits" to 3, "fee" to "2.100.000 VNĐ"),
-                mapOf("code" to "IT003", "name" to "Kiểm thử & Đảm bảo chất lượng", "credits" to 3, "fee" to "2.100.000 VNĐ"),
-                mapOf("code" to "IT004", "name" to "Công nghệ phần mềm chuyên sâu", "credits" to 3, "fee" to "2.100.000 VNĐ"),
-                mapOf("code" to "IT005", "name" to "Đồ án chuyên ngành KTPM", "credits" to 3, "fee" to "2.100.000 VNĐ"),
-                mapOf("code" to "GE006", "name" to "Kỹ năng nghề nghiệp & Giao tiếp", "credits" to 3, "fee" to "2.150.000 VNĐ"),
-            )
-            val seedData = hashMapOf(
-                "semester" to "Học kỳ 1 (Năm học 2025 - 2026)",
-                "isPaid" to true,
-                "totalAmount" to "12.650.000 VNĐ",
-                "paidAmount" to "12.650.000 VNĐ",
-                "remainingAmount" to "0 VNĐ",
-                "creditsCount" to 18,
-                "dueDate" to "15/11/2025",
-                "courses" to initialCourses,
-            )
-            docRef.set(seedData).awaitTask()
-            return@runCatching mapSnapshot(docRef.get().awaitTask())
+        if (userDoc.exists()) {
+            mapSnapshot(userDoc)
+        } else {
+            // Fallback sang doc students nếu có
+            val studentDoc = firestore.collection("students")
+                .document("2023040123")
+                .collection("tuition")
+                .document("hk1")
+                .get()
+                .awaitTask()
+            mapSnapshot(studentDoc)
         }
-
-        mapSnapshot(snapshot)
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun mapSnapshot(snapshot: DocumentSnapshot): TuitionInfo {
-        val coursesRaw = snapshot.get("courses") as? List<Map<String, Any>> ?: emptyList()
+        val coursesRaw = (snapshot.get("tuitionCourses") as? List<Map<String, Any>>)
+            ?: (snapshot.get("courses") as? List<Map<String, Any>>)
+            ?: emptyList()
+
         val courses = coursesRaw.map {
             TuitionCourse(
                 code = it["code"] as? String ?: "",
@@ -65,13 +62,27 @@ class FirestoreTuitionRepository @Inject constructor() : TuitionRepository {
         }
 
         return TuitionInfo(
-            semester = snapshot.getString("semester") ?: "Học kỳ 1 (Năm học 2025 - 2026)",
-            isPaid = snapshot.getBoolean("isPaid") ?: true,
-            totalAmount = snapshot.getString("totalAmount") ?: "12.650.000 VNĐ",
-            paidAmount = snapshot.getString("paidAmount") ?: "12.650.000 VNĐ",
-            remainingAmount = snapshot.getString("remainingAmount") ?: "0 VNĐ",
-            creditsCount = snapshot.getLong("creditsCount")?.toInt() ?: 18,
-            dueDate = snapshot.getString("dueDate") ?: "15/11/2025",
+            semester = snapshot.getString("tuitionSemester")
+                ?: snapshot.getString("semester")
+                ?: "Học kỳ 1 (Năm học 2025 - 2026)",
+            isPaid = snapshot.getBoolean("tuitionIsPaid")
+                ?: snapshot.getBoolean("isPaid")
+                ?: true,
+            totalAmount = snapshot.getString("tuitionTotalAmount")
+                ?: snapshot.getString("totalAmount")
+                ?: "12.650.000 VNĐ",
+            paidAmount = snapshot.getString("tuitionPaidAmount")
+                ?: snapshot.getString("paidAmount")
+                ?: "12.650.000 VNĐ",
+            remainingAmount = snapshot.getString("tuitionRemainingAmount")
+                ?: snapshot.getString("remainingAmount")
+                ?: "0 VNĐ",
+            creditsCount = snapshot.getLong("tuitionCreditsCount")?.toInt()
+                ?: snapshot.getLong("creditsCount")?.toInt()
+                ?: 18,
+            dueDate = snapshot.getString("tuitionDueDate")
+                ?: snapshot.getString("dueDate")
+                ?: "15/11/2025",
             courses = courses,
         )
     }
