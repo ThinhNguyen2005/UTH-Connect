@@ -10,6 +10,28 @@
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+    <string name="tab_tickets">Vé của tôi</string>
+
+    <!-- Vé sự kiện / CHECKIN-1 -->
+    <string name="tickets_title">Vé của tôi</string>
+    <string name="tickets_loading">Đang tải vé…</string>
+    <string name="tickets_error_title">Không tải được vé</string>
+    <string name="tickets_error_body">Kiểm tra kết nối rồi thử lại.</string>
+    <string name="tickets_empty_title">Bạn chưa có vé sự kiện</string>
+    <string name="tickets_empty_body">Đăng ký một sự kiện để vé xuất hiện tại đây.</string>
+    <string name="tickets_status_valid">Có hiệu lực</string>
+    <string name="tickets_status_checked_in">Đã điểm danh</string>
+    <string name="tickets_status_cancelled">Đã hủy</string>
+    <string name="tickets_open_qr">Mở vé và mã check-in</string>
+    <string name="tickets_qr_title">Vé check-in</string>
+    <string name="tickets_qr_placeholder">QR placeholder</string>
+    <string name="tickets_qr_text">■ □ ■ □ ■&#10;□ ■ ■ □ ■&#10;■ □ □ ■ ■</string>
+    <string name="tickets_qr_payload">Mã vé: %1$s</string>
+    <string name="tickets_fallback_code">Mã dự phòng: %1$s</string>
+    <string name="tickets_countdown">Mã làm mới sau %1$d giây</string>
+    <string name="tickets_qr_notice">Mã QR thật sẽ được tích hợp sau khi backend cấp token.</string>
+    <string name="tickets_qr_missing">Không tìm thấy dữ liệu vé. Hãy quay lại danh sách và mở vé lần nữa.</string>
+    <string name="common_back">Quay lại</string>
 
     <!-- Trang chủ / bảng tin (presentation/home) -->
     <string name="home_uni_name">ĐH Giao thông Vận tải TP.HCM</string>

@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
 
@@ -53,6 +54,12 @@ enum class UthDestination(
         ProfileDestination::class,
         R.string.tab_profile,
         Icons.Filled.Person,
+    ),
+    TICKETS(
+        TicketsDestination,
+        TicketsDestination::class,
+        R.string.tab_tickets,
+        Icons.Filled.DateRange,
     ),
     ;
 

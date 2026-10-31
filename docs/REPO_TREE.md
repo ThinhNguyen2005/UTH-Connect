@@ -31,14 +31,15 @@ app/src/main/java/com/giathinh/uthconnect/
 │       ├── component/  UthComponents.kt · UthStatusBadge.kt                          [chủ repo]
 │       └── theme/      Color.kt · Dimens.kt · Theme.kt · Type.kt                     [chủ repo]
 ├── data/
-│   ├── di/            UtilitiesDataModule.kt      ← binding interface→impl           [utilities]
-│   └── repository/    StaticUtilityModuleRepository.kt                               [utilities]
+│   ├── di/            UtilitiesDataModule.kt · TicketDataModule.kt                   [utilities · checkin]
+│   └── repository/    StaticUtilityModuleRepository.kt · MockTicketRepository.kt     [utilities · checkin]
 ├── domain/
-│   ├── model/         UtilityModule.kt                                                [utilities]
-│   ├── repository/    UtilityModuleRepository.kt                                      [utilities]
-│   └── usecase/       GetUtilityModulesUseCase.kt                                     [utilities]
+│   ├── model/         UtilityModule.kt · Ticket.kt · Attendance.kt                    [utilities · checkin]
+│   ├── repository/    UtilityModuleRepository.kt · TicketRepository.kt                [utilities · checkin]
+│   └── usecase/       GetUtilityModulesUseCase.kt · GetTicketsUseCase.kt               [utilities · checkin]
 └── presentation/
-    ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo]
+    ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo; extended for tickets]
+    ├── tickets/       README · TicketsScreen · Route · ViewModel · UiState · Action · Navigation [checkin]
     ├── home/          HomeScreen.kt          (placeholder, chưa MVVM)                 [events]
     ├── schedule/      ScheduleScreen.kt      (placeholder, chưa MVVM)                 [timetable]
     ├── profile/       ProfileScreen.kt       (placeholder, chưa MVVM)                 [auth]
@@ -48,6 +49,7 @@ app/src/main/java/com/giathinh/uthconnect/
 app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
 └── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test, đang xanh)            [utilities]
+    └── presentation/tickets/ TicketsViewModelTest.kt                                      [checkin]
 ```
 
 Trống nhưng còn trên đĩa: `core/di/` (xoá cùng `AppContainer.kt` khi chuyển sang Hilt — **không** tái tạo nếu chưa có provider dùng chung), `ui/` (rác template Android Studio, git đã xoá file, chỉ còn thư mục rỗng ở máy local).
@@ -171,5 +173,6 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | Bản | Ngày | Thay đổi cấu trúc |
 |---|---|---|
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
+| v1.2 | 31/10/2026 | CHECKIN-1: thêm `domain/model/Ticket.kt` + `Attendance.kt`, repository/use case lọc theo `studentId` từ AUTH-1, mock data + Hilt binding, `presentation/tickets/` (danh sách, route type-safe tới QR text placeholder, countdown 60 giây), song ngữ strings, module README và 5 unit test. Thêm tab Vé để màn danh sách có lối vào. |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
 | trước v1.0 | 28/10/2026 | Dựng cây Clean Architecture `core/ · data/ · domain/ · presentation/`; xoá `ui/theme/` của template Android Studio (chuyển vào `core/designsystem/theme/`); thêm slice MVVM mẫu ở `presentation/utilities/` + `test/testing/MainDispatcherRule.kt`. |

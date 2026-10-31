@@ -9,6 +9,27 @@
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+    <string name="tab_tickets">My tickets</string>
+
+    <string name="tickets_title">My tickets</string>
+    <string name="tickets_loading">Loading tickets…</string>
+    <string name="tickets_error_title">Could not load tickets</string>
+    <string name="tickets_error_body">Check your connection and try again.</string>
+    <string name="tickets_empty_title">You have no event tickets</string>
+    <string name="tickets_empty_body">Register for an event and your ticket will appear here.</string>
+    <string name="tickets_status_valid">Valid</string>
+    <string name="tickets_status_checked_in">Checked in</string>
+    <string name="tickets_status_cancelled">Cancelled</string>
+    <string name="tickets_open_qr">Open ticket and check-in code</string>
+    <string name="tickets_qr_title">Check-in ticket</string>
+    <string name="tickets_qr_placeholder">QR placeholder</string>
+    <string name="tickets_qr_text">■ □ ■ □ ■&#10;□ ■ ■ □ ■&#10;■ □ □ ■ ■</string>
+    <string name="tickets_qr_payload">Ticket code: %1$s</string>
+    <string name="tickets_fallback_code">Fallback code: %1$s</string>
+    <string name="tickets_countdown">Code refreshes in %1$d seconds</string>
+    <string name="tickets_qr_notice">A real QR code will be added when the backend issues tokens.</string>
+    <string name="tickets_qr_missing">Ticket data is unavailable. Return to the list and open the ticket again.</string>
+    <string name="common_back">Back</string>
 
     <string name="home_uni_name">University of Transport and Communications</string>
     <string name="home_uni_tagline">Connected student portal</string>
