@@ -105,4 +105,30 @@
     <!-- Cá nhân -->
     <string name="profile_wip_title">Chưa đăng nhập</string>
     <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
+    <!-- Lost & Found -->
+    <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
+    <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>
+    <string name="lostfound_filter_all">Tất cả</string>
+    <string name="lostfound_filter_student_card">Thẻ SV / Thẻ xe</string>
+    <string name="lostfound_filter_electronics">Thiết bị điện tử</string>
+    <string name="lostfound_filter_wallet_papers">Ví / Giấy tờ</string>
+    <string name="lostfound_filter_personal_items">Đồ cá nhân</string>
+    <string name="lostfound_filter_other">Khác</string>
+    <string name="lostfound_post_action">Đăng tin</string>
+    <string name="lostfound_empty_list">Chưa có bài đăng nào trong mục này</string>
+    <string name="lostfound_dialog_title">Đăng tin đồ thất lạc</string>
+    <string name="lostfound_field_title">Tiêu đề tin đăng *</string>
+    <string name="lostfound_field_title_hint">Ví dụ: Rơi ví da màu đen tại CS1</string>
+    <string name="lostfound_field_desc">Mô tả chi tiết (tối thiểu 20 ký tự) *</string>
+    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, thời gian, hoàn cảnh thất lạc...</string>
+    <string name="lostfound_field_kind">Loại tin</string>
+    <string name="lostfound_field_category">Danh mục</string>
+    <string name="lostfound_field_location">Địa điểm (Cơ sở / Phòng)</string>
+    <string name="lostfound_field_contact_name">Người liên hệ</string>
+    <string name="lostfound_field_contact_phone">Số điện thoại liên hệ</string>
+    <string name="lostfound_btn_submit">Đăng bài ngay</string>
+    <string name="lostfound_btn_cancel">Hủy</string>
+    <string name="lostfound_call_contact">Liên hệ</string>
+    <string name="nav_back">Quay lại</string>
 </resources>

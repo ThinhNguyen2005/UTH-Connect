@@ -99,4 +99,30 @@
 
     <string name="profile_wip_title">Not signed in</string>
     <string name="profile_wip_body">Sign-in with a university email (@uth.edu.vn) unlocks when the account verification module lands in M0.</string>
+    <!-- Lost & Found -->
+    <string name="lostfound_title">Lost &amp; Found</string>
+    <string name="lostfound_tab_lost">Lost Items (%1$d)</string>
+    <string name="lostfound_tab_found">Found Items (%1$d)</string>
+    <string name="lostfound_filter_all">All</string>
+    <string name="lostfound_filter_student_card">Student/Parking Card</string>
+    <string name="lostfound_filter_electronics">Electronics</string>
+    <string name="lostfound_filter_wallet_papers">Wallet / ID</string>
+    <string name="lostfound_filter_personal_items">Personal Items</string>
+    <string name="lostfound_filter_other">Other</string>
+    <string name="lostfound_post_action">Post Item</string>
+    <string name="lostfound_empty_list">No listings found in this category</string>
+    <string name="lostfound_dialog_title">Report Lost / Found Item</string>
+    <string name="lostfound_field_title">Listing Title *</string>
+    <string name="lostfound_field_title_hint">e.g. Lost black leather wallet at CS1</string>
+    <string name="lostfound_field_desc">Detailed description (min 20 chars) *</string>
+    <string name="lostfound_field_desc_hint">Identifying features, time, circumstances...</string>
+    <string name="lostfound_field_kind">Type</string>
+    <string name="lostfound_field_category">Category</string>
+    <string name="lostfound_field_location">Location (Campus / Room)</string>
+    <string name="lostfound_field_contact_name">Contact Name</string>
+    <string name="lostfound_field_contact_phone">Contact Phone</string>
+    <string name="lostfound_btn_submit">Post Now</string>
+    <string name="lostfound_btn_cancel">Cancel</string>
+    <string name="lostfound_call_contact">Contact</string>
+    <string name="nav_back">Back</string>
 </resources>

@@ -58,6 +58,7 @@ fun UtilitiesScreen(
     onNavigateToTrainingPoint: () -> Unit = {},
     onNavigateToCampuses: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToLostFound: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -140,7 +141,13 @@ fun UtilitiesScreen(
             else -> uiState.modules.forEach { module ->
                 UthModuleRow(
                     module = module,
-                    onClick = { onAction(UtilitiesAction.OpenModule(module.id)) },
+                    onClick = {
+                        if (module.id == UtilityModuleId.LOST_FOUND) {
+                            onNavigateToLostFound()
+                        } else {
+                            onAction(UtilitiesAction.OpenModule(module.id))
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = UthDimens.Spacing.Md),

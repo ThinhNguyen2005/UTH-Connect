@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.presentation.lostfound.LostFoundRoute
 import com.giathinh.uthconnect.presentation.utilities.campuses.CampusesScreen
 import com.giathinh.uthconnect.presentation.utilities.settings.SettingsScreen
 import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointScreen
@@ -48,6 +49,7 @@ fun UtilitiesRoute(
                 onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
                 onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },
                 onNavigateToSettings = { navController.navigate(UtilitiesDestination.Settings) },
+                onNavigateToLostFound = { navController.navigate(UtilitiesDestination.LostFound) },
             )
         }
 
@@ -77,6 +79,12 @@ fun UtilitiesRoute(
                 onToggleTuitionReminder = viewModel::onToggleTuitionReminder,
                 onToggleTrainingPointNotif = viewModel::onToggleTrainingPointNotif,
                 onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.LostFound> {
+            LostFoundRoute(
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }

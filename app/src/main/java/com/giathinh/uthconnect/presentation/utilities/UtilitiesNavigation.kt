@@ -30,4 +30,8 @@ sealed interface UtilitiesDestination {
     /** Màn hình Cài đặt ứng dụng. */
     @Serializable
     data object Settings : UtilitiesDestination
+
+    /** Màn hình Đồ thất lạc (Lost & Found). */
+    @Serializable
+    data object LostFound : UtilitiesDestination
 }
