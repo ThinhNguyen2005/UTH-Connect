@@ -5,6 +5,7 @@
 
     <string name="common_retry">Retry</string>
     <string name="common_meta_separator">•</string>
+    <string name="utilities_not_available">Not yet available</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
@@ -142,4 +143,45 @@
     <string name="auth_demo_profile">Demo profile</string>
     <string name="auth_logout">Sign out</string>
     <string name="auth_logout_failed">Could not sign out. Try again.</string>
+    <!-- Lost & Found -->
+    <string name="lostfound_title">Lost &amp; Found</string>
+    <string name="lostfound_tab_lost">Lost Items (%1$d)</string>
+    <string name="lostfound_tab_found">Found Items (%1$d)</string>
+    <string name="lostfound_badge_lost">LOST</string>
+    <string name="lostfound_badge_found">FOUND</string>
+    <string name="lostfound_filter_all">All</string>
+    <string name="lostfound_filter_student_card">Student/Parking Card</string>
+    <string name="lostfound_filter_electronics">Electronics</string>
+    <string name="lostfound_filter_wallet_papers">Wallet / ID</string>
+    <string name="lostfound_filter_personal_items">Personal Items</string>
+    <string name="lostfound_filter_other">Other</string>
+    <string name="lostfound_post_action">Post Item</string>
+    <string name="lostfound_empty_list">No listings found in this category</string>
+    <string name="lostfound_empty_desc">Try selecting another category or post a new item</string>
+    <string name="lostfound_load_error_title">Failed to load listings</string>
+    <string name="lostfound_load_error_desc">An error occurred while loading lost and found listings. Please try again.</string>
+    <string name="lostfound_dialog_title">Report Lost / Found Item</string>
+    <string name="lostfound_kind_lost_btn">I lost an item</string>
+    <string name="lostfound_kind_found_btn">I found an item</string>
+    <string name="lostfound_field_title">Listing Title *</string>
+    <string name="lostfound_field_title_hint">e.g. Lost black leather wallet at CS1</string>
+    <string name="lostfound_field_desc">Detailed description (min 20 chars) *</string>
+    <string name="lostfound_field_desc_hint">Identifying features, time, circumstances...</string>
+    <string name="lostfound_desc_counter">%1$d/20 characters minimum</string>
+    <string name="lostfound_field_kind">Type</string>
+    <string name="lostfound_field_category">Category</string>
+    <string name="lostfound_field_location">Location (Campus / Room)</string>
+    <string name="lostfound_field_location_hint">e.g. Room B204 CS1</string>
+    <string name="lostfound_field_contact_name">Contact Name</string>
+    <string name="lostfound_field_contact_name_hint">Your name</string>
+    <string name="lostfound_field_contact_phone">Contact Phone</string>
+    <string name="lostfound_field_contact_phone_hint">Contact phone number</string>
+    <string name="lostfound_btn_submit">Post Now</string>
+    <string name="lostfound_btn_cancel">Cancel</string>
+    <string name="lostfound_call_contact">Contact</string>
+    <string name="lostfound_err_title_required">Title cannot be blank</string>
+    <string name="lostfound_err_desc_min_length">Description must be at least 20 characters (currently: %1$d)</string>
+    <string name="lostfound_msg_post_success">Item posted successfully!</string>
+    <string name="lostfound_msg_post_failed">Failed to post item</string>
+    <string name="nav_back">Back</string>
 </resources>
