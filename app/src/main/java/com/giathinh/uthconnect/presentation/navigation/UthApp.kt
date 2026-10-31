@@ -23,7 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.presentation.home.HomeScreen
 import com.giathinh.uthconnect.presentation.profile.ProfileScreen
-import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
+import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
@@ -83,7 +83,7 @@ private fun UthNavHost(
         // ba tab còn lại chưa có dữ liệu nên đang gọi thẳng Screen stateless.
         // Screen không được tự cầm repository (README mục 5.2); ViewModel do Hilt cung cấp.
         composable<HomeDestination> { HomeScreen() }
-        composable<ScheduleDestination> { ScheduleScreen() }
+        composable<ScheduleDestination> { ScheduleRoute() }
         composable<UtilitiesDestination> { UtilitiesRoute() }
         composable<ProfileDestination> { ProfileScreen() }
     }
