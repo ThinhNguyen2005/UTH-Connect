@@ -441,10 +441,10 @@ flowchart LR
 
 | Hạng mục | Phiên bản / lựa chọn | Nguồn |
 |---|---|---|
-| Android Gradle Plugin | `9.3.3` | `gradle/libs.versions.toml` |
+| Android Gradle Plugin | `8.13.0` | `gradle/libs.versions.toml` |
 | Kotlin | `2.2.10` (+ `org.jetbrains.kotlin.plugin.compose`) | `gradle/libs.versions.toml` |
-| Compose BOM | `2026.02.01`, Material 3 | `app/build.gradle.kts` |
-| `compileSdk` | `37.1` (minor API level 1) — cần vì core-ktx 1.19.1/lifecycle 2.11.0/navigation 2.10.2 đòi API 37 | `app/build.gradle.kts` |
+| Compose BOM | `2025.12.01`, Material 3 | `app/build.gradle.kts` |
+| `compileSdk` | `36.1` — tương thích với AGP 8.13; API tối thiểu theo AAR dependencies | `app/build.gradle.kts` |
 | `targetSdk` | `36` | `app/build.gradle.kts` |
 | `minSdk` | `31` (Android 12) | `app/build.gradle.kts` |
 | Namespace / applicationId | `com.giathinh.uthconnect` | `app/build.gradle.kts` |
@@ -597,7 +597,7 @@ docs/                   # ADR, thiết kế UI, test plan
 
 ### 8.1. Yêu cầu
 
-- Android Studio (Narwhal trở lên) với **SDK platform Android 37.1** (`compileSdk = 37.1`)
+- Android Studio (Narwhal trở lên) với **SDK platform Android 36.1** (`compileSdk = 36.1`)
 - JDK 17+
 - Thiết bị/emulator **Android 12 (API 31)** trở lên
 - Một project Firebase (hoặc dùng mode demo — xem mục 9)

@@ -9,13 +9,9 @@ plugins {
 
 android {
     namespace = "com.giathinh.uthconnect"
-    // compileSdk 37.1: core-ktx 1.19.1 / lifecycle 2.11.0 / navigation-compose 2.10.2 đều đòi
-    // AAR metadata "compile against version 37 or later" — để 36.1 sẽ fail task checkDebugAarMetadata.
-    // targetSdk vẫn giữ 36 để không đổi hành vi runtime.
+    // Android Studio phiên bản nhóm hỗ trợ AGP 8.13 và API 36.1.
     compileSdk {
-        version = release(37) {
-            minorApiLevel = 1
-        }
+        version = release(36) { minorApiLevel = 1 }
     }
 
     defaultConfig {
