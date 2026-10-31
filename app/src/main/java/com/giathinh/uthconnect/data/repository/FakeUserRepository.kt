@@ -11,7 +11,7 @@ import javax.inject.Inject
  * Fake/Static implementation của [UserRepository] dùng để UI team
  * (KAN-32 – Anh Phú) có thể lấy dữ liệu ngay mà không cần Firestore thật.
  *
- * Thay thế bằng [FirestoreUserRepository] khi backend sẵn sàng.
+ * Thay thế bằng FirestoreUserRepository khi backend sẵn sàng.
  */
 class FakeUserRepository @Inject constructor() : UserRepository {
 
@@ -41,17 +41,6 @@ class FakeUserRepository @Inject constructor() : UserRepository {
     // Demo data
     // -----------------------------------------------------------------------
     companion object {
-        val DEMO_USER = User(
-            uid = "demo-uid-001",
-            studentId = "2251010001",
-            email = "nguyen.trongnghia@uth.edu.vn",
-            displayName = "Nguyễn Trọng Nghĩa",
-            className = "22DHTH04",
-            major = "Công nghệ Thông tin",
-            faculty = "Khoa Công nghệ Thông tin",
-            avatarUrl = null,
-            phoneNumber = "0901234567",
-            role = "student",
-        )
+        val DEMO_USER: User = DemoAccount.user
     }
 }
