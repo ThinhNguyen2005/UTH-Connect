@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -58,6 +59,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
     implementation(libs.kotlinx.serialization.json)
+
+    // Firebase BoM & Firestore
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+
     // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
     // (kapt không tương thích built-in Kotlin của AGP 9).
     implementation(libs.hilt.android)

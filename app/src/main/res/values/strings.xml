@@ -22,13 +22,69 @@
     <string name="schedule_wip_body">Module thuộc Phase 2. Màn hình này chờ branch feature/timetable-&lt;tên bạn&gt;.</string>
 
     <!-- Tiện ích -->
-    <string name="utilities_title">Tiện ích</string>
-    <string name="utilities_subtitle">Mọi module của UTH Connect nằm ở một chỗ.</string>
+    <string name="utilities_title">Trung tâm Tiện ích</string>
+    <string name="utilities_subtitle">Tra cứu học phí, điểm rèn luyện, cơ sở UTH và cài đặt.</string>
+    <string name="utilities_grid_tuition">Tra cứu học phí</string>
+    <string name="utilities_grid_tuition_desc">Tình trạng nộp học phí</string>
+    <string name="utilities_grid_training_point">Điểm rèn luyện</string>
+    <string name="utilities_grid_training_point_desc">Xem điểm &amp; xếp loại</string>
+    <string name="utilities_grid_campuses">Cơ sở &amp; Danh bạ</string>
+    <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
+    <string name="utilities_grid_settings">Cài đặt</string>
+    <string name="utilities_grid_settings_desc">Thông báo &amp; Phiên bản</string>
+    <string name="utilities_section_upcoming">Dịch vụ đang phát triển</string>
     <string name="utilities_loading">Đang tải danh sách module…</string>
     <string name="utilities_error_title">Không tải được danh sách</string>
     <string name="utilities_error_body">Kiểm tra kết nối rồi bấm Thử lại. Danh sách này không chứa dữ liệu của bạn.</string>
     <string name="utilities_empty_title">Chưa có module nào</string>
     <string name="utilities_empty_body">Khi module đầu tiên được bật, nó sẽ xuất hiện ở đây.</string>
+
+    <!-- Tra cứu Học phí -->
+    <string name="tuition_title">Tra cứu học phí</string>
+    <string name="tuition_semester">Học kỳ 1 (Năm học 2025 - 2026)</string>
+    <string name="tuition_status_paid">ĐÃ HOÀN THÀNH</string>
+    <string name="tuition_status_unpaid">CHƯA HOÀN THÀNH</string>
+    <string name="tuition_total_amount">Tổng số tiền học phí</string>
+    <string name="tuition_paid_amount">Đã thanh toán</string>
+    <string name="tuition_remaining_amount">Còn phải nộp</string>
+    <string name="tuition_credits_count">Số tín chỉ đăng ký: %1$d</string>
+    <string name="tuition_due_date">Hạn cuối nộp học phí: %1$s</string>
+    <string name="tuition_courses_header">Danh sách học phần đã đăng ký</string>
+    <string name="tuition_payment_guide_header">Thông tin tài khoản đóng học phí</string>
+    <string name="tuition_bank_account_name">Chủ TK: Trường Đại học Giao thông vận tải TP.HCM</string>
+    <string name="tuition_bank_account_number">Số TK: 118000003666 - Ngân hàng VietinBank (Chi nhánh Gia Định)</string>
+    <string name="tuition_payment_syntax">Cú pháp: [MSSV] [Họ tên] HP HK1</string>
+
+    <!-- Điểm rèn luyện -->
+    <string name="training_point_title">Điểm rèn luyện</string>
+    <string name="training_point_semester">Đánh giá rèn luyện HK1 (2025 - 2026)</string>
+    <string name="training_point_rank_excellent">XUẤT SẮC</string>
+    <string name="training_point_rank_good">TỐT</string>
+    <string name="training_point_rank_fair">KHÁ</string>
+    <string name="training_point_criteria_header">Chi tiết các tiêu chí đánh giá</string>
+    <string name="training_point_total_label">Điểm rèn luyện tổng kết</string>
+
+    <!-- Cơ sở & Danh bạ UTH -->
+    <string name="campuses_title">Cơ sở &amp; Danh bạ UTH</string>
+    <string name="campuses_subtitle">Thông tin liên hệ các cơ sở và phòng ban trường ĐH Giao thông vận tải TP.HCM</string>
+    <string name="campuses_list_header">Các cơ sở đào tạo</string>
+    <string name="campuses_departments_header">Danh bạ phòng ban hỗ trợ</string>
+    <string name="campuses_call_action">Gọi ngay</string>
+    <string name="campuses_email_action">Gửi email</string>
+
+    <!-- Cài đặt -->
+    <string name="settings_title">Cài đặt ứng dụng</string>
+    <string name="settings_notification_header">Thông báo</string>
+    <string name="settings_notif_tuition">Nhắc nhở hạn nộp học phí</string>
+    <string name="settings_notif_tuition_desc">Nhận thông báo khi gần đến hạn đóng học phí</string>
+    <string name="settings_notif_training">Thông báo điểm rèn luyện</string>
+    <string name="settings_notif_training_desc">Nhận thông báo khi có kết quả rèn luyện mới</string>
+    <string name="settings_app_info_header">Thông tin ứng dụng</string>
+    <string name="settings_version_label">Phiên bản</string>
+    <string name="settings_version_value">1.0.0 (Build 2026.1)</string>
+    <string name="settings_team_label">Đơn vị phát triển</string>
+    <string name="settings_team_value">Nhóm dự án UTH Connect</string>
+
     <string name="module_events_title">Sự kiện &amp; CLB</string>
     <string name="module_events_desc">Đăng ký, vé QR và điểm danh cho CLB.</string>
     <string name="module_timetable_title">Thời khóa biểu</string>
