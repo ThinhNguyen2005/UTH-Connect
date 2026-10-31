@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'admin' || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    function isOrganizer() {
+      return isAuthenticated() && 
+        (isAdmin() || 
+         request.auth.token.role == 'organizer' || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer');
+    }
+
+    // --- USERS COLLECTION ---
+    match /users/{userId} {
+      // Bất kỳ user đã đăng nhập đều có thể đọc profile cơ bản (để hiển thị tên tác giả/bạn học)
+      allow read: if isAuthenticated();
+      // Chỉ chính user hoặc Admin mới được cập nhật profile cá nhân
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // --- EVENTS COLLECTION ---
+    match /events/{eventId} {
+      // Mọi sinh viên đều có thể xem danh sách và chi tiết sự kiện
+      allow read: if isAuthenticated();
+      // Chỉ Ban tổ chức / Admin mới có quyền tạo và chỉnh sửa sự kiện
+      allow create, update, delete: if isOrganizer();
+
+      // Subcollection: Đăng ký tham gia sự kiện
+      match /registrations/{userId} {
+        allow read: if isAuthenticated();
+        // Sinh viên chỉ được tạo/huỷ đăng ký của chính mình
+        allow create, delete: if isOwner(userId);
+        allow update: if isOrganizer();
+      }
+
+      // Subcollection: Điểm danh sự kiện (check-in QR code)
+      match /attendance/{userId} {
+        allow read: if isOwner(userId) || isOrganizer();
+        // Chỉ BTC mới có quyền xác nhận điểm danh
+        allow write: if isOrganizer();
+      }
+    }
+
+    // --- NOTIFICATIONS & ANNOUNCEMENTS ---
+    match /notifications/{notificationId} {
+      // Sinh viên đọc tin tức công khai
+      allow read: if isAuthenticated();
+      // Chỉ Admin / Cán bộ nhà trường mới được đăng tin
+      allow write: if isAdmin();
+    }
+
+    // --- SCHEDULES (THỜI KHOÁ BIỂU) ---
+    match /schedules/{scheduleId} {
+      // Chỉ sinh viên sở hữu thời khoá biểu mới có thể đọc
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.token.studentId || 
+        resource.data.uid == request.auth.uid ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+    // --- GRADES (BẢNG ĐIỂM) ---
+    match /grades/{gradeId} {
+      // Tuyệt đối bảo mật: chỉ sinh viên sở hữu mới được xem điểm của mình
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.token.studentId || 
+        resource.data.uid == request.auth.uid ||
+        isAdmin()
+      );
+      // Điểm số chỉ được cập nhật từ hệ thống đào tạo (Admin)
+      allow write: if isAdmin();
+    }
+  }
+}
