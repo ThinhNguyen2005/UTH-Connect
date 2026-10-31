@@ -75,7 +75,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 
 Quy tắc đặt tên file trong cây: theo `docs/CODING_STANDARDS.md` mục 2 và 3.2 — một module có đúng **5 file** trong `presentation/<module>/` (Hilt đã xoá bỏ file factory thứ sáu), thêm `<Module>Navigation.kt` khi module có route con.
 
-Phân công trên lấy từ Jira KAN-42–49 ngày 31/10/2026; tên nhánh là kế hoạch, không chứng minh nhánh hoặc PR đã tồn tại, đã merge hay đạt DoD. `feature/timetable` cũng xuất hiện trong ref Git lưu tại máy: đối chiếu trước khi tích hợp để tránh trùng chủ sở hữu `schedule/`.
+Phân công trên lấy từ Jira KAN-42–49 ngày 31/10/2026; tên nhánh là kế hoạch, không chứng minh nhánh hoặc PR đã tồn tại, đã merge hay đạt DoD. Khi đối chiếu GitHub ngày 31/10, nhánh Check-in hiện có tên `feature/checking-duc`, khác với tên `feature/checkin-duc` trong Jira; cần thống nhất trước khi tích hợp. `feature/timetable` cũng tồn tại bên cạnh `feature/timetable-nghia`: đối chiếu trước khi tích hợp để tránh trùng chủ sở hữu `schedule/`.
 
 Module nào cũng bắt đầu bằng 5 file đã chốt, copy nguyên `presentation/utilities/`:
 
