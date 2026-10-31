@@ -83,4 +83,47 @@
     <string name="auth_demo_profile">Hồ sơ demo</string>
     <string name="auth_logout">Đăng xuất</string>
     <string name="auth_logout_failed">Đăng xuất thất bại. Vui lòng thử lại.</string>
+
+    <!-- Auth/Profile V2 -->
+    <string name="auth_password_change_title">Đổi mật khẩu</string>
+    <string name="auth_password_current">Mật khẩu hiện tại</string>
+    <string name="auth_password_new">Mật khẩu mới</string>
+    <string name="auth_password_confirm">Xác nhận mật khẩu mới</string>
+    <string name="auth_password_policy">Mật khẩu dài 8–64 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt; không có khoảng trắng.</string>
+    <string name="auth_password_wrong_current">Mật khẩu hiện tại không chính xác.</string>
+    <string name="auth_password_weak">Mật khẩu chưa đáp ứng yêu cầu độ mạnh.</string>
+    <string name="auth_password_same">Mật khẩu mới phải khác mật khẩu hiện tại.</string>
+    <string name="auth_password_mismatch">Xác nhận mật khẩu không khớp.</string>
+    <string name="auth_password_changed">Đã đổi mật khẩu demo trên thiết bị này. Lần đăng nhập sau hãy dùng mật khẩu mới.</string>
+    <string name="auth_contact_edit_title">Chỉnh sửa thông tin liên hệ</string>
+    <string name="auth_contact_phone">Số điện thoại</string>
+    <string name="auth_contact_email">Email cá nhân</string>
+    <string name="auth_contact_address">Địa chỉ trọ hiện tại</string>
+    <string name="auth_contact_not_set">Chưa cập nhật</string>
+    <string name="auth_contact_invalid_phone">Số điện thoại không hợp lệ (VD: 0912345678).</string>
+    <string name="auth_contact_invalid_email">Email cá nhân không hợp lệ.</string>
+    <string name="auth_contact_invalid_address">Địa chỉ không được vượt quá 200 ký tự.</string>
+    <string name="auth_contact_saved">Đã lưu thông tin liên hệ demo trên thiết bị này.</string>
+    <string name="auth_save_failed">Không lưu được dữ liệu. Vui lòng thử lại.</string>
+    <string name="auth_save">Lưu thay đổi</string>
+    <string name="auth_back">Quay lại</string>
+    <string name="auth_cancel">Hủy</string>
+    <string name="auth_biometric_enable">Bật đăng nhập bằng sinh trắc học</string>
+    <string name="auth_biometric_disable">Tắt đăng nhập bằng sinh trắc học</string>
+    <string name="auth_biometric_login">Đăng nhập bằng vân tay / khuôn mặt</string>
+    <string name="auth_biometric_subtitle">Xác thực sinh trắc học đã đăng ký trong cài đặt thiết bị</string>
+    <string name="auth_biometric_note">Chỉ hoạt động khi thiết bị hỗ trợ và đã đăng ký sinh trắc học mạnh. Chức năng chỉ mở phiên demo trên thiết bị.</string>
+    <string name="auth_biometric_error">Sinh trắc học không khả dụng hoặc xác thực bị hủy. Hãy cài đặt vân tay hoặc đăng nhập bằng mật khẩu.</string>
+    <string name="auth_biometric_enabled">Đã bật sinh trắc học. Lần mở ứng dụng sau, hãy bấm nút sinh trắc học để đăng nhập.</string>
+    <string name="auth_biometric_disabled">Đã tắt đăng nhập sinh trắc học.</string>
+    <string name="auth_logout_confirm_title">Xác nhận đăng xuất?</string>
+    <string name="auth_logout_confirm_body">Ứng dụng sẽ xóa phiên đã ghi nhớ và quyền đăng nhập sinh trắc học trên thiết bị. Bạn cần đăng nhập lại. Thông tin liên hệ đã lưu không bị xóa.</string>
+
+    <!-- Auth/Profile V3 -->
+    <string name="auth_verified_demo_badge">Đã xác minh (demo, không phải UTH)</string>
+    <string name="auth_unverified_badge">Chưa xác minh UTH</string>
+    <string name="auth_organizer_demo_badge">Ban tổ chức (demo)</string>
+    <string name="auth_logout_retry">Thử lại</string>
+    <!-- Auth/Profile V3.1: login retry -->
+    <string name="auth_login_retry">Thử đăng nhập lại</string>
 </resources>

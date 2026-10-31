@@ -54,6 +54,22 @@ Trống nhưng còn trên đĩa: `core/di/` (xoá cùng `AppContainer.kt` khi ch
 
 ---
 
+### Auth/Profile da tich hop - 31/10/2026
+
+- `presentation/auth/` va `presentation/profile/`: moi module 5 file Screen/Route/ViewModel/UiState/Action.
+- `domain/model/StudentProfile.kt`; `domain/repository/{AuthRepository,SessionRepository,StudentContactRepository}.kt`; `domain/validation/{LoginValidator,PasswordChangeValidator,StudentContactValidator}.kt`; `domain/usecase/{SignInUseCase,GetProfileUseCase,ChangePasswordUseCase,UpdateStudentContactUseCase}.kt`.
+- `data/repository/{DemoAuthRepository,PreferencesSessionRepository}.kt`; `data/di/AuthDataModule.kt`; test unit va Compose UI.
+- Co permission USE_BIOMETRIC, resource song ngu, quy tac backup; Auth V1 da sua UthApp.kt. Ban demo cuc bo chua ket noi API UTH.
+
+### Auth/Profile V3 - role and verified
+
+- domain/model/StudentProfile.kt: extend existing model with role (STUDENT default), uthVerified (false default), retain studentId and V2 contact fields.
+- domain/model/UserRole.kt: STUDENT, ORGANIZER, ADMIN.
+- data/repository/DemoAuthRepository.kt: two isolated demo accounts; verified and organizer badges are simulated and must never authorize server-side actions.
+- presentation/auth and presentation/profile: Channel + receiveAsFlow for one-off UI events; failed logout has visible Retry.
+- Tests: StudentProfileRoleTest, AuthViewModelTest, ProfileViewModelTest, ProfileScreenUiTest.
+- No changes to global nav, MainActivity, Gradle or design system; V1 UthApp changes still need repo owner review.
+
 ## 3. Cây đích: mỗi người một nhánh
 
 Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
@@ -62,7 +78,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 |---|---|---|---|---|---|
 | **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
 | **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
-| **Bạn C** | `feature/auth-<tên>` | `auth/` · `profile/` | `model/User.kt` `model/Faculty.kt` · `repository/AuthRepository.kt` `repository/ProfileRepository.kt` · `usecase/SendSchoolOtpUseCase.kt` `SignInUseCase.kt` `GetProfileUseCase.kt` | `remote/auth/SchoolEmailAuthRepository.kt` · `di/AuthDataModule.kt` | `presentation/auth/` `presentation/profile/` |
+| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` (2 × 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `DemoAuthRepository`, `PreferencesSessionRepository`, `AuthDataModule` | Auth/Profile unit + UI tests |
 | **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
@@ -169,6 +185,9 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 ## 8. Nhật ký cấu trúc
 
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
+| v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
+| v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |
 |---|---|---|
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |

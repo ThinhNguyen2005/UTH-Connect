@@ -3,7 +3,6 @@ package com.giathinh.uthconnect.presentation.auth
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 
-/** Chỉ có một UiState cho màn đăng nhập; mặc định không giả vờ đã có phiên. */
 data class AuthUiState(
     val isRestoring: Boolean = true,
     val student: StudentProfile? = null,
@@ -16,6 +15,11 @@ data class AuthUiState(
     val passwordError: LoginFieldError? = null,
     val failure: AuthFailure? = null,
     val forgotDialogOpen: Boolean = false,
+    /** Enrollment is persisted; NOT a signed-in session until OS prompt succeeds. */
+    val biometricAvailable: Boolean = false,
 )
 
-enum class AuthFailure { InvalidCredentials, Unexpected, SessionRestore }
+/** One-off notification (not a navigation command; the signed-in gate is state driven). */
+sealed interface AuthEvent { data object InvalidCredentials : AuthEvent }
+
+enum class AuthFailure { InvalidCredentials, Unexpected, SessionRestore, BiometricUnavailable }

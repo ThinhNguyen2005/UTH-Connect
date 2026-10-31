@@ -21,14 +21,19 @@ class SignInUseCaseTest {
                 (identifier == student.studentId || identifier.equals(student.email, true)) && password == "correct"
             })
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(student)
+        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
     }
     private val session = object : SessionRepository {
         private val current = MutableStateFlow(StudentSession(isRestoring = false))
         override val session: StateFlow<StudentSession> = current
         override suspend fun restore() = Unit
         override suspend fun start(profile: StudentProfile, remember: Boolean) {
-            current.value = StudentSession(profile = profile, remembered = remember)
+            current.value = StudentSession(isRestoring = false, profile = profile, remembered = remember)
         }
+        override suspend fun updateProfile(profile: StudentProfile) { current.value = current.value.copy(profile = profile) }
+        override suspend fun enableBiometric(studentId: String) = Unit
+        override suspend fun disableBiometric() = Unit
+        override suspend fun unlockWithBiometric() = Unit
         override suspend fun signOut() { current.value = StudentSession(isRestoring = false) }
     }
 
