@@ -1,6 +1,6 @@
 # UTH Connect — Cây thư mục & phân quyền sở hữu
 
-> **Phiên bản:** v1.3 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
+> **Phiên bản:** v1.4 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
 > **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
 >
@@ -69,7 +69,22 @@ test/presentation/lostfound/ LostFoundViewModelTest.kt
 res/values/ + values-en/     41 dòng string mới trong mỗi file
 ```
 
-Mã Lost & Found đã merge nhưng **chưa có child destination/graph**, chưa nối từ Utilities và còn lỗi điền số điện thoại/địa điểm giả khi form để trống (đã ghi review trong Jira KAN-49). Bản `origin/develop` tại `3f545c3` đã build `assembleDebug` thành công và qua **42 unit tests/10 suites, 0 failures** trên worktree kiểm thử riêng (Gradle 8.13 checksum chuẩn, SDK local, JVM 1 GiB, 1 worker). Kết quả này chỉ xác minh build/test; chưa chứng minh điều hướng hay smoke-test APK trên thiết bị.
+Tại nhánh tích hợp CORE-1 (`codex/core-integration`, merge `24117e7` từ `origin/develop`), phần cây mới đã được nối như sau:
+
+```text
+presentation/lostfound/  LostFoundAction.kt · LostFoundRoute.kt · LostFoundScreen.kt
+                         LostFoundUiState.kt · LostFoundViewModel.kt · LostFoundNavigation.kt
+presentation/navigation/ UthApp.kt: lostFoundGraph() + mở LostFoundDestination từ Utilities
+data/repository/         StaticUtilityModuleRepository.kt: LOST_FOUND chưa được bật
+domain/model/            LostFoundListing.kt
+domain/repository/       LostFoundRepository.kt
+domain/usecase/          GetLostFoundListingsUseCase.kt · ReportLostFoundItemUseCase.kt
+data/repository/         InMemoryLostFoundRepository.kt
+data/di/                 LostFoundDataModule.kt
+test/presentation/lostfound/ LostFoundViewModelTest.kt
+```
+
+`LostFoundNavigation.kt` khai báo `@Serializable LostFoundDestination` cùng `lostFoundGraph`. Module vẫn bị tắt trong Utilities để chờ Thắng sửa lỗi KAN-49, bao gồm dữ liệu liên hệ giả và thao tác gọi điện trong Screen. Bản `origin/develop` tại `3f545c3` và nhánh tích hợp đều build thành công, qua **42 unit tests/10 suites, 0 failures**. APK nhánh tích hợp đã cài và mở tới màn đăng nhập trên thiết bị Android; chưa kiểm tra đăng nhập và điều hướng vì thiết bị từ chối thao tác `adb input` với lỗi `INJECT_EVENTS`.
 
 ---
 
@@ -90,7 +105,7 @@ Quy tắc đặt tên file trong cây: theo `docs/CODING_STANDARDS.md` mục 2 v
 
 Phân công trên lấy từ Jira KAN-42–49 ngày 31/10/2026; tên nhánh là kế hoạch, không chứng minh nhánh hoặc PR đã tồn tại, đã merge hay đạt DoD. Khi đối chiếu GitHub ngày 31/10, nhánh Check-in hiện có tên `feature/checking-duc`, khác với tên `feature/checkin-duc` trong Jira; cần thống nhất trước khi tích hợp. `feature/timetable` cũng tồn tại bên cạnh `feature/timetable-nghia`: đối chiếu trước khi tích hợp để tránh trùng chủ sở hữu `schedule/`.
 
-**Cập nhật đồng bộ `develop`:** Lost & Found (Thắng) đã merge qua PR #20 tại `3f545c3`, đang chờ khắc phục review KAN-49 và nối route bởi chủ repo. Nhánh CORE-1 vẫn cần đồng bộ với `develop` trước khi kiểm thử tổ hợp; không đánh dấu ✅ DoD khi bug tích hợp còn tồn tại.
+**Cập nhật đồng bộ `develop`:** Lost & Found (Thắng) đã merge qua PR #20 tại `3f545c3`. Nhánh tích hợp CORE-1 đã merge commit đó tại `24117e7` và chuẩn bị graph; chờ Thắng xử lý review KAN-49 trước khi bật module. Chỉ đánh dấu ✅ DoD sau khi build/test tích hợp, review và smoke-test trên thiết bị.
 
 Module nào cũng bắt đầu bằng 5 file đã chốt, copy nguyên `presentation/utilities/`:
 
@@ -196,6 +211,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | Bản | Ngày | Thay đổi cấu trúc |
 |---|---|---|
 | v1.3 | 31/10/2026 | Phát hiện `origin/develop` tại `3f545c3` đã merge PR #20: bổ sung 5 file presentation Lost & Found, 6 file domain/data, 1 file test cùng strings VI/EN. Chưa nối route; KAN-49 có lỗi dữ liệu liên hệ mặc định. CORE-1 ban đầu: 35 tests/9 suites; `origin/develop` sau merge: `assembleDebug` thành công, **42 tests/10 suites, 0 failures** (worktree kiểm thử riêng). Chưa smoke-test APK. |
+| v1.4 | 31/10/2026 | Nhánh tích hợp `codex/core-integration`: merge `origin/develop` ở `24117e7`, bổ sung `presentation/lostfound/LostFoundNavigation.kt` (destination type-safe + graph), chuẩn bị điều hướng từ Utilities; module vẫn tắt, chờ Thắng sửa lỗi KAN-49. Build thành công, 42 unit tests/10 suites đều qua; APK mở màn đăng nhập trên thiết bị nhưng `adb input` bị từ chối `INJECT_EVENTS`, chưa smoke-test các luồng tiếp theo. |
 | v1.2 | 31/10/2026 | Đối chiếu cây checkout `main` và cập nhật phân công theo Jira KAN-42–49; sửa checksum Gradle 8.13-bin. Chưa xác nhận build/test hoặc trạng thái merge các feature. |
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |

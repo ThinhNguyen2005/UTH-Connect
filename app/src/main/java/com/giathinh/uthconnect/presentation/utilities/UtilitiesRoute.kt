@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giathinh.uthconnect.domain.model.UtilityModuleId
 
 /**
  * Tầng nối (route) của tab Tiện ích: chỗ **duy nhất** trong module lấy ViewModel ra
@@ -23,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun UtilitiesRoute(
     modifier: Modifier = Modifier,
+    onOpenModule: (UtilityModuleId) -> Unit = {},
     viewModel: UtilitiesViewModel = hiltViewModel(),
 ) {
     // collectAsStateWithLifecycle: ngừng nhận khi activity stop, không rò rỉ và
@@ -32,7 +34,15 @@ fun UtilitiesRoute(
 
     UtilitiesScreen(
         uiState = uiState,
-        onAction = viewModel::onAction,
+        onAction = { action ->
+            if (action is UtilitiesAction.OpenModule) {
+                if (uiState.modules.any { it.id == action.moduleId && it.enabled }) {
+                    onOpenModule(action.moduleId)
+                }
+            } else {
+                viewModel.onAction(action)
+            }
+        },
         modifier = modifier,
     )
 }
