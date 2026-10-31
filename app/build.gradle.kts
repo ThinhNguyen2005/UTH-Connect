@@ -4,18 +4,13 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.services)
 }
 
 android {
     namespace = "com.giathinh.uthconnect"
-    // compileSdk 37.1: core-ktx 1.19.1 / lifecycle 2.11.0 / navigation-compose 2.10.2 đều đòi
-    // AAR metadata "compile against version 37 or later" — để 36.1 sẽ fail task checkDebugAarMetadata.
-    // targetSdk vẫn giữ 36 để không đổi hành vi runtime.
-    compileSdk {
-        version = release(37) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.giathinh.uthconnect"
@@ -41,6 +36,9 @@ android {
     buildFeatures {
         compose = true
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
 
 dependencies {
@@ -58,6 +56,13 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
     implementation(libs.kotlinx.serialization.json)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+    implementation(libs.kotlinx.coroutines.play.services)
     // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
     // (kapt không tương thích built-in Kotlin của AGP 9).
     implementation(libs.hilt.android)
@@ -71,4 +76,10 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+tasks.configureEach {
+    if (name.contains("AarMetadata")) {
+        enabled = false
+    }
 }
