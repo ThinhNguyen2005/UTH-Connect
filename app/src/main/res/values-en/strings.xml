@@ -165,4 +165,8 @@
     <string name="timetable_database">Databases</string>
     <string name="timetable_english">English</string>
     <string name="timetable_title">Timetable</string>
+    <string name="timetable_urgent_badge">Due soon</string>
+    <string name="timetable_form_hint">Choose a course and enter when it is due.</string>
+    <string name="timetable_label_course">Course</string>
+    <string name="timetable_room">Room %1$s</string>
 </resources>
