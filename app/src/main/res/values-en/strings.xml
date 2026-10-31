@@ -5,6 +5,7 @@
 
     <string name="common_retry">Retry</string>
     <string name="common_meta_separator">•</string>
+    <string name="utilities_not_available">Not yet available</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>

@@ -21,10 +21,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.home.HomeRoute
+import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
+import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
@@ -109,12 +112,22 @@ private fun UthNavHost(
             )
         }
         composable<ScheduleDestination> { ScheduleScreen() }
-        composable<UtilitiesDestination> { UtilitiesRoute() }
+        composable<UtilitiesDestination> {
+            UtilitiesRoute(
+                onOpenModule = { module ->
+                    when (module) {
+                        UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
+                        else -> Unit // Các graph khác được nối khi module hoàn tất review.
+                    }
+                },
+            )
+        }
         composable<ProfileDestination> { ProfileRoute() }
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
         announcementGraph(navController)
+        lostFoundGraph(navController)
     }
 }
 
