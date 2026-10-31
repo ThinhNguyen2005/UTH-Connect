@@ -19,7 +19,7 @@ class StaticUtilityModuleRepository @Inject constructor() : UtilityModuleReposit
 
     override suspend fun modules(): Result<List<UtilityModule>> = Result.success(
         listOf(
-            UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = true),
+            UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = false),
             UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
             UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = false),
             UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.BACKLOG, enabled = false),

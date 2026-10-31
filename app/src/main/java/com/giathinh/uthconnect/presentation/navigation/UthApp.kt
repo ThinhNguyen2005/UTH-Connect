@@ -21,26 +21,40 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
-import com.giathinh.uthconnect.presentation.home.HomeScreen
-import com.giathinh.uthconnect.presentation.profile.ProfileRoute
+import com.giathinh.uthconnect.domain.model.UtilityModuleId
+import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
+import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.home.HomeRoute
+import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
+import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
+import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
- * Khung điều hướng tổng: [UthBottomBar] + [NavHost] cho 4 tab cấp 1.
+ * Cửa vào app: 4 tab chỉ mở sau khi xác thực demo.
  *
- * Trạng thái tab đang chọn lấy từ `currentBackStackEntry`, không nhân bản sang
- * biến riêng — tránh lệch khi quay lại bằng nút hệ thống.
- *
- * File không còn giữ vai trò DI: trước đây nó cấp `AppContainer` cho cả cây,
- * nay Hilt lo việc đó qua `@AndroidEntryPoint` trên `MainActivity`.
+ * Phần đăng nhập nằm trong [AuthRoute] và phần đã đăng nhập nằm trong [SignedInUthApp], nên
+ * khung điều hướng không phải biết gì về form đăng nhập, và ngược lại.
  */
-/** Login -> Home -> Profile: chỉ mở 4 tab sau khi xác thực demo. */
 @Composable
 fun UthApp() {
     AuthRoute(signedInContent = { SignedInUthApp() })
 }
+
+/**
+ * Khung điều hướng tổng: [UthBottomBar] + [NavHost] cho 4 tab cấp 1 và các graph con.
+ *
+ * Trạng thái tab đang chọn lấy từ `currentBackStackEntry`, không nhân bản sang
+ * biến riêng — tránh lệch khi quay lại bằng nút hệ thống.
+ *
+ * `selectedDestination == null` = đang ở màn hình con (ví dụ Chi tiết thông báo): thanh tab bị
+ * ẩn, vì màn hình con có thanh trên riêng và không có tab nào đang được chọn.
+ *
+ * File không còn giữ vai trò DI: trước đây nó cấp `AppContainer` cho cả cây,
+ * nay Hilt lo việc đó qua `@AndroidEntryPoint` trên `MainActivity`.
+ */
 @Composable
 private fun SignedInUthApp(
     navController: NavHostController = rememberNavController(),
@@ -50,19 +64,21 @@ private fun SignedInUthApp(
 
     Scaffold(
         bottomBar = {
-            UthBottomBar(
-                selected = selectedDestination,
-                onSelect = { destination ->
-                    if (destination != selectedDestination) {
-                        navController.navigate(destination.route) {
-                            // Tab cấp 1: lưu/trả trạng thái riêng từng tab, không xếp chồng bản sao.
-                            popUpTo(UthDestination.start.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+            if (selectedDestination != null) {
+                UthBottomBar(
+                    selected = selectedDestination,
+                    onSelect = { destination ->
+                        if (destination != selectedDestination) {
+                            navController.navigate(destination.route) {
+                                // Tab cấp 1: lưu/trả trạng thái riêng từng tab, không xếp chồng bản sao.
+                                popUpTo(UthDestination.start.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
     ) { innerPadding ->
         UthNavHost(
@@ -88,10 +104,30 @@ private fun UthNavHost(
         // Tab nào có state holder thì gọi `<Module>Route()` (nối ViewModel với Screen);
         // ba tab còn lại chưa có dữ liệu nên đang gọi thẳng Screen stateless.
         // Screen không được tự cầm repository (README mục 5.2); ViewModel do Hilt cung cấp.
-        composable<HomeDestination> { HomeScreen() }
+        composable<HomeDestination> {
+            HomeRoute(
+                onOpenAnnouncement = { announcementId ->
+                    navController.navigate(AnnouncementDetailDestination(announcementId))
+                },
+            )
+        }
         composable<ScheduleDestination> { ScheduleScreen() }
-        composable<UtilitiesDestination> { UtilitiesRoute() }
+        composable<UtilitiesDestination> {
+            UtilitiesRoute(
+                onOpenModule = { module ->
+                    when (module) {
+                        UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
+                        else -> Unit // Các graph khác được nối khi module hoàn tất review.
+                    }
+                },
+            )
+        }
         composable<ProfileDestination> { ProfileRoute() }
+
+        // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
+        // file này chỉ gọi một dòng, không biết chi tiết bên trong.
+        announcementGraph(navController)
+        lostFoundGraph(navController)
     }
 }
 
