@@ -60,9 +60,10 @@ dependencies {
     // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
     implementation(libs.kotlinx.serialization.json)
 
-    // Firebase BoM & Firestore
+    // Firebase BoM, Firestore & Auth
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 
     // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
     // (kapt không tương thích built-in Kotlin của AGP 9).
