@@ -33,6 +33,7 @@ class TicketsViewModel @Inject constructor(
             getProfile.observe().collect { profile ->
                 if (profile != null) {
                     currentStudentId = profile.studentId
+                    _uiState.update { it.copy(studentName = profile.displayName) }
                     loadTickets(profile.studentId)
                 }
             }
@@ -42,6 +43,7 @@ class TicketsViewModel @Inject constructor(
     fun onAction(action: TicketsAction) {
         when (action) {
             TicketsAction.Retry -> currentStudentId?.let(::loadTickets)
+            is TicketsAction.SelectFilter -> _uiState.update { it.copy(filter = action.filter) }
             is TicketsAction.OpenTicket -> openTicket(action.ticketId)
             TicketsAction.CloseTicket -> _uiState.update { it.copy(selectedTicket = null) }
         }

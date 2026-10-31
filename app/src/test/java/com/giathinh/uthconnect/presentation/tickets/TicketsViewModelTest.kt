@@ -69,6 +69,28 @@ class TicketsViewModelTest {
         assertFalse(state.isEmpty)
     }
 
+    @Test
+    fun `nhóm vé suy ra từ trạng thái - vé còn hiệu lực thuộc Sắp diễn ra`() {
+        val state = TicketsUiState(isLoading = false, tickets = tickets)
+        assertEquals(listOf(tickets[0]), state.upcomingTickets)
+        assertEquals(listOf(tickets[1]), state.pastTickets)
+        assertEquals(listOf(tickets[0]), state.visibleTickets)
+    }
+
+    @Test
+    fun `chọn tab Đã qua - danh sách hiển thị chỉ còn vé đã dùng`() {
+        val viewModel = viewModel(FakeTicketRepository(Result.success(tickets)))
+        viewModel.onAction(TicketsAction.SelectFilter(TicketFilter.Past))
+        assertEquals(TicketFilter.Past, viewModel.uiState.value.filter)
+        assertEquals(listOf(tickets[1]), viewModel.uiState.value.visibleTickets)
+    }
+
+    @Test
+    fun `hồ sơ đã đăng nhập - tên sinh viên vào state để màn chi tiết vé in kèm MSSV`() {
+        val viewModel = viewModel(FakeTicketRepository(Result.success(tickets)))
+        assertEquals("Sinh viên", viewModel.uiState.value.studentName)
+    }
+
     private fun viewModel(repository: FakeTicketRepository) = TicketsViewModel(
         GetTicketsUseCase(repository),
         GetProfileUseCase(FakeSessionRepository()),
