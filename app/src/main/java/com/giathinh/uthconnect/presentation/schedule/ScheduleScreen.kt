@@ -28,6 +28,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -47,7 +48,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
@@ -94,6 +94,21 @@ fun ScheduleScreen(
             date = uiState.now.toLocalDate().plusDays(1).format(dateFormatter),
         )
 
+        if (uiState.isLoading) {
+            UthCard {
+                Row(
+                    modifier = Modifier.padding(vertical = UthDimens.Spacing.Md),
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(UthDimens.Size.Icon))
+                    Text(
+                        text = stringResource(R.string.timetable_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        } else {
         UthSectionHeader(title = stringResource(R.string.timetable_tomorrow))
         val sessions = uiState.tomorrowClasses
         if (sessions.isEmpty()) {
@@ -137,7 +152,7 @@ fun ScheduleScreen(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md)) {
                 urgent.forEach { deadline ->
-                    DeadlineCard(deadline, uiState, dateFormatter, onAction)
+                    DeadlineCard(deadline, uiState, onAction)
                 }
             }
         }
@@ -146,12 +161,13 @@ fun ScheduleScreen(
             UthSectionHeader(title = stringResource(R.string.timetable_later))
             Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md)) {
                 later.forEach { deadline ->
-                    DeadlineCard(deadline, uiState, dateFormatter, onAction)
+                    DeadlineCard(deadline, uiState, onAction)
                 }
             }
         }
+        }
 
-        Text(
+        if (!uiState.isLoading) Text(
             text = stringResource(
                 R.string.timetable_completed,
                 uiState.timetable.deadlines.count { it.completed },
@@ -252,10 +268,10 @@ private fun ClassSessionCard(session: ClassSession) {
 private fun DeadlineCard(
     item: Deadline,
     state: ScheduleUiState,
-    dateFormatter: DateTimeFormatter,
     onAction: (ScheduleAction) -> Unit,
 ) {
     val overdue = item.dueAt.isBefore(state.now)
+    val urgent = !overdue && !item.dueAt.isAfter(state.now.plusHours(48))
     UthCard {
         Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
             Row(
@@ -279,8 +295,18 @@ private fun DeadlineCard(
                     )
                 }
                 UthStatusBadge(
-                    text = stringResource(if (overdue) R.string.timetable_overdue else R.string.timetable_urgent_badge),
-                    tone = if (overdue) BadgeTone.Danger else BadgeTone.Warning,
+                    text = stringResource(
+                        when {
+                            overdue -> R.string.timetable_overdue
+                            urgent -> R.string.timetable_urgent_badge
+                            else -> R.string.timetable_upcoming_badge
+                        },
+                    ),
+                    tone = when {
+                        overdue -> BadgeTone.Danger
+                        urgent -> BadgeTone.Warning
+                        else -> BadgeTone.Info
+                    },
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -296,7 +322,10 @@ private fun DeadlineCard(
                 )
                 Spacer(Modifier.width(UthDimens.Spacing.Sm))
                 Text(
-                    text = stringResource(R.string.timetable_due, item.dueAt.format(dateFormatter)),
+                    text = stringResource(
+                        R.string.timetable_due,
+                        item.dueAt.format(deadlineDateTimeFormatter()),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (overdue) MaterialTheme.colorScheme.error else UthTheme.extendedColors.textSecondary,
                     modifier = Modifier.weight(1f),
@@ -489,6 +518,9 @@ private fun courseName(course: Course): String = stringResource(
 private fun dateFormatter(): DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())
 
+private fun deadlineDateTimeFormatter(): DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE, d MMMM · HH:mm", Locale.getDefault())
+
 private fun timeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @Preview(showBackground = true)
@@ -503,6 +535,7 @@ private fun previewState(): ScheduleUiState {
     val now = LocalDateTime.of(2026, 10, 31, 12, 0)
     return ScheduleUiState(
         now = now,
+        isLoading = false,
         timetable = Timetable(
             sessions = listOf(
                 ClassSession(

@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 data class ScheduleUiState(
     val timetable: Timetable = Timetable(),
     val now: LocalDateTime = LocalDateTime.MIN,
+    val isLoading: Boolean = true,
     val showForm: Boolean = false,
     val course: Course = Course.ANDROID,
     val title: String = "",

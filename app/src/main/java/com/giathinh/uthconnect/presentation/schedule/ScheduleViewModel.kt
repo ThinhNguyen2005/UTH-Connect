@@ -22,7 +22,11 @@ class ScheduleViewModel @Inject constructor(
     private val state = MutableStateFlow(ScheduleUiState(now = LocalDateTime.now(clock)))
     val uiState = state.asStateFlow()
     init {
-        viewModelScope.launch { useCase.timetable.collect { value -> state.update { it.copy(timetable = value) } } }
+        viewModelScope.launch {
+            useCase.timetable.collect { value ->
+                state.update { it.copy(timetable = value, isLoading = false) }
+            }
+        }
         viewModelScope.launch {
             while (true) {
                 state.update { it.copy(now = LocalDateTime.now(clock)) }

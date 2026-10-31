@@ -169,6 +169,8 @@
     <string name="timetable_english">Tiếng Anh</string>
     <string name="timetable_title">Thời khóa biểu</string>
     <string name="timetable_urgent_badge">Sắp đến hạn</string>
+    <string name="timetable_upcoming_badge">Còn hạn</string>
+    <string name="timetable_loading">Đang tải thời khóa biểu…</string>
     <string name="timetable_form_hint">Chọn môn học và nhập thời hạn cần nhớ.</string>
     <string name="timetable_label_course">Môn học</string>
     <string name="timetable_room">Phòng %1$s</string>
