@@ -1,13 +1,31 @@
 import urllib.request
 import json
 import sys
+import os
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-API_KEY = "AIzaSyBEHyI3RB4cefMk9n0F9UYbr1CojA5F8c8"
-PROJECT_ID = "uthconnect-d4d91"
-EMAIL = "2023040123@ut.edu.vn"
-PASSWORD = "123456"
+# Đọc cấu hình tự động từ app/google-services.json thay vì hardcode key
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent
+gs_file = project_root / "app" / "google-services.json"
+
+if gs_file.exists():
+    with open(gs_file, "r", encoding="utf-8") as f:
+        gs_data = json.load(f)
+    PROJECT_ID = gs_data["project_info"]["project_id"]
+    API_KEY = gs_data["client"][0]["api_key"][0]["current_key"]
+else:
+    PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
+    API_KEY = os.environ.get("FIREBASE_API_KEY", "")
+
+if not API_KEY:
+    print("Error: Không tìm thấy API Key từ app/google-services.json hoặc biến môi trường.")
+    sys.exit(1)
+
+EMAIL = os.environ.get("FIREBASE_TEST_EMAIL", "2023040123@ut.edu.vn")
+PASSWORD = os.environ.get("FIREBASE_TEST_PASSWORD", "123456")
 
 print("1. Authenticating with Firebase Auth...")
 auth_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}"
