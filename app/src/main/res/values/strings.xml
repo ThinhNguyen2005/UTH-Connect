@@ -6,6 +6,7 @@
     <string name="common_meta_separator">•</string>
 
     <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
+    <string name="utilities_not_available">Chưa sẵn sàng</string>
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
