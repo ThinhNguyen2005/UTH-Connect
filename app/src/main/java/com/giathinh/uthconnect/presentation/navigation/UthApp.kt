@@ -23,13 +23,22 @@ import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
-import com.giathinh.uthconnect.presentation.home.HomeRoute
-import com.giathinh.uthconnect.presentation.profile.ProfileScreen
-import com.giathinh.uthconnect.presentation.home.HomeScreen
-import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.home.HomeRoute
+import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
+
+/**
+ * Cửa vào app: 4 tab chỉ mở sau khi xác thực demo.
+ *
+ * Phần đăng nhập nằm trong [AuthRoute] và phần đã đăng nhập nằm trong [SignedInUthApp], nên
+ * khung điều hướng không phải biết gì về form đăng nhập, và ngược lại.
+ */
+@Composable
+fun UthApp() {
+    AuthRoute(signedInContent = { SignedInUthApp() })
+}
 
 /**
  * Khung điều hướng tổng: [UthBottomBar] + [NavHost] cho 4 tab cấp 1 và các graph con.
@@ -43,11 +52,6 @@ import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
  * File không còn giữ vai trò DI: trước đây nó cấp `AppContainer` cho cả cây,
  * nay Hilt lo việc đó qua `@AndroidEntryPoint` trên `MainActivity`.
  */
-/** Login -> Home -> Profile: chỉ mở 4 tab sau khi xác thực demo. */
-@Composable
-fun UthApp() {
-    AuthRoute(signedInContent = { SignedInUthApp() })
-}
 @Composable
 private fun SignedInUthApp(
     navController: NavHostController = rememberNavController(),
@@ -106,7 +110,7 @@ private fun UthNavHost(
         }
         composable<ScheduleDestination> { ScheduleScreen() }
         composable<UtilitiesDestination> { UtilitiesRoute() }
-        composable<ProfileDestination> { ProfileScreen() }
+        composable<ProfileDestination> { ProfileRoute() }
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
