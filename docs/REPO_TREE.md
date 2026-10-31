@@ -1,6 +1,6 @@
 # UTH Connect — Cây thư mục & phân quyền sở hữu
 
-> **Phiên bản:** v1.2 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
+> **Phiên bản:** v1.3 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
 > **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
 >
@@ -56,7 +56,20 @@ app/src/test/java/com/giathinh/uthconnect/
 └── presentation/      announcement · auth · home · profile · utilities ViewModel tests
 ```
 
-Đây là snapshot checkout `main` tại `9267f65`, không khẳng định các nhánh feature đã merge hoặc các test hiện đang xanh. `schedule/` vẫn là placeholder; Events, Check-in và Lost & Found chưa có package presentation trên checkout này.
+Đây là snapshot checkout `main` tại `9267f65`; `schedule/` vẫn là placeholder, Events và Check-in chưa có package presentation trên `main`. **Cây `origin/develop` đã tiến lên `3f545c3`**, khác `main` vì PR #20 đã merge Lost & Found. Phần chênh lệch được xác minh bằng `git diff --name-status 9267f65..origin/develop`:
+
+```text
+presentation/lostfound/      LostFoundAction · Route · Screen · UiState · ViewModel
+domain/model/                LostFoundListing.kt
+domain/repository/           LostFoundRepository.kt
+domain/usecase/              GetLostFoundListingsUseCase · ReportLostFoundItemUseCase
+data/repository/             InMemoryLostFoundRepository.kt
+data/di/                     LostFoundDataModule.kt
+test/presentation/lostfound/ LostFoundViewModelTest.kt
+res/values/ + values-en/     41 dòng string mới trong mỗi file
+```
+
+Mã Lost & Found đã merge nhưng **chưa có child destination/graph**, chưa nối từ Utilities và còn lỗi điền số điện thoại/địa điểm giả khi form để trống (đã ghi review trong Jira KAN-49). Bản `origin/develop` tại `3f545c3` đã build `assembleDebug` thành công và qua **42 unit tests/10 suites, 0 failures** trên worktree kiểm thử riêng (Gradle 8.13 checksum chuẩn, SDK local, JVM 1 GiB, 1 worker). Kết quả này chỉ xác minh build/test; chưa chứng minh điều hướng hay smoke-test APK trên thiết bị.
 
 ---
 
@@ -76,6 +89,8 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 Quy tắc đặt tên file trong cây: theo `docs/CODING_STANDARDS.md` mục 2 và 3.2 — một module có đúng **5 file** trong `presentation/<module>/` (Hilt đã xoá bỏ file factory thứ sáu), thêm `<Module>Navigation.kt` khi module có route con.
 
 Phân công trên lấy từ Jira KAN-42–49 ngày 31/10/2026; tên nhánh là kế hoạch, không chứng minh nhánh hoặc PR đã tồn tại, đã merge hay đạt DoD. Khi đối chiếu GitHub ngày 31/10, nhánh Check-in hiện có tên `feature/checking-duc`, khác với tên `feature/checkin-duc` trong Jira; cần thống nhất trước khi tích hợp. `feature/timetable` cũng tồn tại bên cạnh `feature/timetable-nghia`: đối chiếu trước khi tích hợp để tránh trùng chủ sở hữu `schedule/`.
+
+**Cập nhật đồng bộ `develop`:** Lost & Found (Thắng) đã merge qua PR #20 tại `3f545c3`, đang chờ khắc phục review KAN-49 và nối route bởi chủ repo. Nhánh CORE-1 vẫn cần đồng bộ với `develop` trước khi kiểm thử tổ hợp; không đánh dấu ✅ DoD khi bug tích hợp còn tồn tại.
 
 Module nào cũng bắt đầu bằng 5 file đã chốt, copy nguyên `presentation/utilities/`:
 
@@ -180,6 +195,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 
 | Bản | Ngày | Thay đổi cấu trúc |
 |---|---|---|
+| v1.3 | 31/10/2026 | Phát hiện `origin/develop` tại `3f545c3` đã merge PR #20: bổ sung 5 file presentation Lost & Found, 6 file domain/data, 1 file test cùng strings VI/EN. Chưa nối route; KAN-49 có lỗi dữ liệu liên hệ mặc định. CORE-1 ban đầu: 35 tests/9 suites; `origin/develop` sau merge: `assembleDebug` thành công, **42 tests/10 suites, 0 failures** (worktree kiểm thử riêng). Chưa smoke-test APK. |
 | v1.2 | 31/10/2026 | Đối chiếu cây checkout `main` và cập nhật phân công theo Jira KAN-42–49; sửa checksum Gradle 8.13-bin. Chưa xác nhận build/test hoặc trạng thái merge các feature. |
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
