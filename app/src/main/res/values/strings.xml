@@ -146,6 +146,36 @@
     <string name="auth_demo_profile">Hồ sơ demo</string>
     <string name="auth_logout">Đăng xuất</string>
     <string name="auth_logout_failed">Đăng xuất thất bại. Vui lòng thử lại.</string>
+    <string name="timetable_memory">Dữ liệu mẫu · Chỉ lưu trong bộ nhớ</string>
+    <string name="timetable_add">Thêm deadline</string>
+    <string name="timetable_tomorrow">Lớp ngày mai</string>
+    <string name="timetable_empty_classes">Ngày mai không có lớp</string>
+    <string name="timetable_urgent">Cấp bách · Trong 48 giờ hoặc quá hạn</string>
+    <string name="timetable_empty_deadlines">Không có deadline cấp bách</string>
+    <string name="timetable_later">Deadline sắp tới</string>
+    <string name="timetable_completed">Đã hoàn tất: %1$d</string>
+    <string name="timetable_class_detail">%1$s – %2$s · Phòng %3$s</string>
+    <string name="timetable_assignment">Bài tập %1$s</string>
+    <string name="timetable_due">Hạn nộp: %1$s</string>
+    <string name="timetable_overdue">Đã quá hạn</string>
+    <string name="timetable_complete">Đánh dấu hoàn tất</string>
+    <string name="timetable_label_title">Tên deadline</string>
+    <string name="timetable_label_date">Ngày (yyyy-MM-dd)</string>
+    <string name="timetable_label_time">Giờ (HH:mm)</string>
+    <string name="timetable_invalid">Nhập tên và ngày giờ hợp lệ.</string>
+    <string name="timetable_save">Lưu</string>
+    <string name="timetable_cancel">Hủy</string>
+    <string name="timetable_android">Lập trình Android</string>
+    <string name="timetable_database">Cơ sở dữ liệu</string>
+    <string name="timetable_english">Tiếng Anh</string>
+    <string name="timetable_title">Thời khóa biểu</string>
+    <string name="timetable_urgent_badge">Sắp đến hạn</string>
+    <string name="timetable_upcoming_badge">Còn hạn</string>
+    <string name="timetable_loading">Đang tải thời khóa biểu…</string>
+    <string name="timetable_form_hint">Chọn môn học và nhập thời hạn cần nhớ.</string>
+    <string name="timetable_label_course">Môn học</string>
+    <string name="timetable_room">Phòng %1$s</string>
+    <string name="timetable_add_content_description">Thêm deadline</string>
 
     <!-- Auth/Profile V2 -->
     <string name="auth_password_change_title">Đổi mật khẩu</string>

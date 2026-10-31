@@ -29,7 +29,7 @@ import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
-import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
+import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
@@ -111,7 +111,7 @@ private fun UthNavHost(
                 },
             )
         }
-        composable<ScheduleDestination> { ScheduleScreen() }
+        composable<ScheduleDestination> { ScheduleRoute() }
         composable<UtilitiesDestination> {
             UtilitiesRoute(
                 onOpenModule = { module ->

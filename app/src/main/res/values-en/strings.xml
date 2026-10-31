@@ -143,6 +143,36 @@
     <string name="auth_demo_profile">Demo profile</string>
     <string name="auth_logout">Sign out</string>
     <string name="auth_logout_failed">Could not sign out. Try again.</string>
+    <string name="timetable_memory">Sample data · Stored in memory only</string>
+    <string name="timetable_add">Add deadline</string>
+    <string name="timetable_tomorrow">Classes tomorrow</string>
+    <string name="timetable_empty_classes">No classes tomorrow</string>
+    <string name="timetable_urgent">Urgent · Within 48 hours or overdue</string>
+    <string name="timetable_empty_deadlines">No urgent deadlines</string>
+    <string name="timetable_later">Upcoming deadlines</string>
+    <string name="timetable_completed">Completed: %1$d</string>
+    <string name="timetable_class_detail">%1$s – %2$s · Room %3$s</string>
+    <string name="timetable_assignment">%1$s assignment</string>
+    <string name="timetable_due">Due: %1$s</string>
+    <string name="timetable_overdue">Overdue</string>
+    <string name="timetable_complete">Mark complete</string>
+    <string name="timetable_label_title">Deadline title</string>
+    <string name="timetable_label_date">Date (yyyy-MM-dd)</string>
+    <string name="timetable_label_time">Time (HH:mm)</string>
+    <string name="timetable_invalid">Enter a title and a valid date and time.</string>
+    <string name="timetable_save">Save</string>
+    <string name="timetable_cancel">Cancel</string>
+    <string name="timetable_android">Android development</string>
+    <string name="timetable_database">Databases</string>
+    <string name="timetable_english">English</string>
+    <string name="timetable_title">Timetable</string>
+    <string name="timetable_urgent_badge">Due soon</string>
+    <string name="timetable_upcoming_badge">Upcoming</string>
+    <string name="timetable_loading">Loading timetable…</string>
+    <string name="timetable_form_hint">Choose a course and enter when it is due.</string>
+    <string name="timetable_label_course">Course</string>
+    <string name="timetable_room">Room %1$s</string>
+    <string name="timetable_add_content_description">Add deadline</string>
 
     <!-- Auth/Profile V2 -->
     <string name="auth_password_change_title">Change password</string>
