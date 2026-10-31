@@ -88,12 +88,33 @@ test/presentation/lostfound/ LostFoundViewModelTest.kt
 
 ---
 
+### Auth/Profile da tich hop - 31/10/2026
+
+- `presentation/auth/` va `presentation/profile/`: moi module 5 file Screen/Route/ViewModel/UiState/Action.
+- `domain/model/StudentProfile.kt`; `domain/repository/{AuthRepository,SessionRepository,StudentContactRepository}.kt`; `domain/validation/{LoginValidator,PasswordChangeValidator,StudentContactValidator}.kt`; `domain/usecase/{SignInUseCase,GetProfileUseCase,ChangePasswordUseCase,UpdateStudentContactUseCase}.kt`.
+- `data/repository/{DemoAuthRepository,PreferencesSessionRepository}.kt`; `data/di/AuthDataModule.kt`; test unit va Compose UI.
+- Co permission USE_BIOMETRIC, resource song ngu, quy tac backup; Auth V1 da sua UthApp.kt. Ban demo cuc bo chua ket noi API UTH.
+
+### Auth/Profile V3 - role and verified
+
+- domain/model/StudentProfile.kt: extend existing model with role (STUDENT default), uthVerified (false default), retain studentId and V2 contact fields.
+- domain/model/UserRole.kt: STUDENT, ORGANIZER, ADMIN.
+- data/repository/DemoAuthRepository.kt: two isolated demo accounts; verified and organizer badges are simulated and must never authorize server-side actions.
+- presentation/auth and presentation/profile: Channel + receiveAsFlow for one-off UI events; failed logout has visible Retry.
+- Tests: StudentProfileRoleTest, AuthViewModelTest, ProfileViewModelTest, ProfileScreenUiTest.
+- No changes to global nav, MainActivity, Gradle or design system; V1 UthApp changes still need repo owner review.
+
 ## 3. Cây đích: mỗi người một nhánh
 
 Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
 
 | Người | Nhánh | `presentation/` | `domain/` | `data/` | `test/` mirror |
 |---|---|---|---|---|---|
+| **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
+| **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
+| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` (2 × 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `DemoAuthRepository`, `PreferencesSessionRepository`, `AuthDataModule` | Auth/Profile unit + UI tests |
+| **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
+| **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Anh Phú** | `feature/auth-phu` | `auth/` · `profile/` | model và hợp đồng auth/session | repository và DI auth/session | auth · profile |
 | **Văn Tạ Huy Thiên** | `feature/events-van` | `events/` | Event · Registration · use case | repository và DI events | events |
 | **Đức Dịch Viết** | `feature/checkin-duc` | `tickets/` · `scanner/` | Ticket · Attendance · use case | repository và DI check-in | tickets · scanner |
@@ -211,6 +232,9 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 ## 8. Nhật ký cấu trúc
 
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
+| v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
+| v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |
 |---|---|---|
 | v1.3 | 31/10/2026 | Phát hiện `origin/develop` tại `3f545c3` đã merge PR #20: bổ sung 5 file presentation Lost & Found, 6 file domain/data, 1 file test cùng strings VI/EN. Chưa nối route; KAN-49 có lỗi dữ liệu liên hệ mặc định. CORE-1 ban đầu: 35 tests/9 suites; `origin/develop` sau merge: `assembleDebug` thành công, **42 tests/10 suites, 0 failures** (worktree kiểm thử riêng). Chưa smoke-test APK. |
 | v1.4 | 31/10/2026 | Nhánh tích hợp `codex/core-integration`: merge `origin/develop` ở `24117e7`, bổ sung `presentation/lostfound/LostFoundNavigation.kt` (destination type-safe + graph), chuẩn bị điều hướng từ Utilities; module vẫn tắt, chờ Thắng sửa lỗi KAN-49. Build thành công, 42 unit tests/10 suites đều qua; APK `adb9449` smoke-test trên Samsung SM-G990E thành công với đăng nhập demo, bốn tab và mở thông báo/Back; kiểm tra card Sự kiện chưa sẵn sàng. Các module chưa tích hợp vẫn cần test sau khi sẵn sàng. |

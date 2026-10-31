@@ -143,6 +143,49 @@
     <string name="auth_demo_profile">Demo profile</string>
     <string name="auth_logout">Sign out</string>
     <string name="auth_logout_failed">Could not sign out. Try again.</string>
+
+    <!-- Auth/Profile V2 -->
+    <string name="auth_password_change_title">Change password</string>
+    <string name="auth_password_current">Current password</string>
+    <string name="auth_password_new">New password</string>
+    <string name="auth_password_confirm">Confirm new password</string>
+    <string name="auth_password_policy">Use 8–64 characters with uppercase, lowercase, a digit and a symbol; no spaces.</string>
+    <string name="auth_password_wrong_current">Current password is incorrect.</string>
+    <string name="auth_password_weak">Password does not meet the strength requirements.</string>
+    <string name="auth_password_same">The new password must differ from the current password.</string>
+    <string name="auth_password_mismatch">New passwords do not match.</string>
+    <string name="auth_password_changed">Demo password updated on this device. Use it for your next sign-in.</string>
+    <string name="auth_contact_edit_title">Edit contact information</string>
+    <string name="auth_contact_phone">Phone number</string>
+    <string name="auth_contact_email">Personal email</string>
+    <string name="auth_contact_address">Current accommodation address</string>
+    <string name="auth_contact_not_set">Not added</string>
+    <string name="auth_contact_invalid_phone">Invalid phone number (e.g. 0912345678).</string>
+    <string name="auth_contact_invalid_email">Invalid personal email address.</string>
+    <string name="auth_contact_invalid_address">Address must not exceed 200 characters.</string>
+    <string name="auth_contact_saved">Demo contact information saved on this device.</string>
+    <string name="auth_save_failed">Could not save changes. Please retry.</string>
+    <string name="auth_save">Save changes</string>
+    <string name="auth_back">Back</string>
+    <string name="auth_cancel">Cancel</string>
+    <string name="auth_biometric_enable">Enable biometric sign-in</string>
+    <string name="auth_biometric_disable">Disable biometric sign-in</string>
+    <string name="auth_biometric_login">Sign in with fingerprint / face</string>
+    <string name="auth_biometric_subtitle">Verify using biometrics enrolled in device settings</string>
+    <string name="auth_biometric_note">Requires strong biometrics enrolled on the device. This only unlocks the local demo account.</string>
+    <string name="auth_biometric_error">Biometrics unavailable or canceled. Enroll a fingerprint or use a password.</string>
+    <string name="auth_biometric_enabled">Biometric sign-in enabled. Next time, tap the biometric button to sign in.</string>
+    <string name="auth_biometric_disabled">Biometric sign-in disabled.</string>
+    <string name="auth_logout_confirm_title">Sign out?</string>
+    <string name="auth_logout_confirm_body">Saved session and biometric sign-in permission on this device will be cleared. You will need to sign in again. Saved contact data stays.</string>
+
+    <!-- Auth/Profile V3 -->
+    <string name="auth_verified_demo_badge">Verified (demo only, not UTH)</string>
+    <string name="auth_unverified_badge">Not UTH verified</string>
+    <string name="auth_organizer_demo_badge">Organizer (demo)</string>
+    <string name="auth_logout_retry">Retry</string>
+    <!-- Auth/Profile V3.1: login retry -->
+    <string name="auth_login_retry">Retry sign-in</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Lost &amp; Found</string>
     <string name="lostfound_tab_lost">Lost Items (%1$d)</string>
