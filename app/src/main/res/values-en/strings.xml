@@ -169,4 +169,5 @@
     <string name="timetable_form_hint">Choose a course and enter when it is due.</string>
     <string name="timetable_label_course">Course</string>
     <string name="timetable_room">Room %1$s</string>
+    <string name="timetable_add_content_description">Add deadline</string>
 </resources>
