@@ -63,4 +63,47 @@
     <string name="schedule_exam_date">Exam date: %1$s</string>
     <string name="schedule_exam_method">Exam format: %1$s</string>
     <string name="schedule_lecturer">Lecturer: %1$s</string>
+    <!-- Events: fixed demo content, not official university announcements. -->
+    <string name="events_title">Events &amp; clubs</string>
+    <string name="events_sample_note">6 sample events • Demo only, not synced with the university calendar.</string>
+    <string name="events_back">Back</string>
+    <string name="events_all_campuses">All campuses</string>
+    <string name="events_campus_binh_thanh">Binh Thanh</string>
+    <string name="events_campus_thu_duc">Thu Duc</string>
+    <string name="events_campus_quan_12">District 12</string>
+    <string name="events_loading">Loading events…</string>
+    <string name="events_error_title">Could not load events</string>
+    <string name="events_error_body">Please try again to load the event list.</string>
+    <string name="events_empty_title">No events yet</string>
+    <string name="events_empty_body">There are no events for this campus. Try viewing all campuses.</string>
+    <string name="events_status_open">Registration open</string>
+    <string name="events_status_closed">Registration closed</string>
+    <string name="events_status_ended">Ended</string>
+    <string name="events_status_cancelled">Cancelled</string>
+    <string name="events_full">Fully booked</string>
+    <string name="events_capacity">%1$d/%2$d seats left</string>
+    <string name="events_location">%1$s • %2$s</string>
+    <string name="events_date_time">%1$02d/%2$02d/%3$d • %4$02d:%5$02d – %6$02d:%7$02d</string>
+    <string name="events_view_detail">View details</string>
+    <string name="events_register">Register</string>
+    <string name="events_detail_title">Event details</string>
+    <string name="events_detail_id">Event ID: %1$s</string>
+    <string name="events_detail_placeholder">This detail screen is under construction. This preview does not create a registration or issue a QR ticket.</string>
+    <string name="events_venue_hall">Assembly hall</string>
+    <string name="events_venue_lab">Computer lab</string>
+    <string name="events_venue_club">Club activity room</string>
+    <string name="events_venue_yard">Campus courtyard</string>
+    <string name="events_career_title">Transport and logistics career day</string>
+    <string name="events_career_body">Meet employers, explore internships and get CV feedback. Bring your CV and student card.</string>
+    <string name="events_android_title">Building Android apps with Kotlin</string>
+    <string name="events_android_body">Build a Jetpack Compose screen with the IT club. Bring a laptop with Android Studio installed.</string>
+    <string name="events_english_title">English Club: Confident internship interviews</string>
+    <string name="events_english_body">Practice introducing yourself, answering interview questions and speaking English in small groups.</string>
+    <string name="events_green_title">Green Sunday: Clean up our campus</string>
+    <string name="events_green_body">Join student volunteers to collect and sort litter and care for campus plants. Bring a reusable water bottle and a hat.</string>
+    <string name="events_logistics_title">Talk: Starting a career in logistics</string>
+    <string name="events_logistics_body">Discuss warehousing, shipping documents and internship skills with alumni. This sample session has been cancelled.</string>
+    <string name="events_welcome_title">Welcome freshmen: Meet UTH clubs</string>
+    <string name="events_welcome_body">Discover student clubs, Youth Union activities and study tips from senior students.</string>
+
 </resources>

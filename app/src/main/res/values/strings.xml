@@ -69,4 +69,47 @@
     <string name="schedule_exam_date">Ngày thi: %1$s</string>
     <string name="schedule_exam_method">Hình thức: %1$s</string>
     <string name="schedule_lecturer">Giảng viên: %1$s</string>
+    <!-- Events: nội dung demo cố định, không phải thông báo chính thức của trường. -->
+    <string name="events_title">Sự kiện &amp; CLB</string>
+    <string name="events_sample_note">6 sự kiện mẫu • Dùng để demo, chưa đồng bộ lịch của trường.</string>
+    <string name="events_back">Quay lại</string>
+    <string name="events_all_campuses">Tất cả cơ sở</string>
+    <string name="events_campus_binh_thanh">Bình Thạnh</string>
+    <string name="events_campus_thu_duc">Thủ Đức</string>
+    <string name="events_campus_quan_12">Quận 12</string>
+    <string name="events_loading">Đang tải sự kiện…</string>
+    <string name="events_error_title">Không tải được sự kiện</string>
+    <string name="events_error_body">Vui lòng thử lại để tải danh sách sự kiện.</string>
+    <string name="events_empty_title">Chưa có sự kiện</string>
+    <string name="events_empty_body">Cơ sở này chưa có sự kiện. Bạn có thể xem tất cả cơ sở.</string>
+    <string name="events_status_open">Đang mở đăng ký</string>
+    <string name="events_status_closed">Đã đóng đăng ký</string>
+    <string name="events_status_ended">Đã kết thúc</string>
+    <string name="events_status_cancelled">Đã hủy</string>
+    <string name="events_full">Hết chỗ</string>
+    <string name="events_capacity">Còn %1$d/%2$d chỗ</string>
+    <string name="events_location">%1$s • %2$s</string>
+    <string name="events_date_time">%1$02d/%2$02d/%3$d • %4$02d:%5$02d – %6$02d:%7$02d</string>
+    <string name="events_view_detail">Xem chi tiết</string>
+    <string name="events_register">Đăng ký</string>
+    <string name="events_detail_title">Chi tiết sự kiện</string>
+    <string name="events_detail_id">Mã sự kiện: %1$s</string>
+    <string name="events_detail_placeholder">Màn chi tiết đang được xây dựng. Đây chỉ là bước xem trước, chưa ghi nhận đăng ký hoặc cấp vé QR.</string>
+    <string name="events_venue_hall">Hội trường</string>
+    <string name="events_venue_lab">Phòng thực hành máy tính</string>
+    <string name="events_venue_club">Phòng sinh hoạt câu lạc bộ</string>
+    <string name="events_venue_yard">Sân trường</string>
+    <string name="events_career_title">Ngày hội việc làm ngành giao thông và logistics</string>
+    <string name="events_career_body">Gặp doanh nghiệp, tìm cơ hội thực tập và được góp ý CV. Sinh viên mang theo CV cùng thẻ sinh viên.</string>
+    <string name="events_android_title">Workshop làm ứng dụng Android với Kotlin</string>
+    <string name="events_android_body">Thực hành dựng màn hình Jetpack Compose cùng CLB Tin học. Chuẩn bị laptop đã cài Android Studio.</string>
+    <string name="events_english_title">English Club: Tự tin phỏng vấn thực tập</string>
+    <string name="events_english_body">Luyện giới thiệu bản thân, trả lời câu hỏi phỏng vấn và giao tiếp tiếng Anh theo nhóm nhỏ.</string>
+    <string name="events_green_title">Chủ nhật xanh: Cùng làm sạch khuôn viên</string>
+    <string name="events_green_body">Cùng đội tình nguyện thu gom rác, phân loại rác và chăm sóc cây xanh. Mang bình nước cá nhân và nón.</string>
+    <string name="events_logistics_title">Talkshow: Bắt đầu nghề logistics từ đâu?</string>
+    <string name="events_logistics_body">Trao đổi cùng cựu sinh viên về công việc kho vận, chứng từ và kỹ năng cần có khi thực tập. Buổi chia sẻ mẫu đã hủy.</string>
+    <string name="events_welcome_title">Chào tân sinh viên: Kết nối câu lạc bộ UTH</string>
+    <string name="events_welcome_body">Tìm hiểu các câu lạc bộ, hoạt động Đoàn – Hội và kinh nghiệm học tập từ sinh viên khóa trên.</string>
+
 </resources>

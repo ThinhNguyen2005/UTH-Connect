@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
 import com.giathinh.uthconnect.R
 import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
@@ -17,6 +18,7 @@ import kotlinx.serialization.Serializable
 @Serializable object HomeDestination
 @Serializable object ScheduleDestination
 @Serializable object UtilitiesDestination
+@Serializable object UtilitiesListDestination
 @Serializable object ProfileDestination
 
 /**
@@ -64,6 +66,8 @@ enum class UthDestination(
          * biến state riêng. `hasRoute` so theo @Serializable class — không parse chuỗi.
          */
         fun from(destination: NavDestination?): UthDestination? =
-            destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
+            destination?.let { cur ->
+                entries.firstOrNull { tab -> cur.hierarchy.any { it.hasRoute(tab.routeClass) } }
+            }
     }
 }
