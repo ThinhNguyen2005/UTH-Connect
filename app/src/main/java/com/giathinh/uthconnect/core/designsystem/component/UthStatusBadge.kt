@@ -30,7 +30,8 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 enum class BadgeTone { Success, Warning, Danger, Info, Accent, Neutral }
 
 /**
- * Badge trạng thái cao ~24dp.
+ * Badge trạng thái cao ~24dp, bo góc `Sm` (4dp) và nền/chữ lấy theo [BadgeTone] — đúng mục 4.3
+ * của `docs/Design-system.md`: badge là tag vuông mềm, không phải pill.
  *
  * Mặc định kèm icon để màu không phải tín hiệu duy nhất (người mù màu +
  * TalkBack). Truyền `icon = null` chỉ khi chữ đã tự mô tả, ví dụ "Gợi ý bởi AI".
