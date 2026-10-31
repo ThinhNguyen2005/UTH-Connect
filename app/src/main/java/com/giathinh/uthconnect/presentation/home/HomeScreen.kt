@@ -47,7 +47,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +79,7 @@ import com.giathinh.uthconnect.domain.model.AnnouncementCategory
 import com.giathinh.uthconnect.domain.model.HomeBanner
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 
 /**
  * Tab Trang chủ — cổng thông tin sinh viên: khối nhận diện nhà trường (nền `primary`),
@@ -378,11 +381,24 @@ private fun HomeHighlightsSection(
     if (banners.isEmpty()) return
 
     val listState = rememberLazyListState()
-    val position = (listState.firstVisibleItemIndex + 1).coerceAtMost(banners.size)
+
+    // Thẻ đang xem là thẻ gần **giữa khung nhìn**, không phải `firstVisibleItemIndex`: carousel
+    // snap giữa và mỗi thẻ chỉ rộng [BannerWidthFraction], nên sau khi lướt sang thẻ kế tiếp thẻ
+    // cũ vẫn còn "ló" ở mép trái — `firstVisibleItemIndex` không tăng và bộ đếm đứng yên ở 1.
+    val position by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
+            info.visibleItemsInfo
+                .minByOrNull { item -> abs(item.offset + item.size / 2 - center) }
+                ?.index ?: 0
+        }
+    }
+    val page = (position + 1).coerceAtMost(banners.size)
 
     Column(modifier = modifier.fillMaxWidth()) {
         HomeHighlightHeader(
-            position = position,
+            position = page,
             total = banners.size,
             modifier = Modifier.padding(
                 start = UthDimens.Spacing.Xl,
@@ -394,6 +410,7 @@ private fun HomeHighlightsSection(
         HomeBannerCarousel(
             banners = banners,
             listState = listState,
+            selectedIndex = position,
             onOpen = onOpen,
         )
     }
@@ -444,6 +461,7 @@ private fun HomeHighlightHeader(
 private fun HomeBannerCarousel(
     banners: List<HomeBanner>,
     listState: LazyListState,
+    selectedIndex: Int,
     onOpen: (HomeBanner) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -466,7 +484,7 @@ private fun HomeBannerCarousel(
     }
     HomePageIndicator(
         count = banners.size,
-        selectedIndex = listState.firstVisibleItemIndex,
+        selectedIndex = selectedIndex,
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = UthDimens.Spacing.Md, bottom = UthDimens.Spacing.Sm),
