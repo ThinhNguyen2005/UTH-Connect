@@ -40,7 +40,7 @@ app/src/main/java/com/giathinh/uthconnect/
 └── presentation/
     ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo]
     ├── home/          HomeScreen.kt          (placeholder, chưa MVVM)                 [events]
-    ├── schedule/      ScheduleScreen.kt      (placeholder, chưa MVVM)                 [timetable]
+    ├── schedule/      Screen · Route · ViewModel · UiState · Action (TIMETABLE-1)                 [timetable]
     ├── profile/       ProfileScreen.kt       (placeholder, chưa MVVM)                 [auth]
     └── utilities/     Screen · Route · ViewModel · UiState · Action                   [lost&found]
                        ↑ module mẫu, 5 file — đã đạt checklist CODING_STANDARDS mục 12
@@ -63,7 +63,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 | **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
 | **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
 | **Bạn C** | `feature/auth-<tên>` | `auth/` · `profile/` | `model/User.kt` `model/Faculty.kt` · `repository/AuthRepository.kt` `repository/ProfileRepository.kt` · `usecase/SendSchoolOtpUseCase.kt` `SignInUseCase.kt` `GetProfileUseCase.kt` | `remote/auth/SchoolEmailAuthRepository.kt` · `di/AuthDataModule.kt` | `presentation/auth/` `presentation/profile/` |
-| **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
+| **Nghĩa (TIMETABLE-1)** | feature/timetable-nghia | schedule/ (5 file MVVM) | model/Timetable.kt (Course/ClassSession/Deadline) · repository/TimetableRepository.kt · usecase/TimetableUseCase.kt | repository/InMemoryTimetableRepository.kt · di/TimetableDataModule.kt | domain/usecase/TimetableUseCaseTest.kt |
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
 
@@ -173,3 +173,14 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
 | trước v1.0 | 28/10/2026 | Dựng cây Clean Architecture `core/ · data/ · domain/ · presentation/`; xoá `ui/theme/` của template Android Studio (chuyển vào `core/designsystem/theme/`); thêm slice MVVM mẫu ở `presentation/utilities/` + `test/testing/MainDispatcherRule.kt`. |
+
+### TIMETABLE-1 — bổ sung cây thật ngày 31/10/2026 (mục 2/3)
+
+- domain/model/Timetable.kt: Course, ClassSession, Deadline, Timetable (java.time).
+- domain/repository/TimetableRepository.kt; domain/usecase/TimetableUseCase.kt.
+- data/repository/InMemoryTimetableRepository.kt; data/di/TimetableDataModule.kt.
+- presentation/schedule/: đúng 5 file Screen/Route/ViewModel/UiState/Action, phụ trách Nghĩa.
+- test/domain/usecase/TimetableUseCaseTest.kt: mock, filter/sort, validation và hoàn tất.
+
+Nhật ký mục 8: 31/10/2026 — Nghĩa triển khai TIMETABLE-1 in-memory; nối ScheduleRoute
+vào ScheduleDestination @Serializable hiện có. Không thêm dependency hoặc thay token theme.
