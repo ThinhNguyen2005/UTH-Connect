@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.utilities.campuses.CampusesScreen
 import com.giathinh.uthconnect.presentation.utilities.settings.SettingsScreen
 import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointScreen
@@ -37,17 +38,6 @@ fun UtilitiesRoute(
     NavHost(
         navController = navController,
         startDestination = UtilitiesDestination.Hub,
-    UtilitiesScreen(
-        uiState = uiState,
-        onAction = { action ->
-            if (action is UtilitiesAction.OpenModule) {
-                if (uiState.modules.any { it.id == action.moduleId && it.enabled }) {
-                    onOpenModule(action.moduleId)
-                }
-            } else {
-                viewModel.onAction(action)
-            }
-        },
         modifier = modifier,
         enterTransition = { fadeIn(tween(UthDimens.Motion.RouteFadeMillis)) },
         exitTransition = { fadeOut(tween(UthDimens.Motion.RouteFadeMillis)) },
@@ -55,7 +45,15 @@ fun UtilitiesRoute(
         composable<UtilitiesDestination.Hub> {
             UtilitiesScreen(
                 uiState = uiState,
-                onAction = viewModel::onAction,
+                onAction = { action ->
+                    if (action is UtilitiesAction.OpenModule) {
+                        if (uiState.modules.any { it.id == action.moduleId && it.enabled }) {
+                            onOpenModule(action.moduleId)
+                        }
+                    } else {
+                        viewModel.onAction(action)
+                    }
+                },
                 onNavigateToTuition = { navController.navigate(UtilitiesDestination.Tuition) },
                 onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
                 onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },

@@ -1,8 +1,8 @@
 package com.giathinh.uthconnect.core.designsystem.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,26 +45,26 @@ fun UthStatusBadge(
     icon: ImageVector? = tone.defaultIcon(),
 ) {
     val (container, onContainer) = UthTheme.extendedColors.toneColors(tone)
-    Row(
-        modifier = modifier
-            .background(container, MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = modifier.heightIn(min = UthDimens.Size.Badge),
+        shape = MaterialTheme.shapes.extraSmall,
+        color = container,
+        contentColor = onContainer,
     ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = onContainer,
-                modifier = Modifier.size(UthDimens.Size.IconBadge),
-            )
-            Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Row(
+            modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Spacer(Modifier.width(UthDimens.Spacing.Xs))
+            }
+            Text(text = text, style = MaterialTheme.typography.labelSmall)
         }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = onContainer,
-        )
     }
 }
 

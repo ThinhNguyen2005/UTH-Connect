@@ -141,8 +141,11 @@
     <string name="training_point_rank_excellent">XUẤT SẮC</string>
     <string name="training_point_rank_good">TỐT</string>
     <string name="training_point_rank_fair">KHÁ</string>
+    <string name="training_point_rank_label">XẾP LOẠI: %1$s</string>
     <string name="training_point_criteria_header">Chi tiết các tiêu chí đánh giá</string>
     <string name="training_point_total_label">Điểm rèn luyện tổng kết</string>
+    <string name="training_point_max_score"> / %1$d điểm</string>
+    <string name="training_point_criteria_score">%1$d/%2$d đ</string>
 
     <!-- Cơ sở & Danh bạ UTH -->
     <string name="campuses_title">Cơ sở &amp; Danh bạ UTH</string>
@@ -266,6 +269,7 @@
     <string name="timetable_english">Tiếng Anh</string>
     <string name="timetable_title">Thời khóa biểu</string>
     <string name="timetable_urgent_badge">Sắp đến hạn</string>
+    <string name="timetable_warning_badge">Cần lưu ý</string>
     <string name="timetable_upcoming_badge">Còn hạn</string>
     <string name="timetable_loading">Đang tải thời khóa biểu…</string>
     <string name="timetable_form_hint">Chọn môn học và nhập thời hạn cần nhớ.</string>

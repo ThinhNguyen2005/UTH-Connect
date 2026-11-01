@@ -3,7 +3,10 @@ package com.giathinh.uthconnect.presentation.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -14,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -138,7 +142,14 @@ private fun UthBottomBar(
     selected: UthDestination?,
     onSelect: (UthDestination) -> Unit,
 ) {
+    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
+    val scrollState = rememberScrollState()
     NavigationBar(
+        modifier = if (largeText) {
+            Modifier
+                .horizontalScroll(scrollState)
+                .width(UthDimens.Layout.LargeTextNavigationItemWidth * UthDestination.entries.size)
+        } else Modifier,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = UthDimens.Elevation.BottomBar,
     ) {
@@ -149,7 +160,7 @@ private fun UthBottomBar(
                 icon = {
                     Icon(
                         imageVector = destination.icon,
-                        contentDescription = stringResource(destination.labelRes),
+                        contentDescription = null, // NavigationBarItem đã có label cho TalkBack.
                     )
                 },
                 label = { Text(stringResource(destination.labelRes)) },

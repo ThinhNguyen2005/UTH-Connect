@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,29 +9,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -47,15 +50,27 @@ fun AuthScreen(
     modifier: Modifier = Modifier,
 ) {
     val enabled = !uiState.isSigningIn
+    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
     Column(
-        modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(UthDimens.Spacing.Xl),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.auth_brand), style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = stringResource(R.string.auth_brand),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        Text(stringResource(R.string.auth_subtitle), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = stringResource(R.string.auth_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
         UthCard(modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.auth_title), style = MaterialTheme.typography.titleLarge)
@@ -96,21 +111,31 @@ fun AuthScreen(
                 keyboardActions = KeyboardActions(onDone = { onAction(AuthAction.Submit) }),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    modifier = Modifier.weight(1f).toggleable(
-                        value = uiState.rememberMe,
-                        enabled = enabled,
-                        role = Role.Checkbox,
-                        onValueChange = { onAction(AuthAction.RememberChanged(it)) },
-                    ),
-                    verticalAlignment = Alignment.CenterVertically,
+            if (largeText) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
                 ) {
-                    Checkbox(checked = uiState.rememberMe, onCheckedChange = null, enabled = enabled)
-                    Text(stringResource(R.string.auth_remember), style = MaterialTheme.typography.bodySmall)
+                    RememberMeOption(
+                        checked = uiState.rememberMe,
+                        enabled = enabled,
+                        onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
+                    )
+                    TextButton(onClick = { onAction(AuthAction.ForgotPassword) }) {
+                        Text(stringResource(R.string.auth_forgot))
+                    }
                 }
-                TextButton(onClick = { onAction(AuthAction.ForgotPassword) }) {
-                    Text(stringResource(R.string.auth_forgot))
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    RememberMeOption(
+                        checked = uiState.rememberMe,
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f),
+                        onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
+                    )
+                    TextButton(onClick = { onAction(AuthAction.ForgotPassword) }) {
+                        Text(stringResource(R.string.auth_forgot))
+                    }
                 }
             }
             uiState.failure?.let { failure ->
@@ -147,8 +172,11 @@ fun AuthScreen(
             ) { Text(stringResource(R.string.auth_biometric_login)) }
         }
         Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(stringResource(R.string.auth_demo_notice), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = stringResource(R.string.auth_demo_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     if (uiState.forgotDialogOpen) {
         AlertDialog(
@@ -161,6 +189,29 @@ fun AuthScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun RememberMeOption(
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .heightIn(min = UthDimens.Size.MinTouchTarget)
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+        Text(stringResource(R.string.auth_remember), style = MaterialTheme.typography.bodySmall)
     }
 }
 

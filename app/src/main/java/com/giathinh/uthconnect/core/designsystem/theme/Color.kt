@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.Color
  * KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
  * `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).
  *
- * Tỷ số tương phản đã đo theo WCAG 2.1 với nền trắng #FFFFFF.
+ * Tỷ số tương phản đã đo theo WCAG 2.2 trên các nền Surface/Background.
  */
 
 // ───────────────────────── Brand (màu nhận diện trường UTH) ─────────────────────────
@@ -45,8 +45,8 @@ val UthSurfaceLight = Color(0xFFFFFFFF)
 /** List item xen kẽ, vùng inactive, skeleton. */
 val UthSurfaceSubtleLight = Color(0xFFF0F3F6)
 
-/** Viền 1.dp của card và text field. */
-val UthOutlineLight = Color(0xFFD5DCE3)
+/** Viền component light: ≥3.7:1 trên Surface, dùng cho Card và TextField. */
+val UthOutlineLight = Color(0xFF768696)
 
 /** Viền phân tách nhẹ (divider, outlineVariant) — mờ hơn [UthOutlineLight]. */
 val UthOutlineVariantLight = Color(0xFFE4E7EB)
@@ -60,7 +60,7 @@ val UthOnNavyContainerLight = Color(0xFF0A2A4A)
 /** Nền `tertiaryContainer` — nhạt hơn [UthNavyContainerLight] một bậc. */
 val UthTertiaryContainerLight = Color(0xFFDCE8F5)
 
-/** Chữ chính — 15.6:1 (AAA). */
+/** Chữ chính — 16.0:1 trên Surface (AAA). */
 val UthTextPrimaryLight = Color(0xFF14213D)
 
 /** Chữ phụ, mô tả, timestamp — 5.5:1 (AA). */
@@ -74,7 +74,8 @@ val UthTextTertiaryLight = Color(0xFF8C99A6)
 val UthBackgroundDark = Color(0xFF0B1622)
 val UthSurfaceDark = Color(0xFF13202E)
 val UthSurfaceSubtleDark = Color(0xFF1C2C3D)
-val UthOutlineDark = Color(0xFF33465C)
+/** Viền component dark: ≥3.6:1 trên Surface. */
+val UthOutlineDark = Color(0xFF65788E)
 val UthTextPrimaryDark = Color(0xFFEAF1F8)
 val UthTextSecondaryDark = Color(0xFFA9B7C6)
 val UthTextTertiaryDark = Color(0xFF6B7A8A)
