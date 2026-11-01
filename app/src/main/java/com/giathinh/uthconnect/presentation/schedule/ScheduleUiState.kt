@@ -20,5 +20,7 @@ data class ScheduleUiState(
 ) {
     val tomorrowClasses get() = TimetableUseCase.tomorrow(timetable, now.toLocalDate())
     val urgentDeadlines get() = TimetableUseCase.urgent(timetable, now)
-    val laterDeadlines get() = TimetableUseCase.pending(timetable).filter { it.dueAt.isAfter(now.plusHours(48)) }
+    val laterDeadlines get() = TimetableUseCase.pending(timetable).filterNot {
+        TimetableUseCase.isUrgent(it.dueAt, now)
+    }
 }

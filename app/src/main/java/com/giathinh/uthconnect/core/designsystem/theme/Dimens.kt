@@ -69,22 +69,12 @@ object UthDimens {
         /** Top app bar. */
         val TopBar: Dp = 64.dp
 
-        /** Bottom navigation (khớp mặc định Material 3). */
-        val BottomBar: Dp = 80.dp
-
-        /** FAB chuẩn / FAB mini. */
-        val Fab: Dp = 56.dp
-        val FabMini: Dp = 40.dp
-
         /** Avatar. */
         val Avatar: Dp = 40.dp
         val AvatarLarge: Dp = 56.dp
 
         /** Badge/tag cao 24dp. */
         val Badge: Dp = 24.dp
-
-        /** Ảnh bìa sự kiện cao tương ứng tỉ lệ 16:9 trên bề rộng màn hình phổ biến. */
-        val CoverHeight: Dp = 180.dp
 
         /** Cạnh tối thiểu của QR để máy quét ở bàn check-in đọc được. */
         val QrMin: Dp = 220.dp
@@ -107,6 +97,15 @@ object UthDimens {
 
         /** Icon chuẩn 24.dp — nút icon-only (chuông thông báo) và icon đại diện khi ảnh chưa có. */
         val Icon: Dp = 24.dp
+
+        /** Icon trong CTA nhỏ (điện thoại/email); không dùng cho vùng chạm. */
+        val IconCompact: Dp = 16.dp
+
+        /** Nền icon trong ô Tiện ích; vùng chạm do UthCard của Material 3 cung cấp. */
+        val UtilityIconContainer: Dp = 44.dp
+
+        /** Chiều cao thanh tiến độ điểm rèn luyện. */
+        val TrainingProgressTrack: Dp = 6.dp
 
         /** Ảnh thumbnail vuông trong danh sách bảng tin (trang chủ). */
         val Thumbnail: Dp = 80.dp
@@ -142,9 +141,6 @@ object UthDimens {
         /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
         val IndicatorBar: Dp = 20.dp
 
-        /** Drag handle của bottom sheet. */
-        val SheetHandleWidth: Dp = 32.dp
-        val SheetHandleHeight: Dp = 4.dp
     }
 
     /**
@@ -159,17 +155,53 @@ object UthDimens {
         val BottomBar: Dp = 2.dp
     }
 
-    /** Duration (ms) — tắt khi người dùng bật "Giảm chuyển động". */
+    /** Duration (ms) cho các hiệu ứng được dự án quản lý trực tiếp. */
     object Motion {
-        val PressMillis = 100
-        val RouteFadeMillis = 200
-        val SheetExpandMillis = 250
-        val QrRefreshMillis = 150
-        val ShimmerMillis = 1200
+        const val RouteFadeMillis = 200
+        const val ShimmerMillis = 1200
+    }
 
-        /** Ngưỡng đổi màu deadline sang cảnh báo (T-3 ngày) và sang lỗi (48 giờ). */
-        val DeadlineWarnDays = 3
-        val DeadlineErrorHours = 48
+    /** Độ trong suốt của lớp trang trí; màu chữ quan trọng vẫn dùng semantic color. */
+    object Opacity {
+        const val HeaderMetadata = 0.78f
+        const val HeaderActionFill = 0.14f
+        const val HeaderActionBorder = 0.22f
+        const val HomeHeaderRing = 0.06f
+        const val HomeHeaderAccentRing = 0.10f
+        const val CoverPlaceholder = 0.28f
+        const val CoverLabelSurface = 0.92f
+        const val ShimmerHighlight = 0.70f
+        const val TicketHeaderRing = 0.14f
+        const val TicketSelectedCount = 0.24f
+        const val TicketStub = 0.50f
+        const val SubtleDivider = 0.50f
+    }
+
+    /** Tỷ lệ bố cục và hình trang trí của các màn hiện có; không thay thế quy tắc đo của M3. */
+    object Layout {
+        const val CoverAspectRatio = 16f / 9f
+        /** Cho phép mục điều hướng có đủ chỗ khi chữ được phóng lớn. */
+        val LargeTextNavigationItemWidth: Dp = 144.dp
+        const val LargeTextScale = 1.5f
+        const val HomeBannerWidthFraction = 0.86f
+
+        const val HomeRingRadiusFraction = 0.42f
+        const val HomeRingStrokeFraction = 0.055f
+        const val HomeRingOffsetFraction = 0.30f
+        const val HomeAccentRingRadiusFactor = 0.66f
+        const val HomeAccentRingCenterFraction = 0.92f
+        const val HomeAccentRingStrokeFactor = 0.60f
+
+        const val TicketRingRadiusFraction = 0.62f
+        const val TicketRingStrokeFraction = 0.008f
+        const val TicketRingCenterFraction = 0.95f
+        const val TicketDashedLineDashFactor = 1f
+        const val TicketDashedLineGapFactor = 1.2f
+
+        const val HomeSkeletonRowCount = 3
+        const val HomeSkeletonTitleFraction = 0.62f
+        const val HomeSkeletonMetadataFraction = 0.38f
+        const val ShimmerBandFraction = 0.60f
     }
 }
 

@@ -110,6 +110,10 @@ class TicketsViewModelTest {
         )
         override suspend fun restore() = Unit
         override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+        override suspend fun updateProfile(profile: StudentProfile) = Unit
+        override suspend fun enableBiometric(studentId: String) = Unit
+        override suspend fun disableBiometric() = Unit
+        override suspend fun unlockWithBiometric() = Unit
         override suspend fun signOut() = Unit
     }
 

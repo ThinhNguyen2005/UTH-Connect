@@ -32,7 +32,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -169,7 +168,7 @@ private fun UtilityGridCard(
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(UthDimens.Size.UtilityIconContainer)
                 .background(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = MaterialTheme.shapes.small,
@@ -180,7 +179,7 @@ private fun UtilityGridCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(UthDimens.Size.Icon),
             )
         }
 

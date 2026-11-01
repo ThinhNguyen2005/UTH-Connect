@@ -1,7 +1,6 @@
 package com.giathinh.uthconnect.core.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,17 +47,35 @@ fun UthCard(
     contentPadding: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
-    Card(
-        modifier = modifier.then(clickModifier),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline),
-        elevation = CardDefaults.cardElevation(defaultElevation = UthDimens.Elevation.Card),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
+    val shape = MaterialTheme.shapes.medium
+    val border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline)
+    val elevation = CardDefaults.cardElevation(defaultElevation = UthDimens.Elevation.Card)
+    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = if (contentPadding) Modifier.padding(UthDimens.Spacing.Lg) else Modifier,
             content = content,
+        )
+    }
+
+    if (onClick == null) {
+        Card(
+            modifier = modifier,
+            shape = shape,
+            border = border,
+            elevation = elevation,
+            colors = colors,
+            content = cardContent,
+        )
+    } else {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            shape = shape,
+            border = border,
+            elevation = elevation,
+            colors = colors,
+            content = cardContent,
         )
     }
 }
@@ -102,7 +120,7 @@ fun UthPrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
-        modifier = modifier.height(UthDimens.Size.ButtonHeight).semantics {
+        modifier = modifier.heightIn(min = UthDimens.Size.ButtonHeight).semantics {
             if (loading) stateDescription = loadingDescription
         },
         shape = MaterialTheme.shapes.small,

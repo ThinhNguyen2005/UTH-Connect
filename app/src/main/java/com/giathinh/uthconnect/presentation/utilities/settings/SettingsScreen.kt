@@ -59,7 +59,7 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại",
+                            contentDescription = stringResource(R.string.common_back),
                         )
                     }
                 },
@@ -110,7 +110,7 @@ fun SettingsScreen(
                 }
 
                 Spacer(Modifier.height(UthDimens.Spacing.Md))
-                HorizontalDivider(color = DividerDefaults.color.copy(alpha = 0.5f))
+                HorizontalDivider(color = DividerDefaults.color.copy(alpha = UthDimens.Opacity.SubtleDivider))
                 Spacer(Modifier.height(UthDimens.Spacing.Md))
 
                 // Toggle Thông báo điểm rèn luyện
@@ -165,7 +165,7 @@ fun SettingsScreen(
                 }
 
                 Spacer(Modifier.height(UthDimens.Spacing.Md))
-                HorizontalDivider(color = DividerDefaults.color.copy(alpha = 0.5f))
+                HorizontalDivider(color = DividerDefaults.color.copy(alpha = UthDimens.Opacity.SubtleDivider))
                 Spacer(Modifier.height(UthDimens.Spacing.Md))
 
                 Row(

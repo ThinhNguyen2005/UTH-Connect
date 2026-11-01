@@ -39,13 +39,13 @@
 | `Background` | `#FAFAF9` | Nền màn hình, tông ấm chống mỏi mắt |
 | `Surface` | `#FFFFFF` | Card, BottomSheet, Dialog, Bottom bar |
 | `SurfaceSubtle` | `#F0F3F6` | List item xen kẽ, vùng inactive, skeleton |
-| `Outline` | `#D5DCE3` | Viền 1.dp của Card/TextField |
-| `TextPrimary` | `#14213D` | Tiêu đề, nội dung quan trọng — **15.6:1** |
+| `Outline` | `#768696` | Viền Card/TextField, ≥3.7:1 trên Surface |
+| `TextPrimary` | `#14213D` | Tiêu đề, nội dung quan trọng — **16.0:1** |
 | `TextSecondary` | `#5A6B7C` | Mô tả, timestamp — **5.5:1** |
 | `TextTertiary` | `#8C99A6` | **Chỉ** chữ disabled / trang trí — 2.9:1 |
 | `Success` / `SuccessContainer` / `SuccessOnContainer` | `#10B981` / `#ECFDF5` / `#047857` | Check-in hợp lệ, đã trả đồ, đã nộp bài |
-| `Warning` / `WarningContainer` / `WarningOnContainer` | `#F59E0B` / `#FFFBEB` / `#92400E` | Deadline ≤ 3 ngày, hết khung giờ quét |
-| `Error(danger)` / `ErrorContainer` / `ErrorOnContainer` | `#EF4444` / `#FEF2F2` / `#B91C1C` | Quét sai mã, mất kết nối, vé không tồn tại |
+| `Warning` / `WarningContainer` / `WarningOnContainer` | `#F59E0B` / `#FFFBEB` / `#92400E` | Deadline còn trên 48 giờ đến hết 7 ngày; cảnh báo ngoài khung giờ quét |
+| `Danger` / `ErrorContainer` / `ErrorOnContainer` | `#EF4444` / `#FEF2F2` / `#B91C1C` | Màu `Danger` chỉ cho icon/nền/viền; chữ lỗi dùng `ErrorOnContainer` |
 | `Info` / `InfoContainer` / `InfoOnContainer` | `#0EA5E9` / `#F0F9FF` / `#075985` | Gợi ý, hướng dẫn lần đầu |
 
 > Trung tính chuyển từ tông kẽm (`#F4F4F5`/`#E4E4E7`/`#18181B`) sang tông **xanh lạnh** để ăn khớp Navy. Đây là thay đổi duy nhất so với spec *CampusHub* về nền/viền.
@@ -57,7 +57,7 @@
 | `Background` | `#0B1622` | | `Primary` (Navy sáng hoá) | `#7FB2E5` |
 | `Surface` | `#13202E` | | `OnPrimary` | `#062038` |
 | `SurfaceSubtle` | `#1C2C3D` | | `PrimaryContainer` | `#143252` |
-| `Outline` | `#33465C` | | `OnPrimaryContainer` | `#BBD8F5` |
+| `Outline` | `#65788E` | ≥3.6:1 trên Surface | `OnPrimaryContainer` | `#BBD8F5` |
 | `TextPrimary` | `#EAF1F8` | | `Secondary` (Gold sáng hoá) | `#F5B740` |
 | `TextSecondary` | `#A9B7C6` | | `OnSecondary` | `#0B1622` |
 | `TextTertiary` | `#6B7A8A` | | `SecondaryContainer` / text | `#3A2C10` / `#FCD98A` |
@@ -78,7 +78,7 @@ Module **không** có màu riêng cho nút/bảng. Chỉ badge phân loại đư
 | `Đang mở / Còn chỗ / Đã điểm danh` | `Success` | `SuccessContainer` | `SuccessOnContainer` |
 | `Sắp deadline / Hết hạn / Trùng scan` | `Warning` / `Danger` | `WarningContainer` / `ErrorContainer` | `WarningOnContainer` / `ErrorOnContainer` |
 
-### 1.4. Tương phản đã đo (WCAG 2.1)
+### 1.4. Tương phản đã đo (WCAG 2.2)
 
 Tất cả tỷ số dưới đây tính theo công thức WCAG trên nền trắng (trừ cặp ghi rõ nền khác). Light đo trước, dark đo sau.
 
@@ -89,19 +89,22 @@ Tất cả tỷ số dưới đây tính theo công thức WCAG trên nền tr�
 | Trắng trên `UthGold` | **2.0:1** | ❌ cấm tuyệt đối |
 | `UthGoldText` #7A4E00 trên `UthGoldContainer` #FFF3DC | **6.6:1** | Đạt AA (badge MVP) |
 | `UthGold` làm **chữ** trên trắng | **2.0:1** | ❌ → dùng `UthGoldText` |
-| `TextPrimary` #14213D trên `Surface` | **15.6:1** | Đạt AAA |
+| `TextPrimary` #14213D trên `Surface` | **16.0:1** | Đạt AAA |
 | `TextSecondary` #5A6B7C trên `Surface` | **5.5:1** | Đạt AA (body) |
+| `Outline` light #768696 trên `Surface` #FFFFFF | **3.7:1** | Đạt non-text contrast cho biên component |
+| Dark: `Outline` #65788E trên `Surface` #13202E | **3.6:1** | Đạt non-text contrast cho biên component |
 | `TextTertiary` #8C99A6 trên `Surface` | **2.9:1** | ❌ **không đạt** → chỉ text disabled hoặc số trang trí ≥ 24.sp |
 | `Success` #10B981 làm **chữ** trên trắng | **2.5:1** | ❌ → `SuccessOnContainer` #047857 (5.5:1 trên trắng, **5.2:1** trên container) |
 | `Warning` #F59E0B làm **chữ** trên trắng | **2.2:1** | ❌ → `WarningOnContainer` #92400E (**6.8:1** trên container) |
-| `Error` #EF4444 làm **chữ** trên trắng | **3.8:1** | ❌ body → `ErrorOnContainer` #B91C1C (**5.9:1** trên container) |
-| Dark: `TextPrimary` #EAF1F8 trên #0B1622 | **15.8:1** | Đạt AAA |
+| `Danger` #EF4444 làm **chữ** trên trắng | **3.8:1** | ❌ body → `ErrorOnContainer` #B91C1C (**5.9:1** trên container); `colorScheme.error` light cũng dùng màu này cho trạng thái lỗi Material 3 |
+| Dark: `TextPrimary` #EAF1F8 trên #0B1622 | **16.0:1** | Đạt AAA |
 | Dark: `Primary` #7FB2E5 trên #0B1622 | **8.1:1** | Đạt AAA |
 | Dark: `OnPrimary` #062038 trên #7FB2E5 | **7.4:1** | Đạt AAA |
 | Dark: `OnSecondary` #0B1622 trên #F5B740 | **10.0:1** | Đạt AAA |
 | `UthNavy` làm viền/icon (không phải chữ) | ≥ 3:1 | Đạt UI component |
 
 > **Kết luận quan trọng:** `Success`/`Warning`/`Error`/`Gold` **chỉ là màu nền, icon, viền**. Chữ bắt buộc dùng biến `*OnContainer`. Trạng thái không được truyền tải chỉ bằng màu — phải kèm icon + chữ (colour-not-only-meaning).
+> `OutlineVariant` dành cho divider và trang trí; dùng `Outline` khi đường viền là tín hiệu cần để nhận diện ranh giới component.
 
 ### 1.5. Dynamic color: mặc định tắt (đã áp dụng)
 
@@ -181,8 +184,8 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
 | Khu vực | Chuẩn |
 |---|---|
 | Top app bar | 64.dp cao, `titleLarge`, lùi `Xl` hai bên |
-| Bottom navigation | 80.dp, nền `Surface`, **label luôn hiện** (hỗ trợ TalkBack); tab đang chọn: icon+chữ `primary` (Navy), indicator `PrimaryContainer` |
-| FAB | 56.dp thường, 40.dp mini; cách đáy `Lg` trên top của bottom nav; nền `secondary` (Gold) + icon `onSecondary` (Navy) |
+| Bottom navigation | Dùng kích thước và insets mặc định của Material 3; nền `Surface`, **label luôn hiện** (hỗ trợ TalkBack); tab đang chọn: icon+chữ `primary` (Navy), indicator `PrimaryContainer`. Khi font scale từ `UthDimens.Layout.LargeTextScale`, giữ mỗi mục tối thiểu `UthDimens.Layout.LargeTextNavigationItemWidth` và cho thanh cuộn ngang để nhãn không bị ép hẹp. |
+| FAB | Dùng `FloatingActionButton` Material 3 với kích thước mặc định; đặt trong `Scaffold` để giữ insets và khoảng cách hệ thống. |
 | Loading indicator | `UthDimens.Size.Progress` 40.dp đường kính, nét `ProgressStroke` 3.dp, màu `primary`; đặt cạnh chữ `bodyMedium` màu `textSecondary`, cách `Md`. **Không** dùng overlay chặn tương tác khi tải danh sách |
 | Touch target | **≥ 48×48.dp** cho mọi phần tử bấm được (icon trong card cũng vậy) |
 | Divider | 1.dp `Outline`, cách nội dung `Md` |
@@ -247,7 +250,7 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
 - Văn phong: nói nguyên nhân + cách xử lý ("Chưa có sự kiện nào ở cơ sở Thủ Đức · Thử đổi bộ lọc"), không dùng "Không có dữ liệu".
 
 ### 4.10. BottomSheet / Dialog
-- Sheet: bo góc `Xl` trên, drag handle 32×4.dp `Outline`, content padding `Lg`, cao tối đa 80 % màn hình.
+- Sheet: dùng `ModalBottomSheet` của Material 3, shape `MaterialTheme.shapes.large` từ Design System và drag handle mặc định (`BottomSheetDefaults.DragHandle`). Để Material 3 quản lý insets, gesture và giới hạn chiều cao; nội dung dùng padding `UthDimens.Spacing.Lg` khi phù hợp bố cục.
 - Dialog: tối đa 2 action, action phá huỷ (xóa sự kiện, hủy đăng ký hàng loạt) dùng `ErrorOnContainer` và phải có bước xác nhận.
 
 ---
@@ -256,12 +259,12 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
 
 | Loại | Duration | Easing |
 |---|---|---|
-| Press/state layer | 100 ms | `FastOutSlowIn` |
-| Chuyển tab/Route fade | 200 ms | `FastOutLinearIn` |
-| BottomSheet mở | 250 ms | `Emphasized` |
-| Refresh QR | 150 ms fade | `Linear` |
+| Route fade | 200 ms (`UthDimens.Motion.RouteFadeMillis`) | `tween` mặc định của Compose |
+| Home loading shimmer | 1200 ms (`UthDimens.Motion.ShimmerMillis`) | `LinearEasing`; dừng khi hệ thống tắt animator |
+| Press/focus state và ModalBottomSheet | Mặc định Material 3 | Không khai báo duration token riêng |
 
-- Tôn trọng `Settings → Giảm chuyển động` (Android): mọi animation > 100 ms phải tắt khi `reduceMotion` bật.
+- Tôn trọng thiết lập hệ thống giảm/tắt chuyển động: animation mặc định của Compose/Material 3 theo duration scale; shimmer vô hạn chỉ chạy khi `ValueAnimator.areAnimatorsEnabled()` và render skeleton tĩnh khi hệ thống tắt animator.
+- Chỉ thêm `UthDimens.Motion` khi animation có hành vi thực tế. Dùng API animation/transition có sẵn của Compose và Material 3 trước khi tạo helper riêng.
 - Không dùng animation để chờ dữ liệu thay vì skeleton.
 
 ---
@@ -281,18 +284,18 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
 
 ---
 
-## 7. Ánh xạ vào code (trạng thái đã kiểm chứng bằng build)
+## 7. Ánh xạ vào code (kiểm tra lại build khi nghiệm thu)
 
 | Token | File | Trạng thái |
 |---|---|---|
 | Bảng màu light/dark | `core/designsystem/theme/Color.kt` | ✅ đã thay 6 màu template (`Purple80`/`PurpleGrey40`/…); thư mục `ui/theme/` cũ đã xoá |
 | `Typography` 11 role | `core/designsystem/theme/Type.kt` → `UthTypography` | ✅ Roboto, có `Typography.tabularFigures` cho MSSV/giờ/số liệu |
-| Spacing / radius / kích thước / motion | `core/designsystem/theme/Dimens.kt` → `UthDimens.Spacing·Radius·Size·Motion` | ✅ + `UthShapes` đưa vào `MaterialTheme.shapes` |
+| Spacing / radius / kích thước / motion / opacity / tỷ lệ | `core/designsystem/theme/Dimens.kt` → `UthDimens.Spacing·Radius·Size·Motion·Opacity·Layout` | ✅ các giá trị dùng trong Compose tập trung tại token; `UthShapes` được đưa vào `MaterialTheme.shapes` |
 | `lightColorScheme` / `darkColorScheme` | `core/designsystem/theme/Theme.kt` | ✅ `dynamicColor = false` mặc định |
 | Màu mở rộng (surfaceSubtle, textSecondary/Tertiary, 4 nhóm trạng thái, accent) | `Theme.kt` → `UthExtendedColors` + `LocalUthExtendedColors`, đọc qua `UthTheme.extendedColors` | ✅ một chỗ duy nhất, tự động đổi theo dark |
 | Component dùng chung | `core/designsystem/component/UthComponents.kt` (`UthCard`, `UthSectionHeader`, `UthPrimaryButton`, `UthEmptyState`) | ✅ |
 | Badge trạng thái | `core/designsystem/component/UthStatusBadge.kt` — `enum BadgeTone` | ✅ 6 tone theo mục 1.3 |
-| Skeleton + shimmer (mục 4.2) | `core/designsystem/component/` | ⏳ chưa làm — cần màn hình tải dữ liệu đầu tiên |
+| Skeleton + shimmer (mục 4.2) | `presentation/home/HomeScreen.kt` | ✅ Home loading, vô hiệu hoá shimmer khi duration scale = 0; chưa trích thành component chung vì hiện chỉ một nơi dùng |
 | Bản mẫu một màn hình đạt checklist mục 8 | `presentation/utilities/` — `UtilitiesScreen` stateless nhận `UiState`, `UtilitiesRoute` nối `UtilitiesViewModel` | ✅ 8 `@Preview` (4 trạng thái × light/dark) + 4 unit test; `:app:assembleDebug`/`testDebugUnitTest` xanh. Màn hình mới copy cấu trúc này, không tự bày lại |
 | Icon | `androidx.compose.material:material-icons-core:1.7.8` | ⚠ thư viện đã đóng băng (không cập nhật nữa); chỉ dùng cho khung nav + badge, icon thiết kế riêng sẽ vào `res/drawable` |
 
@@ -335,7 +338,7 @@ Checklist dưới đây kiểm tra **kết quả thị giác**; cách viết cod
 |---|---|---|
 | `PrimaryAccent` `#4F46E5` (indigo) | `primary` **Navy `#003366`** | màu nhận diện trường UTH; trắng trên Navy 12.6:1 (tốt hơn indigo 6.3:1) |
 | `Secondary` không dùng | **Gold `#F5A623`** cho FAB/badge nhấn | dùng được nhưng **bắt buộc** chữ Navy (6.2:1); trắng trên Gold chỉ 2.0:1 |
-| Trung tính kẽm `#F4F4F5`/`#E4E4E7`/`#18181B` | Trung tính xanh lạnh `#F0F3F6`/`#D5DCE3`/`#14213D` | đồng tông với Navy, tương phản vẫn AAA/AA |
+| Trung tính kẽm `#F4F4F5`/`#E4E4E7`/`#18181B` | Trung tính xanh lạnh `#F0F3F6`/`#768696`/`#14213D` | đồng tông với Navy; Outline đạt non-text contrast trên Surface |
 | Dark `Primary` `#A5B4FC` | Dark `Primary` `#7FB2E5` (Navy sáng hoá) | đo lại 8.1:1 trên nền `#0B1622` |
 | Badge `VERIFIED`/`AI` dùng tint indigo | `BadgeTone` 6 giá trị, `Accent` =Gold cho MVP | khớp `UthStatusBadge` trong code |
 | Spec trên giấy | Token + component đã compile (`:app:compileDebugKotlin` BUILD SUCCESSFUL) | tên API trong code là hợp đồng, đổi phải cập nhật mục 7 |

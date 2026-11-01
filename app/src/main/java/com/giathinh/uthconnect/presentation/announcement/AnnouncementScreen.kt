@@ -2,7 +2,6 @@ package com.giathinh.uthconnect.presentation.announcement
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +31,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -163,7 +163,7 @@ private fun AnnouncementTopBar(
     }
 }
 
-/** Nút icon-only đạt vùng chạm 48dp; nhãn nằm ở `contentDescription`, không phải text ẩn. */
+/** Hành động icon-only dùng IconButton Material 3 và nhãn đọc từ `contentDescription`. */
 @Composable
 private fun TopBarAction(
     icon: ImageVector,
@@ -171,13 +171,7 @@ private fun TopBarAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .size(UthDimens.Size.MinTouchTarget)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(
             imageVector = icon,
             contentDescription = label,
@@ -343,7 +337,7 @@ private fun AnnouncementCover(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(CoverAspectRatio)
+            .aspectRatio(UthDimens.Layout.CoverAspectRatio)
             .clip(MaterialTheme.shapes.medium)
             .background(
                 Brush.linearGradient(
@@ -369,7 +363,7 @@ private fun AnnouncementCover(
                     .align(Alignment.BottomStart)
                     .padding(UthDimens.Spacing.Md)
                     .background(
-                        color = colors.surface.copy(alpha = CoverChipAlpha),
+                        color = colors.surface.copy(alpha = UthDimens.Opacity.CoverLabelSurface),
                         shape = MaterialTheme.shapes.extraSmall,
                     )
                     .padding(
@@ -715,12 +709,6 @@ private object AnnouncementKey {
     /** Tiền tố key cho từng khối nội dung; số thứ tự nối vào sau. */
     const val BlockPrefix = "announcement_block_"
 }
-
-/** Ảnh bìa 16:9 theo mục 3.3. */
-private const val CoverAspectRatio = 16f / 9f
-
-/** Chip trên ảnh bìa gần đặc để không phụ thuộc độ sáng của ảnh nền. */
-private const val CoverChipAlpha = 0.92f
 
 /** Định dạng ngày theo locale trường: `dd/MM/yyyy` (mục 8). */
 private val DetailDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")

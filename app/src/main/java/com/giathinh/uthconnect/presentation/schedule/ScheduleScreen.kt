@@ -21,13 +21,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,6 +70,8 @@ import com.giathinh.uthconnect.domain.model.ClassSession
 import com.giathinh.uthconnect.domain.model.Course
 import com.giathinh.uthconnect.domain.model.Deadline
 import com.giathinh.uthconnect.domain.model.Timetable
+import com.giathinh.uthconnect.domain.usecase.DeadlinePriority
+import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.Instant
@@ -193,7 +193,6 @@ fun ScheduleScreen(
           modifier = Modifier.align(Alignment.BottomEnd).padding(UthDimens.Spacing.Lg),
           containerColor = MaterialTheme.colorScheme.primary,
           contentColor = MaterialTheme.colorScheme.onPrimary,
-          shape = FloatingActionButtonDefaults.largeShape,
       ) {
           Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timetable_add_content_description))
       }
@@ -279,8 +278,8 @@ private fun DeadlineCard(
     state: ScheduleUiState,
     onAction: (ScheduleAction) -> Unit,
 ) {
-    val overdue = item.dueAt.isBefore(state.now)
-    val urgent = !overdue && !item.dueAt.isAfter(state.now.plusHours(48))
+    val priority = TimetableUseCase.priority(item.dueAt, state.now)
+    val overdue = priority == DeadlinePriority.OVERDUE
     UthCard {
         Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
             Row(
@@ -307,13 +306,15 @@ private fun DeadlineCard(
                     text = stringResource(
                         when {
                             overdue -> R.string.timetable_overdue
-                            urgent -> R.string.timetable_urgent_badge
+                            priority == DeadlinePriority.URGENT -> R.string.timetable_urgent_badge
+                            priority == DeadlinePriority.WARNING -> R.string.timetable_warning_badge
                             else -> R.string.timetable_upcoming_badge
                         },
                     ),
                     tone = when {
                         overdue -> BadgeTone.Danger
-                        urgent -> BadgeTone.Warning
+                        priority == DeadlinePriority.URGENT -> BadgeTone.Danger
+                        priority == DeadlinePriority.WARNING -> BadgeTone.Warning
                         else -> BadgeTone.Info
                     },
                 )
@@ -420,7 +421,6 @@ private fun DeadlineForm(state: ScheduleUiState, onAction: (ScheduleAction) -> U
         onDismissRequest = { onAction(ScheduleAction.CloseForm) },
         shape = MaterialTheme.shapes.large,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
             modifier = Modifier
