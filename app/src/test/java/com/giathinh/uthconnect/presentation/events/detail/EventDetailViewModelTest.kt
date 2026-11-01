@@ -51,6 +51,26 @@ class EventDetailViewModelTest {
     }
 
     @Test
+    fun `fully booked event cannot be registered`() {
+        val viewModel = createViewModel()
+        viewModel.load("android-workshop")
+
+        assertFalse(viewModel.uiState.value.canRegister)
+        viewModel.onAction(EventDetailAction.Register)
+        assertEquals(null, viewModel.uiState.value.registration)
+    }
+
+    @Test
+    fun `unknown event produces not found state`() {
+        val viewModel = createViewModel()
+        viewModel.load("missing-event")
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(EventDetailFailure.EventNotFound, viewModel.uiState.value.failure)
+        assertFalse(viewModel.uiState.value.canRegister)
+    }
+
+    @Test
     fun `load error can be retried`() {
         var shouldFail = true
         val repository = object : EventRepository {
@@ -71,9 +91,11 @@ class EventDetailViewModelTest {
 
     @Test
     fun `registration error is shown and can be retried`() {
+        var shouldFail = true
         val studentIdProvider = object : StudentIdProvider {
             override suspend fun studentId(): Result<String> =
-                Result.failure(IllegalStateException("profile is not available"))
+                if (shouldFail) Result.failure(IllegalStateException("profile is not available"))
+                else Result.success("2023040123")
         }
         val viewModel = createViewModel(studentIdProvider = studentIdProvider)
         viewModel.load("career-day")
@@ -82,6 +104,13 @@ class EventDetailViewModelTest {
 
         assertTrue(viewModel.uiState.value.registrationFailed)
         assertTrue(viewModel.uiState.value.canRegister)
+
+        shouldFail = false
+        viewModel.onAction(EventDetailAction.Register)
+
+        assertFalse(viewModel.uiState.value.registrationFailed)
+        assertEquals("2023040123", viewModel.uiState.value.registration?.studentId)
+        assertFalse(viewModel.uiState.value.canRegister)
     }
 
     private fun createViewModel(
