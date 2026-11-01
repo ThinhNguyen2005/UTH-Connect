@@ -15,7 +15,7 @@ import javax.inject.Provider
 
 class DemoDataRepositoryTest {
     @Test fun demoLoginMatchesSharedProfile() = runTest {
-        val auth = DemoAuthRepository()
+        val auth = DemoAuthRepository(InMemoryDemoAccountStore())
         val user = FakeUserRepository().getUserProfile("demo-uid-001").first()!!
         for (identifier in listOf(user.studentId, user.email.uppercase())) {
             val profile = auth.authenticate(identifier, DemoAuthRepository.DEMO_PASSWORD).getOrThrow()!!
@@ -30,7 +30,7 @@ class DemoDataRepositoryTest {
 
     @Test fun mockBindingDoesNotInitializeFirebase() {
         org.junit.Assume.assumeTrue(BuildConfig.USE_MOCK_DATA)
-        val demo = DemoAuthRepository()
+        val demo = DemoAuthRepository(InMemoryDemoAccountStore())
         val selected = AuthDataModule.provideAuth(
             Provider { demo },
             Provider { error("Mock login must not initialize Firebase") },
@@ -66,5 +66,15 @@ class DemoDataRepositoryTest {
         assertEquals(updated, repository.getUserProfile(user.uid).first())
         assertEquals(updated, repository.getCurrentUser().first())
         assertNull(repository.getUserProfile("missing").first())
+    }
+
+    /** In-memory [DemoAccountStore] so demo auth is testable without Robolectric/Mockito. */
+    private class InMemoryDemoAccountStore : DemoAccountStore {
+        private val data = mutableMapOf<String, String>()
+        override fun getString(key: String): String? = data[key]
+        override fun putAll(values: Map<String, String>): Boolean {
+            data.putAll(values)
+            return true
+        }
     }
 }

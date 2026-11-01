@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -95,11 +97,18 @@ fun AuthScreen(
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = uiState.rememberMe,
-                    onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
-                    enabled = enabled)
-                Text(stringResource(R.string.auth_remember), modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall)
+                Row(
+                    modifier = Modifier.weight(1f).toggleable(
+                        value = uiState.rememberMe,
+                        enabled = enabled,
+                        role = Role.Checkbox,
+                        onValueChange = { onAction(AuthAction.RememberChanged(it)) },
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = uiState.rememberMe, onCheckedChange = null, enabled = enabled)
+                    Text(stringResource(R.string.auth_remember), style = MaterialTheme.typography.bodySmall)
+                }
                 TextButton(onClick = { onAction(AuthAction.ForgotPassword) }) {
                     Text(stringResource(R.string.auth_forgot))
                 }
@@ -107,7 +116,7 @@ fun AuthScreen(
             uiState.failure?.let { failure ->
                 Text(
                     text = stringResource(failureRes(failure)),
-                    color = MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.testTag("auth_error"),
                 )

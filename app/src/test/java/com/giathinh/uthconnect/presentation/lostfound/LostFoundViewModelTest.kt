@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.repository.LostFoundRepository
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -155,11 +156,73 @@ class LostFoundViewModelTest {
         viewModel.onAction(LostFoundAction.OpenReportDialog)
         viewModel.onAction(LostFoundAction.UpdateReportTitle("Rơi thẻ sinh viên"))
         viewModel.onAction(LostFoundAction.UpdateReportDescription("Rơi thẻ tại sảnh toà B trường cơ sở 1 sáng nay"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Sảnh tòa B, CS1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
         viewModel.onAction(LostFoundAction.SubmitReport)
 
         assertNotNull(viewModel.uiState.value.userMessage)
         viewModel.onAction(LostFoundAction.DismissMessage)
         assertNull(viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `submitReport_requiresLocationAndPhone_andClearsEachErrorWhenEdited`() {
+        val viewModel = createViewModel()
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Nhặt được thẻ sinh viên"))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription("Nhặt được thẻ trước cửa phòng B101 chiều nay"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+
+        assertEquals(FormValidationError.LocationRequired, viewModel.uiState.value.reportForm.locationError)
+        assertEquals(FormValidationError.PhoneRequired, viewModel.uiState.value.reportForm.phoneError)
+        assertEquals(8, viewModel.uiState.value.listings.size)
+        assertTrue(viewModel.uiState.value.isReportDialogOpen)
+
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Phòng B101"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("not a phone"))
+        assertNull(viewModel.uiState.value.reportForm.locationError)
+        assertNull(viewModel.uiState.value.reportForm.phoneError)
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        assertEquals(FormValidationError.PhoneInvalid, viewModel.uiState.value.reportForm.phoneError)
+        assertEquals(8, viewModel.uiState.value.listings.size)
+        assertEquals("Nhặt được thẻ sinh viên", viewModel.uiState.value.reportForm.title)
+
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("+84 912 345 678"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        assertEquals(9, viewModel.uiState.value.listings.size)
+        assertEquals("+84912345678", viewModel.uiState.value.listings.first().contactPhone)
+        assertEquals("", viewModel.uiState.value.listings.first().contactName)
+    }
+
+    @Test
+    fun `submitReport_preventsDuplicatePostsWhilePending`() {
+        val release = CompletableDeferred<Unit>()
+        var submissions = 0
+        val repository = object : LostFoundRepository {
+            private val delegate = InMemoryLostFoundRepository()
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> {
+                submissions++
+                release.await()
+                return delegate.reportItem(item)
+            }
+        }
+        val viewModel = createViewModel(repository)
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Nhặt được ví"))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription("Nhặt được ví tại phòng B101 chiều nay"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("B101"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
+
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        assertTrue(viewModel.uiState.value.reportForm.isSubmitting)
+        assertEquals(1, submissions)
+
+        release.complete(Unit)
+        assertEquals(1, submissions)
+        assertEquals(9, viewModel.uiState.value.listings.size)
+        assertFalse(viewModel.uiState.value.isReportDialogOpen)
     }
 
     @Test

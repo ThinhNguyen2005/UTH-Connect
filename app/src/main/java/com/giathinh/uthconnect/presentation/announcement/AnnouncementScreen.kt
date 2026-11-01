@@ -627,12 +627,6 @@ private fun AttachmentRow(attachment: AnnouncementAttachment, modifier: Modifier
                 color = extended.textSecondary,
             )
         }
-        Icon(
-            painter = painterResource(R.drawable.ic_announcement_download),
-            contentDescription = null,
-            tint = extended.textSecondary,
-            modifier = Modifier.size(UthDimens.Size.IconInline),
-        )
     }
 }
 
