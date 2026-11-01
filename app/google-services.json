@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742957714603",
+    "project_id": "uthconnect-d4d91",
+    "storage_bucket": "uthconnect-d4d91.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742957714603:android:a0d1f3a55aed14f8953bee",
+        "android_client_info": {
+          "package_name": "com.giathinh.uthconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEHyI3RB4cefMk9n0F9UYbr1CojA5F8c8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
