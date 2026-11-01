@@ -31,15 +31,19 @@ app/src/main/java/com/giathinh/uthconnect/
 │       ├── component/  UthComponents.kt · UthStatusBadge.kt                          [chủ repo]
 │       └── theme/      Color.kt · Dimens.kt · Theme.kt · Type.kt                     [chủ repo]
 ├── data/
-│   ├── di/            UtilitiesDataModule.kt      ← binding interface→impl           [utilities]
-│   └── repository/    StaticUtilityModuleRepository.kt                               [utilities]
+│   ├── di/            UtilitiesDataModule.kt · EventsDataModule.kt                    [utilities/events]
+│   └── repository/    StaticUtilityModuleRepository.kt · StaticEventRepository.kt · DemoStudentIdProvider.kt     [utilities/events]
 ├── domain/
-│   ├── model/         UtilityModule.kt                                                [utilities]
-│   ├── repository/    UtilityModuleRepository.kt                                      [utilities]
-│   └── usecase/       GetUtilityModulesUseCase.kt                                     [utilities]
+│   ├── model/         UtilityModule.kt · Event.kt (kèm EventTopic) · EventStatus.kt · Registration.kt [utilities/events]
+│   │                  Campus.kt (enum dùng chung, owner: chủ repo)
+│   ├── repository/    UtilityModuleRepository.kt · EventRepository.kt · StudentIdProvider.kt                 [utilities/events]
+│   └── usecase/       GetUtilityModulesUseCase.kt · GetEventsUseCase.kt · RegisterEventUseCase.kt                [utilities/events]
 └── presentation/
     ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo]
     ├── home/          HomeScreen.kt          (placeholder, chưa MVVM)                 [events]
+    ├── events/        EventsScreen · EventsRoute · EventsViewModel · EventsUiState · EventsAction [events]
+    │   ├── navigation/ EventsNavigation.kt   (graph con type-safe trong tab Tiện ích) [events]
+    │   └── detail/     EventDetailScreen · EventDetailRoute · EventDetailViewModel · EventDetailUiState · EventDetailAction (registration stub) [events]
     ├── schedule/      ScheduleScreen.kt      (placeholder, chưa MVVM)                 [timetable]
     ├── profile/       ProfileScreen.kt       (placeholder, chưa MVVM)                 [auth]
     └── utilities/     Screen · Route · ViewModel · UiState · Action                   [lost&found]
@@ -47,7 +51,11 @@ app/src/main/java/com/giathinh/uthconnect/
 
 app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
-└── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test, đang xanh)            [utilities]
+├── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test)                       [utilities]
+├── presentation/events/     EventsViewModelTest.kt     (7 test)                       [events]
+├── presentation/events/detail/ EventDetailViewModelTest.kt (3 test)                 [events]
+├── domain/usecase/          GetEventsUseCaseTest.kt     (6 test, gồm repository/model) [events]
+└── domain/usecase/          RegisterEventUseCaseTest.kt (3 test)                      [events]
 ```
 
 Trống nhưng còn trên đĩa: `core/di/` (xoá cùng `AppContainer.kt` khi chuyển sang Hilt — **không** tái tạo nếu chưa có provider dùng chung), `ui/` (rác template Android Studio, git đã xoá file, chỉ còn thư mục rỗng ở máy local).
@@ -60,12 +68,14 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 
 | Người | Nhánh | `presentation/` | `domain/` | `data/` | `test/` mirror |
 |---|---|---|---|---|---|
-| **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
+| **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM +
+avigation/` + placeholder `detail/`); slice danh sách tĩnh giữ nguyên `home/`; `tickets/`, `scanner/` chưa làm trong task này | `model/Event.kt` (kèm EventTopic) `model/EventStatus.kt` `model/Registration.kt`; dùng chung `model/Campus.kt` do chủ repo quản lý · `repository/EventRepository.kt` · `usecase/GetEventsUseCase.kt` | `repository/StaticEventRepository.kt` · `di/EventsDataModule.kt`; Firestore để task sau | `presentation/events/` `domain/usecase/GetEventsUseCaseTest.kt` |
 | **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
 | **Bạn C** | `feature/auth-<tên>` | `auth/` · `profile/` | `model/User.kt` `model/Faculty.kt` · `repository/AuthRepository.kt` `repository/ProfileRepository.kt` · `usecase/SendSchoolOtpUseCase.kt` `SignInUseCase.kt` `GetProfileUseCase.kt` | `remote/auth/SchoolEmailAuthRepository.kt` · `di/AuthDataModule.kt` | `presentation/auth/` `presentation/profile/` |
 | **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
-| **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
+| **Chủ repo** | `chore/<việc>` |
+avigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
 
 Quy tắc đặt tên file trong cây: theo `docs/CODING_STANDARDS.md` mục 2 và 3.2 — một module có đúng **5 file** trong `presentation/<module>/` (Hilt đã xoá bỏ file factory thứ sáu), thêm `<Module>Navigation.kt` khi module có route con.
 
@@ -170,6 +180,9 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 
 | Bản | Ngày | Thay đổi cấu trúc |
 |---|---|---|
-| v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
+| events-registration-stub | 01/11/2026 | Add a demo student ID provider, a registration use case, and a detail flow with loading, error, success, and unavailable states. The registration keeps studentId and eventId for future Check-in use; replace the demo provider after AUTH-1 is integrated. Add six unit tests. |
+| events-static | 31/10/2026 | Thêm model Event/EventTopic, Registration, Campus, EventStatus; EventRepository, GetEventsUseCase, StaticEventRepository và EventsDataModule. Presentation events có 5 file chính, graph con trong navigation/ và placeholder detail/. Nối từ Tiện ích, giữ nguyên HomeScreen; dùng hierarchy để tab Tiện ích vẫn được chọn ở màn con. Thêm 13 unit test cho dữ liệu, lọc, lỗi/thử lại, điều kiện đăng ký và hủy lần tải cũ. |
+| v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`,
+avigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
 | trước v1.0 | 28/10/2026 | Dựng cây Clean Architecture `core/ · data/ · domain/ · presentation/`; xoá `ui/theme/` của template Android Studio (chuyển vào `core/designsystem/theme/`); thêm slice MVVM mẫu ở `presentation/utilities/` + `test/testing/MainDispatcherRule.kt`. |

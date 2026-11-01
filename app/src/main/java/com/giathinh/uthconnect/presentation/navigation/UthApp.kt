@@ -20,8 +20,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navigation
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.presentation.home.HomeScreen
+import com.giathinh.uthconnect.presentation.events.navigation.EventsGraph
+import com.giathinh.uthconnect.presentation.events.navigation.eventsGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileScreen
 import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
@@ -80,11 +83,17 @@ private fun UthNavHost(
     ) {
         // Route type-safe: mỗi tab là một @Serializable object (xem UthDestination.kt).
         // Tab nào có state holder thì gọi `<Module>Route()` (nối ViewModel với Screen);
-        // ba tab còn lại chưa có dữ liệu nên đang gọi thẳng Screen stateless.
+        // Các màn chưa có state holder vẫn gọi Screen stateless.
         // Screen không được tự cầm repository (README mục 5.2); ViewModel do Hilt cung cấp.
         composable<HomeDestination> { HomeScreen() }
         composable<ScheduleDestination> { ScheduleScreen() }
-        composable<UtilitiesDestination> { UtilitiesRoute() }
+        // Giữ HomeScreen cũ. Mở sự kiện từ Tiện ích, cùng một tab cả khi xem detail.
+        navigation<UtilitiesDestination>(startDestination = UtilitiesListDestination) {
+            composable<UtilitiesListDestination> {
+                UtilitiesRoute(onOpenEvents = { navController.navigate(EventsGraph) { launchSingleTop = true } })
+            }
+            eventsGraph(navController)
+        }
         composable<ProfileDestination> { ProfileScreen() }
     }
 }
