@@ -87,4 +87,4 @@ Validation: `:app:assembleDebug` và `:app:testDebugUnitTest` pass, tổng 18 te
 - Added `StudentIdProvider` and a demo provider returning the sample student ID `2023040123`. Replace this provider with the Auth session when AUTH-1 is integrated into this branch.
 - `RegisterEventUseCase` checks the event and whether registration is open, then returns a `Registration` containing `eventId`, `studentId`, and a registration ID. This is an in-memory stub; it does not save a registration or issue a QR ticket.
 - The event detail route now loads the event, shows loading/error states, and disables registration when unavailable or after success. Registration keeps the identifiers needed for a future Check-in flow; no Check-in module exists in this branch yet.
-- Added 3 use-case tests and 3 detail ViewModel tests.
+- Added 3 use-case tests and 5 detail ViewModel tests, including retry after load and registration errors.

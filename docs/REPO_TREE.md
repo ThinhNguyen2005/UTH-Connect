@@ -53,7 +53,7 @@ app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
 ├── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test)                       [utilities]
 ├── presentation/events/     EventsViewModelTest.kt     (7 test)                       [events]
-├── presentation/events/detail/ EventDetailViewModelTest.kt (3 test)                 [events]
+├── presentation/events/detail/ EventDetailViewModelTest.kt (5 test)                 [events]
 ├── domain/usecase/          GetEventsUseCaseTest.kt     (6 test, gồm repository/model) [events]
 └── domain/usecase/          RegisterEventUseCaseTest.kt (3 test)                      [events]
 ```
@@ -180,7 +180,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 
 | Bản | Ngày | Thay đổi cấu trúc |
 |---|---|---|
-| events-registration-stub | 01/11/2026 | Add a demo student ID provider, a registration use case, and a detail flow with loading, error, success, and unavailable states. The registration keeps studentId and eventId for future Check-in use; replace the demo provider after AUTH-1 is integrated. Add six unit tests. |
+| events-registration-stub | 01/11/2026 | Add a demo student ID provider, a registration use case, and a detail flow with loading, error, success, and unavailable states. The registration keeps studentId and eventId for future Check-in use; replace the demo provider after AUTH-1 is integrated. Add eight unit tests. |
 | events-static | 31/10/2026 | Thêm model Event/EventTopic, Registration, Campus, EventStatus; EventRepository, GetEventsUseCase, StaticEventRepository và EventsDataModule. Presentation events có 5 file chính, graph con trong navigation/ và placeholder detail/. Nối từ Tiện ích, giữ nguyên HomeScreen; dùng hierarchy để tab Tiện ích vẫn được chọn ở màn con. Thêm 13 unit test cho dữ liệu, lọc, lỗi/thử lại, điều kiện đăng ký và hủy lần tải cũ. |
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`,
 avigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |

@@ -20,8 +20,10 @@ class EventDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(EventDetailUiState())
     val uiState = _uiState.asStateFlow()
     private var loadJob: Job? = null
+    private var requestedEventId: String? = null
 
     fun load(eventId: String) {
+        requestedEventId = eventId
         loadJob?.cancel()
         _uiState.update { it.copy(isLoading = true, failure = null) }
         loadJob = viewModelScope.launch {
@@ -45,7 +47,7 @@ class EventDetailViewModel @Inject constructor(
 
     fun onAction(action: EventDetailAction) {
         when (action) {
-            EventDetailAction.Retry -> _uiState.value.event?.id?.let(::load)
+            EventDetailAction.Retry -> requestedEventId?.let(::load)
             EventDetailAction.Register -> register()
         }
     }

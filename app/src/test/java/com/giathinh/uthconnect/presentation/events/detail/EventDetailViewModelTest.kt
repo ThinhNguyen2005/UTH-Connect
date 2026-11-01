@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.presentation.events.detail
 
 import com.giathinh.uthconnect.data.repository.StaticEventRepository
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.repository.StudentIdProvider
 import com.giathinh.uthconnect.domain.usecase.GetEventsUseCase
 import com.giathinh.uthconnect.domain.usecase.RegisterEventUseCase
@@ -48,11 +50,47 @@ class EventDetailViewModelTest {
         assertEquals(null, viewModel.uiState.value.registration)
     }
 
-    private fun createViewModel(): EventDetailViewModel {
-        val events = GetEventsUseCase(StaticEventRepository())
-        val studentIdProvider = object : StudentIdProvider {
-            override suspend fun studentId() = Result.success("2023040123")
+    @Test
+    fun `load error can be retried`() {
+        var shouldFail = true
+        val repository = object : EventRepository {
+            override suspend fun events(): Result<List<Event>> =
+                if (shouldFail) Result.failure(IllegalStateException("temporary error"))
+                else StaticEventRepository().events()
         }
+        val viewModel = createViewModel(eventRepository = repository)
+
+        viewModel.load("career-day")
+        assertEquals(EventDetailFailure.LoadFailed, viewModel.uiState.value.failure)
+
+        shouldFail = false
+        viewModel.onAction(EventDetailAction.Retry)
+        assertEquals("career-day", viewModel.uiState.value.event?.id)
+        assertEquals(null, viewModel.uiState.value.failure)
+    }
+
+    @Test
+    fun `registration error is shown and can be retried`() {
+        val studentIdProvider = object : StudentIdProvider {
+            override suspend fun studentId(): Result<String> =
+                Result.failure(IllegalStateException("profile is not available"))
+        }
+        val viewModel = createViewModel(studentIdProvider = studentIdProvider)
+        viewModel.load("career-day")
+
+        viewModel.onAction(EventDetailAction.Register)
+
+        assertTrue(viewModel.uiState.value.registrationFailed)
+        assertTrue(viewModel.uiState.value.canRegister)
+    }
+
+    private fun createViewModel(
+        eventRepository: EventRepository = StaticEventRepository(),
+        studentIdProvider: StudentIdProvider = object : StudentIdProvider {
+            override suspend fun studentId() = Result.success("2023040123")
+        },
+    ): EventDetailViewModel {
+        val events = GetEventsUseCase(eventRepository)
         return EventDetailViewModel(events, RegisterEventUseCase(events, studentIdProvider))
     }
 }
