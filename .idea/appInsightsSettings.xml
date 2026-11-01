@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.giathinh.uthconnect" />
+                  <option name="mobileSdkAppId" value="1:742957714603:android:a0d1f3a55aed14f8953bee" />
+                  <option name="projectId" value="uthconnect-d4d91" />
+                  <option name="projectNumber" value="742957714603" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
