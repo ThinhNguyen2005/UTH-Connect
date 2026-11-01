@@ -17,6 +17,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -111,6 +112,13 @@ fun AuthScreen(
                     modifier = Modifier.testTag("auth_error"),
                 )
                 Spacer(Modifier.height(UthDimens.Spacing.Sm))
+                if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected) {
+                    OutlinedButton(
+                        onClick = { onAction(AuthAction.Retry) },
+                        enabled = enabled,
+                        modifier = Modifier.fillMaxWidth().testTag("auth_retry"),
+                    ) { Text(stringResource(R.string.auth_login_retry)) }
+                }
             }
             Spacer(Modifier.height(UthDimens.Spacing.Lg))
             UthPrimaryButton(
@@ -120,6 +128,14 @@ fun AuthScreen(
                 loading = uiState.isSigningIn,
                 modifier = Modifier.fillMaxWidth().testTag("auth_sign_in"),
             )
+        }
+        if (uiState.biometricAvailable) {
+            Spacer(Modifier.height(UthDimens.Spacing.Md))
+            OutlinedButton(
+                onClick = { onAction(AuthAction.RequestBiometric) },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag("auth_biometric_login"),
+            ) { Text(stringResource(R.string.auth_biometric_login)) }
         }
         Spacer(Modifier.height(UthDimens.Spacing.Md))
         Text(stringResource(R.string.auth_demo_notice), style = MaterialTheme.typography.bodySmall,
@@ -148,6 +164,7 @@ private fun failureRes(failure: AuthFailure) = when (failure) {
     AuthFailure.InvalidCredentials -> R.string.auth_invalid_credentials
     AuthFailure.Unexpected -> R.string.auth_unexpected
     AuthFailure.SessionRestore -> R.string.auth_restore_failed
+    AuthFailure.BiometricUnavailable -> R.string.auth_biometric_error
 }
 
 @Composable
