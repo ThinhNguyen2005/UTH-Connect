@@ -1,11 +1,9 @@
 package com.giathinh.uthconnect.data.repository
 
-import android.content.Context
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -21,9 +19,8 @@ import kotlinx.coroutines.withContext
 /** Two isolated demo accounts, without any UTH identity/role verification server. */
 @Singleton
 class DemoAuthRepository @Inject constructor(
-    @ApplicationContext context: Context,
+    private val store: DemoAccountStore,
 ) : AuthRepository, StudentContactRepository {
-    private val prefs = context.getSharedPreferences("uth_auth_demo_account", Context.MODE_PRIVATE)
     private val mutex = Mutex()
 
     private val student = StudentProfile(
@@ -58,14 +55,14 @@ class DemoAuthRepository @Inject constructor(
         if (base.studentId == student.studentId) field else "organizer_$field"
 
     private fun profile(base: StudentProfile): StudentProfile = base.copy(
-        phoneNumber = prefs.getString(key(base, "phone"), "").orEmpty(),
-        personalEmail = prefs.getString(key(base, "personal_email"), "").orEmpty(),
-        currentAddress = prefs.getString(key(base, "address"), "").orEmpty(),
+        phoneNumber = store.getString(key(base, "phone")).orEmpty(),
+        personalEmail = store.getString(key(base, "personal_email")).orEmpty(),
+        currentAddress = store.getString(key(base, "address")).orEmpty(),
     )
 
     private fun passwordMatches(base: StudentProfile, candidate: String): Boolean {
-        val encodedSalt = prefs.getString(key(base, "password_salt"), null)
-        val encodedHash = prefs.getString(key(base, "password_hash"), null)
+        val encodedSalt = store.getString(key(base, "password_salt"))
+        val encodedHash = store.getString(key(base, "password_hash"))
         if (encodedSalt == null || encodedHash == null) {
             val initial = if (base.studentId == student.studentId) STUDENT_DEMO_PASSWORD else ORGANIZER_DEMO_PASSWORD
             return MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), initial.toByteArray(Charsets.UTF_8))
@@ -106,10 +103,12 @@ class DemoAuthRepository @Inject constructor(
                 if (!passwordMatches(base, oldPassword)) return@withLock false
                 val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
                 val hash = derivePassword(newPassword, salt)
-                check(prefs.edit()
-                    .putString(key(base, "password_salt"), Base64.getEncoder().encodeToString(salt))
-                    .putString(key(base, "password_hash"), Base64.getEncoder().encodeToString(hash))
-                    .commit()) { "Password storage failed" }
+                check(store.putAll(
+                    mapOf(
+                        key(base, "password_salt") to Base64.getEncoder().encodeToString(salt),
+                        key(base, "password_hash") to Base64.getEncoder().encodeToString(hash),
+                    )
+                )) { "Password storage failed" }
                 true
             }
         }
@@ -120,11 +119,13 @@ class DemoAuthRepository @Inject constructor(
     ): Result<StudentProfile> = runCatching {
         mutex.withLock {
             val base = requireNotNull(baseFor(studentId)) { "Unknown student" }
-            check(prefs.edit()
-                .putString(key(base, "phone"), phone)
-                .putString(key(base, "personal_email"), personalEmail)
-                .putString(key(base, "address"), currentAddress)
-                .commit()) { "Contact storage failed" }
+            check(store.putAll(
+                mapOf(
+                    key(base, "phone") to phone,
+                    key(base, "personal_email") to personalEmail,
+                    key(base, "address") to currentAddress,
+                )
+            )) { "Contact storage failed" }
             profile(base)
         }
     }

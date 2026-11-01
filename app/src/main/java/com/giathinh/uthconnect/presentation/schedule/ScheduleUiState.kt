@@ -14,7 +14,9 @@ data class ScheduleUiState(
     val title: String = "",
     val date: String = "",
     val time: String = "23:59",
-    val invalidForm: Boolean = false,
+    val titleError: Boolean = false,
+    val dateError: Boolean = false,
+    val timeError: Boolean = false,
 ) {
     val tomorrowClasses get() = TimetableUseCase.tomorrow(timetable, now.toLocalDate())
     val urgentDeadlines get() = TimetableUseCase.urgent(timetable, now)

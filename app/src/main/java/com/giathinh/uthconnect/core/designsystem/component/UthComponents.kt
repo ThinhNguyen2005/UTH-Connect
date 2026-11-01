@@ -27,7 +27,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
@@ -82,7 +87,7 @@ fun UthSectionHeader(
 
 /**
  * Nút chính cao 48dp, bo 8dp — `docs/Design-system.md` mục 4.1.
- * `loading = true` đổi chữ thành spinner và chặn chạm (chống double-submit).
+ * `loading = true` giữ nhãn, thông báo trạng thái và chặn chạm (chống double-submit).
  */
 @Composable
 fun UthPrimaryButton(
@@ -93,25 +98,29 @@ fun UthPrimaryButton(
     loading: Boolean = false,
     leadingIcon: ImageVector? = null,
 ) {
-    val extended = UthTheme.extendedColors
+    val loadingDescription = stringResource(R.string.common_loading)
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
-        modifier = modifier.height(UthDimens.Size.ButtonHeight),
+        modifier = modifier.height(UthDimens.Size.ButtonHeight).semantics {
+            if (loading) stateDescription = loadingDescription
+        },
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = extended.textTertiary,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         if (loading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(UthDimens.Size.ProgressInline),
-                color = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(UthDimens.Size.ProgressInline).clearAndSetSemantics { },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = UthDimens.Size.ProgressInlineStroke,
             )
+            Spacer(Modifier.width(UthDimens.Spacing.Sm))
+            Text(text = text.uppercase(), style = MaterialTheme.typography.labelLarge)
         } else {
             if (leadingIcon != null) {
                 Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconInline))

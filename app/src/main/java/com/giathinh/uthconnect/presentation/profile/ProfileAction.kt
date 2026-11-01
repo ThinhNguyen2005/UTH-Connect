@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.profile
 
 sealed interface ProfileAction {
+    data object RetryLoad : ProfileAction
     data object OpenPassword : ProfileAction
     data object OpenContact : ProfileAction
     data object Back : ProfileAction

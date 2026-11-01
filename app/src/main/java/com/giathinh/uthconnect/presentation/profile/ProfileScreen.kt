@@ -68,6 +68,8 @@ fun ProfileScreen(
                     uiState.failure == ProfileFailure.LoadFailed -> UthEmptyState(
                         stringResource(R.string.auth_profile_error),
                         stringResource(R.string.auth_profile_try_again),
+                        actionLabel = stringResource(R.string.auth_profile_retry),
+                        onAction = { onAction(ProfileAction.RetryLoad) },
                     )
                     uiState.student == null -> UthEmptyState(
                         stringResource(R.string.auth_profile_empty),
@@ -88,7 +90,7 @@ fun ProfileScreen(
                     Text(stringResource(R.string.auth_logout_confirm_body))
                     if (uiState.failure == ProfileFailure.LogoutFailed) {
                         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                        Text(stringResource(R.string.auth_logout_failed), color = MaterialTheme.colorScheme.error,
+                        Text(stringResource(R.string.auth_logout_failed), color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.testTag("logout_retry_error"))
                     }
                 }
@@ -230,7 +232,7 @@ private fun DisplayFeedback(state: ProfileUiState) {
         null -> null
     }
     errorRes?.let {
-        Text(stringResource(it), color = MaterialTheme.colorScheme.error,
+        Text(stringResource(it), color = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier.testTag("profile_error"))
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
     }

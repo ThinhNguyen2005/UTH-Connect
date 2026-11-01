@@ -219,7 +219,7 @@
     <string name="auth_logout_retry">Thử lại</string>
     <!-- Auth/Profile V3.1: login retry -->
     <string name="auth_login_retry">Thử đăng nhập lại</string>
-</resources>
+
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
@@ -258,6 +258,16 @@
     <string name="lostfound_call_contact">Liên hệ</string>
     <string name="lostfound_err_title_required">Tiêu đề không được để trống</string>
     <string name="lostfound_err_desc_min_length">Mô tả phải có ít nhất 20 ký tự (hiện tại: %1$d)</string>
+    <string name="lostfound_err_location_required">Vui lòng nhập địa điểm thất lạc hoặc nhặt được đồ.</string>
+    <string name="lostfound_err_phone_required">Vui lòng nhập số điện thoại liên hệ.</string>
+    <string name="lostfound_err_phone_invalid">Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.</string>
+    <string name="lostfound_phone_public_notice">Số điện thoại sẽ hiển thị công khai trên bài đăng để người khác liên hệ.</string>
+    <string name="lostfound_contact_unnamed">Chưa cung cấp tên liên hệ</string>
+    <string name="auth_profile_retry">Tải lại hồ sơ</string>
+    <string name="timetable_title_required">Vui lòng nhập tên công việc.</string>
+    <string name="timetable_date_invalid">Ngày không hợp lệ. Hãy chọn lại ngày.</string>
+    <string name="timetable_time_invalid">Giờ không hợp lệ. Hãy chọn lại giờ.</string>
+    <string name="common_loading">Đang xử lý</string>
     <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
     <string name="nav_back">Quay lại</string>

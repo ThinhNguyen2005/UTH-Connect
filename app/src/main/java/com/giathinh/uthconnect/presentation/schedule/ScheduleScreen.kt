@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -42,13 +45,19 @@ import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
@@ -352,6 +361,10 @@ private fun DeadlineCard(
 private fun DeadlineForm(state: ScheduleUiState, onAction: (ScheduleAction) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    val titleFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(state.titleError) {
+        if (state.titleError) titleFocusRequester.requestFocus()
+    }
     val selectedDate = runCatching { LocalDate.parse(state.date) }
         .getOrElse { state.now.toLocalDate().plusDays(1) }
     val selectedTime = runCatching {
@@ -413,6 +426,7 @@ private fun DeadlineForm(state: ScheduleUiState, onAction: (ScheduleAction) -> U
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(horizontal = UthDimens.Spacing.Xl)
                 .padding(bottom = UthDimens.Spacing.Xl),
             verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
@@ -443,47 +457,44 @@ private fun DeadlineForm(state: ScheduleUiState, onAction: (ScheduleAction) -> U
                 onValueChange = { onAction(ScheduleAction.Title(it)) },
                 label = { Text(stringResource(R.string.timetable_label_title)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.date,
-                onValueChange = {},
-                label = { Text(stringResource(R.string.timetable_label_date)) },
-                leadingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(
-                            Icons.Filled.DateRange,
-                            contentDescription = stringResource(R.string.timetable_label_date),
-                        )
-                    }
+                isError = state.titleError,
+                supportingText = {
+                    if (state.titleError) Text(stringResource(R.string.timetable_title_required), color = MaterialTheme.colorScheme.onErrorContainer)
                 },
-                readOnly = true,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                modifier = Modifier.fillMaxWidth().focusRequester(titleFocusRequester),
             )
-            OutlinedTextField(
-                value = state.time,
-                onValueChange = {},
-                label = { Text(stringResource(R.string.timetable_label_time)) },
-                leadingIcon = {
-                    IconButton(onClick = { showTimePicker = true }) {
-                        Icon(
-                            Icons.Filled.DateRange,
-                            contentDescription = stringResource(R.string.timetable_label_time),
-                        )
-                    }
-                },
-                readOnly = true,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
-            )
-            if (state.invalidForm) {
-                Text(
-                    text = stringResource(R.string.timetable_invalid),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+            val dateLabel = stringResource(R.string.timetable_label_date)
+            val dateErrorMessage = stringResource(R.string.timetable_date_invalid)
+            Text(dateLabel, style = MaterialTheme.typography.labelMedium)
+            OutlinedButton(
+                onClick = { showDatePicker = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget)
+                    .semantics {
+                        contentDescription = "$dateLabel: ${state.date}"
+                        if (state.dateError) error(dateErrorMessage)
+                    },
+            ) {
+                Icon(Icons.Filled.DateRange, contentDescription = null)
+                Spacer(Modifier.width(UthDimens.Spacing.Sm))
+                Text(state.date, modifier = Modifier.weight(1f))
             }
+            if (state.dateError) Text(dateErrorMessage, color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodySmall)
+            val timeLabel = stringResource(R.string.timetable_label_time)
+            val timeErrorMessage = stringResource(R.string.timetable_time_invalid)
+            Text(timeLabel, style = MaterialTheme.typography.labelMedium)
+            OutlinedButton(
+                onClick = { showTimePicker = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget)
+                    .semantics {
+                        contentDescription = "$timeLabel: ${state.time}"
+                        if (state.timeError) error(timeErrorMessage)
+                    },
+            ) {
+                Text(state.time, modifier = Modifier.weight(1f))
+            }
+            if (state.timeError) Text(timeErrorMessage, color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodySmall)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),

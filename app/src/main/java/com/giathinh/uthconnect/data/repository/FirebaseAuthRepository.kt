@@ -57,6 +57,33 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
+    override suspend fun changePassword(
+        studentId: String,
+        oldPassword: String,
+        newPassword: String,
+    ): Result<Boolean> = runCatching {
+        val email = resolveEmail(studentId) ?: return@runCatching false
+
+        // Firebase yeu cau re-authenticate truoc khi doi mat khau: dang nhap lai
+        // bang mat khau cu vua de lay token moi, vua de kiem tra mat khau cu dung.
+        try {
+            firebaseAuth.signInWithEmailAndPassword(email, oldPassword).await()
+        } catch (e: FirebaseAuthException) {
+            return@runCatching when (e.errorCode) {
+                "ERROR_WRONG_PASSWORD",
+                "ERROR_INVALID_CREDENTIALS",
+                "ERROR_USER_NOT_FOUND",
+                "ERROR_INVALID_EMAIL",
+                -> false
+                else -> throw e
+            }
+        }
+
+        val user = firebaseAuth.currentUser ?: return@runCatching false
+        user.updatePassword(newPassword).await()
+        true
+    }
+
     private suspend fun resolveEmail(identifier: String): String? {
         if (identifier.contains("@")) {
             return identifier

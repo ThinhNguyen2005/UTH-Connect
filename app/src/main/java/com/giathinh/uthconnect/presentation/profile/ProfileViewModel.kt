@@ -11,6 +11,7 @@ import com.giathinh.uthconnect.domain.usecase.UpdateStudentContactUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,13 +32,10 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
     private val eventChannel = Channel<ProfileEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
+    private var profileJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            getProfile.observe().collect { profile ->
-                _uiState.update { it.copy(isLoading = false, student = profile) }
-            }
-        }
+        loadProfile()
         viewModelScope.launch {
             manageSession.observeBiometricEnabled().collect { enabled ->
                 _uiState.update { it.copy(biometricEnabled = enabled) }
@@ -47,6 +45,7 @@ class ProfileViewModel @Inject constructor(
 
     fun onAction(action: ProfileAction) {
         when (action) {
+            ProfileAction.RetryLoad -> loadProfile()
             ProfileAction.OpenPassword -> _uiState.update {
                 it.copy(page = ProfilePage.ChangePassword, passwordForm = PasswordForm(), failure = null, notice = null)
             }
@@ -85,6 +84,22 @@ class ProfileViewModel @Inject constructor(
             }
             ProfileAction.CancelLogout -> _uiState.update { it.copy(confirmLogout = false, failure = null) }
             ProfileAction.ConfirmLogout, ProfileAction.RetryLogout -> logout()
+        }
+    }
+
+    private fun loadProfile() {
+        profileJob?.cancel()
+        _uiState.update { it.copy(isLoading = true, failure = null) }
+        profileJob = viewModelScope.launch {
+            try {
+                getProfile.observe().collect { profile ->
+                    _uiState.update { it.copy(isLoading = false, failure = null, student = profile) }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false, failure = ProfileFailure.LoadFailed) }
+            }
         }
     }
 

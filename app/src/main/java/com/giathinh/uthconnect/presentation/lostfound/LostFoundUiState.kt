@@ -17,6 +17,18 @@ sealed interface FormValidationError {
     data class DescriptionTooShort(val currentLength: Int) : FormValidationError {
         override val messageRes: Int = R.string.lostfound_err_desc_min_length
     }
+
+    data object LocationRequired : FormValidationError {
+        override val messageRes: Int = R.string.lostfound_err_location_required
+    }
+
+    data object PhoneRequired : FormValidationError {
+        override val messageRes: Int = R.string.lostfound_err_phone_required
+    }
+
+    data object PhoneInvalid : FormValidationError {
+        override val messageRes: Int = R.string.lostfound_err_phone_invalid
+    }
 }
 
 sealed interface UserMessage {
@@ -42,6 +54,8 @@ data class ReportFormState(
     val contactPhone: String = "",
     val titleError: FormValidationError? = null,
     val descriptionError: FormValidationError? = null,
+    val locationError: FormValidationError? = null,
+    val phoneError: FormValidationError? = null,
     val isSubmitting: Boolean = false,
 )
 

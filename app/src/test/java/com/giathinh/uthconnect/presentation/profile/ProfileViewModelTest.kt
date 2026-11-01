@@ -31,8 +31,16 @@ class ProfileViewModelTest {
         "CN23A", "Công nghệ thông tin", "Khoa Công nghệ thông tin")
     private class FakeSession(initial: StudentProfile) : SessionRepository {
         var failNextLogout = false
+        var failNextProfileRead = false
         private val state = MutableStateFlow(StudentSession(isRestoring = false, profile = initial))
-        override val session: StateFlow<StudentSession> = state
+        override val session: StateFlow<StudentSession>
+            get() {
+                if (failNextProfileRead) {
+                    failNextProfileRead = false
+                    throw IllegalStateException("Simulated profile storage failure")
+                }
+                return state
+            }
         override suspend fun restore() = Unit
         override suspend fun start(profile: StudentProfile, remember: Boolean) {
             state.value = StudentSession(isRestoring = false, profile = profile, remembered = remember)
@@ -140,6 +148,22 @@ class ProfileViewModelTest {
         assertNull(session.session.value.profile)
         assertFalse(vm.uiState.value.confirmLogout)
         assertNull(vm.uiState.value.failure)
+    }
+
+    @Test fun `load failure shows retry and recovered session restores profile`() = runTest {
+        val session = FakeSession(demo).apply { failNextProfileRead = true }
+        val vm = newVm(session)
+        advanceUntilIdle()
+
+        assertEquals(ProfileFailure.LoadFailed, vm.uiState.value.failure)
+        assertFalse(vm.uiState.value.isLoading)
+        assertNull(vm.uiState.value.student)
+
+        vm.onAction(ProfileAction.RetryLoad)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.failure)
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(demo.studentId, vm.uiState.value.student?.studentId)
     }
 
 }
