@@ -6,7 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -25,6 +25,7 @@ import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionScreen
 @Composable
 fun UtilitiesRoute(
     modifier: Modifier = Modifier,
+    onOpenModule: (UtilityModuleId) -> Unit = {},
     viewModel: UtilitiesViewModel = hiltViewModel(),
     navController: NavHostController = rememberNavController(),
 ) {
@@ -36,6 +37,17 @@ fun UtilitiesRoute(
     NavHost(
         navController = navController,
         startDestination = UtilitiesDestination.Hub,
+    UtilitiesScreen(
+        uiState = uiState,
+        onAction = { action ->
+            if (action is UtilitiesAction.OpenModule) {
+                if (uiState.modules.any { it.id == action.moduleId && it.enabled }) {
+                    onOpenModule(action.moduleId)
+                }
+            } else {
+                viewModel.onAction(action)
+            }
+        },
         modifier = modifier,
         enterTransition = { fadeIn(tween(UthDimens.Motion.RouteFadeMillis)) },
         exitTransition = { fadeOut(tween(UthDimens.Motion.RouteFadeMillis)) },

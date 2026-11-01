@@ -8,4 +8,5 @@ plugins {
     // Serialization plugin (khớp Kotlin) cho route type-safe của Navigation — route là @Serializable.
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.kotlin.android) apply false
 }

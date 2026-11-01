@@ -780,3 +780,5 @@ Dự án kế thừa nền tảng và bài học phạm vi từ [App_UTH_Social]
 ---
 
 <sub>Tài liệu này phản ánh kiến trúc đích của UTH Connect; bảng ở mục 5.3 liệt kê rõ hạng mục đã có trong mã nguồn và hạng mục còn dự kiến, để người đọc không nhầm giữa tài liệu và hiện trạng.</sub>
+
+Hướng dẫn tích hợp dữ liệu mẫu cho nhóm UI: [Data Layer Guide](docs/DATA_LAYER_GUIDE.md).

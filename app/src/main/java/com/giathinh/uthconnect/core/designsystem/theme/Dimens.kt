@@ -105,6 +105,24 @@ object UthDimens {
         val IconInline: Dp = 18.dp
         val IconBadge: Dp = 14.dp
 
+        /** Icon chuẩn 24.dp — nút icon-only (chuông thông báo) và icon đại diện khi ảnh chưa có. */
+        val Icon: Dp = 24.dp
+
+        /** Ảnh thumbnail vuông trong danh sách bảng tin (trang chủ). */
+        val Thumbnail: Dp = 80.dp
+
+        /**
+         * Filter chip cao 32.dp (`docs/Design-system.md` mục 4.4). Phần nhìn thấy cao
+         * 32.dp nhưng phải bọc trong vùng chạm [MinTouchTarget] — chip không tự đạt 48.dp.
+         */
+        val ChipHeight: Dp = 32.dp
+
+        /** Chấm trạng thái 8.dp — dot "chưa đọc", chấm trang trí cạnh lời chào. */
+        val IndicatorDot: Dp = 8.dp
+
+        /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
+        val IndicatorBar: Dp = 20.dp
+
         /** Drag handle của bottom sheet. */
         val SheetHandleWidth: Dp = 32.dp
         val SheetHandleHeight: Dp = 4.dp
