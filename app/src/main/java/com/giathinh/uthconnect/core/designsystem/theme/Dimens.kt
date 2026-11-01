@@ -111,6 +111,25 @@ object UthDimens {
         /** Ảnh thumbnail vuông trong danh sách bảng tin (trang chủ). */
         val Thumbnail: Dp = 80.dp
 
+        /** Dải màu nhận diện bên trái thẻ vé dạng boarding pass (tab Vé). */
+        val TicketStripe: Dp = 4.dp
+
+        /** Bề ngang cuống vé bên phải — đủ chỗ cho QR mini và nhãn mở vé. */
+        val TicketStub: Dp = 88.dp
+
+        /** Cạnh QR mini in trên cuống vé; QR thật khi mở vé vẫn dùng [QrMin]. */
+        val TicketStubQr: Dp = 44.dp
+
+        /** Khuyết tròn hai đầu đường xé của thẻ vé ở màn chi tiết (rộng × cao). */
+        val TicketNotchWidth: Dp = 16.dp
+        val TicketNotchHeight: Dp = 32.dp
+
+        /** Cạnh ô góc ngắm (4 chữ L) trong khung QR của màn chi tiết. */
+        val QrDesignator: Dp = 16.dp
+
+        /** Ô vuông chữ "UTH" đặt giữa mã QR — che phần lõi nên chỉ dùng cho QR mô phỏng. */
+        val QrMonogram: Dp = 40.dp
+
         /**
          * Filter chip cao 32.dp (`docs/Design-system.md` mục 4.4). Phần nhìn thấy cao
          * 32.dp nhưng phải bọc trong vùng chạm [MinTouchTarget] — chip không tự đạt 48.dp.

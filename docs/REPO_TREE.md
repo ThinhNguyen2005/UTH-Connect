@@ -31,6 +31,16 @@ app/src/main/java/com/giathinh/uthconnect/
 │       ├── component/  UthComponents.kt · UthStatusBadge.kt                          [chủ repo]
 │       └── theme/      Color.kt · Dimens.kt · Theme.kt · Type.kt                     [chủ repo]
 ├── data/
+│   ├── di/            UtilitiesDataModule.kt · TicketDataModule.kt                   [utilities · checkin]
+│   └── repository/    StaticUtilityModuleRepository.kt · MockTicketRepository.kt     [utilities · checkin]
+├── domain/
+│   ├── model/         UtilityModule.kt · Ticket.kt · Attendance.kt                    [utilities · checkin]
+│   ├── repository/    UtilityModuleRepository.kt · TicketRepository.kt                [utilities · checkin]
+│   └── usecase/       GetUtilityModulesUseCase.kt · GetTicketsUseCase.kt               [utilities · checkin]
+└── presentation/
+    ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo; extended for tickets]
+    ├── tickets/       README · TicketsScreen · Route · ViewModel · UiState · Action · Navigation [checkin]
+    ├── home/          HomeScreen.kt          (placeholder, chưa MVVM)                 [events]
 │   ├── di/            Auth · Events · Firebase · Grade · Home · Network · Notification · Schedule · User · Utilities
 │   ├── network/       NetworkMonitor · ConnectivityManagerNetworkMonitor
 │   ├── repository/    demo/Firebase auth, session, Firestore events, fake data, announcements, utilities
@@ -51,9 +61,8 @@ app/src/main/java/com/giathinh/uthconnect/
 
 app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
-├── data/repository/   DemoDataRepositoryTest.kt
-├── domain/            SignInUseCaseTest.kt · LoginValidatorTest.kt
-└── presentation/      announcement · auth · home · profile · utilities ViewModel tests
+└── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test, đang xanh)            [utilities]
+    └── presentation/tickets/ TicketsViewModelTest.kt                                      [checkin]
 ```
 
 Đây là snapshot checkout `main` tại `9267f65`; `schedule/` vẫn là placeholder, Events và Check-in chưa có package presentation trên `main`. **Cây `origin/develop` đã tiến lên `3f545c3`**, khác `main` vì PR #20 đã merge Lost & Found. Phần chênh lệch được xác minh bằng `git diff --name-status 9267f65..origin/develop`:
@@ -242,6 +251,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | v1.4 | 31/10/2026 | Nhánh tích hợp `codex/core-integration`: merge `origin/develop` ở `24117e7`, bổ sung `presentation/lostfound/LostFoundNavigation.kt` (destination type-safe + graph), chuẩn bị điều hướng từ Utilities; module vẫn tắt, chờ Thắng sửa lỗi KAN-49. Build thành công, 42 unit tests/10 suites đều qua; APK `adb9449` smoke-test trên Samsung SM-G990E thành công với đăng nhập demo, bốn tab và mở thông báo/Back; kiểm tra card Sự kiện chưa sẵn sàng. Các module chưa tích hợp vẫn cần test sau khi sẵn sàng. |
 | v1.2 | 31/10/2026 | Đối chiếu cây checkout `main` và cập nhật phân công theo Jira KAN-42–49; sửa checksum Gradle 8.13-bin. Chưa xác nhận build/test hoặc trạng thái merge các feature. |
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
+| v1.2 | 31/10/2026 | CHECKIN-1: thêm `domain/model/Ticket.kt` + `Attendance.kt`, repository/use case lọc theo `studentId` từ AUTH-1, mock data + Hilt binding, `presentation/tickets/` (danh sách, route type-safe tới QR text placeholder, countdown 60 giây), song ngữ strings, module README và 5 unit test. Thêm tab Vé để màn danh sách có lối vào. |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
 | trước v1.0 | 28/10/2026 | Dựng cây Clean Architecture `core/ · data/ · domain/ · presentation/`; xoá `ui/theme/` của template Android Studio (chuyển vào `core/designsystem/theme/`); thêm slice MVVM mẫu ở `presentation/utilities/` + `test/testing/MainDispatcherRule.kt`. |
 
