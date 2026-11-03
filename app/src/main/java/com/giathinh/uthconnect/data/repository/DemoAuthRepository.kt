@@ -13,6 +13,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -83,7 +84,7 @@ class DemoAuthRepository @Inject constructor(
 
     override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> =
         withContext(Dispatchers.Default) {
-            runCatching {
+            cancellableResult {
                 mutex.withLock {
                     val base = listOf(student, organizer).firstOrNull {
                         identifier == it.studentId || identifier.equals(it.email, ignoreCase = true)
@@ -93,14 +94,14 @@ class DemoAuthRepository @Inject constructor(
             }
         }
 
-    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
+    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = cancellableResult {
         mutex.withLock { baseFor(studentId)?.let(::profile) }
     }
 
     override suspend fun changePassword(
         studentId: String, oldPassword: String, newPassword: String,
     ): Result<Boolean> = withContext(Dispatchers.Default) {
-        runCatching {
+        cancellableResult {
             mutex.withLock {
                 val base = baseFor(studentId) ?: return@withLock false
                 if (!passwordMatches(base, oldPassword)) return@withLock false
@@ -117,7 +118,8 @@ class DemoAuthRepository @Inject constructor(
 
     override suspend fun updateContact(
         studentId: String, phone: String, personalEmail: String, currentAddress: String,
-    ): Result<StudentProfile> = runCatching {
+    ): Result<StudentProfile> = withContext(Dispatchers.IO) {
+        cancellableResult {
         mutex.withLock {
             val base = requireNotNull(baseFor(studentId)) { "Unknown student" }
             check(prefs.edit()
@@ -125,9 +127,14 @@ class DemoAuthRepository @Inject constructor(
                 .putString(key(base, "personal_email"), personalEmail)
                 .putString(key(base, "address"), currentAddress)
                 .commit()) { "Contact storage failed" }
-            profile(base)
+                profile(base)
+            }
         }
     }
+
+    private suspend fun <T> cancellableResult(block: suspend () -> T): Result<T> = try { Result.success(block()) }
+    catch (cancelled: CancellationException) { throw cancelled }
+    catch (error: Exception) { Result.failure(error) }
 
     companion object {
         const val STUDENT_DEMO_PASSWORD = "UTH@123456"

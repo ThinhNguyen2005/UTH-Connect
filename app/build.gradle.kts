@@ -9,7 +9,8 @@ plugins {
 }
 
 val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()
-if (!useMockData) {
+// Auth luôn dùng Firebase; thiếu cấu hình thì báo lỗi rõ ràng, không fallback demo.
+if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
@@ -83,10 +84,4 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-}
-
-tasks.configureEach {
-    if (name.contains("AarMetadata")) {
-        enabled = false
-    }
 }

@@ -56,17 +56,45 @@ class ProfileViewModelTest {
         }
     }
     private class FakeAuth(private val demo: StudentProfile) : AuthRepository, StudentContactRepository {
+        var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        var updates = 0
         override suspend fun authenticate(identifier: String, password: String) = Result.success<StudentProfile?>(demo)
         override suspend fun findStudent(studentId: String) = Result.success<StudentProfile?>(demo)
         override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) =
             Result.success(oldPassword == "UTH@123456")
-        override suspend fun updateContact(studentId: String, phone: String, personalEmail: String, currentAddress: String) =
-            Result.success(demo.copy(phoneNumber = phone, personalEmail = personalEmail, currentAddress = currentAddress))
+        override suspend fun updateContact(studentId: String, phone: String, personalEmail: String, currentAddress: String): Result<StudentProfile> {
+            updates++
+            gate?.await()
+            return Result.success(demo.copy(phoneNumber = phone, personalEmail = personalEmail, currentAddress = currentAddress))
+        }
     }
-    private fun newVm(session: FakeSession) : ProfileViewModel {
-        val auth = FakeAuth(demo)
+    private fun newVm(session: FakeSession, auth: FakeAuth = FakeAuth(demo)) : ProfileViewModel {
         return ProfileViewModel(GetProfileUseCase(session), ManageStudentSessionUseCase(session),
             ChangePasswordUseCase(auth, session), UpdateStudentContactUseCase(auth, session))
+    }
+
+    @Test fun `editing invalid fields clears their stale validation errors`() = runTest {
+        val vm = newVm(FakeSession(demo)); advanceUntilIdle()
+        vm.onAction(ProfileAction.OpenContact)
+        vm.onAction(ProfileAction.PhoneChanged("123"))
+        vm.onAction(ProfileAction.SubmitContact); advanceUntilIdle()
+        assertTrue(vm.uiState.value.contactForm.errors.phoneError != null)
+        vm.onAction(ProfileAction.PhoneChanged("0912345678"))
+        assertNull(vm.uiState.value.contactForm.errors.phoneError)
+        vm.onAction(ProfileAction.OpenPassword)
+        vm.onAction(ProfileAction.SubmitPassword); advanceUntilIdle()
+        assertTrue(vm.uiState.value.passwordForm.errors.oldError != null)
+        vm.onAction(ProfileAction.OldPasswordChanged("Old@12345"))
+        assertNull(vm.uiState.value.passwordForm.errors.oldError)
+    }
+
+    @Test fun `starting a new edit clears previous success notice`() = runTest {
+        val vm = newVm(FakeSession(demo)); advanceUntilIdle()
+        vm.onAction(ProfileAction.OpenContact)
+        vm.onAction(ProfileAction.SubmitContact); advanceUntilIdle()
+        assertEquals(ProfileNotice.ContactSaved, vm.uiState.value.notice)
+        vm.onAction(ProfileAction.OpenPassword)
+        assertNull(vm.uiState.value.notice)
     }
 
     @Test fun `logout dialog must be confirmed`() = runTest {
@@ -140,6 +168,22 @@ class ProfileViewModelTest {
         assertNull(session.session.value.profile)
         assertFalse(vm.uiState.value.confirmLogout)
         assertNull(vm.uiState.value.failure)
+    }
+
+    @Test fun `back and double submit are ignored while saving`() = runTest {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val auth = FakeAuth(demo).apply { this.gate = gate }
+        val vm = newVm(FakeSession(demo), auth); advanceUntilIdle()
+        vm.onAction(ProfileAction.OpenContact)
+        vm.onAction(ProfileAction.SubmitContact)
+        assertTrue(vm.uiState.value.isSaving)
+        vm.onAction(ProfileAction.Back)
+        vm.onAction(ProfileAction.SubmitContact)
+        assertEquals(ProfilePage.EditContact, vm.uiState.value.page)
+        assertEquals(1, auth.updates)
+        gate.complete(Unit); advanceUntilIdle()
+        assertFalse(vm.uiState.value.isSaving)
+        assertEquals(ProfilePage.Overview, vm.uiState.value.page)
     }
 
 }

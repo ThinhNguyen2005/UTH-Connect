@@ -1,115 +1,136 @@
 package com.giathinh.uthconnect.data.repository
 
-import android.content.Context
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionFailure
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Only student ID / biometric opt-in; never password, raw biometric, session token. */
+/** Tùy chọn UID chỉ là lựa chọn UX; Firebase mới là bằng chứng xác thực. */
 @Singleton
 class PreferencesSessionRepository @Inject constructor(
-    @ApplicationContext context: Context,
     private val auth: AuthRepository,
+    private val preferences: SessionPreferences,
 ) : SessionRepository {
-    private val prefs = context.getSharedPreferences("uth_auth_demo", Context.MODE_PRIVATE)
     private val mutex = Mutex()
-    private val _session = MutableStateFlow(StudentSession())
-    override val session: StateFlow<StudentSession> = _session.asStateFlow()
+    private val current = MutableStateFlow(StudentSession())
+    override val session = current.asStateFlow()
     private var restored = false
 
     override suspend fun restore() {
         mutex.withLock {
             if (restored) return
-            restored = true
+            current.value = current.value.copy(isRestoring = true, failure = null)
             try {
-                val biometricId = prefs.getString(KEY_BIO_ID, null)
-                val rememberedId = prefs.getString(KEY_ID, null)
-                // Biometric opt-in always requires new OS authentication on a cold start.
-                val candidateId = biometricId ?: rememberedId
-                val candidateProfile = candidateId?.let { auth.findStudent(it).getOrThrow() }
-                if (candidateId != null && candidateProfile == null) {
-                    check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit())
+                val grants = preferences.read()
+                if (grants.rememberedId == null && grants.biometricId == null) {
+                    auth.signOut()
+                    current.value = StudentSession(isRestoring = false)
+                } else {
+                    val profile = auth.restoreAuthenticatedProfile().getOrThrow()
+                    val valid = profile != null && profile.sessionIdentity == (grants.biometricId ?: grants.rememberedId)
+                    if (!valid) {
+                        auth.signOut()
+                        preferences.write(SessionGrants())
+                        current.value = StudentSession(isRestoring = false)
+                    } else {
+                        current.value = StudentSession(isRestoring = false,
+                            profile = if (grants.biometricId == null) profile else null,
+                            remembered = grants.rememberedId != null, biometricStudentId = grants.biometricId)
+                    }
                 }
-                _session.value = StudentSession(
-                    isRestoring = false,
-                    profile = if (biometricId == null) candidateProfile else null,
-                    remembered = rememberedId != null,
-                    biometricStudentId = if (candidateProfile != null) biometricId else null,
-                )
+                restored = true
             } catch (cancelled: CancellationException) {
                 restored = false
+                current.value = current.value.copy(isRestoring = false)
                 throw cancelled
             } catch (_: Exception) {
-                _session.value = StudentSession(isRestoring = false, failure = SessionFailure.RestoreFailed)
+                restored = false
+                current.value = StudentSession(isRestoring = false, failure = SessionFailure.RestoreFailed)
+            }
+        }
+    }
+
+    override suspend fun refresh() {
+        mutex.withLock {
+            if (!restored || current.value.profile == null) return
+            try {
+                val profile = auth.restoreAuthenticatedProfile().getOrThrow()
+                current.value = if (profile?.sessionIdentity == current.value.profile?.sessionIdentity)
+                    current.value.copy(profile = profile, failure = null)
+                else StudentSession(isRestoring = false)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                restored = false
+                current.value = StudentSession(isRestoring = false, failure = SessionFailure.RestoreFailed)
+            }
+        }
+    }
+
+    override suspend fun monitorAuthChanges() {
+        auth.authChanges.collect { signedIn ->
+            if (!signedIn) mutex.withLock {
+                if (current.value.profile != null || current.value.biometricStudentId != null) {
+                    current.value = StudentSession(isRestoring = false)
+                    restored = false
+                }
             }
         }
     }
 
     override suspend fun start(profile: StudentProfile, remember: Boolean) {
         mutex.withLock {
-            val edit = prefs.edit()
-            if (remember) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)
-            val biometricId = prefs.getString(KEY_BIO_ID, null)
-            if (biometricId != null && biometricId != profile.studentId) edit.remove(KEY_BIO_ID)
-            check(edit.commit()) { "Cannot save demo session" }
-            _session.value = StudentSession(
-                isRestoring = false, profile = profile, remembered = remember,
-                biometricStudentId = biometricId?.takeIf { it == profile.studentId },
-            )
+            val identity = profile.sessionIdentity
+            val bio = preferences.read().biometricId?.takeIf { it == identity }
+            try { preferences.write(SessionGrants(if (remember) identity else null, bio)) }
+            catch (error: Exception) { auth.signOut(); throw error }
+            restored = true
+            current.value = StudentSession(isRestoring = false, profile = profile,
+                remembered = remember, biometricStudentId = bio)
         }
     }
-
     override suspend fun updateProfile(profile: StudentProfile) {
         mutex.withLock {
-            check(_session.value.profile?.studentId == profile.studentId) { "No active session" }
-            _session.value = _session.value.copy(profile = profile)
+            check(current.value.profile?.sessionIdentity == profile.sessionIdentity) { "Không có phiên phù hợp" }
+            current.value = current.value.copy(profile = profile)
         }
     }
-
     override suspend fun enableBiometric(studentId: String) {
         mutex.withLock {
-            check(_session.value.profile?.studentId == studentId) { "No active session" }
-            check(prefs.edit().putString(KEY_BIO_ID, studentId).commit()) { "Cannot save biometric preference" }
-            _session.value = _session.value.copy(biometricStudentId = studentId)
+            val profile = current.value.profile ?: error("Chưa đăng nhập")
+            check(profile.studentId == studentId)
+            preferences.write(preferences.read().copy(biometricId = profile.sessionIdentity))
+            current.value = current.value.copy(biometricStudentId = profile.sessionIdentity)
         }
     }
-
     override suspend fun disableBiometric() {
         mutex.withLock {
-            check(prefs.edit().remove(KEY_BIO_ID).commit()) { "Cannot disable biometric preference" }
-            _session.value = _session.value.copy(biometricStudentId = null)
+            preferences.write(preferences.read().copy(biometricId = null))
+            current.value = current.value.copy(biometricStudentId = null)
         }
     }
-
     override suspend fun unlockWithBiometric() {
         mutex.withLock {
-            val studentId = _session.value.biometricStudentId ?: error("Biometric login is not enabled")
-            val profile = auth.findStudent(studentId).getOrThrow() ?: error("Student account is missing")
-            _session.value = _session.value.copy(isRestoring = false, profile = profile, failure = null)
+            val id = current.value.biometricStudentId ?: error("Chưa bật sinh trắc học")
+            val profile = auth.restoreAuthenticatedProfile().getOrThrow() ?: error("Phiên đã hết hạn")
+            check(profile.sessionIdentity == id) { "Tài khoản đã thay đổi" }
+            current.value = current.value.copy(profile = profile, failure = null)
         }
     }
-
     override suspend fun signOut() {
         mutex.withLock {
-            // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
-            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
-            _session.value = StudentSession(isRestoring = false)
+            auth.signOut()
+            // Đĩa lỗi vẫn phải thu hồi credential Firebase và profile trong bộ nhớ.
+            try { preferences.write(SessionGrants()) }
+            finally { current.value = StudentSession(isRestoring = false); restored = true }
         }
-    }
-
-    private companion object {
-        const val KEY_ID = "remembered_student_id"
-        const val KEY_BIO_ID = "biometric_student_id"
     }
 }

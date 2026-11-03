@@ -10,6 +10,7 @@
         <exclude .../>
         -->
             <exclude domain="sharedpref" path="uth_auth_demo.xml" />
+        <exclude domain="sharedpref" path="uth_auth_session.xml" />
         <exclude domain="sharedpref" path="uth_auth_demo_account.xml" />
     </cloud-backup>
     <!--
@@ -20,6 +21,7 @@
     -->
     <device-transfer>
         <exclude domain="sharedpref" path="uth_auth_demo.xml" />
+        <exclude domain="sharedpref" path="uth_auth_session.xml" />
         <exclude domain="sharedpref" path="uth_auth_demo_account.xml" />
     </device-transfer>
 </data-extraction-rules>

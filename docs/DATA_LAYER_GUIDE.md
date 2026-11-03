@@ -1,5 +1,10 @@
 # Bàn giao Data Layer cho Phú, Văn, Đức, Thắng
 
+> Cập nhật sau tích hợp Auth/Profile: binding Auth luôn dùng Firebase, không fallback demo.
+> Cờ useMockData và fixture của các module khác vẫn giữ; hướng dẫn demo login dưới đây là lịch sử
+> trước tích hợp, không còn mô tả đăng nhập production. Xem AUTH_PROFILE_STATUS.md mục hợp nhất.
+> SDK chỉ được khởi tạo khi cần; thiếu google-services.json thì Auth báo lỗi cấu hình.
+
 ## Chạy ngay với mock
 
 Nhánh: feature/data-backend-nghia. Mở bằng Android Studio, chọn Debug và chạy app.

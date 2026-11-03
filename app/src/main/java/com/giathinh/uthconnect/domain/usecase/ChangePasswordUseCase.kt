@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.domain.usecase
 
 import com.giathinh.uthconnect.domain.repository.AuthRepository
+import com.giathinh.uthconnect.domain.repository.AuthError
+import com.giathinh.uthconnect.domain.repository.AuthException
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.validation.PasswordChangeValidator
 import com.giathinh.uthconnect.domain.validation.PasswordValidation
@@ -12,6 +14,7 @@ sealed interface ChangePasswordResult {
     data object NoSession : ChangePasswordResult
     data object Success : ChangePasswordResult
     data object Failed : ChangePasswordResult
+    data class ServiceError(val reason: AuthError) : ChangePasswordResult
 }
 
 class ChangePasswordUseCase @Inject constructor(
@@ -25,7 +28,8 @@ class ChangePasswordUseCase @Inject constructor(
         val id = sessions.session.value.profile?.studentId ?: return ChangePasswordResult.NoSession
         return auth.changePassword(id, old, updated).fold(
             onSuccess = { if (it) ChangePasswordResult.Success else ChangePasswordResult.IncorrectCurrentPassword },
-            onFailure = { ChangePasswordResult.Failed },
+            onFailure = { (it as? AuthException)?.let { error -> ChangePasswordResult.ServiceError(error.reason) }
+                ?: ChangePasswordResult.Failed },
         )
     }
 }

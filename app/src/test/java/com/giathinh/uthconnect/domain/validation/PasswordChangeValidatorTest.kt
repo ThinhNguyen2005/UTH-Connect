@@ -7,6 +7,8 @@ import org.junit.Test
 
 class PasswordChangeValidatorTest {
     private val validator = PasswordChangeValidator()
+    @Test fun `reject passwords beyond maximum length`() = assertEquals(PasswordError.Weak,
+        validator.validate("old", "Aa@1" + "x".repeat(61), "Aa@1" + "x".repeat(61)).newError)
     @Test fun `accept strong distinct password`() = assertTrue(validator.validate("UTH@123456", "New@12345", "New@12345").valid)
     @Test fun `reject weak password`() = assertEquals(PasswordError.Weak,
         validator.validate("UTH@123456", "abc", "abc").newError)

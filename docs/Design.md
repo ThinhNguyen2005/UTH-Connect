@@ -278,7 +278,7 @@ Trạng thái theo từng tab so với sườn MVVM mục 5.1.1:
 | Tiện ích | đủ 5 file MVVM + 4 test (`UtilitiesViewModelTest`) | graph con bên trong module; nối Firebase thật |
 | Trang chủ | Screen stateless + placeholder sự kiện | `HomeViewModel` + `HomeUiState` khi module Sự kiện vào code |
 | Thời khóa biểu | Screen placeholder Phase 2 | cả 5 file, do `feature/timetable-<tên>` dựng |
-| Cá nhân | Screen placeholder đăng nhập | `ProfileViewModel` + luồng auth (M0) |
+| Auth/Cá nhân | Hai slice MVVM, Firebase repository, session, liên hệ/mật khẩu | Cần cấu hình Firebase, claims, rules và backend ánh xạ MSSV; xem `AUTH_PROFILE_STATUS.md` |
 
 ### 8.2. Màn hình nghiệp vụ khi module vào code
 

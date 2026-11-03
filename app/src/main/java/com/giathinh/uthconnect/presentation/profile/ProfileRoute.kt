@@ -7,9 +7,12 @@ import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.CancellationSignal
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -30,6 +33,15 @@ fun ProfileRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val biometric = remember(context) { findProfileActivity(context)?.let { ProfileBiometricController(it) } }
+    DisposableEffect(lifecycleOwner, biometric) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) biometric?.cancel()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); biometric?.cancel() }
+    }
     val snackbars = remember { SnackbarHostState() }
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
@@ -42,23 +54,25 @@ fun ProfileRoute(
         }
     }
     BackHandler(enabled = uiState.page != ProfilePage.Overview || uiState.confirmLogout) {
+        if (uiState.isSaving || uiState.isLoggingOut) return@BackHandler
         if (uiState.confirmLogout) viewModel.onAction(ProfileAction.CancelLogout)
         else viewModel.onAction(ProfileAction.Back)
     }
-    Box(modifier.fillMaxSize()) {
+    // Dành vùng riêng để Snackbar không che nút đăng xuất ở cuối nội dung.
+    Column(modifier.fillMaxSize()) {
         ProfileScreen(uiState, onAction = { action ->
         if (action == ProfileAction.RequestBiometricEnroll) {
             val activity = findProfileActivity(context)
             if (activity == null || uiState.biometricEnabled) {
                 viewModel.onAction(ProfileAction.BiometricFailed)
             } else {
-                showEnrollmentPrompt(activity,
+                (biometric ?: return@ProfileScreen).show(
                     onVerified = { viewModel.onAction(ProfileAction.BiometricVerified) },
                     onError = { viewModel.onAction(ProfileAction.BiometricFailed) })
             }
         } else viewModel.onAction(action)
-    }, modifier = Modifier.fillMaxSize())
-        SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
+    }, modifier = Modifier.weight(1f))
+        SnackbarHost(hostState = snackbars)
     }
 }
 
@@ -71,21 +85,41 @@ private fun findProfileActivity(context: Context): Activity? {
     return null
 }
 
-private fun showEnrollmentPrompt(activity: Activity, onVerified: () -> Unit, onError: () -> Unit) {
-    val strong = BiometricManager.Authenticators.BIOMETRIC_STRONG
-    val manager = activity.getSystemService(BiometricManager::class.java)
-    if (manager?.canAuthenticate(strong) != BiometricManager.BIOMETRIC_SUCCESS) {
-        onError()
-        return
+/** Một prompt mỗi Route; bỏ callback đến sau khi stop/dispose. */
+private class ProfileBiometricController(private val activity: Activity) {
+    private var signal: CancellationSignal? = null
+    fun cancel() {
+        val pending = signal
+        signal = null
+        pending?.cancel()
     }
-    val prompt = BiometricPrompt.Builder(activity)
-        .setTitle(activity.getString(R.string.auth_biometric_enable))
-        .setSubtitle(activity.getString(R.string.auth_biometric_subtitle))
-        .setAllowedAuthenticators(strong)
-        .setNegativeButton(activity.getString(R.string.auth_cancel), activity.mainExecutor) { _, _ -> Unit }
-        .build()
-    prompt.authenticate(CancellationSignal(), activity.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
-        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onVerified() }
-        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { onError() }
-    })
+    fun show(onVerified: () -> Unit, onError: () -> Unit) {
+        if (signal != null) return
+        val strong = BiometricManager.Authenticators.BIOMETRIC_STRONG
+        val manager = activity.getSystemService(BiometricManager::class.java)
+        if (manager?.canAuthenticate(strong) != BiometricManager.BIOMETRIC_SUCCESS) { onError(); return }
+        val pending = CancellationSignal()
+        signal = pending
+        try {
+            val prompt = BiometricPrompt.Builder(activity)
+                .setTitle(activity.getString(R.string.auth_biometric_enable))
+                .setSubtitle(activity.getString(R.string.auth_biometric_subtitle))
+                .setAllowedAuthenticators(strong)
+                .setNegativeButton(activity.getString(R.string.auth_cancel), activity.mainExecutor) { _, _ -> cancel() }
+                .build()
+            prompt.authenticate(pending, activity.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (signal !== pending) return
+                    signal = null
+                    onVerified()
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    if (signal !== pending) return
+                    signal = null
+                    if (errorCode != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED &&
+                        errorCode != BiometricPrompt.BIOMETRIC_ERROR_CANCELED) onError()
+                }
+            })
+        } catch (_: Exception) { cancel(); onError() }
+    }
 }

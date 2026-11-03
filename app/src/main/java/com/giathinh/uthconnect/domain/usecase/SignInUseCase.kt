@@ -2,10 +2,15 @@ package com.giathinh.uthconnect.domain.usecase
 
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
+import com.giathinh.uthconnect.domain.repository.AuthException
+import com.giathinh.uthconnect.domain.repository.AuthError
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 import com.giathinh.uthconnect.domain.validation.LoginValidator
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /** Kiểm tra dữ liệu trước khi gọi kho xác thực. */
 class SignInUseCase @Inject constructor(
@@ -24,11 +29,20 @@ class SignInUseCase @Inject constructor(
             onSuccess = { student ->
                 if (student == null) SignInResult.InvalidCredentials
                 else {
-                    session.start(student, remember)
-                    SignInResult.Success(student)
+                    try {
+                        session.start(student, remember)
+                        SignInResult.Success(student)
+                    } catch (cancelled: CancellationException) {
+                        withContext(NonCancellable) { auth.signOut() }
+                        throw cancelled
+                    } catch (_: Exception) {
+                        auth.signOut()
+                        SignInResult.Failure
+                    }
                 }
             },
-            onFailure = { SignInResult.Failure },
+            onFailure = { (it as? AuthException)?.let { error -> SignInResult.ServiceError(error.reason) }
+                ?: SignInResult.Failure },
         )
     }
 }
@@ -41,4 +55,5 @@ sealed interface SignInResult {
     ) : SignInResult
     data object InvalidCredentials : SignInResult
     data object Failure : SignInResult
+    data class ServiceError(val reason: AuthError) : SignInResult
 }

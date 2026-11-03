@@ -126,7 +126,7 @@
     <string name="auth_unexpected">Could not sign in. Please try again.</string>
     <string name="auth_restore_failed">Could not restore the old session. Sign in again.</string>
     <string name="auth_forgot_title">Forgot password</string>
-    <string name="auth_forgot_message">This student project uses a demo account; password recovery has not been connected to an API.</string>
+    <string name="auth_forgot_message">Enter your university email to receive a password reset link.</string>
     <string name="auth_ok">OK</string>
     <string name="auth_demo_notice">Demo mode – not connected to UTH student authentication.</string>
     <string name="auth_profile_title">Personal profile</string>
@@ -154,7 +154,7 @@
     <string name="auth_password_weak">Password does not meet the strength requirements.</string>
     <string name="auth_password_same">The new password must differ from the current password.</string>
     <string name="auth_password_mismatch">New passwords do not match.</string>
-    <string name="auth_password_changed">Demo password updated on this device. Use it for your next sign-in.</string>
+    <string name="auth_password_changed">Password changed. Use the new password next time.</string>
     <string name="auth_contact_edit_title">Edit contact information</string>
     <string name="auth_contact_phone">Phone number</string>
     <string name="auth_contact_email">Personal email</string>
@@ -163,7 +163,7 @@
     <string name="auth_contact_invalid_phone">Invalid phone number (e.g. 0912345678).</string>
     <string name="auth_contact_invalid_email">Invalid personal email address.</string>
     <string name="auth_contact_invalid_address">Address must not exceed 200 characters.</string>
-    <string name="auth_contact_saved">Demo contact information saved on this device.</string>
+    <string name="auth_contact_saved">Contact information saved.</string>
     <string name="auth_save_failed">Could not save changes. Please retry.</string>
     <string name="auth_save">Save changes</string>
     <string name="auth_back">Back</string>
@@ -172,7 +172,7 @@
     <string name="auth_biometric_disable">Disable biometric sign-in</string>
     <string name="auth_biometric_login">Sign in with fingerprint / face</string>
     <string name="auth_biometric_subtitle">Verify using biometrics enrolled in device settings</string>
-    <string name="auth_biometric_note">Requires strong biometrics enrolled on the device. This only unlocks the local demo account.</string>
+    <string name="auth_biometric_note">Requires enrolled strong biometrics and a valid Firebase session. Signing out disables this feature.</string>
     <string name="auth_biometric_error">Biometrics unavailable or canceled. Enroll a fingerprint or use a password.</string>
     <string name="auth_biometric_enabled">Biometric sign-in enabled. Next time, tap the biometric button to sign in.</string>
     <string name="auth_biometric_disabled">Biometric sign-in disabled.</string>
@@ -227,4 +227,24 @@
     <string name="lostfound_msg_post_success">Item posted successfully!</string>
     <string name="lostfound_msg_post_failed">Failed to post item</string>
     <string name="nav_back">Back</string>
+    <string name="auth_configuration">Firebase is not configured. Contact the app administrator.</string>
+    <string name="auth_network">Cannot reach the server. Check your connection and retry.</string>
+    <string name="auth_disabled">This account is disabled. Contact the administrator.</string>
+    <string name="auth_invalid_session">Your session is no longer valid. Please sign in again.</string>
+    <string name="auth_verify_email">Verify your university email using the verification message, then sign in again.</string>
+    <string name="auth_approval">Your UTH identity is awaiting approval. Contact the administrator.</string>
+    <string name="auth_profile_missing">Your student profile is incomplete. Contact the administrator.</string>
+    <string name="auth_permission">Profile access denied. Contact the administrator.</string>
+    <string name="auth_too_many">Too many requests. Please wait before retrying.</string>
+    <string name="auth_student_id_unavailable">Student ID sign-in requires an account mapping backend that is not configured. Use your university email.</string>
+    <string name="auth_reset_invalid">Enter a valid university email to reset your password.</string>
+    <string name="auth_reset_sent">If this email has an account, a reset link will be sent. Check your inbox.</string>
+    <string name="auth_reset_send">Send reset link</string>
+    <string name="auth_reset_sending">Sending?</string>
+    <string name="auth_restore_retry">Retry session restore</string>
+    <string name="auth_service_notice">Sign in with your provisioned and verified university account.</string>
+    <string name="auth_profile_source">Student profile</string>
+    <string name="auth_verified_badge">UTH verified</string>
+    <string name="auth_organizer_badge">Organizer</string>
+    <string name="auth_admin_badge">Administrator</string>
 </resources>

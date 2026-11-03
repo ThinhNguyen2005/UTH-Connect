@@ -1,6 +1,5 @@
 package com.giathinh.uthconnect.data.repository
 
-import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.data.di.AuthDataModule
 import com.giathinh.uthconnect.domain.model.NotificationCategory
 import com.giathinh.uthconnect.domain.model.PostNotification
@@ -14,28 +13,14 @@ import org.junit.Test
 import javax.inject.Provider
 
 class DemoDataRepositoryTest {
-    @Test fun demoLoginMatchesSharedProfile() = runTest {
-        val auth = DemoAuthRepository()
-        val user = FakeUserRepository().getUserProfile("demo-uid-001").first()!!
-        for (identifier in listOf(user.studentId, user.email.uppercase())) {
-            val profile = auth.authenticate(identifier, DemoAuthRepository.DEMO_PASSWORD).getOrThrow()!!
-            assertEquals(user.studentId, profile.studentId)
-            assertEquals(user.email, profile.email)
-            assertEquals(user.displayName, profile.displayName)
-            assertEquals(profile, auth.findStudent(user.studentId).getOrThrow())
-        }
-        assertNull(auth.authenticate(user.email, "wrong").getOrThrow())
-        assertNull(auth.authenticate("unknown", DemoAuthRepository.DEMO_PASSWORD).getOrThrow())
-    }
-
-    @Test fun mockBindingDoesNotInitializeFirebase() {
-        org.junit.Assume.assumeTrue(BuildConfig.USE_MOCK_DATA)
-        val demo = DemoAuthRepository()
-        val selected = AuthDataModule.provideAuth(
-            Provider { demo },
-            Provider { error("Mock login must not initialize Firebase") },
+    @Test fun productionBindingUsesFirebaseWithoutInitializingSdkOrDemo() {
+        val source = SdkFirebaseAuthSource(
+            Provider { error("Binding must not eagerly initialize Firebase Auth") },
+            Provider { error("Binding must not eagerly initialize Firestore") },
         )
-        assertSame(demo, selected)
+        val firebase = FirebaseAuthRepository(source)
+        val selected = AuthDataModule.provideAuth(Provider { firebase })
+        assertSame(firebase, selected)
     }
 
     @Test fun scheduleFiltersByDateAndHandlesEmptyDay() = runTest {

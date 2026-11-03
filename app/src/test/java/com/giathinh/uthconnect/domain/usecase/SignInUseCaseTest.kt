@@ -52,4 +52,44 @@ class SignInUseCaseTest {
         val result = SignInUseCase(auth, session)("gmail.com", "", false)
         assertEquals(SignInResult.InvalidForm(LoginFieldError.InvalidIdentifier, LoginFieldError.Required), result)
     }
+
+    @Test fun `failed session persistence revokes successful authentication`() = runBlocking {
+        var revoked = false
+        val recordingAuth = object : AuthRepository by auth {
+            override suspend fun signOut() { revoked = true }
+        }
+        val failingSession = object : SessionRepository by session {
+            override suspend fun start(profile: StudentProfile, remember: Boolean) { error("Disk failure") }
+        }
+        val result = SignInUseCase(recordingAuth, failingSession)("demo@ut.edu.vn", "correct", true)
+        assertEquals(SignInResult.Failure, result)
+        assertTrue(revoked)
+        assertEquals(null, session.session.value.profile)
+    }
+
+    @Test fun `cancelled session start revokes auth and propagates cancellation`() = runBlocking {
+        var revoked = false
+        val recordingAuth = object : AuthRepository by auth {
+            override suspend fun signOut() { revoked = true }
+        }
+        val cancelledSession = object : SessionRepository by session {
+            override suspend fun start(profile: StudentProfile, remember: Boolean) {
+                throw kotlinx.coroutines.CancellationException("cancel")
+            }
+        }
+        try {
+            SignInUseCase(recordingAuth, cancelledSession)("demo@ut.edu.vn", "correct", true)
+            throw AssertionError("Must cancel")
+        } catch (_: kotlinx.coroutines.CancellationException) { assertTrue(revoked) }
+    }
+
+    @Test fun `service error is preserved for friendly UI mapping`() = runBlocking {
+        val offline = object : AuthRepository by auth {
+            override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> =
+                Result.failure(com.giathinh.uthconnect.domain.repository.AuthException(
+                    com.giathinh.uthconnect.domain.repository.AuthError.Network))
+        }
+        assertEquals(SignInResult.ServiceError(com.giathinh.uthconnect.domain.repository.AuthError.Network),
+            SignInUseCase(offline, session)("demo@ut.edu.vn", "correct", false))
+    }
 }

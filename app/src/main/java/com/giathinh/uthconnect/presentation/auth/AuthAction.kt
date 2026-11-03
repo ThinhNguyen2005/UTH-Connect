@@ -6,6 +6,10 @@ sealed interface AuthAction {
     data class RememberChanged(val value: Boolean) : AuthAction
     data object TogglePassword : AuthAction
     data object Submit : AuthAction
+    data object RetryRestore : AuthAction
+    data object RefreshSession : AuthAction
+    data class ResetEmailChanged(val value: String) : AuthAction
+    data object SubmitReset : AuthAction
     /** Repeats a failed sign-in attempt after the user corrects credentials. */
     data object Retry : AuthAction
     data object ForgotPassword : AuthAction

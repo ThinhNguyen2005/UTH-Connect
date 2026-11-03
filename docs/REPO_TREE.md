@@ -104,6 +104,19 @@ test/presentation/lostfound/ LostFoundViewModelTest.kt
 - Tests: StudentProfileRoleTest, AuthViewModelTest, ProfileViewModelTest, ProfileScreenUiTest.
 - No changes to global nav, MainActivity, Gradle or design system; V1 UthApp changes still need repo owner review.
 
+### Auth/Profile Firebase — 03/11/2026
+
+- `data/repository/FirebaseAuthRepository.kt`, `FirebaseAuthSource.kt` (interface và SDK adapter),
+  `SessionPreferences.kt` (interface và SharedPreferences I/O), `PreferencesSessionRepository.kt`.
+- `data/di/AuthDataModule.kt` bind Firebase, không bind DemoAuthRepository. Mã demo cũ giữ lại không dùng.
+- `domain/model/StudentProfile.kt` thêm authUid; `domain/usecase/ResetPasswordUseCase.kt`.
+- `test/data/repository/{FirebaseAuthRepository,PreferencesSessionRepository}Test.kt`,
+  `test/domain/usecase/ResetPasswordUseCaseTest.kt`; Android AuthProfileFlowUiTest và FirebaseAuthErrorMappingTest.
+- Các file mới trên thuộc owner auth ở bảng mục 3. Thêm Firebase Auth/Firestore, Google Services và
+  coroutines-play-services; không thay AGP/Kotlin/Gradle/SDK. Xem AUTH_PROFILE_STATUS.md về cấu hình còn thiếu.
+- Có README riêng trong `presentation/auth/`, `presentation/profile/`; Android AuthProfileLocaleUiTest
+  kiểm tra VI/EN với font scale 200% mà không đổi locale thiết bị.
+
 ## 3. Cây đích: mỗi người một nhánh
 
 Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
@@ -112,7 +125,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 |---|---|---|---|---|---|
 | **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
 | **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
-| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` (2 × 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `DemoAuthRepository`, `PreferencesSessionRepository`, `AuthDataModule` | Auth/Profile unit + UI tests |
+| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` (2 × 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `FirebaseAuthRepository`, `FirebaseAuthSource`, `PreferencesSessionRepository`, `SessionPreferences`, `AuthDataModule` (demo cũ không bind) | Auth/Profile unit + UI tests |
 | **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Anh Phú** | `feature/auth-phu` | `auth/` · `profile/` | model và hợp đồng auth/session | repository và DI auth/session | auth · profile |
@@ -232,6 +245,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 ## 8. Nhật ký cấu trúc
 
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.4-auth | 03/11/2026 | Thêm FirebaseAuthRepository, FirebaseAuthSource, SessionPreferences, ResetPasswordUseCase và test mirror; bind Firebase thay demo; AuthProfileFlowUiTest/FirebaseAuthErrorMappingTest; xem AUTH_PROFILE_STATUS.md. |
 | v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
 | v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
 | v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |

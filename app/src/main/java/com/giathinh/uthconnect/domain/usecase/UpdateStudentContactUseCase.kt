@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.domain.usecase
 
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
+import com.giathinh.uthconnect.domain.repository.AuthError
+import com.giathinh.uthconnect.domain.repository.AuthException
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.validation.ContactValidation
 import com.giathinh.uthconnect.domain.validation.StudentContactValidator
@@ -11,6 +13,7 @@ sealed interface UpdateContactResult {
     data object NoSession : UpdateContactResult
     data object Success : UpdateContactResult
     data object Failed : UpdateContactResult
+    data class ServiceError(val reason: AuthError) : UpdateContactResult
 }
 
 class UpdateStudentContactUseCase @Inject constructor(
@@ -27,7 +30,8 @@ class UpdateStudentContactUseCase @Inject constructor(
                 session.updateProfile(profile)
                 UpdateContactResult.Success
             },
-            onFailure = { UpdateContactResult.Failed },
+            onFailure = { (it as? AuthException)?.let { error -> UpdateContactResult.ServiceError(error.reason) }
+                ?: UpdateContactResult.Failed },
         )
     }
 }

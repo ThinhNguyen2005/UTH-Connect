@@ -11,6 +11,8 @@ class AccessStudentSessionUseCase @Inject constructor(
 ) {
     fun observe(): StateFlow<StudentSession> = sessions.session
     suspend fun restore() = sessions.restore()
+    suspend fun refresh() = sessions.refresh()
+    suspend fun monitorAuthChanges() = sessions.monitorAuthChanges()
     /** Caller must first receive a successful Android BiometricPrompt response. */
     suspend fun unlockAfterBiometricPrompt() = sessions.unlockWithBiometric()
 }

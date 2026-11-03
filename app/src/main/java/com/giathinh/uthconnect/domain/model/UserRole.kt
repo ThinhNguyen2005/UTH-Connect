@@ -1,4 +1,4 @@
 package com.giathinh.uthconnect.domain.model
 
-/** Local demo role. In production, authorization is checked by trusted server claims. */
+/** Quyền hiển thị lấy từ claims; backend/rules vẫn phải kiểm tra từng thao tác được bảo vệ. */
 enum class UserRole { STUDENT, ORGANIZER, ADMIN }

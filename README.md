@@ -595,6 +595,19 @@ docs/                   # ADR, thiết kế UI, test plan
 
 ## 8. Bắt đầu nhanh
 
+> Sau rebase Auth/Profile lên d608a09: giữ AGP 8.13.0, Gradle 8.13, Kotlin 2.2.10, SDK 36, Hilt 2.58
+> của remote. AndroidX Core 1.18.0, Lifecycle 2.10.0, Navigation 2.9.5, AndroidX Hilt 1.3.0 được chọn
+> để bật kiểm tra AAR metadata thật. Bảng phiên bản cũ ở trên là lịch sử; xem docs/AUTH_PROFILE_STATUS.md.
+> Firebase BoM 33.10.0/Google Services 4.4.2 và Storage được giữ từ remote; Auth không dùng demo fallback.
+
+
+**Auth/Profile trên `feature/auth-phu`:** có repository Firebase Auth/Firestore, session theo UID,
+reset email, đổi mật khẩu và cập nhật liên hệ. Cần `app/google-services.json`, bật Email/Password,
+cấp hồ sơ và claims từ backend. Không dùng demo để xác thực ứng dụng. MSSV chờ hợp đồng ánh xạ;
+dùng email trường khi cấu hình đầy đủ. Xem [báo cáo Auth/Profile](docs/AUTH_PROFILE_STATUS.md)
+về phạm vi, phần còn thiếu và bằng chứng kiểm thử. Các kết quả build cũ bên dưới là lịch sử,
+không xác nhận Firebase production đã hoạt động.
+
 ### 8.1. Yêu cầu
 
 - Android Studio (Narwhal trở lên) với **SDK platform Android 37.1** (`compileSdk = 37.1`)
@@ -637,7 +650,7 @@ firebase init emulator   # chọn Firestore, Storage, Functions
 firebase emulators:start # http://localhost:9099 (UI), 8080 (Firestore)
 ```
 
-Trong app, bật **Emulator mode** ở `Settings → Developer` (điểm nối `10.0.2.2` trên emulator).
+Mục Settings → Developer/Emulator mode là thiết kế dự kiến, chưa có trong app. Không tự chuyển endpoint hoặc Firebase project.
 
 ---
 

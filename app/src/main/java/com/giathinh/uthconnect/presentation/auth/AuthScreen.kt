@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -90,7 +91,7 @@ fun AuthScreen(
                 supportingText = {
                     uiState.passwordError?.let { Text(stringResource(R.string.auth_required)) }
                 },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onAction(AuthAction.Submit) }),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
@@ -112,7 +113,13 @@ fun AuthScreen(
                     modifier = Modifier.testTag("auth_error"),
                 )
                 Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected) {
+                if (failure == AuthFailure.SessionRestore) {
+                    OutlinedButton(onClick = { onAction(AuthAction.RetryRestore) }, enabled = enabled,
+                        modifier = Modifier.fillMaxWidth().testTag("auth_restore_retry")) {
+                        Text(stringResource(R.string.auth_restore_retry))
+                    }
+                }
+                if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected || failure == AuthFailure.Network) {
                     OutlinedButton(
                         onClick = { onAction(AuthAction.Retry) },
                         enabled = enabled,
@@ -138,17 +145,35 @@ fun AuthScreen(
             ) { Text(stringResource(R.string.auth_biometric_login)) }
         }
         Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(stringResource(R.string.auth_demo_notice), style = MaterialTheme.typography.bodySmall,
+        Text(stringResource(R.string.auth_service_notice), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     if (uiState.forgotDialogOpen) {
         AlertDialog(
             onDismissRequest = { onAction(AuthAction.DismissForgotPassword) },
             title = { Text(stringResource(R.string.auth_forgot_title)) },
-            text = { Text(stringResource(R.string.auth_forgot_message)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.auth_forgot_message))
+                    OutlinedTextField(value = uiState.resetEmail,
+                        onValueChange = { onAction(AuthAction.ResetEmailChanged(it)) },
+                        label = { Text(stringResource(R.string.auth_profile_email)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        enabled = !uiState.isResetting, singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("auth_reset_email"))
+                    if (uiState.resetSent) Text(stringResource(R.string.auth_reset_sent))
+                    uiState.failure?.let { Text(stringResource(failureRes(it)), color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onAction(AuthAction.DismissForgotPassword) }, enabled = !uiState.isResetting) {
+                    Text(stringResource(R.string.auth_cancel))
+                }
+            },
             confirmButton = {
-                TextButton(onClick = { onAction(AuthAction.DismissForgotPassword) }) {
-                    Text(stringResource(R.string.auth_ok))
+                TextButton(onClick = { onAction(AuthAction.SubmitReset) }, enabled = !uiState.isResetting && !uiState.resetSent,
+                    modifier = Modifier.testTag("auth_reset_send")) {
+                    Text(stringResource(if (uiState.isResetting) R.string.auth_reset_sending else R.string.auth_reset_send))
                 }
             },
         )
@@ -162,6 +187,17 @@ private fun identifierErrorRes(error: LoginFieldError) = when (error) {
 
 private fun failureRes(failure: AuthFailure) = when (failure) {
     AuthFailure.InvalidCredentials -> R.string.auth_invalid_credentials
+    AuthFailure.Configuration -> R.string.auth_configuration
+    AuthFailure.Network -> R.string.auth_network
+    AuthFailure.Disabled -> R.string.auth_disabled
+    AuthFailure.InvalidSession -> R.string.auth_invalid_session
+    AuthFailure.VerificationRequired -> R.string.auth_verify_email
+    AuthFailure.ApprovalRequired -> R.string.auth_approval
+    AuthFailure.ProfileMissing -> R.string.auth_profile_missing
+    AuthFailure.PermissionDenied -> R.string.auth_permission
+    AuthFailure.TooManyRequests -> R.string.auth_too_many
+    AuthFailure.StudentIdUnavailable -> R.string.auth_student_id_unavailable
+    AuthFailure.InvalidResetEmail -> R.string.auth_reset_invalid
     AuthFailure.Unexpected -> R.string.auth_unexpected
     AuthFailure.SessionRestore -> R.string.auth_restore_failed
     AuthFailure.BiometricUnavailable -> R.string.auth_biometric_error

@@ -129,7 +129,7 @@
     <string name="auth_unexpected">Không thể đăng nhập. Vui lòng thử lại.</string>
     <string name="auth_restore_failed">Không đọc được phiên đăng nhập cũ. Vui lòng đăng nhập lại.</string>
     <string name="auth_forgot_title">Quên mật khẩu</string>
-    <string name="auth_forgot_message">Bản đồ án đang dùng tài khoản demo, chưa tích hợp API khôi phục mật khẩu.</string>
+    <string name="auth_forgot_message">Nhập email trường để nhận liên kết đặt lại mật khẩu.</string>
     <string name="auth_ok">Đồng ý</string>
     <string name="auth_demo_notice">Chế độ demo – không xác thực với hệ thống đào tạo UTH.</string>
     <string name="auth_profile_title">Thông tin cá nhân</string>
@@ -157,7 +157,7 @@
     <string name="auth_password_weak">Mật khẩu chưa đáp ứng yêu cầu độ mạnh.</string>
     <string name="auth_password_same">Mật khẩu mới phải khác mật khẩu hiện tại.</string>
     <string name="auth_password_mismatch">Xác nhận mật khẩu không khớp.</string>
-    <string name="auth_password_changed">Đã đổi mật khẩu demo trên thiết bị này. Lần đăng nhập sau hãy dùng mật khẩu mới.</string>
+    <string name="auth_password_changed">Đã đổi mật khẩu. Hãy dùng mật khẩu mới cho lần đăng nhập sau.</string>
     <string name="auth_contact_edit_title">Chỉnh sửa thông tin liên hệ</string>
     <string name="auth_contact_phone">Số điện thoại</string>
     <string name="auth_contact_email">Email cá nhân</string>
@@ -166,7 +166,7 @@
     <string name="auth_contact_invalid_phone">Số điện thoại không hợp lệ (VD: 0912345678).</string>
     <string name="auth_contact_invalid_email">Email cá nhân không hợp lệ.</string>
     <string name="auth_contact_invalid_address">Địa chỉ không được vượt quá 200 ký tự.</string>
-    <string name="auth_contact_saved">Đã lưu thông tin liên hệ demo trên thiết bị này.</string>
+    <string name="auth_contact_saved">Đã lưu thông tin liên hệ.</string>
     <string name="auth_save_failed">Không lưu được dữ liệu. Vui lòng thử lại.</string>
     <string name="auth_save">Lưu thay đổi</string>
     <string name="auth_back">Quay lại</string>
@@ -175,7 +175,7 @@
     <string name="auth_biometric_disable">Tắt đăng nhập bằng sinh trắc học</string>
     <string name="auth_biometric_login">Đăng nhập bằng vân tay / khuôn mặt</string>
     <string name="auth_biometric_subtitle">Xác thực sinh trắc học đã đăng ký trong cài đặt thiết bị</string>
-    <string name="auth_biometric_note">Chỉ hoạt động khi thiết bị hỗ trợ và đã đăng ký sinh trắc học mạnh. Chức năng chỉ mở phiên demo trên thiết bị.</string>
+    <string name="auth_biometric_note">Cần sinh trắc học mạnh đã đăng ký. Phiên Firebase phải còn hợp lệ; đăng xuất sẽ tắt tính năng này.</string>
     <string name="auth_biometric_error">Sinh trắc học không khả dụng hoặc xác thực bị hủy. Hãy cài đặt vân tay hoặc đăng nhập bằng mật khẩu.</string>
     <string name="auth_biometric_enabled">Đã bật sinh trắc học. Lần mở ứng dụng sau, hãy bấm nút sinh trắc học để đăng nhập.</string>
     <string name="auth_biometric_disabled">Đã tắt đăng nhập sinh trắc học.</string>
@@ -189,7 +189,7 @@
     <string name="auth_logout_retry">Thử lại</string>
     <!-- Auth/Profile V3.1: login retry -->
     <string name="auth_login_retry">Thử đăng nhập lại</string>
-</resources>
+
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
@@ -231,4 +231,24 @@
     <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
     <string name="nav_back">Quay lại</string>
+    <string name="auth_configuration">Chưa cấu hình Firebase. Vui lòng liên hệ quản trị ứng dụng.</string>
+    <string name="auth_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
+    <string name="auth_disabled">Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.</string>
+    <string name="auth_invalid_session">Phiên không còn hợp lệ. Vui lòng đăng nhập lại.</string>
+    <string name="auth_verify_email">Cần xác minh email trường. Kiểm tra thư xác minh rồi đăng nhập lại.</string>
+    <string name="auth_approval">Tài khoản chưa được xác minh UTH. Vui lòng liên hệ quản trị để được duyệt.</string>
+    <string name="auth_profile_missing">Hồ sơ sinh viên chưa được cấp đầy đủ. Vui lòng liên hệ quản trị.</string>
+    <string name="auth_permission">Không có quyền truy cập hồ sơ. Vui lòng liên hệ quản trị.</string>
+    <string name="auth_too_many">Quá nhiều yêu cầu. Vui lòng chờ rồi thử lại.</string>
+    <string name="auth_student_id_unavailable">Đăng nhập bằng MSSV cần backend ánh xạ tài khoản chưa được cấu hình. Hãy dùng email trường.</string>
+    <string name="auth_reset_invalid">Vui lòng nhập email trường hợp lệ để đặt lại mật khẩu.</string>
+    <string name="auth_reset_sent">Nếu email có tài khoản, liên kết đặt lại mật khẩu sẽ được gửi. Hãy kiểm tra hộp thư.</string>
+    <string name="auth_reset_send">Gửi liên kết</string>
+    <string name="auth_reset_sending">Đang gửi…</string>
+    <string name="auth_restore_retry">Thử khôi phục phiên lại</string>
+    <string name="auth_service_notice">Đăng nhập bằng tài khoản trường đã được cấp và xác minh.</string>
+    <string name="auth_profile_source">Hồ sơ sinh viên</string>
+    <string name="auth_verified_badge">Đã xác minh UTH</string>
+    <string name="auth_organizer_badge">Ban tổ chức</string>
+    <string name="auth_admin_badge">Quản trị viên</string>
 </resources>

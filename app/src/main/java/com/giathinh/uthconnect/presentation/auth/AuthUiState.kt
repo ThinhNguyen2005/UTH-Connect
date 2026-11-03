@@ -15,6 +15,9 @@ data class AuthUiState(
     val passwordError: LoginFieldError? = null,
     val failure: AuthFailure? = null,
     val forgotDialogOpen: Boolean = false,
+    val resetEmail: String = "",
+    val isResetting: Boolean = false,
+    val resetSent: Boolean = false,
     /** Enrollment is persisted; NOT a signed-in session until OS prompt succeeds. */
     val biometricAvailable: Boolean = false,
 )
@@ -22,4 +25,8 @@ data class AuthUiState(
 /** One-off notification (not a navigation command; the signed-in gate is state driven). */
 sealed interface AuthEvent { data object InvalidCredentials : AuthEvent }
 
-enum class AuthFailure { InvalidCredentials, Unexpected, SessionRestore, BiometricUnavailable }
+enum class AuthFailure {
+    InvalidCredentials, Unexpected, SessionRestore, BiometricUnavailable, Configuration, Network,
+    Disabled, InvalidSession, VerificationRequired, ApprovalRequired, ProfileMissing, PermissionDenied,
+    TooManyRequests, StudentIdUnavailable, InvalidResetEmail,
+}

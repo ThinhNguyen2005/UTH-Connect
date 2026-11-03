@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.StateFlow
 interface SessionRepository {
     val session: StateFlow<StudentSession>
     suspend fun restore()
+    suspend fun refresh() = Unit
+    suspend fun monitorAuthChanges() = Unit
     suspend fun start(profile: StudentProfile, remember: Boolean)
     suspend fun updateProfile(profile: StudentProfile)
     /** Only invoke after Android BiometricPrompt returned successful authentication. */

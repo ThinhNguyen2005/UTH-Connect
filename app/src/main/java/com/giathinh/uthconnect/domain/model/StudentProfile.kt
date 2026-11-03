@@ -14,6 +14,8 @@ data class StudentProfile(
     val currentAddress: String = "",
     val role: UserRole = UserRole.STUDENT,
     val uthVerified: Boolean = false,
+    val authUid: String = "",
 ) {
+    val sessionIdentity: String get() = authUid.ifBlank { studentId }
     init { require(studentId.isNotBlank()) { "studentId is required" } }
 }

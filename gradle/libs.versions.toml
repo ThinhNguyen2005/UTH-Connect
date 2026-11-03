@@ -1,30 +1,28 @@
 [versions]
 agp = "8.13.0"
-coreKtx = "1.19.1"
+coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
-lifecycleRuntimeKtx = "2.11.0"
+lifecycleRuntimeKtx = "2.10.0"
 # MVVM: hai artifact này trước đó chỉ là constraint (c) đi theo BOM, không phải
 # dependency thật trên classpath — khai báo tường minh vì code trực tiếp gọi
 # viewModel() và collectAsStateWithLifecycle().
-lifecycleViewmodelCompose = "2.11.0"
-lifecycleRuntimeCompose = "2.11.0"
+lifecycleViewmodelCompose = "2.10.0"
+lifecycleRuntimeCompose = "2.10.0"
 # Khớp bản coroutines đang resolve trong app (1.9.0) để không kéo bản thứ hai vào.
 coroutinesTest = "1.9.0"
 activityCompose = "1.13.0"
-navigationCompose = "2.10.2"
+navigationCompose = "2.9.5"
 materialIconsCore = "1.7.8"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
-# DI chính thức của app (README mục 5.2). Bản 2.60.1 là bản mới nhất có hỗ trợ
-# Hilt Gradle plugin cho AGP 9 — từ Dagger 2.59, AGP 9.0.0+ là yêu cầu bắt buộc
-# (nhóm đang ở 9.3.3). KSP 2.3.12 là bản độc lập: từ KSP 2.3.0, KSP2 không còn là
-# compiler plugin nên không dính chặt theo từng bản Kotlin; yêu cầu AGP >= 8.12.
-# androidx.hilt 1.4.0 đòi compileSdk 37 + AGP 9.2.0 (đang có: 37.1 / 9.3.3).
+# Giữ AGP 8.13/Kotlin 2.2.10/Hilt 2.58 từ remote.
+# AndroidX Core 1.18, Lifecycle 2.10, Navigation 2.9.5 và AndroidX Hilt 1.3 tương thích SDK 36;
+# không bỏ qua AAR metadata để ép các bản yêu cầu AGP 9/SDK 37 chạy trên bộ này.
 hilt = "2.58"
 ksp = "2.3.12"
-androidxHilt = "1.4.0"
+androidxHilt = "1.3.0"
 # Navigation type-safe (README mục 8 / Design.md mục 8.1): route là @Serializable
 # object nên cần plugin serialization (khớp bản Kotlin — 2.2.10) + runtime JSON.
 kotlinxSerialization = "1.9.0"
@@ -58,7 +56,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # (không phải `hilt-android-compiler` của thời kapt) — theo dagger.dev/hilt/gradle-setup.
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
-# `hiltViewModel()` từ androidx.hilt 1.4.0 sống ở artifact riêng này; bản trong
+# `hiltViewModel()` từ androidx.hilt 1.3.0 sống ở artifact riêng này; bản trong
 # `hilt-navigation-compose` đã đánh dấu deprecated (moved package). NavHost đã đặt
 # `LocalViewModelStoreOwner` theo NavBackStackEntry nên không cần navigation-compose
 # cho DI — ViewModel tự scope theo back stack entry.
@@ -74,9 +72,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-# AGP 9 bật sẵn Kotlin nên không còn `org.jetbrains.kotlin.android`. KSP và Hilt
-# là hai plugin duy nhất phải khai thêm; compiler chọn KSP thay kapt vì kapt
-# không tương thích built-in Kotlin của AGP 9.
+# AGP 8.13 dùng kotlin-android tường minh; giữ KSP cho processor của Hilt.
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

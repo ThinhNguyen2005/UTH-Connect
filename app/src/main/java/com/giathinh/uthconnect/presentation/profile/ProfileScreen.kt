@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,7 +52,7 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())
             .padding(horizontal = UthDimens.Spacing.Xl),
     ) {
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
@@ -122,7 +123,7 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
         Text(student.displayName, style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center, modifier = Modifier.testTag("profile_name"))
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        Text(stringResource(R.string.auth_demo_profile), style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.auth_profile_source), style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
         if (student.uthVerified) {
             Surface(
@@ -131,7 +132,7 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
                 modifier = Modifier.testTag("profile_verified_badge"),
             ) {
                 Text(
-                    stringResource(R.string.auth_verified_demo_badge),
+                    stringResource(R.string.auth_verified_badge),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(UthDimens.Spacing.Sm),
@@ -144,6 +145,9 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
                 modifier = Modifier.testTag("profile_unverified_badge"),
             )
         }
+        if (student.role == UserRole.ADMIN) {
+            Text(stringResource(R.string.auth_admin_badge), modifier = Modifier.testTag("profile_admin_badge"))
+        }
         if (student.role == UserRole.ORGANIZER) {
             Spacer(Modifier.height(UthDimens.Spacing.Xs))
             Surface(
@@ -152,7 +156,7 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
                 modifier = Modifier.testTag("profile_organizer_badge"),
             ) {
                 Text(
-                    stringResource(R.string.auth_organizer_demo_badge),
+                    stringResource(R.string.auth_organizer_badge),
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(UthDimens.Spacing.Sm),
@@ -223,6 +227,9 @@ private fun DisplayFeedback(state: ProfileUiState) {
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
     }
     val errorRes = when (state.failure) {
+        ProfileFailure.Network -> R.string.auth_network
+        ProfileFailure.SessionExpired -> R.string.auth_invalid_session
+        ProfileFailure.PermissionDenied -> R.string.auth_permission
         ProfileFailure.LogoutFailed -> R.string.auth_logout_failed
         ProfileFailure.SaveFailed -> R.string.auth_save_failed
         ProfileFailure.BiometricFailed -> R.string.auth_biometric_error
@@ -251,6 +258,7 @@ private fun PasswordChangeContent(state: ProfileUiState, onAction: (ProfileActio
             modifier = Modifier.fillMaxWidth().testTag("password_current"),
             enabled = !state.isSaving,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation(),
             isError = form.errors.oldError != null || form.incorrectCurrent,
             supportingText = {
@@ -266,6 +274,7 @@ private fun PasswordChangeContent(state: ProfileUiState, onAction: (ProfileActio
             modifier = Modifier.fillMaxWidth().testTag("password_new"),
             enabled = !state.isSaving,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation(),
             isError = form.errors.newError != null,
             supportingText = { form.errors.newError?.let { Text(stringResource(passwordErrorRes(it))) } },
@@ -278,6 +287,7 @@ private fun PasswordChangeContent(state: ProfileUiState, onAction: (ProfileActio
             modifier = Modifier.fillMaxWidth().testTag("password_confirm"),
             enabled = !state.isSaving,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation(),
             isError = form.errors.confirmationError != null,
             supportingText = { form.errors.confirmationError?.let { Text(stringResource(passwordErrorRes(it))) } },
