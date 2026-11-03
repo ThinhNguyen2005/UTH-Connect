@@ -25,6 +25,8 @@ import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.books.navigation.BooksDestination
+import com.giathinh.uthconnect.presentation.books.navigation.booksGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
@@ -117,6 +119,7 @@ private fun UthNavHost(
                 onOpenModule = { module ->
                     when (module) {
                         UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
+                        UtilityModuleId.BOOKS -> navController.navigate(BooksDestination)
                         else -> Unit // Các graph khác được nối khi module hoàn tất review.
                     }
                 },
@@ -128,6 +131,7 @@ private fun UthNavHost(
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
         announcementGraph(navController)
         lostFoundGraph(navController)
+        booksGraph(navController)
     }
 }
 

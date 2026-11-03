@@ -1,0 +1,404 @@
+package com.giathinh.uthconnect.presentation.books
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
+import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
+import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
+import com.giathinh.uthconnect.domain.model.BookCondition
+import com.giathinh.uthconnect.domain.model.BookDealType
+import com.giathinh.uthconnect.domain.model.BookListing
+import com.giathinh.uthconnect.domain.model.BookListingStatus
+import coil.compose.AsyncImage
+import java.text.NumberFormat
+import java.util.Locale
+import java.util.UUID
+
+@Composable
+fun BooksScreen(
+    uiState: BooksUiState,
+    onAction: (BooksAction) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showForm by rememberSaveable { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<BookListing?>(null) }
+    var details by remember { mutableStateOf<BookListing?>(null) }
+    var pendingDelete by remember { mutableStateOf<BookListing?>(null) }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize().padding(horizontal = UthDimens.Spacing.Lg),
+        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.books_back))
+                }
+                Text(stringResource(R.string.books_title), style = MaterialTheme.typography.headlineSmall)
+            }
+            OutlinedTextField(
+                value = uiState.query,
+                onValueChange = { onAction(BooksAction.Search(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.books_search)) },
+                singleLine = true,
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            ) {
+                BooksFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = uiState.filter == filter,
+                        onClick = { onAction(BooksAction.SetFilter(filter)) },
+                        label = {
+                            Text(stringResource(when (filter) {
+                                BooksFilter.ALL -> R.string.books_filter_all
+                                BooksFilter.SALE -> R.string.books_filter_sale
+                                BooksFilter.EXCHANGE -> R.string.books_filter_exchange
+                            }))
+                        },
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            ) {
+                FilterChip(
+                    selected = uiState.condition == null,
+                    onClick = { onAction(BooksAction.SetCondition(null)) },
+                    label = { Text(stringResource(R.string.books_condition_all)) },
+                )
+                BookCondition.entries.forEach { condition ->
+                    FilterChip(
+                        selected = uiState.condition == condition,
+                        onClick = { onAction(BooksAction.SetCondition(condition)) },
+                        label = { Text(stringResource(condition.label)) },
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                OutlinedTextField(
+                    value = uiState.minimumPrice,
+                    onValueChange = { onAction(BooksAction.SetPriceRange(it, uiState.maximumPrice)) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.books_min_price)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = uiState.maximumPrice,
+                    onValueChange = { onAction(BooksAction.SetPriceRange(uiState.minimumPrice, it)) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.books_max_price)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                )
+            }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            ) {
+                BooksSort.entries.forEach { sort ->
+                    FilterChip(
+                        selected = uiState.sort == sort,
+                        onClick = { onAction(BooksAction.SetSort(sort)) },
+                        label = { Text(stringResource(when (sort) {
+                            BooksSort.NEWEST -> R.string.books_sort_newest
+                            BooksSort.PRICE_LOW -> R.string.books_sort_price_low
+                            BooksSort.PRICE_HIGH -> R.string.books_sort_price_high
+                        })) },
+                    )
+                }
+            }
+            FilterChip(
+                selected = uiState.includeSold,
+                onClick = { onAction(BooksAction.IncludeSold(!uiState.includeSold)) },
+                label = { Text(stringResource(R.string.books_show_sold)) },
+            )
+            UthPrimaryButton(
+                text = stringResource(R.string.books_create),
+                onClick = { editing = null; showForm = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        if (uiState.isLoading) item { Text(stringResource(R.string.books_loading)) }
+        else if (uiState.failure == BooksFailure.SAVE_FAILED) item {
+            Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
+        }
+        if (!uiState.isLoading && uiState.failure == BooksFailure.LOAD_FAILED) item {
+            UthEmptyState(
+                title = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_title else R.string.books_error_title),
+                body = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_body else R.string.books_error_body),
+                icon = Icons.Filled.Warning,
+                actionLabel = if (uiState.currentUserUid == null) null else stringResource(R.string.common_retry),
+                onAction = if (uiState.currentUserUid == null) null else {{ onAction(BooksAction.Retry) }},
+            )
+        } else if (!uiState.isLoading && uiState.failure != BooksFailure.LOAD_FAILED && uiState.visibleListings.isEmpty()) item {
+            UthEmptyState(
+                title = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_title else R.string.books_no_results_title),
+                body = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_body else R.string.books_no_results_body),
+            )
+        } else if (!uiState.isLoading && uiState.failure != BooksFailure.LOAD_FAILED) items(uiState.visibleListings, key = { it.id }) { listing ->
+            ListingCard(
+                listing = listing,
+                canManage = listing.ownerUid == uiState.currentUserUid,
+                onOpen = { details = listing },
+                onEdit = { editing = listing; showForm = true },
+                onDelete = { pendingDelete = listing },
+                onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
+            )
+        }
+        item { Spacer(Modifier.height(UthDimens.Spacing.Xl)) }
+    }
+
+    if (showForm) ListingFormDialog(
+        initial = editing,
+        onDismiss = { showForm = false; editing = null },
+        onSave = { listing -> onAction(BooksAction.Save(listing)); showForm = false; editing = null },
+    )
+    details?.let { listing ->
+        val uriHandler = LocalUriHandler.current
+        AlertDialog(
+            onDismissRequest = { details = null },
+            title = { Text(listing.title) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+                    listing.photoUrl?.let {
+                        AsyncImage(it, listing.title, modifier = Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
+                    }
+                    Text(listing.subject)
+                    Text(stringResource(R.string.books_condition_format, stringResource(listing.condition.label)))
+                    Text(if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange))
+                    Text(listing.description)
+                    Text(stringResource(R.string.books_seller_format, listing.sellerName))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val contact = listing.contact.trim()
+                    uriHandler.openUri(if ('@' in contact) "mailto:${Uri.encode(contact)}" else "tel:${Uri.encode(contact)}")
+                }) { Text(stringResource(R.string.books_contact_seller)) }
+            },
+            dismissButton = { TextButton(onClick = { details = null }) { Text(stringResource(R.string.books_close)) } },
+        )
+    }
+    pendingDelete?.let { listing ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.books_delete_title)) },
+            text = { Text(stringResource(R.string.books_delete_body)) },
+            confirmButton = { TextButton(onClick = { onAction(BooksAction.Delete(listing.id)); pendingDelete = null }) {
+                Text(stringResource(R.string.books_delete))
+            } },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.books_cancel)) } },
+        )
+    }
+}
+
+@Composable
+private fun ListingCard(
+    listing: BookListing,
+    canManage: Boolean,
+    onOpen: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onSetStatus: (BookListingStatus) -> Unit,
+) {
+    UthCard(modifier = Modifier.fillMaxWidth(), onClick = onOpen) {
+        listing.photoUrl?.let {
+            AsyncImage(it, contentDescription = listing.title, modifier = Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Crop)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(listing.title, style = MaterialTheme.typography.titleLarge)
+                Text(listing.subject, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (canManage) {
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit)) }
+                IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete)) }
+            }
+        }
+        Text(
+            if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+            Text(stringResource(listing.condition.label), style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_available else R.string.books_sold))
+        }
+        if (canManage) {
+            TextButton(onClick = {
+                onSetStatus(if (listing.status == BookListingStatus.AVAILABLE) BookListingStatus.SOLD else BookListingStatus.AVAILABLE)
+            }) {
+                Text(stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_mark_sold else R.string.books_mark_available))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSave: (BookListing) -> Unit) {
+    val context = LocalContext.current
+    var photoUri by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
+    var title by rememberSaveable(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
+    var subject by rememberSaveable(initial?.id) { mutableStateOf(initial?.subject.orEmpty()) }
+    var condition by rememberSaveable(initial?.id) { mutableStateOf(initial?.condition ?: BookCondition.GOOD) }
+    var dealType by rememberSaveable(initial?.id) { mutableStateOf(initial?.dealType ?: BookDealType.SALE) }
+    var price by rememberSaveable(initial?.id) { mutableStateOf(initial?.priceVnd?.toString().orEmpty()) }
+    var description by rememberSaveable(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }
+    var seller by rememberSaveable(initial?.id) { mutableStateOf(initial?.sellerName.orEmpty()) }
+    var contact by rememberSaveable(initial?.id) { mutableStateOf(initial?.contact.orEmpty()) }
+    val priceValue = price.toLongOrNull()
+    val normalizedContact = contact.trim()
+    val contactValid = normalizedContact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
+        (normalizedContact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && normalizedContact.filter(Char::isDigit).length >= 8)
+    val valid = title.isNotBlank() && title.length <= 160 && subject.isNotBlank() &&
+        seller.isNotBlank() && seller.length <= 100 && description.length <= 2000 &&
+        normalizedContact.length <= 254 && contactValid &&
+        (dealType == BookDealType.EXCHANGE || (priceValue != null && priceValue > 0))
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            photoUri = uri.toString()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (initial == null) R.string.books_create else R.string.books_edit)) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                modifier = Modifier.padding(top = UthDimens.Spacing.Sm).verticalScroll(rememberScrollState()),
+            ) {
+                FormField(title, { title = it }, R.string.books_book_title)
+                FormField(subject, { subject = it }, R.string.books_subject)
+                Text(stringResource(R.string.books_condition))
+                Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+                    BookCondition.entries.forEach { value ->
+                        FilterChip(condition == value, { condition = value }, label = { Text(stringResource(value.label)) })
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+                    BookDealType.entries.forEach { value ->
+                        FilterChip(dealType == value, { dealType = value }, label = {
+                            Text(stringResource(if (value == BookDealType.SALE) R.string.books_filter_sale else R.string.books_filter_exchange))
+                        })
+                    }
+                }
+                if (dealType == BookDealType.SALE) FormField(price, { price = it }, R.string.books_price, numeric = true)
+                FormField(description, { description = it }, R.string.books_description, singleLine = false)
+                AsyncImage(
+                    model = photoUri ?: initial?.photoUrl,
+                    contentDescription = stringResource(R.string.books_photo),
+                    modifier = Modifier.fillMaxWidth().height(160.dp),
+                    contentScale = ContentScale.Crop,
+                )
+                Button(onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                    Text(stringResource(R.string.books_pick_photo))
+                }
+                FormField(seller, { seller = it }, R.string.books_seller)
+                FormField(contact, { contact = it }, R.string.books_contact)
+                if (!valid) Text(stringResource(R.string.books_form_invalid), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        confirmButton = { TextButton(enabled = valid, onClick = {
+            onSave(BookListing(
+                id = initial?.id ?: UUID.randomUUID().toString(),
+                title = title.trim(), subject = subject.trim(), condition = condition, dealType = dealType,
+                priceVnd = if (dealType == BookDealType.SALE) priceValue else null,
+                description = description.trim(), sellerName = seller.trim(), contact = contact.trim(),
+                photoUrl = initial?.photoUrl,
+                photoUri = photoUri,
+                status = initial?.status ?: BookListingStatus.AVAILABLE,
+                createdAt = initial?.createdAt ?: System.currentTimeMillis(),
+            ))
+        }) { Text(stringResource(R.string.books_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.books_cancel)) } },
+    )
+}
+
+@Composable
+private fun FormField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: Int,
+    numeric: Boolean = false,
+    singleLine: Boolean = true,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(label)) },
+        singleLine = singleLine,
+        keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text),
+    )
+}
+
+@Composable
+private fun priceText(value: Long?): String = NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value ?: 0) + " ₫"
+
+private val BookCondition.label: Int
+    get() = when (this) {
+        BookCondition.NEW -> R.string.books_condition_new
+        BookCondition.GOOD -> R.string.books_condition_good
+        BookCondition.USED -> R.string.books_condition_used
+    }
+
+@Preview(showBackground = true, widthDp = 360)
+@Composable
+private fun BooksScreenPreview() = UthPreview { BooksScreen(BooksUiState(isLoading = false), {}, {}) }

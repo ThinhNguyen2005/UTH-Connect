@@ -22,7 +22,7 @@ class StaticUtilityModuleRepository @Inject constructor() : UtilityModuleReposit
             UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = false),
             UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
             UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = false),
-            UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.BACKLOG, enabled = false),
+            UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.PHASE_3, enabled = true),
             UtilityModule(UtilityModuleId.HOUSING, DeliveryPhase.BACKLOG, enabled = false),
             UtilityModule(UtilityModuleId.RIDE_SHARE, DeliveryPhase.BACKLOG, enabled = false),
         ),
