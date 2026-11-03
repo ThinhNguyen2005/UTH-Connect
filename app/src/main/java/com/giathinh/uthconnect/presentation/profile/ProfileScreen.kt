@@ -11,10 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -52,6 +58,7 @@ private fun StudentAvatar(student: StudentProfile, modifier: Modifier = Modifier
 fun ProfileScreen(
     uiState: ProfileUiState,
     onAction: (ProfileAction) -> Unit,
+    onOpenUtilities: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -76,6 +83,7 @@ fun ProfileScreen(
                 loggingOut = uiState.isLoggingOut,
                 failure = uiState.failure,
                 onLogout = { onAction(ProfileAction.Logout) },
+                onOpenUtilities = onOpenUtilities,
             )
         }
     }
@@ -87,6 +95,7 @@ private fun ProfileContent(
     loggingOut: Boolean,
     failure: ProfileFailure?,
     onLogout: () -> Unit,
+    onOpenUtilities: () -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StudentAvatar(student)
@@ -104,6 +113,49 @@ private fun ProfileContent(
         ProfileRow(stringResource(R.string.auth_profile_class), student.className)
         ProfileRow(stringResource(R.string.auth_profile_major), student.major)
         ProfileRow(stringResource(R.string.auth_profile_faculty), student.faculty)
+    }
+    Spacer(Modifier.height(UthDimens.Spacing.Md))
+    UthCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onOpenUtilities,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = UthDimens.Spacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.profile_utilities_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.profile_utilities_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     if (failure == ProfileFailure.LogoutFailed) {
