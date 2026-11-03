@@ -13,9 +13,6 @@
     <string name="home_events_empty_title">No events yet</string>
     <string name="home_events_empty_body">Once your club publishes an event on UTH Connect, it shows up here.</string>
 
-    <string name="schedule_wip_title">Schedule</string>
-    <string name="schedule_wip_body">Phase 2 module. This screen is waiting for the feature/timetable-&lt;your-name&gt; branch.</string>
-
     <string name="utilities_title">Utilities</string>
     <string name="utilities_subtitle">Every UTH Connect module in one place.</string>
     <string name="utilities_loading">Loading modules…</string>
@@ -43,26 +40,56 @@
     <string name="profile_wip_title">Not signed in</string>
     <string name="profile_wip_body">Sign-in with a university email (@uth.edu.vn) unlocks when the account verification module lands in M0.</string>
 
-    <!-- Schedule (CourseClassCard) -->
-    <string name="schedule_period_format">Period %1$d–%2$d</string>
-    <string name="schedule_class_code_format">Class Code: %1$s • %2$d Credits</string>
-    <string name="schedule_room_format">Room %1$s</string>
-    <!-- Schedule: keep the same resource names as values/strings.xml. -->
-    <string name="app_name">UTH Connect</string>
-    <string name="schedule_sample_note">Sample data • Week of 26/10–01/11/2026 • Not synced with the student portal</string>
-    <string name="schedule_classes">Classes</string>
-    <string name="schedule_exams">Exams</string>
-    <string name="schedule_day">Day</string>
-    <string name="schedule_week">Week</string>
-    <string name="schedule_previous">Previous week</string>
-    <string name="schedule_next">Next week</string>
-    <string name="schedule_today">Today</string>
-    <string name="schedule_week_range">%1$s – %2$s</string>
-    <string name="schedule_empty_title">No classes</string>
-    <string name="schedule_empty_body">No sample classes are available for this date.</string>
-    <string name="schedule_exam_date">Exam date: %1$s</string>
-    <string name="schedule_exam_method">Exam format: %1$s</string>
-    <string name="schedule_lecturer">Lecturer: %1$s</string>
+    <!-- Timetable and deadlines -->
+    <string name="timetable_title">Timetable</string>
+    <string name="timetable_subtitle">Your classes and deadlines, saved on this device.</string>
+    <string name="timetable_classes">Classes</string>
+    <string name="timetable_deadlines">Deadlines</string>
+    <string name="timetable_previous">Previous week</string>
+    <string name="timetable_today">Today</string>
+    <string name="timetable_next">Next week</string>
+    <string name="timetable_day_view">Day</string>
+    <string name="timetable_week_view">Week</string>
+    <string name="timetable_week_range">%1$s – %2$s</string>
+    <string name="timetable_add_class">Add class</string>
+    <string name="timetable_add_deadline">Add deadline</string>
+    <string name="timetable_loading">Loading schedule…</string>
+    <string name="timetable_load_error_title">Could not load your data</string>
+    <string name="timetable_load_error_body">Try loading the schedule and deadlines again.</string>
+    <string name="timetable_save_error">Could not save changes. Please try again.</string>
+    <string name="timetable_empty_classes_title">No classes yet</string>
+    <string name="timetable_empty_classes_body">Add your classes to see your day or week.</string>
+    <string name="timetable_empty_deadlines_title">No deadlines yet</string>
+    <string name="timetable_empty_deadlines_body">Add assignments or other work you need to finish.</string>
+    <string name="timetable_no_class">No classes</string>
+    <string name="timetable_period_format">Periods %1$d–%2$d</string>
+    <string name="timetable_course_code_format">Class code: %1$s • %2$d credits</string>
+    <string name="timetable_room_campus_format">Room %1$s • %2$s</string>
+    <string name="timetable_lecturer_format">Lecturer: %1$s</string>
+    <string name="timetable_due_date_format">Due: %1$s</string>
+    <string name="timetable_edit">Edit</string>
+    <string name="timetable_delete">Delete</string>
+    <string name="timetable_edit_class">Edit class</string>
+    <string name="timetable_edit_deadline">Edit deadline</string>
+    <string name="timetable_course_name">Course name</string>
+    <string name="timetable_course_code">Course code</string>
+    <string name="timetable_room">Room</string>
+    <string name="timetable_campus">Campus</string>
+    <string name="timetable_lecturer">Lecturer (optional)</string>
+    <string name="timetable_day_of_week">Weekly class day</string>
+    <string name="timetable_start_period">First period</string>
+    <string name="timetable_end_period">Last period</string>
+    <string name="timetable_start_time">Start time (HH:mm)</string>
+    <string name="timetable_end_time">End time (HH:mm)</string>
+    <string name="timetable_credits">Credits</string>
+    <string name="timetable_form_invalid">Check the course name, room, campus, periods, times (HH:mm), and credits.</string>
+    <string name="timetable_save">Save</string>
+    <string name="timetable_cancel">Cancel</string>
+    <string name="timetable_deadline_title">Deadline title</string>
+    <string name="timetable_course_name_optional">Course (optional)</string>
+    <string name="timetable_due_date_iso">Due date (YYYY-MM-DD)</string>
+    <string name="timetable_note">Note (optional)</string>
+    <string name="timetable_deadline_invalid">Enter a deadline title and a valid date in YYYY-MM-DD format.</string>
     <!-- Events: fixed demo content, not official university announcements. -->
     <string name="events_title">Events &amp; clubs</string>
     <string name="events_sample_note">6 sample events • Demo only, not synced with the university calendar.</string>

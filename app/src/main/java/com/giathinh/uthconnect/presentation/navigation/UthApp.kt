@@ -26,7 +26,7 @@ import com.giathinh.uthconnect.presentation.home.HomeScreen
 import com.giathinh.uthconnect.presentation.events.navigation.EventsGraph
 import com.giathinh.uthconnect.presentation.events.navigation.eventsGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileScreen
-import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
+import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
@@ -86,7 +86,7 @@ private fun UthNavHost(
         // Các màn chưa có state holder vẫn gọi Screen stateless.
         // Screen không được tự cầm repository (README mục 5.2); ViewModel do Hilt cung cấp.
         composable<HomeDestination> { HomeScreen() }
-        composable<ScheduleDestination> { ScheduleScreen() }
+        composable<ScheduleDestination> { ScheduleRoute() }
         // Giữ HomeScreen cũ. Mở sự kiện từ Tiện ích, cùng một tab cả khi xem detail.
         navigation<UtilitiesDestination>(startDestination = UtilitiesListDestination) {
             composable<UtilitiesListDestination> {

@@ -17,10 +17,6 @@
     <string name="home_events_empty_title">Chưa có sự kiện nào</string>
     <string name="home_events_empty_body">Khi CLB của bạn đăng sự kiện lên UTH Connect, danh sách sẽ xuất hiện ở đây.</string>
 
-    <!-- Thời khóa biểu (Phase 2) -->
-    <string name="schedule_wip_title">Thời khóa biểu</string>
-    <string name="schedule_wip_body">Module thuộc Phase 2. Màn hình này chờ branch feature/timetable-&lt;tên bạn&gt;.</string>
-
     <!-- Tiện ích -->
     <string name="utilities_title">Tiện ích</string>
     <string name="utilities_subtitle">Mọi module của UTH Connect nằm ở một chỗ.</string>
@@ -51,24 +47,56 @@
     <string name="profile_wip_body">Đăng nhập bằng email trường (@uth.edu.vn) sẽ bật khi module xác thực tài khoản hoàn thành ở M0.</string>
 
 
-    <!-- Thời khóa biểu (CourseClassCard) -->
-    <string name="schedule_period_format">Tiết %1$d–%2$d</string>
-    <string name="schedule_class_code_format">Mã LHP: %1$s • %2$d TC</string>
-    <string name="schedule_room_format">Phòng %1$s</string>
-    <string name="schedule_sample_note">Dữ liệu mẫu • Tuần 26/10–01/11/2026 • Chưa đồng bộ cổng đào tạo</string>
-    <string name="schedule_classes">Lịch học</string>
-    <string name="schedule_exams">Lịch thi</string>
-    <string name="schedule_day">Theo ngày</string>
-    <string name="schedule_week">Cả tuần</string>
-    <string name="schedule_previous">Tuần trước</string>
-    <string name="schedule_next">Tuần sau</string>
-    <string name="schedule_today">Hôm nay</string>
-    <string name="schedule_week_range">%1$s – %2$s</string>
-    <string name="schedule_empty_title">Không có lịch học</string>
-    <string name="schedule_empty_body">Chưa có buổi học trong dữ liệu mẫu cho ngày này.</string>
-    <string name="schedule_exam_date">Ngày thi: %1$s</string>
-    <string name="schedule_exam_method">Hình thức: %1$s</string>
-    <string name="schedule_lecturer">Giảng viên: %1$s</string>
+    <!-- Thời khóa biểu và deadline -->
+    <string name="timetable_title">Thời khóa biểu</string>
+    <string name="timetable_subtitle">Lịch học và hạn nộp do bạn quản lý, lưu trên thiết bị.</string>
+    <string name="timetable_classes">Lịch học</string>
+    <string name="timetable_deadlines">Deadline</string>
+    <string name="timetable_previous">Tuần trước</string>
+    <string name="timetable_today">Hôm nay</string>
+    <string name="timetable_next">Tuần sau</string>
+    <string name="timetable_day_view">Theo ngày</string>
+    <string name="timetable_week_view">Cả tuần</string>
+    <string name="timetable_week_range">%1$s – %2$s</string>
+    <string name="timetable_add_class">Thêm lịch học</string>
+    <string name="timetable_add_deadline">Thêm deadline</string>
+    <string name="timetable_loading">Đang tải lịch…</string>
+    <string name="timetable_load_error_title">Không tải được dữ liệu</string>
+    <string name="timetable_load_error_body">Hãy thử tải lại lịch và deadline trên thiết bị.</string>
+    <string name="timetable_save_error">Không lưu được thay đổi. Hãy thử lại.</string>
+    <string name="timetable_empty_classes_title">Chưa có lịch học</string>
+    <string name="timetable_empty_classes_body">Thêm lịch học của bạn để xem lịch theo ngày hoặc tuần.</string>
+    <string name="timetable_empty_deadlines_title">Chưa có deadline</string>
+    <string name="timetable_empty_deadlines_body">Thêm hạn nộp bài hoặc việc cần hoàn thành.</string>
+    <string name="timetable_no_class">Không có lịch học</string>
+    <string name="timetable_period_format">Tiết %1$d–%2$d</string>
+    <string name="timetable_course_code_format">Mã LHP: %1$s • %2$d tín chỉ</string>
+    <string name="timetable_room_campus_format">Phòng %1$s • %2$s</string>
+    <string name="timetable_lecturer_format">Giảng viên: %1$s</string>
+    <string name="timetable_due_date_format">Hạn: %1$s</string>
+    <string name="timetable_edit">Chỉnh sửa</string>
+    <string name="timetable_delete">Xóa</string>
+    <string name="timetable_edit_class">Chỉnh sửa lịch học</string>
+    <string name="timetable_edit_deadline">Chỉnh sửa deadline</string>
+    <string name="timetable_course_name">Tên môn học</string>
+    <string name="timetable_course_code">Mã lớp học phần</string>
+    <string name="timetable_room">Phòng học</string>
+    <string name="timetable_campus">Cơ sở</string>
+    <string name="timetable_lecturer">Giảng viên (không bắt buộc)</string>
+    <string name="timetable_day_of_week">Ngày học hàng tuần</string>
+    <string name="timetable_start_period">Tiết bắt đầu</string>
+    <string name="timetable_end_period">Tiết kết thúc</string>
+    <string name="timetable_start_time">Giờ bắt đầu (HH:mm)</string>
+    <string name="timetable_end_time">Giờ kết thúc (HH:mm)</string>
+    <string name="timetable_credits">Số tín chỉ</string>
+    <string name="timetable_form_invalid">Kiểm tra tên môn, phòng, cơ sở, tiết, giờ (HH:mm) và tín chỉ.</string>
+    <string name="timetable_save">Lưu</string>
+    <string name="timetable_cancel">Hủy</string>
+    <string name="timetable_deadline_title">Tên deadline</string>
+    <string name="timetable_course_name_optional">Môn học (không bắt buộc)</string>
+    <string name="timetable_due_date_iso">Ngày đến hạn (YYYY-MM-DD)</string>
+    <string name="timetable_note">Ghi chú (không bắt buộc)</string>
+    <string name="timetable_deadline_invalid">Nhập tên deadline và ngày hợp lệ theo dạng YYYY-MM-DD.</string>
     <!-- Events: nội dung demo cố định, không phải thông báo chính thức của trường. -->
     <string name="events_title">Sự kiện &amp; CLB</string>
     <string name="events_sample_note">6 sự kiện mẫu • Dùng để demo, chưa đồng bộ lịch của trường.</string>
