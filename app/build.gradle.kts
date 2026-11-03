@@ -58,11 +58,14 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
     // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
     // (kapt không tương thích built-in Kotlin của AGP 9).
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
+    ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
