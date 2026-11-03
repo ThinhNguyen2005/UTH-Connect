@@ -2,10 +2,19 @@ package com.giathinh.uthconnect.presentation.auth
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.test.platform.app.InstrumentationRegistry
+import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.presentation.utilities.UtilitiesScreen
+import com.giathinh.uthconnect.presentation.utilities.UtilitiesUiState
 import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
@@ -55,7 +64,7 @@ class AuthProfileFlowUiTest {
         }
     }
 
-    private fun launch(backend: Backend) {
+    private fun launch(backend: Backend, withUtilities: Boolean = false) {
         lateinit var auth: AuthViewModel
         lateinit var profile: ProfileViewModel
         rule.runOnUiThread {
@@ -65,7 +74,20 @@ class AuthProfileFlowUiTest {
         }
         rule.setContent {
             UTHConnectTheme {
-                AuthRoute(viewModel = auth, signedInContent = { ProfileRoute(viewModel = profile) })
+                AuthRoute(viewModel = auth, signedInContent = {
+                    if (withUtilities) {
+                        val nav = rememberNavController()
+                        NavHost(navController = nav, startDestination = "profile") {
+                            composable("profile") {
+                                ProfileRoute(viewModel = profile, onOpenUtilities = { nav.navigate("utilities") })
+                            }
+                            composable("utilities") {
+                                UtilitiesScreen(UtilitiesUiState(isLoading = false), onAction = {},
+                                    onBack = { nav.popBackStack() })
+                            }
+                        }
+                    } else ProfileRoute(viewModel = profile)
+                })
             }
         }
     }
@@ -101,5 +123,19 @@ class AuthProfileFlowUiTest {
         rule.onNodeWithTag("auth_error").assertExists()
         rule.onNodeWithTag("profile_name").assertDoesNotExist()
         rule.runOnIdle { assertNull(backend.session.value.profile) }
+    }
+
+    @Test fun profileOpensUtilitiesAndBackPreservesContactEditing() {
+        val backend = Backend()
+        launch(backend, withUtilities = true)
+        signIn("Correct@123")
+        rule.onNodeWithTag("profile_utilities").performScrollTo().performClick()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        rule.onNodeWithText(context.getString(R.string.utilities_title)).assertExists()
+        rule.onNodeWithContentDescription(context.getString(R.string.common_back)).performClick()
+        rule.onNodeWithTag("profile_name").assertExists()
+        rule.onNodeWithTag("profile_edit_contact").performScrollTo().performClick()
+        rule.onNodeWithTag("contact_phone").assertExists()
+        rule.runOnIdle { assertEquals(backend.profile, backend.session.value.profile) }
     }
 }

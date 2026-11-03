@@ -12,11 +12,16 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -34,6 +39,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -49,6 +55,7 @@ import com.giathinh.uthconnect.domain.validation.PasswordError
 fun ProfileScreen(
     uiState: ProfileUiState,
     onAction: (ProfileAction) -> Unit,
+    onOpenUtilities: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -74,7 +81,7 @@ fun ProfileScreen(
                         stringResource(R.string.auth_profile_empty),
                         stringResource(R.string.auth_profile_empty_body),
                     )
-                    else -> ProfileOverview(uiState, onAction)
+                    else -> ProfileOverview(uiState, onAction, onOpenUtilities)
                 }
             }
         }
@@ -115,7 +122,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit) {
+private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit, onOpenUtilities: () -> Unit) {
     val student = state.student ?: return
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StudentAvatar(student)
@@ -184,6 +191,49 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
             stringResource(R.string.auth_contact_address),
             if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress,
         )
+    }
+    Spacer(Modifier.height(UthDimens.Spacing.Md))
+    UthCard(
+        modifier = Modifier.fillMaxWidth().testTag("profile_utilities"),
+        onClick = onOpenUtilities,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = UthDimens.Spacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.profile_utilities_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.profile_utilities_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     OutlinedButton(

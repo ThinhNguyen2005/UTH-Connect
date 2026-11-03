@@ -42,12 +42,6 @@ enum class UthDestination(
         R.string.tab_schedule,
         Icons.Filled.DateRange,
     ),
-    UTILITIES(
-        UtilitiesDestination,
-        UtilitiesDestination::class,
-        R.string.tab_utilities,
-        Icons.Filled.Build,
-    ),
     PROFILE(
         ProfileDestination,
         ProfileDestination::class,

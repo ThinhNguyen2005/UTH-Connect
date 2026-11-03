@@ -990,3 +990,35 @@ và AUTH3_STAGING_ACCEPTANCE.md. Danh sách thay thế inventory cũ cho lượt
 - `functions/test/auth3.emulator.test.cjs`
 - `functions/test/baseline.security.test.cjs`
 - `gradle/libs.versions.toml`
+
+
+## Tích hợp develop cho PR #36 — 04/11/2026
+
+Merge origin/develop c636661eecbe98ccdee9925e6268c1ad5db83202 vào feature/auth-phu
+trên nền b54b31e1e452e9784dd22058139887f10eaa9258. Backup giữ nguyên tại
+backup/auth3-pr36-before-integration-b54b31e. Không rebase, không force push, không merge PR hoặc deploy.
+
+Bốn conflict thực tế và cách hợp nhất:
+- ProfileRoute.kt: giữ lifecycle/biometric/BackHandler/StateFlow/snackbar/callback Profile của Auth3-1;
+  thêm và chuyển tiếp onOpenUtilities từ develop vào ProfileScreen.
+- ProfileScreen.kt: giữ overview/contacts/password/verified-role badges/logout; chuyển thẻ Utilities
+  của develop vào ProfileOverview và nối callback. Thêm test tag cho thẻ để kiểm tra điều hướng.
+- values/strings.xml và values-en/strings.xml: giữ toàn bộ key và giá trị riêng của hai phía,
+  bao gồm Auth3-1 và Utilities; mỗi ngôn ngữ288 key duy nhất, parity đạt.
+
+Kiểm thử trên bản hợp nhất:
+- Gradle assembleDebug/testDebugUnitTest/connectedDebugAndroidTest: BUILD SUCCESSFUL.
+- Unit Test142/142 PASS (bao gồm test mới từ develop), 0 failure/error/skip.
+- Android Test29/29 PASS, emulator-5554; thêm profileOpensUtilitiesAndBackPreservesContactEditing
+  dùng ProfileRoute thật + NavHost + UtilitiesScreen, kiểm tra đi/quay lại rồi mở form contacts.
+- Firebase Emulator28/28 PASS, Auth/Functions/Firestore localhost project demo-uth-auth3; không cloud deploy.
+- git diff --check và cached --check PASS; không còn unmerged entry/conflict marker.
+
+Lượt Android đầu có1 lỗi do locator profile_utilities chưa có trong APK lúc biên dịch;
+đã thêm tag, biên dịch lại và chạy toàn suite29/29 đạt, không xóa/bỏ qua test.
+
+Đối chiếu: Home/Schedule/Utilities/Dimens/UtilitiesDataModule/UthApp khớp develop;
+FirebaseAuthRepository/PreferencesSessionRepository/Functions/Rules và toolchain giữ từ source
+(ngoài hợp nhất Profile/UI/resources nêu trên). .idea và integration_backups không stage, kiểm tra checksum
+để bảo toàn các file cá nhân. Các blocker Firebase staging/production, cache và backend của báo cáo trước
+vẫn tồn tại; PASS tích hợp local không chứng minh OAuth/Firestore/biometric production hoạt động.

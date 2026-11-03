@@ -1,7 +1,5 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +55,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.giathinh.uthconnect.R
@@ -76,9 +73,9 @@ fun LostFoundScreen(
     onAction: (LostFoundAction) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onCallContact: (String) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
 
     val messageText = uiState.userMessage?.let { stringResource(it.messageRes) }
     LaunchedEffect(uiState.userMessage) {
@@ -204,10 +201,7 @@ fun LostFoundScreen(
                         ) { listing ->
                             LostFoundItemCard(
                                 listing = listing,
-                                onCallClick = { phone ->
-                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                                    context.startActivity(dialIntent)
-                                },
+                                onCallClick = onCallContact,
                             )
                         }
                     }
@@ -329,66 +323,72 @@ private fun LostFoundItemCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
-
-        // Location
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                modifier = Modifier.size(UthDimens.Size.IconInline),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
-            Text(
-                text = listing.location,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-
-        // Contact Row with Call button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // Location (only show if not blank)
+        if (listing.location.isNotBlank()) {
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Person,
+                    imageVector = Icons.Default.LocationOn,
                     contentDescription = null,
                     modifier = Modifier.size(UthDimens.Size.IconInline),
-                    tint = MaterialTheme.colorScheme.outline,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
                 Text(
-                    text = listing.contactName,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = listing.location,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
+        }
 
-            if (listing.contactPhone.isNotBlank()) {
-                OutlinedButton(
-                    onClick = { onCallClick(listing.contactPhone) },
-                    shape = MaterialTheme.shapes.small,
-                    contentPadding = PaddingValues(
-                        horizontal = UthDimens.Spacing.Md,
-                        vertical = UthDimens.Spacing.Xs,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Call,
-                        contentDescription = null,
-                        modifier = Modifier.size(UthDimens.Size.IconBadge),
-                    )
-                    Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                    Text(
-                        text = stringResource(R.string.lostfound_call_contact),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+        // Contact Row with Call button (only show if contactName or contactPhone is present)
+        if (listing.contactName.isNotBlank() || listing.contactPhone.isNotBlank()) {
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (listing.contactName.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconInline),
+                            tint = MaterialTheme.colorScheme.outline,
+                        )
+                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
+                        Text(
+                            text = listing.contactName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
+                }
+
+                if (listing.contactPhone.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = { onCallClick(listing.contactPhone) },
+                        shape = MaterialTheme.shapes.small,
+                        contentPadding = PaddingValues(
+                            horizontal = UthDimens.Spacing.Md,
+                            vertical = UthDimens.Spacing.Xs,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Call,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconBadge),
+                        )
+                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                        Text(
+                            text = stringResource(R.string.lostfound_call_contact),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
                 }
             }
         }
