@@ -305,7 +305,7 @@ private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSa
     val normalizedContact = contact.trim()
     val contactValid = normalizedContact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
         (normalizedContact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && normalizedContact.filter(Char::isDigit).length >= 8)
-    val valid = title.isNotBlank() && title.length <= 160 && subject.isNotBlank() &&
+    val valid = title.isNotBlank() && title.length <= 160 && subject.isNotBlank() && subject.length <= 100 &&
         seller.isNotBlank() && seller.length <= 100 && description.length <= 2000 &&
         normalizedContact.length <= 254 && contactValid &&
         (dealType == BookDealType.EXCHANGE || (priceValue != null && priceValue > 0))

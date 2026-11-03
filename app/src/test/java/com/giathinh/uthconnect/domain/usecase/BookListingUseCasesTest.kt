@@ -39,6 +39,15 @@ class BookListingUseCasesTest {
         assertFalse(repository.saved)
     }
 
+    @Test
+    fun `subject over 100 characters is rejected before persistence`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).save(listing().copy(subject = "x".repeat(101)))
+
+        assertTrue(result.isFailure)
+        assertFalse(repository.saved)
+    }
+
     private fun listing(
         dealType: BookDealType = BookDealType.SALE,
         price: Long? = 1000,

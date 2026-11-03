@@ -12,7 +12,8 @@ class BookListingUseCases @Inject constructor(private val repository: BookListin
 
     suspend fun save(listing: BookListing): Result<Unit> {
         if (listing.id.isBlank() || listing.title.isBlank() || listing.title.length > 160 ||
-            listing.subject.isBlank() || listing.sellerName.isBlank() || listing.sellerName.length > 100 ||
+            listing.subject.isBlank() || listing.subject.length > 100 ||
+            listing.sellerName.isBlank() || listing.sellerName.length > 100 ||
             listing.description.length > 2000 || listing.contact.length > 254 ||
             !isValidContact(listing.contact) ||
             (listing.dealType == BookDealType.SALE && (listing.priceVnd ?: 0) <= 0)

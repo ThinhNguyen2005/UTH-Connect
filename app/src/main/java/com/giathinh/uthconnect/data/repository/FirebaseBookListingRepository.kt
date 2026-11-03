@@ -69,8 +69,9 @@ class FirebaseBookListingRepository @Inject constructor(
         val existing = document.get().await()
         if (!existing.exists()) return@persist
         if (existing.getString("ownerUid") != uid) throw SecurityException("Only the listing owner can delete it")
-        existing.getString("photoUrl")?.let { runCatching { storage.getReferenceFromUrl(it).delete().await() } }
+        val photoUrl = existing.getString("photoUrl")
         document.delete().await()
+        photoUrl?.let { runCatching { storage.getReferenceFromUrl(it).delete().await() } }
     }
 
     private fun BookListing.toMap() = mapOf(
