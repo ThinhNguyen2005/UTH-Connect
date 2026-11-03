@@ -19,6 +19,7 @@ import kotlinx.serialization.Serializable
 @Serializable object ScheduleDestination
 @Serializable object UtilitiesDestination
 @Serializable object ProfileDestination
+@Serializable object EventsDestination
 
 /**
  * 4 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
@@ -61,6 +62,7 @@ enum class UthDestination(
         R.string.tab_tickets,
         Icons.Filled.DateRange,
     ),
+    EVENTS(EventsDestination, EventsDestination::class, R.string.tab_events, Icons.Filled.DateRange),
     ;
 
     companion object {

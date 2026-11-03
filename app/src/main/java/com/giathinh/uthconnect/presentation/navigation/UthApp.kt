@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import com.giathinh.uthconnect.BuildConfig
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -29,6 +30,7 @@ import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.events.EventsRoute
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
@@ -128,6 +130,7 @@ private fun UthNavHost(
             )
         }
         composable<ProfileDestination> { ProfileRoute() }
+        composable<EventsDestination> { EventsRoute() }
         ticketsGraph(navController)
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
@@ -143,17 +146,18 @@ private fun UthBottomBar(
     onSelect: (UthDestination) -> Unit,
 ) {
     val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
+    val destinations = UthDestination.entries.filter { it != UthDestination.EVENTS || BuildConfig.USE_SUPABASE }
     val scrollState = rememberScrollState()
     NavigationBar(
         modifier = if (largeText) {
             Modifier
                 .horizontalScroll(scrollState)
-                .width(UthDimens.Layout.LargeTextNavigationItemWidth * UthDestination.entries.size)
+                .width(UthDimens.Layout.LargeTextNavigationItemWidth * destinations.size)
         } else Modifier,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = UthDimens.Elevation.BottomBar,
     ) {
-        UthDestination.entries.forEach { destination ->
+        destinations.forEach { destination ->
             NavigationBarItem(
                 selected = destination == selected,
                 onClick = { onSelect(destination) },

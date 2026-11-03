@@ -12,6 +12,7 @@
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
     <string name="tab_tickets">Vé của tôi</string>
+    <string name="tab_events">Sự kiện</string>
 
     <!-- Vé sự kiện / CHECKIN-1 -->
     <string name="tickets_title">Vé của tôi</string>
