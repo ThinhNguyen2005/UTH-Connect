@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.model.Deadline
 import com.giathinh.uthconnect.domain.repository.TimetableRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 class RoomTimetableRepository @Inject constructor(
@@ -19,19 +20,28 @@ class RoomTimetableRepository @Inject constructor(
     override fun observeDeadlines(): Flow<List<Deadline>> =
         database.deadlineDao().observeAll().map { rows -> rows.map(DeadlineEntity::toDomain) }
 
-    override suspend fun saveSchedule(schedule: CourseSchedule): Result<Unit> = runCatching {
+    override suspend fun saveSchedule(schedule: CourseSchedule): Result<Unit> = persist {
         database.scheduleDao().upsert(ScheduleEntity.fromDomain(schedule))
     }
 
-    override suspend fun deleteSchedule(id: String): Result<Unit> = runCatching {
+    override suspend fun deleteSchedule(id: String): Result<Unit> = persist {
         database.scheduleDao().deleteById(id)
     }
 
-    override suspend fun saveDeadline(deadline: Deadline): Result<Unit> = runCatching {
+    override suspend fun saveDeadline(deadline: Deadline): Result<Unit> = persist {
         database.deadlineDao().upsert(DeadlineEntity.fromDomain(deadline))
     }
 
-    override suspend fun deleteDeadline(id: String): Result<Unit> = runCatching {
+    override suspend fun deleteDeadline(id: String): Result<Unit> = persist {
         database.deadlineDao().deleteById(id)
+    }
+
+    private suspend fun persist(write: suspend () -> Unit): Result<Unit> = try {
+        write()
+        Result.success(Unit)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (failure: Exception) {
+        Result.failure(failure)
     }
 }

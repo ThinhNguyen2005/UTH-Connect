@@ -76,6 +76,8 @@
     <string name="timetable_due_date_format">Hạn: %1$s</string>
     <string name="timetable_edit">Chỉnh sửa</string>
     <string name="timetable_delete">Xóa</string>
+    <string name="timetable_confirm_delete_title">Xóa mục này?</string>
+    <string name="timetable_confirm_delete_body">Bạn sẽ không thể khôi phục mục đã xóa.</string>
     <string name="timetable_edit_class">Chỉnh sửa lịch học</string>
     <string name="timetable_edit_deadline">Chỉnh sửa deadline</string>
     <string name="timetable_course_name">Tên môn học</string>

@@ -69,6 +69,8 @@
     <string name="timetable_due_date_format">Due: %1$s</string>
     <string name="timetable_edit">Edit</string>
     <string name="timetable_delete">Delete</string>
+    <string name="timetable_confirm_delete_title">Delete this item?</string>
+    <string name="timetable_confirm_delete_body">You cannot restore a deleted item.</string>
     <string name="timetable_edit_class">Edit class</string>
     <string name="timetable_edit_deadline">Edit deadline</string>
     <string name="timetable_course_name">Course name</string>

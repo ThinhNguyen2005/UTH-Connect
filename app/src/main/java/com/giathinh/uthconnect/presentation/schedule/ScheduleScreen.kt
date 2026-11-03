@@ -69,6 +69,7 @@ fun ScheduleScreen(
     var showDeadlineForm by rememberSaveable { mutableStateOf(false) }
     var editingSchedule by remember { mutableStateOf<CourseSchedule?>(null) }
     var editingDeadline by remember { mutableStateOf<Deadline?>(null) }
+    var pendingDelete by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = UthDimens.Spacing.Xl),
@@ -135,7 +136,7 @@ fun ScheduleScreen(
                         date = date,
                         schedules = uiState.schedules.filter { it.dayOfWeek == date.dayOfWeek.value },
                         onEdit = { editingSchedule = it; showScheduleForm = true },
-                        onDelete = { onAction(ScheduleAction.DeleteSchedule(it.id)) },
+                        onDelete = { schedule -> pendingDelete = { onAction(ScheduleAction.DeleteSchedule(schedule.id)) } },
                     )
                 }
             } else {
@@ -157,7 +158,7 @@ fun ScheduleScreen(
                     ScheduleCard(
                         schedule = schedule,
                         onEdit = { editingSchedule = schedule; showScheduleForm = true },
-                        onDelete = { onAction(ScheduleAction.DeleteSchedule(schedule.id)) },
+                        onDelete = { pendingDelete = { onAction(ScheduleAction.DeleteSchedule(schedule.id)) } },
                     )
                 }
             }
@@ -180,7 +181,7 @@ fun ScheduleScreen(
                 DeadlineCard(
                     deadline = deadline,
                     onEdit = { editingDeadline = deadline; showDeadlineForm = true },
-                    onDelete = { onAction(ScheduleAction.DeleteDeadline(deadline.id)) },
+                    onDelete = { pendingDelete = { onAction(ScheduleAction.DeleteDeadline(deadline.id)) } },
                 )
             }
         }
@@ -206,6 +207,23 @@ fun ScheduleScreen(
                 onAction(ScheduleAction.SaveDeadline(deadline))
                 showDeadlineForm = false
                 editingDeadline = null
+            },
+        )
+    }
+    pendingDelete?.let { delete ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.timetable_confirm_delete_title)) },
+            text = { Text(stringResource(R.string.timetable_confirm_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = { delete(); pendingDelete = null }) {
+                    Text(stringResource(R.string.timetable_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text(stringResource(R.string.timetable_cancel))
+                }
             },
         )
     }
