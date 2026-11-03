@@ -21,13 +21,17 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +55,7 @@ import com.giathinh.uthconnect.domain.model.CourseSchedule
 import com.giathinh.uthconnect.domain.model.Deadline
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -73,30 +78,43 @@ fun ScheduleScreen(
     var pendingDelete by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize().padding(horizontal = UthDimens.Spacing.Xl),
-        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        modifier = modifier.fillMaxSize().padding(horizontal = UthDimens.Spacing.Lg),
+        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
         item {
-            Spacer(Modifier.height(UthDimens.Spacing.Xl))
-            Text(stringResource(R.string.timetable_title), style = MaterialTheme.typography.headlineMedium)
-            Text(
-                stringResource(R.string.timetable_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = UthTheme.extendedColors.textSecondary,
+            Spacer(Modifier.height(UthDimens.Spacing.Sm))
+            TimetableHeader(
+                schedules = uiState.schedules.size,
+                deadlines = uiState.deadlines.size,
+                onEnableReminders = onEnableReminders,
             )
-            TextButton(onClick = onEnableReminders) {
-                Text(stringResource(R.string.timetable_enable_reminders))
-            }
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
             Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                 FilterChip(
+                    modifier = Modifier.weight(1f),
                     selected = uiState.selectedTab == ScheduleTab.Classes,
                     onClick = { onAction(ScheduleAction.ShowClasses) },
-                    label = { Text(stringResource(R.string.timetable_classes)) },
+                    label = {
+                        Text("${stringResource(R.string.timetable_classes)}  ·  ${uiState.schedules.size}")
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
                 )
                 FilterChip(
+                    modifier = Modifier.weight(1f),
                     selected = uiState.selectedTab == ScheduleTab.Deadlines,
                     onClick = { onAction(ScheduleAction.ShowDeadlines) },
-                    label = { Text(stringResource(R.string.timetable_deadlines)) },
+                    label = {
+                        Text("${stringResource(R.string.timetable_deadlines)}  ·  ${uiState.deadlines.size}")
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
                 )
             }
         }
@@ -236,56 +254,109 @@ fun ScheduleScreen(
 @Composable
 private fun ScheduleControls(state: ScheduleUiState, onAction: (ScheduleAction) -> Unit) {
     val week = selectedWeek(state.selectedDate)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = { onAction(ScheduleAction.PreviousWeek) }) {
-            Text(stringResource(R.string.timetable_previous))
+    UthCard {
+        Text(
+            stringResource(R.string.timetable_week_range, week.first().format(dateFormat), week.last().format(dateFormat)),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = UthDimens.Spacing.Xs),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { onAction(ScheduleAction.PreviousWeek) }) {
+                Text(stringResource(R.string.timetable_previous))
+            }
+            TextButton(onClick = { onAction(ScheduleAction.Today) }) {
+                Text(stringResource(R.string.timetable_today))
+            }
+            TextButton(onClick = { onAction(ScheduleAction.NextWeek) }) {
+                Text(stringResource(R.string.timetable_next))
+            }
         }
-        TextButton(onClick = { onAction(ScheduleAction.Today) }) {
-            Text(stringResource(R.string.timetable_today))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+            items(week, key = { it.toEpochDay() }) { date ->
+                FilterChip(
+                    selected = date == state.selectedDate,
+                    onClick = { onAction(ScheduleAction.SelectDate(date)) },
+                    label = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()))
+                            Text(date.format(DateTimeFormatter.ofPattern("dd/MM")))
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                )
+            }
         }
-        TextButton(onClick = { onAction(ScheduleAction.NextWeek) }) {
-            Text(stringResource(R.string.timetable_next))
-        }
-    }
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
-        items(week, key = { it.toEpochDay() }) { date ->
+        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
             FilterChip(
-                selected = date == state.selectedDate,
-                onClick = { onAction(ScheduleAction.SelectDate(date)) },
-                label = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()))
-                        Text(date.format(DateTimeFormatter.ofPattern("dd/MM")))
-                    }
-                },
+                selected = !state.isWeekView,
+                onClick = { onAction(ScheduleAction.SetWeekView(false)) },
+                label = { Text(stringResource(R.string.timetable_day_view)) },
+            )
+            FilterChip(
+                selected = state.isWeekView,
+                onClick = { onAction(ScheduleAction.SetWeekView(true)) },
+                label = { Text(stringResource(R.string.timetable_week_view)) },
             )
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
-        FilterChip(
-            selected = !state.isWeekView,
-            onClick = { onAction(ScheduleAction.SetWeekView(false)) },
-            label = { Text(stringResource(R.string.timetable_day_view)) },
-        )
-        FilterChip(
-            selected = state.isWeekView,
-            onClick = { onAction(ScheduleAction.SetWeekView(true)) },
-            label = { Text(stringResource(R.string.timetable_week_view)) },
-        )
+}
+
+@Composable
+private fun TimetableHeader(schedules: Int, deadlines: Int, onEnableReminders: () -> Unit) {
+    Surface(
+        shape = UthDimens.Radius.LgShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(UthDimens.Spacing.Lg)) {
+            Text(stringResource(R.string.timetable_title), style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(R.string.timetable_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = UthDimens.Spacing.Xs),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = UthDimens.Spacing.Md),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            ) {
+                HeaderCount(schedules, stringResource(R.string.timetable_classes))
+                HeaderCount(deadlines, stringResource(R.string.timetable_deadlines))
+            }
+            Button(
+                onClick = onEnableReminders,
+                modifier = Modifier.fillMaxWidth().padding(top = UthDimens.Spacing.Sm),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ),
+            ) {
+                Text(stringResource(R.string.timetable_enable_reminders), style = MaterialTheme.typography.labelLarge)
+            }
+        }
     }
-    Text(
-        stringResource(
-            R.string.timetable_week_range,
-            week.first().format(dateFormat),
-            week.last().format(dateFormat),
-        ),
-        style = MaterialTheme.typography.bodySmall,
-        color = UthTheme.extendedColors.textSecondary,
-    )
+}
+
+@Composable
+private fun HeaderCount(count: Int, label: String) {
+    Surface(
+        shape = UthDimens.Radius.MdShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = UthDimens.Spacing.Md, vertical = UthDimens.Spacing.Xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(count.toString(), style = MaterialTheme.typography.titleSmall)
+            Text(label, style = MaterialTheme.typography.labelSmall)
+        }
+    }
 }
 
 @Composable
@@ -296,11 +367,27 @@ private fun ScheduleDay(
     onDelete: (CourseSchedule) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
-        Text(
-            date.format(DateTimeFormatter.ofPattern("EEEE, dd/MM", Locale.getDefault())),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = UthDimens.Spacing.Md),
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = UthDimens.Spacing.Md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                date.format(DateTimeFormatter.ofPattern("EEEE, dd/MM", Locale.getDefault())),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Surface(
+                shape = UthDimens.Radius.MdShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Text(
+                    schedules.size.toString(),
+                    modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
         if (schedules.isEmpty()) {
             Text(
                 stringResource(R.string.timetable_no_class),
@@ -324,7 +411,11 @@ private fun ScheduleCard(schedule: CourseSchedule, onEdit: () -> Unit, onDelete:
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge,
                 )
-                Text("${schedule.startTime} – ${schedule.endTime}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "${schedule.startTime} – ${schedule.endTime}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.timetable_edit))
@@ -333,7 +424,8 @@ private fun ScheduleCard(schedule: CourseSchedule, onEdit: () -> Unit, onDelete:
                 Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.timetable_delete))
             }
         }
-        Text(schedule.courseName, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Text(schedule.courseName, style = MaterialTheme.typography.titleLarge)
         Text(
             stringResource(R.string.timetable_course_code_format, schedule.courseCode, schedule.credits),
             style = MaterialTheme.typography.bodySmall,
@@ -352,20 +444,27 @@ private fun ScheduleCard(schedule: CourseSchedule, onEdit: () -> Unit, onDelete:
 
 @Composable
 private fun DeadlineCard(deadline: Deadline, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val overdue = deadline.dueDate.atTime(deadline.dueTime).isBefore(LocalDateTime.now())
     UthCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(deadline.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(
-                        R.string.timetable_due_date_time_format,
-                        deadline.dueDate.format(dateFormat),
-                        deadline.dueTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                    ),
-                    color = if (deadline.dueDate.isBefore(LocalDate.now())) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.labelLarge,
-                )
+                Text(deadline.title, style = MaterialTheme.typography.titleLarge)
+                Surface(
+                    modifier = Modifier.padding(top = UthDimens.Spacing.Sm),
+                    shape = UthDimens.Radius.MdShape,
+                    color = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.timetable_due_date_time_format,
+                            deadline.dueDate.format(dateFormat),
+                            deadline.dueTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                        ),
+                        modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.timetable_edit))
@@ -374,7 +473,9 @@ private fun DeadlineCard(deadline: Deadline, onEdit: () -> Unit, onDelete: () ->
                 Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.timetable_delete))
             }
         }
-        if (deadline.courseName.isNotBlank()) Text(deadline.courseName)
+        if (deadline.courseName.isNotBlank()) {
+            Text(deadline.courseName, modifier = Modifier.padding(top = UthDimens.Spacing.Sm))
+        }
         if (deadline.note.isNotBlank()) {
             Text(deadline.note, color = UthTheme.extendedColors.textSecondary)
         }
