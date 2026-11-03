@@ -6,6 +6,18 @@ import android.content.ContextWrapper
 import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.CancellationSignal
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.CancellationException
+import java.security.SecureRandom
+import java.util.Base64
+import com.giathinh.uthconnect.presentation.auth.verifyemail.VerifyEmailRoute
+import com.giathinh.uthconnect.presentation.auth.forgotpassword.ForgotPasswordRoute
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +45,8 @@ fun AuthRoute(
     signedInContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AuthViewModel = hiltViewModel(),
+    verifyContent: @Composable (Boolean) -> Unit = { VerifyEmailRoute(remember = it, modifier = modifier) },
+    forgotContent: @Composable (() -> Unit) -> Unit = { ForgotPasswordRoute(onBack = it, modifier = modifier) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -49,14 +63,43 @@ fun AuthRoute(
     val snackbars = remember { SnackbarHostState() }
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
-            val resId = when (event) { AuthEvent.InvalidCredentials -> R.string.auth_invalid_credentials }
-            snackbars.showSnackbar(context.getString(resId))
+            when (event) {
+                AuthEvent.InvalidCredentials -> snackbars.showSnackbar(context.getString(R.string.auth_invalid_credentials))
+                AuthEvent.RequestGoogle -> {
+                    try {
+                        val clientIdRes = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+                        if (clientIdRes == 0) { viewModel.onAction(AuthAction.GoogleFailed(configuration = true)); return@collect }
+                        val nonce = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) })
+                        val option = GetSignInWithGoogleOption.Builder(context.getString(clientIdRes)).setNonce(nonce).build()
+                        val response = CredentialManager.create(context).getCredential(context,
+                            GetCredentialRequest.Builder().addCredentialOption(option).build())
+                        val credential = response.credential
+                        if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                            viewModel.onAction(AuthAction.GoogleFailed())
+                        } else {
+                            val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                            val payload = org.json.JSONObject(String(Base64.getUrlDecoder().decode(token.split('.')[1]), Charsets.UTF_8))
+                            if (payload.optString("nonce") != nonce) viewModel.onAction(AuthAction.GoogleFailed())
+                            else viewModel.onAction(AuthAction.GoogleTokenReceived(token))
+                        }
+                    } catch (_: GetCredentialCancellationException) { viewModel.onAction(AuthAction.GoogleCancelled) }
+                    catch (cancelled: CancellationException) { viewModel.onAction(AuthAction.GoogleCancelled); throw cancelled }
+                    catch (_: Exception) { viewModel.onAction(AuthAction.GoogleFailed()) }
+                }
+                AuthEvent.ClearCredentials -> {
+                    try { CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest()) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { /* Firebase đã signOut; không cấp lại phiên nếu provider không hỗ trợ clear. */ }
+                }
+            }
         }
     }
     when {
         state.isRestoring -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
+        state.pendingIdentity != null -> verifyContent(state.rememberMe)
+        state.forgotDialogOpen -> forgotContent { viewModel.onAction(AuthAction.DismissForgotPassword) }
         state.student == null -> Box(modifier.fillMaxSize()) {
             AuthScreen(
             uiState = state,

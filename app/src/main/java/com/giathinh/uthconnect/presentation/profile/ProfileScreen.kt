@@ -167,11 +167,11 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
     Spacer(Modifier.height(UthDimens.Spacing.Xl))
     UthCard(modifier = Modifier.fillMaxWidth()) {
         ProfileRow(stringResource(R.string.auth_profile_name), student.displayName)
-        ProfileRow(stringResource(R.string.auth_profile_student_id), student.studentId)
+        ProfileRow(stringResource(R.string.auth_profile_student_id), student.studentId.ifBlank { stringResource(R.string.auth3_student_id_pending) })
         ProfileRow(stringResource(R.string.auth_profile_email), student.email)
-        ProfileRow(stringResource(R.string.auth_profile_class), student.className)
-        ProfileRow(stringResource(R.string.auth_profile_major), student.major)
-        ProfileRow(stringResource(R.string.auth_profile_faculty), student.faculty)
+        ProfileRow(stringResource(R.string.auth_profile_class), student.className.ifBlank { stringResource(R.string.auth_contact_not_set) })
+        ProfileRow(stringResource(R.string.auth_profile_major), student.major.ifBlank { stringResource(R.string.auth_contact_not_set) })
+        ProfileRow(stringResource(R.string.auth_profile_faculty), student.faculty.ifBlank { stringResource(R.string.auth_contact_not_set) })
         ProfileRow(
             stringResource(R.string.auth_contact_phone),
             if (student.phoneNumber.isBlank()) stringResource(R.string.auth_contact_not_set) else student.phoneNumber,

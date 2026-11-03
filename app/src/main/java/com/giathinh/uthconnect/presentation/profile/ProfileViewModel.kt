@@ -36,7 +36,10 @@ class ProfileViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             getProfile.observe().collect { profile ->
-                _uiState.update { it.copy(isLoading = false, student = profile) }
+                _uiState.update {
+                    if (profile == null) ProfileUiState(isLoading = false)
+                    else it.copy(isLoading = false, student = profile)
+                }
             }
         }
         viewModelScope.launch {

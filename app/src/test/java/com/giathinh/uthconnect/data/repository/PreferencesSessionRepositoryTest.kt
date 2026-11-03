@@ -30,6 +30,8 @@ class PreferencesSessionRepositoryTest {
     }
     private class Auth(var profile: StudentProfile?) : AuthRepository {
         override val authChanges = MutableSharedFlow<Boolean>()
+        val tokenProfiles = MutableSharedFlow<StudentProfile?>()
+        override fun observeProfileChanges() = tokenProfiles
         var error: Exception? = null
         var restores = 0
         var signOuts = 0
@@ -44,6 +46,26 @@ class PreferencesSessionRepositoryTest {
         override suspend fun authenticate(identifier: String, password: String) = Result.success(profile)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = error("Must not trust stored student ID")
         override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(true)
+    }
+    @Test fun `token role refresh updates only an already unlocked session`() = runTest {
+        val auth = Auth(profile)
+        val repository = PreferencesSessionRepository(auth, Preferences(SessionGrants("uid-a")))
+        repository.restore()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { repository.monitorAuthChanges() }
+        val changed = profile.copy(role = com.giathinh.uthconnect.domain.model.UserRole.ADMIN)
+        auth.tokenProfiles.emit(changed)
+        assertEquals(changed, repository.session.value.profile)
+        auth.tokenProfiles.emit(null)
+        assertNull(repository.session.value.profile)
+    }
+    @Test fun `token refresh cannot bypass biometric lock`() = runTest {
+        val auth = Auth(profile)
+        val repository = PreferencesSessionRepository(auth, Preferences(SessionGrants("uid-a", "uid-a")))
+        repository.restore()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { repository.monitorAuthChanges() }
+        auth.tokenProfiles.emit(profile)
+        assertNull(repository.session.value.profile)
+        assertEquals("uid-a", repository.session.value.biometricStudentId)
     }
     @Test fun `remembered ID alone never authenticates`() = runTest {
         val preferences = Preferences(SessionGrants("uid-a"))
@@ -144,4 +166,30 @@ class PreferencesSessionRepositoryTest {
         repository.refresh()
         assertNull(repository.session.value.profile)
     }
+    @Test fun `foreground network or disabled account error closes active session and supports retry`() = runTest {
+        for (reason in listOf(com.giathinh.uthconnect.domain.repository.AuthError.Network,
+                com.giathinh.uthconnect.domain.repository.AuthError.Disabled,
+                com.giathinh.uthconnect.domain.repository.AuthError.InvalidSession)) {
+            val auth = Auth(profile)
+            val repository = PreferencesSessionRepository(auth, Preferences())
+            repository.start(profile, true)
+            auth.error = com.giathinh.uthconnect.domain.repository.AuthException(reason)
+            repository.refresh()
+            assertNull(repository.session.value.profile)
+            assertEquals(SessionFailure.RestoreFailed, repository.session.value.failure)
+        }
+    }
+    @Test fun `new session instance restores remembered UID but logout prevents another restart`() = runTest {
+        val auth = Auth(profile); val prefs = Preferences()
+        PreferencesSessionRepository(auth, prefs).start(profile, true)
+        val restarted = PreferencesSessionRepository(auth, prefs)
+        restarted.restore()
+        assertEquals(profile, restarted.session.value.profile)
+        restarted.signOut()
+        val afterLogout = PreferencesSessionRepository(auth, prefs)
+        afterLogout.restore()
+        assertNull(afterLogout.session.value.profile)
+        assertEquals(SessionGrants(), prefs.grants)
+    }
+
 }

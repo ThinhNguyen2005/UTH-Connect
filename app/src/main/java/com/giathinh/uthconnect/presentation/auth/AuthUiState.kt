@@ -5,6 +5,8 @@ import com.giathinh.uthconnect.domain.validation.LoginFieldError
 
 data class AuthUiState(
     val isRestoring: Boolean = true,
+    val isSignUp: Boolean = false,
+    val pendingIdentity: com.giathinh.uthconnect.domain.model.AuthIdentity? = null,
     val student: StudentProfile? = null,
     val identifier: String = "",
     val password: String = "",
@@ -23,10 +25,14 @@ data class AuthUiState(
 )
 
 /** One-off notification (not a navigation command; the signed-in gate is state driven). */
-sealed interface AuthEvent { data object InvalidCredentials : AuthEvent }
+sealed interface AuthEvent {
+    data object InvalidCredentials : AuthEvent
+    data object RequestGoogle : AuthEvent
+    data object ClearCredentials : AuthEvent
+}
 
 enum class AuthFailure {
     InvalidCredentials, Unexpected, SessionRestore, BiometricUnavailable, Configuration, Network,
     Disabled, InvalidSession, VerificationRequired, ApprovalRequired, ProfileMissing, PermissionDenied,
-    TooManyRequests, StudentIdUnavailable, InvalidResetEmail,
+    TooManyRequests, StudentIdUnavailable, InvalidResetEmail, DomainNotAllowed, EmailAlreadyInUse, WeakPassword, AccountCollision, Unknown,
 }

@@ -34,6 +34,17 @@ class FirebaseAuthErrorMappingTest {
         override suspend fun updateContact(fields: Map<String, String>): Unit = throw error
         override suspend fun sendVerification() = Unit
     }
+    @Test fun sdkRegistrationAndCollisionErrorsAreTypedWithoutGrantingProfile() = runBlocking {
+        mapOf("ERROR_EMAIL_ALREADY_IN_USE" to AuthError.EmailAlreadyInUse,
+            "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" to AuthError.AccountCollision,
+            "ERROR_CREDENTIAL_ALREADY_IN_USE" to AuthError.AccountCollision,
+            "ERROR_WEAK_PASSWORD" to AuthError.WeakPassword).forEach { (code, expected) ->
+            val result = FirebaseAuthRepository(Source(FirebaseAuthException(code, "Test SDK error")))
+                .authenticate("student@ut.edu.vn", "password")
+            assertEquals(expected, (result.exceptionOrNull() as AuthException).reason)
+            assertNull(result.getOrNull())
+        }
+    }
     @Test fun sdkInvalidCredentialsNeverGrantProfile() = runBlocking {
         val source = Source(FirebaseAuthException("ERROR_INVALID_CREDENTIAL", "Invalid"))
         assertNull(FirebaseAuthRepository(source).authenticate("student@ut.edu.vn", "wrong").getOrThrow())

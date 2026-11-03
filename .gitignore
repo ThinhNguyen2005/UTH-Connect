@@ -16,3 +16,10 @@ google-services.json
 .cxx
 local.properties
 
+
+# Auth3 local tooling/emulator output; no production credentials
+node_modules/
+.firebase/
+*-debug.log
+functions/.env*
+functions/service-account*.json

@@ -58,15 +58,17 @@ class FirebaseAuthRepositoryTest {
         source.account = source.account.copy(claims = emptyMap(), fields = source.account.fields + ("uthVerified" to true))
         val result = FirebaseAuthRepository(source).authenticate("student@ut.edu.vn", "password")
         assertEquals(AuthError.ApprovalRequired, (result.exceptionOrNull() as AuthException).reason)
-        assertTrue(source.signedOut)
+        assertFalse(source.signedOut)
+        assertNull(result.getOrNull())
     }
     @Test fun `unverified email sends verification and never grants profile`() = runTest {
         val source = Source()
         source.account = source.account.copy(emailVerified = false)
         val result = FirebaseAuthRepository(source).authenticate("student@ut.edu.vn", "password")
-        assertEquals(AuthError.VerificationRequired, (result.exceptionOrNull() as AuthException).reason)
+        assertEquals(AuthError.EmailNotVerified, (result.exceptionOrNull() as AuthException).reason)
         assertTrue(source.verificationSent)
-        assertTrue(source.signedOut)
+        assertFalse(source.signedOut)
+        assertNull(result.getOrNull())
     }
     @Test fun `student ID does not fabricate an email or contact Firebase`() = runTest {
         val source = Source()

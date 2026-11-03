@@ -1,5 +1,7 @@
 # Auth/Profile — phạm vi và nghiệm thu
 
+> Xem [kết quả mới nhất](#auth3-latest); các mục phía dưới trước đó là lịch sử nghiệm thu.
+
 Ngày rà soát: 03/11/2026. Nhánh `feature/auth-phu`. Không đổi toolchain, commit hoặc push.
 HEAD gốc giữ nguyên: `bf38503e17405025e83b25fe518b97fe9f5daf94`.
 
@@ -382,4 +384,609 @@ Tính tương thích của tổ hợp cuối được xác nhận bằng artifac
 - `docs/DATA_LAYER_GUIDE.md`
 - `docs/Design.md`
 - `docs/REPO_TREE.md`
+- `gradle/libs.versions.toml`
+
+
+# Cập nhật nghiệm thu Auth3-1 — 03/11/2026
+
+Phần này là trạng thái hiện tại, thay thế các mô tả giới hạn của giai đoạn trước khi có khác biệt.
+**Kết luận: PARTIAL; chưa đủ điều kiện tuyên bố Auth3-1 hoàn thành production.**
+Mã nguồn/UI/backend/Rules và kiểm thử local đã triển khai; Firebase thật, Google OAuth, email giao thực tế,
+triển khai backend/Rules, nguồn học vụ và kiểm tra vận hành vẫn BLOCKED.
+
+## Baseline và bảo toàn
+
+- Branch `feature/auth-phu`; HEAD gốc `5efb1f37cc8ca75fed8b861fb0a782aabacd5d5b`, tên `KAN _75 1/2`.
+  Đã đối chiếu tracking ref và `git ls-remote origin refs/heads/feature/auth-phu` cùng hash.
+  Backup `backup/auth-phu-before-rebase-d2761b9` giữ nguyên; không commit/push/rebase thêm.
+- Đã chạy lại baseline: Build PASS, 99 Unit Test PASS, 19 Android Test PASS, không lấy số cũ làm bằng chứng.
+- Kế thừa MVVM/Clean Architecture, Hilt, StateFlow, session/biometric, Profile/password/contact,
+  navigation và Design System. Các API cũ vẫn giữ, bổ sung capability có default fail cấu hình cho test cũ.
+- Không sửa Home/Schedule/Utilities, fixtures/mock hoặc cache của module khác.
+  `.idea/*`, `integration_backups/` là thay đổi có sẵn, giữ nguyên và không nằm trong danh sách task.
+- Giữ AGP 8.13.0, Gradle 8.13, Kotlin 2.2.10, compile/targetSdk 36, minSdk 31, Hilt 2.58,
+  KSP 2.3.12, Firebase BoM 33.10.0, Google Services 4.4.2.
+- Bổ sung Credentials 1.5.0, Google ID 1.1.1, Functions theo BoM; không nâng toolchain Android.
+
+## Checklist theo yêu cầu và bằng chứng
+
+PASS dưới đây nghĩa là mã và kiểm thử local đạt; không thay thế nghiệm thu cloud thật.
+PARTIAL/BLOCKED là giới hạn còn lại cần xử lý trước PR/triển khai.
+
+| Yêu cầu | Trạng thái | Bằng chứng / giới hạn |
+|---|---|---|
+| I. Kiểm tra README/docs/Git/baseline và kế thừa | PASS | README.md, phần lịch sử tài liệu này; HEAD/remote và baseline nêu trên |
+| II. MVVM/Clean/Hilt/API/Design System/fixtures cũ | PASS | `app/src/main/java/com/giathinh/uthconnect/data/di/AuthDataModule.kt:30`; test cũ giữ nguyên và chạy lại |
+| III. Đăng ký email/password, đăng nhập, Google Credential Manager | PARTIAL | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:66`; `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt:73`; thiếu cấu hình OAuth/Firebase thật |
+| III. Gửi/resend/reload email, reset, logout, refresh token | PARTIAL | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthSource.kt:91`; SDK adapter đã nối, chưa nghiệm thu mail/cloud |
+| III. Account collision, không link chỉ vì email trùng | PASS | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:244`; SDK error mapping Android test; không có linkWithCredential |
+| IV. Exact domain, trim/lowercase, từ chối sai định dạng/subdomain/suffix | PASS | `app/src/main/java/com/giathinh/uthconnect/domain/validation/LoginValidator.kt:6`; `functions/src/policy.cjs:2`; Unit/Emulator tests |
+| IV. Chỉ email UTH verified được cấp uthVerified phía server | PASS | `functions/index.cjs:22`; Emulator kiểm tra Admin record thay token/email client |
+| V. Callable UID từ auth, Admin SDK, claims STUDENT, giữ role/claims hợp lệ | PASS | `functions/index.cjs:9`; `functions/src/policy.cjs:10`; không deploy |
+| V. Tạo users idempotent, không tự xác minh studentId | PASS | `functions/index.cjs:24`; kiểm thử đồng thời, studentId null, không client create/academic update |
+| V. Lỗi có cấu trúc, Emulator, beforeUserCreated | PARTIAL | `functions/src/optional-blocking.cjs:4`; blocking chưa export, Identity Platform/triển khai chưa được xác minh |
+| VI. Claims-only, owner UID, bảo vệ metadata và role | PASS | `firestore.rules:12`; 22 Emulator tests gồm quyền hợp lệ các module |
+| VI. Rules production và review các policy liên module | BLOCKED | Không deploy; owner cần phê duyệt rollout claims, review registrations read và staging |
+| VII. AuthError, validation và các Repository/UseCase | PASS | `app/src/main/java/com/giathinh/uthconnect/domain/repository/AuthRepository.kt:33`; domain/usecase/{SignUp,SignInWithGoogle,SendVerification,CheckVerification,RefreshClaims,SignOut}UseCase.kt |
+| VIII. Session theo Firebase/claims, cold start/refresh/network/retry | PASS | `app/src/main/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepository.kt:85`; test token role update, invalid token, không vượt biometric |
+| VIII. Logout/private state/cache độc lập | PARTIAL | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseProfileRemoteStore.kt:17`; profile không ghi disk cache mới; dữ liệu SDK cache từ bản cũ cần audit có phạm vi |
+| VIII. Profile theo UID, contacts, role/verified từ claims, missing profile | PARTIAL | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:204`; không mặc định role khi thiếu claim; REST/Firestore thật chưa nghiệm thu |
+| IX. Biometric không cấp phiên/claims, hủy lifecycle/chống trùng | PASS | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt:137`; session/biometric Unit Test, chưa có phần cứng biometric để nghiệm thu prompt thật |
+| X. Tab login/signup, Google, password, loading/error, forgot screen | PASS | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt:45`; `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordScreen.kt:29`; UI tests |
+| X. Verify screen/cooldown60/foreground reload→claims→Main | PASS | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailViewModel.kt:24`; `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailRoute.kt:20`; pending identity không phải phiên Main |
+| X. Channel events, lifecycle state, badge Role/Verified, VI/EN, previews | PASS | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt:34`; ProfileScreen, resources values/values-en, previews Loading/Error |
+| XI. Unit/UI/Emulator suites và bảo toàn test cũ | PASS | Kết quả, lệnh và đường dẫn báo cáo ở phần kiểm thử bên dưới |
+| XII. Firebase Console, SHA, JSON, Enumeration Protection, template | BLOCKED | Không có app/google-services.json/dự án thật; hướng dẫn docs/AUTH3_FIREBASE_SETUP.md; không tạo credential giả |
+| XIII. Git/scope/toolchain/cloud controls | PASS | Không commit/push/deploy/migration; chỉ Auth3-1 và cấu hình/test/docs trực tiếp |
+| XIV. README M0, docs trạng thái/cấu hình/tree | PASS | README.md; tài liệu này; docs/AUTH3_FIREBASE_SETUP.md; docs/REPO_TREE.md |
+
+## Các lỗi bảo mật/chức năng đã xử lý
+
+| Mức độ ban đầu | Lỗi | Cách xử lý / bằng chứng |
+|---|---|---|
+| Nghiêm trọng | users.role do client sửa có thể thành quyền admin | Tái hiện bằng baseline.security.test; bỏ fallback document role trong rules; chống nâng quyền ở Emulator |
+| Cao | Hồ sơ UID khác đọc được theo policy cũ | users chỉ owner verified get/update contacts; list/create/delete client bị chặn; test cross UID |
+| Cao | Quyền STUDENT có thể được mặc định ở client khi thiếu role | mapProfile chỉ map claim hợp lệ; thiếu/role lạ bị từ chối; Unit Test riêng |
+| Cao | Pending Firebase credential có nguy cơ bị coi như đăng nhập | AuthIdentity tách profile; chỉ checkVerification + claims mới start session/Main |
+| Cao | Refresh token tự mở khóa biometric | Observer chỉ cập nhật phiên đã mở; Unit Test token không vượt biometric |
+| Trung bình | Lỗi/cancellation khi lưu phiên có thể để credential một phần | Verification/Google usecases thu hồi auth trong NonCancellable; không nuốt CancellationException |
+| Trung bình | Profile private form còn sau logout/cache đĩa mới | Reset ProfileUiState khi session null; transport REST không disk cache, không purge module khác |
+| Trung bình | Gọi Google lặp | AuthViewModel chặn request và job đang chạy; không lưu ID token vào state/log |
+| Trung bình | Thiếu trạng thái/validation và lỗi SDK nhất quán | Signup/Verify/Forgot VMs, typed AuthError, lỗi form được xóa khi sửa dữ liệu, VI/EN |
+
+## Kiểm thử và giới hạn bằng chứng
+
+- Unit Test cuối: **131 tests, 0 failures, 0 errors, 0 skipped**; XML `app/build/test-results/testDebugUnitTest/`.
+- Build + Android Test cuối: **BUILD SUCCESSFUL**, **24/24 Android Test**, không skip,
+  emulator `Medium_Phone_API_37.0`, serial emulator-5554. Lệnh thực tế:
+  `.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest`.
+- HTML: `app/build/reports/tests/testDebugUnitTest/index.html`,
+  `app/build/reports/androidTests/connected/debug/index.html`; Android XML trong
+  `app/build/outputs/androidTest-results/connected/debug/`.
+- Firebase Emulator cuối: **22/22 PASS, 0 fail/skip** sau cập nhật Rules và vá dependencies,
+  Node 22.23.4, firebase-tools 15.34.2, Auth/Functions/Firestore localhost, project demo-uth-auth3.
+  Callable chạy bằng Admin SDK với Auth Emulator token; Rules chạy trên Firestore Emulator thật.
+- Baseline exploit: 1/1 PASS trên rules lịch sử trước thay đổi, chứng minh hai lỗ hổng nêu trên;
+  không dùng test khai thác này để đánh giá rules mới.
+- Trong quá trình phát triển đã có test compile lỗi khai báo fake và 1 UI assertion sai nút ở trạng thái
+  Configuration; đã sửa và chạy lại toàn suite. Không bỏ qua, xóa hoặc làm yếu điều kiện bảo mật của test cũ.
+- `npm audit --omit=dev`: **0 vulnerabilities**. Audit toàn bộ: **13 moderate, 0 high/critical**,
+  thuộc dependencies tooling/test Firebase CLI (glob/minimatch/uuid/archiver/OTel và nhánh phụ thuộc).
+  Không dùng audit fix --force để downgrade/break SDK. package-lock và overrides grpc-js/rimraf→glob
+  giữ runtime đã vá, suites đã chạy lại. Cần theo dõi bản vá upstream cho tooling trước CI ngoài môi trường local.
+- Không có bằng chứng end-to-end Firebase production, Google OAuth thật, giao email/nhấn link,
+  account collision giữa hai provider thật hoặc biometric phần cứng. Không nhận PASS cho các hạng mục đó.
+- Existing demo repository/fixture và fake chỉ phục vụ test/preview/module cũ; Hilt production vẫn
+  bind FirebaseAuthRepository. Không có fallback demo. Không tạo dữ liệu hoặc tài khoản cloud giả.
+
+## Rủi ro còn lại và việc cần làm trước PR/deploy
+
+1. **Cao/BLOCKED:** thiếu Firebase Android config/Web client ID, provider/Console/SHA, backend deployment,
+   staging data và tài khoản @ut.edu.vn kiểm thử. Thực hiện docs/AUTH3_FIREBASE_SETUP.md rồi nghiệm thu thật.
+2. **Cao:** phối hợp single-writer khi đổi custom claims; Firebase Admin không cung cấp CAS.
+   Callable idempotent không thể bảo vệ writer Admin khác đang ghi đồng thời nếu không cùng giao thức.
+3. **Cao, policy ngoài Auth3-1:** registrations của event vẫn đọc bởi mọi tài khoản đã đăng nhập,
+   theo chính sách remote. Nếu chứa PII cần owner sự kiện review, bổ sung test tác động và PR riêng;
+   không tự sửa policy này trong task. Dữ liệu sự kiện/thông báo công khai authenticated giữ nguyên.
+4. **Trung bình:** token đã cấp có thể tồn tại tới refresh/hết hạn sau disable/role change;
+   cần chính sách revocation hệ thống nếu yêu cầu thu hồi tức thì. Client foreground/unlock đã reload.
+5. **Trung bình:** cache SDK private từ bản cũ chưa được migration; REST mới không ghi cache hồ sơ.
+   Không global clearPersistence vì ảnh hưởng module khác. REST PATCH/GET cần nghiệm thu server thật.
+6. **Trung bình:** tooling dev còn 13 cảnh báo moderate; không có cảnh báo ở runtime dependencies.
+7. **BLOCKED:** Identity Platform beforeCreate chưa deploy; email ngoài trường vẫn có thể tạo Auth account
+   trực tiếp nếu dùng API ngoài app, nhưng không được cấp UTH claims/truy cập dữ liệu UTH.
+8. **BLOCKED:** chưa có nguồn học vụ đối chiếu MSSV; studentId mới null và UI hiển thị chờ cập nhật.
+   Không nhận studentId do client tự xác minh; badge thể hiện email UTH verified, không giả danh xác minh MSSV.
+9. Cần backend/owner review Functions+Rules, rollout claims cho tài khoản cũ và staging module sự kiện,
+   lịch học/thông báo trước deploy. Không deploy Rules lên production trong phiên này.
+
+## Danh sách file thuộc thay đổi Auth3-1
+
+Danh sách dưới không gồm `.idea/`, integration_backups, build, node_modules, local.properties hoặc credential.
+
+- `.gitignore`
+- `README.md`
+- `app/build.gradle.kts`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3FlowUiTest.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/FirebaseAuthErrorMappingTest.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthSource.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseProfileRemoteStore.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/model/AuthIdentity.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/model/StudentProfile.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/repository/AuthRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/CheckVerificationUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/ManageAuthAccountUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/RefreshClaimsUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SendVerificationUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInWithGoogleUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignOutUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignUpUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/validation/LoginValidator.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileViewModel.kt`
+- `app/src/main/res/values-en/strings.xml`
+- `app/src/main/res/values/strings.xml`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/domain/validation/Auth3ValidatorTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3UseCaseTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3ViewModelTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/ForgotPasswordViewModelTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/VerifyEmailViewModelTest.kt`
+- `docs/AUTH3_FIREBASE_SETUP.md`
+- `docs/AUTH_PROFILE_STATUS.md`
+- `docs/REPO_TREE.md`
+- `firebase.json`
+- `firestore.rules`
+- `functions/index.cjs`
+- `functions/package-lock.json`
+- `functions/package.json`
+- `functions/src/optional-blocking.cjs`
+- `functions/src/policy.cjs`
+- `functions/test/auth3.emulator.test.cjs`
+- `functions/test/baseline.security.test.cjs`
+- `gradle/libs.versions.toml`
+
+
+# Kiểm định cuối Auth3-1 — 03/11/2026
+
+**Kết luận hiện tại: PARTIAL. Không đủ bằng chứng hoàn thành Firebase production.**
+Phần này là kết quả kiểm định mới nhất, thay thế số test/bằng chứng dòng của các phần lịch sử phía trên.
+Đã đọc lại README (799 dòng), báo cáo trạng thái, hướng dẫn Firebase và toàn bộ 64 file của lần triển khai.
+Package lock 10.275 dòng được parse và đối chiếu dependency/dev flags; XML VI/EN và JSON được parse.
+Lần kiểm định bổ sung sửa lỗi/test/docs, không viết lại các thành phần đã hoạt động đúng.
+
+## Phạm vi, mã đã có và mức bằng chứng
+
+| Phạm vi | Trạng thái | Giới hạn |
+|---|---|---|
+| 64 file Auth3-1 trước kiểm định | PASS kiểm tra mã | Đã đối chiếu inventory, compiler/test, ranh giới Presentation/Domain/Data và cấu hình |
+| Build/Unit/UI/Emulator local | PASS | Các kết quả mới bên dưới; UI dùng fake test, Emulator dùng backend local thật |
+| Auth Email/Password/Google/verify/reset production | BLOCKED | Không có app/google-services.json, OAuth client/SHA, tài khoản và Firebase project nghiệm thu |
+| Profile REST production, biometric phần cứng | BLOCKED | Chưa có cấu hình/backend thật hoặc thiết bị sinh trắc học để nghiệm thu |
+| Bảo toàn claim khi nhiều backend writer đồng thời | PARTIAL | Giữ claim hợp lệ và chặn false; chưa có CAS/cơ chế single-writer ngoài repo được xác minh |
+| Cache/thu hồi quyền tức thời toàn hệ thống | PARTIAL | Không tạo disk cache Profile mới; cache bản cũ, token cũ và policy module khác cần owner review |
+| Git/toolchain/module ngoài Auth3-1 | PASS | Branch feature/auth-phu; HEAD 5efb1f37cc8ca75fed8b861fb0a782aabacd5d5b; không commit/push/merge/deploy |
+
+Production vẫn bind FirebaseAuthRepository; không fallback demo. Firebase BoM 33.10.0 và toàn bộ
+AGP 8.13.0/Gradle 8.13/Kotlin 2.2.10/SDK 36/Hilt 2.58 được giữ nguyên. Mock của các module khác còn nguyên.
+`git diff --name-only` với Home/Schedule/Utilities, root build.gradle.kts/settings.gradle.kts,
+Gradle Wrapper không có thay đổi. Credentials/Google ID/Functions là dependency trực tiếp Auth3-1 đã được build.
+Không coi BuildConfig.USE_MOCK_DATA của nhóm là quyền bật demo cho Auth production.
+
+## Lỗi xác minh và sửa trong lần kiểm định
+
+1. **Cao — tự cấp lại quyền đã thu hồi:** mergeVerifiedClaims từng ghi true đè lên uthVerified=false
+   do backend đặt. Kiểm thử trực tiếp trước sửa thất bại với `Missing expected exception` (exit 1),
+   xác nhận lỗi, không chỉ suy đoán. Đã chặn explicit false ở backend trước tạo profile và kiểm tra lại
+   trước setCustomUserClaims; client cũng từ chối provisioning khi thấy false. Claims/role khác giữ nguyên.
+2. **Trung bình — thông báo Verify sai nhóm lỗi:** PermissionDenied/Disabled/InvalidSession trước đó
+   rơi về lỗi không mong đợi, ApprovalRequired hiển thị nhầm lỗi cấu hình. Đã dùng các resource lỗi
+   tương ứng có sẵn ở VI/EN, không thêm màn hình hoặc đổi luồng đang hoạt động đúng.
+3. **Khoảng trống kiểm thử:** bổ sung thu hồi quyền, token đổi role/network, callable chưa triển khai,
+   cold restart/logout, foreground lỗi, Back sau logout, Verify/Forgot VI/EN font 200%, ký tự điều khiển email.
+   Kiểm thử ký tự xuống dòng đã chứng minh validator hiện có từ chối đúng, vì vậy giữ nguyên logic domain.
+
+Bằng chứng sửa:
+
+- `functions/src/policy.cjs:12`
+- `functions/index.cjs:23`
+- `functions/index.cjs:47`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:106`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:195`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailScreen.kt:39`
+
+**Quy ước thu hồi cần owner chấp thuận:** uthVerified=false là thu hồi rõ ràng; chỉ backend có thẩm quyền
+được bật lại. Xóa claim không đồng nghĩa thu hồi bền vững: tài khoản trường verified thiếu claim vẫn được
+onboarding theo yêu cầu task. Nếu cần cách thu hồi khác, phải thống nhất metadata/backend đáng tin cậy
+và kiểm thử trước rollout. Cơ chế này chưa giải quyết race với Admin writer ngoài repo hoặc token cũ chưa refresh.
+
+## Checklist các tình huống bắt buộc
+
+PASS ở cột local không mang nghĩa đã chạy production.
+
+| Tình huống | Local | Bằng chứng hiện tại | Production |
+|---|---|---|---|
+| Chưa đăng nhập | PASS | `functions/test/auth3.emulator.test.cjs:65`; `functions/test/auth3.emulator.test.cjs:129` | BLOCKED |
+| Email ngoài trường/suffix/subdomain | PASS | `app/src/main/java/com/giathinh/uthconnect/domain/validation/LoginValidator.kt:6`; `functions/src/policy.cjs:2`; `functions/test/auth3.emulator.test.cjs:88` | BLOCKED |
+| Email chưa xác minh | PASS | `functions/test/auth3.emulator.test.cjs:77`; `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt:49` | BLOCKED |
+| Email verified nhưng chưa có claim | PASS | `functions/test/auth3.emulator.test.cjs:68`; `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt:115`; thiếu role không mặc định tại client | BLOCKED |
+| Tài khoản bị khóa/xóa | PASS | `functions/test/auth3.emulator.test.cjs:121`; `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt:169` | BLOCKED |
+| Role đổi/thu hồi uthVerified=false | PASS | `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt:93`; `functions/test/auth3.emulator.test.cjs:199` | PARTIAL: token đã cấp/race backend |
+| Mất mạng lúc xác thực/foreground | PASS | `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt:115`; `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt:169`; SDK error mapping Android test | BLOCKED |
+| Functions chưa deploy | PASS mã/contract | `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:233`; `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt:115`; không giả lập cloud thành công | BLOCKED HTTP/Firebase thật |
+| Tự sửa role/uthVerified/metadata | PASS | `functions/test/auth3.emulator.test.cjs:148`; `functions/test/auth3.emulator.test.cjs:154`; `firestore.rules:38` | BLOCKED deploy rules |
+| UID khác đọc/ghi hồ sơ | PASS | `functions/test/auth3.emulator.test.cjs:140`; users get/update chỉ owner verified | BLOCKED deploy rules |
+| Logout rồi nhấn Back | PASS | `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/AuthProfileFlowUiTest.kt:93`; session vẫn null | BLOCKED tài khoản thật |
+| Khởi động lại sau đăng nhập/logout | PASS | `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt:182`; nhớ UID cần xác thực Firebase lại, không nhớ thì logout | BLOCKED process death với SDK thật |
+| Sinh trắc học/lifecycle | PASS logic | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt:137`; `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt:61`; foreground reload/cancel ON_STOP | BLOCKED phần cứng |
+| Cooldown 60s/chống gọi trùng | PASS | `app/src/test/java/com/giathinh/uthconnect/presentation/auth/VerifyEmailViewModelTest.kt:47`; ViewModel giữ qua đổi cấu hình, tạo VM mới chờ lại60 | BLOCKED quota/mail thật |
+| Google/account collision | PASS mã/typed lỗi | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt:73`; FirebaseAuthErrorMappingTest; không linkWithCredential theo email | BLOCKED OAuth/provider thật |
+| Quên/reset mật khẩu không dò tài khoản | PASS mã/UI | `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordViewModel.kt:17`; repository che ERROR_USER_NOT_FOUND | BLOCKED giao mail/reset link thật |
+| Compose/Navigation/Preview/VI-EN | PASS | `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3FlowUiTest.kt:91`; 108 key Auth/Profile VI/EN tương ứng, Preview Loading/Error compile; gate pending→Verify, valid→Main | BLOCKED trải nghiệm provider thật |
+
+## Kết quả test thực tế sau sửa
+
+- **Gradle Build PASS**, lệnh cuối:
+  `.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest`.
+- **136 Unit Test, 0 failures/errors/skipped**. Lượt cuối compile và chạy test mới, không chỉ dùng kết quả cache cũ.
+- **28 Android Test, 0 failures/errors/skipped**, emulator-5554, Medium_Phone_API_37.0. Lượt cuối có kiểm tra Back.
+- **24 Firebase Emulator Test, 0 fail/skip**, Functions/Auth/Firestore local demo-uth-auth3, CLI exit 0.
+  Lệnh từ functions/:
+  `firebase emulators:exec --config ../firebase.json --project demo-uth-auth3 --only auth,firestore,functions "node --test --test-concurrency=1 test/auth3.emulator.test.cjs"`.
+- Emulator có cảnh báo MetadataLookupWarning khi tìm metadata credential; các host Auth/Firestore đều localhost,
+  toàn suite exit 0. Không dùng cảnh báo này làm bằng chứng kết nối Firebase cloud.
+- Báo cáo XML/HTML: `app/build/test-results/testDebugUnitTest/`, `app/build/reports/tests/testDebugUnitTest/`,
+  `app/build/outputs/androidTest-results/connected/debug/`, `app/build/reports/androidTests/connected/debug/`.
+- `git diff --check` PASS; cảnh báo LF→CRLF từ Git là thông báo chuẩn hóa EOL, không phải lỗi whitespace.
+- Không nâng dependency/toolchain trong lần kiểm định; package.json/package-lock không thay đổi thêm.
+
+## Rà soát đủ 13 moderate của tooling
+
+`npm audit --json` mới: **13 moderate, 0 high/critical**; `npm audit --omit=dev --json`: **0**.
+Đây là 13 package entries, quy về bốn advisory gốc, không phải 13 lỗi độc lập trong ứng dụng.
+Lockfile xác nhận node_modules/@opentelemetry/core 1.30.1, @google-cloud/pubsub 5.3.1,
+uuid 9.0.1, glob 10.5.0, firebase-tools 15.34.2 đều dev=true; glob runtime của rimraf là14.0.3 đã vá.
+Những package bị audit đánh dấu không thuộc cây production khi omit dev. APK không đóng gói npm packages.
+Đây là đánh giá dependency/reachability hiện tại, **không phải chứng nhận toàn bộ CVE runtime Android**
+và chưa xác minh artifact Cloud Functions đã deploy vì chưa có deploy. CI/deployment phải dùng đúng dependency production.
+
+| Package bị audit đánh dấu | Gốc cảnh báo | Khả năng ảnh hưởng trong repo hiện tại |
+|---|---|---|
+| @opentelemetry/core | GHSA-8988-4f7v-96qf | Baggage header quá lớn có thể tiêu tốn bộ nhớ khi dùng propagator; nằm dev tree, callable không nhận/parse baggage trong code Auth3 |
+| @google-cloud/pubsub | Kéo @opentelemetry/core | Nhánh CLI; Auth3 không dùng Pub/Sub production |
+| glob | GHSA-3g3m-2fjr-6pw4 + minimatch | DoS CPU/I/O khi glob cây/pattern không tin cậy và AbortSignal không dừng traversal; tooling CLI/đóng gói, không phải đầu vào callable |
+| minimatch | GHSA-g3hv-75wg-m249 | Amplification pattern gây CPU/memory DoS; chưa xác định đường từ request Auth3 tới glob pattern |
+| readdir-glob | Kéo minimatch | Lan theo archiver; rủi ro CLI/CI với cây đầu vào không tin cậy |
+| superstatic | Kéo minimatch | Nhánh tooling static hosting; task không chạy hosting emulator |
+| archiver-utils | Kéo glob | Nhánh đóng gói CLI, không nằm dependencies runtime khai báo |
+| archiver | Kéo archiver-utils/readdir-glob/zip-stream | Nhánh CLI/CI, cần tránh build/deploy nội dung không tin cậy với credentials |
+| zip-stream | Kéo archiver-utils | Cùng nhánh đóng gói, không phải lỗi riêng mới |
+| exegesis | Kéo glob | Tooling OpenAPI; không được code callable Auth3 import |
+| uuid | GHSA-w5hq-g745-h8pq | Advisory áp dụng API v3/v5/v6 khi có buf/offset; nhánh gaxios dùng uuid.v4() không truyền buffer |
+| gaxios (bản dev dưới firebase-tools) | Kéo uuid | `functions/node_modules/firebase-tools/node_modules/gaxios/build/src/gaxios.js:417` gọi v4(); chưa xác định exploit qua nhánh này |
+| firebase-tools | Tổng hợp các nhánh trên | Tool chạy local/CI, không deploy vào runtime khi omit dev; vẫn cần theo dõi upstream, không coi moderate là vô hại |
+
+Môi trường Emulator chỉ bind127.0.0.1; không expose cổng ra Internet, không deploy/mở hosting trong lần kiểm định.
+Cần theo dõi bản vá tương thích ở upstream; không ép minimatch major mới vào dependency cũ, không audit fix --force
+hay downgrade Firebase SDK/CLI để làm mất cảnh báo bằng cách phá compatibility. Không có bằng chứng 13 mục này
+đang ảnh hưởng runtime production Auth3; vẫn có rủi ro tooling/CI nếu nhập repository/pattern/header không tin cậy.
+
+Nguồn advisory đã kiểm tra:
+[OpenTelemetry](https://github.com/open-telemetry/opentelemetry-js/security/advisories/GHSA-8988-4f7v-96qf),
+[UUID](https://github.com/uuidjs/uuid/security/advisories/GHSA-w5hq-g745-h8pq),
+[minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249),
+[glob](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
+
+## Những file được sửa thêm trong lần kiểm định này
+
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailScreen.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3FlowUiTest.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/AuthProfileFlowUiTest.kt`
+- `functions/index.cjs`
+- `functions/src/policy.cjs`
+- `functions/test/auth3.emulator.test.cjs`
+- `docs/AUTH_PROFILE_STATUS.md`
+- `docs/AUTH3_FIREBASE_SETUP.md`
+
+Tổng inventory hiện tại: **65 file task** = 64 file triển khai trước + AuthProfileFlowUiTest.kt được bổ sung
+thao tác Back. Không thêm file production mới, không đụng .idea/integration_backups hoặc dữ liệu người khác.
+
+## Điều kiện trước commit, PR và nghiệm thu production
+
+- Trước commit: review diff đúng phạm vi, whitelist 65 file task; loại .idea/, integration_backups/, build/,
+  .gradle/, local.properties, node_modules/logs và mọi credentials; diff check/test đạt, tài liệu cùng kết quả.
+  Phiên này không stage/commit/push/merge, index không có file staged.
+- PR phải ghi PARTIAL/BLOCKED trung thực, đính kèm kiểm thử và yêu cầu backend owner review.
+  Không gọi đây là hoàn tất production hoặc tự merge develop/main. Nếu mở draft PR, các blocker phải giữ rõ.
+- Trước nghiệm thu production: cung cấp cấu hình Firebase thật, SHA/OAuth/providers, Password Policy,
+  Enumeration Protection, template; deploy staging Functions/Rules sau phê duyệt; nghiệm thu SDK Android,
+  Profile REST, Google collision, giao email/links, cold start/process death và biometric thiết bị thật.
+- Owner thống nhất uthVerified=false để thu hồi, single-writer cho claims, rollout tài khoản cũ;
+  kiểm tra ID token cũ/revocation. Chưa có cơ chế thu hồi tức thời toàn hệ thống được nghiệm thu.
+- Owner module sự kiện review policy registrations cho phép mọi tài khoản authenticated đọc (được giữ từ remote),
+  đánh giá PII và test tác động trước khi sửa. Không thay chính sách này trong lần kiểm định.
+- Audit cache SDK cũ theo UID; không purge cache chung gây mất dữ liệu module khác. Nguồn học vụ/MSSV,
+  Identity Platform blocking và cấu hình App Check vẫn là việc owner/backend cần quyết định, chưa tự triển khai.
+
+## Inventory đối chiếu 64 file gốc và file kiểm thử bổ sung
+
+Các đường dẫn bên dưới đã được đọc; dòng đầu mối giúp review cấu trúc. Với code SDK/backend phụ thuộc cloud,
+PASS review không thay thế trạng thái BLOCKED production đã nêu. Source usecases/models/VM compile và có test;
+lockfile được parse, tài nguyên VI/EN có108 key Auth/Profile tương ứng. Dòng tài liệu có thể đổi sau cập nhật.
+
+| File | Dòng đầu mối | Loại kiểm tra |
+|---|---|---|
+| `.gitignore` | 1 | tài liệu/resources/ignore |
+| `README.md` | 1 | tài liệu/resources/ignore |
+| `app/build.gradle.kts` | 1 | dependency/config/rules |
+| `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt` | 13 | test/coverage |
+| `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3FlowUiTest.kt` | 22 | test/coverage |
+| `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/AuthProfileFlowUiTest.kt` | 33 | test/coverage |
+| `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/FirebaseAuthErrorMappingTest.kt` | 25 | test/coverage |
+| `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt` | 28 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthSource.kt` | 25 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseProfileRemoteStore.kt` | 17 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepository.kt` | 21 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/model/AuthIdentity.kt` | 4 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/model/StudentProfile.kt` | 4 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/repository/AuthRepository.kt` | 9 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/CheckVerificationUseCase.kt` | 11 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/ManageAuthAccountUseCase.kt` | 6 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/RefreshClaimsUseCase.kt` | 6 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SendVerificationUseCase.kt` | 6 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInUseCase.kt` | 16 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInWithGoogleUseCase.kt` | 13 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignOutUseCase.kt` | 6 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignUpUseCase.kt` | 10 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/domain/validation/LoginValidator.kt` | 4 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthAction.kt` | 3 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt` | 44 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt` | 45 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthUiState.kt` | 6 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt` | 24 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/README.md` | 1 | tài liệu/resources/ignore |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordAction.kt` | 2 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordRoute.kt` | 11 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordScreen.kt` | 29 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordUiState.kt` | 4 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordViewModel.kt` | 17 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailAction.kt` | 3 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailRoute.kt` | 15 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailScreen.kt` | 25 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailUiState.kt` | 5 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailViewModel.kt` | 24 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileScreen.kt` | 49 | SDK/domain/UI/data review + compile |
+| `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileViewModel.kt` | 25 | SDK/domain/UI/data review + compile |
+| `app/src/main/res/values-en/strings.xml` | 1 | tài liệu/resources/ignore |
+| `app/src/main/res/values/strings.xml` | 1 | tài liệu/resources/ignore |
+| `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt` | 15 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepositoryTest.kt` | 15 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt` | 21 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/domain/validation/Auth3ValidatorTest.kt` | 6 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt` | 13 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3UseCaseTest.kt` | 12 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3ViewModelTest.kt` | 23 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/presentation/auth/ForgotPasswordViewModelTest.kt` | 19 | test/coverage |
+| `app/src/test/java/com/giathinh/uthconnect/presentation/auth/VerifyEmailViewModelTest.kt` | 23 | test/coverage |
+| `docs/AUTH3_FIREBASE_SETUP.md` | 1 | tài liệu/resources/ignore |
+| `docs/AUTH_PROFILE_STATUS.md` | 1 | tài liệu/resources/ignore |
+| `docs/REPO_TREE.md` | 109 | tài liệu/resources/ignore |
+| `firebase.json` | 1 | dependency/config/rules |
+| `firestore.rules` | 1 | dependency/config/rules |
+| `functions/index.cjs` | 9 | tài liệu/resources/ignore |
+| `functions/package-lock.json` | 10 | dependency/config/rules |
+| `functions/package.json` | 14 | dependency/config/rules |
+| `functions/src/optional-blocking.cjs` | 7 | tài liệu/resources/ignore |
+| `functions/src/policy.cjs` | 1 | tài liệu/resources/ignore |
+| `functions/test/auth3.emulator.test.cjs` | 56 | test/coverage |
+| `functions/test/baseline.security.test.cjs` | 8 | test/coverage |
+| `gradle/libs.versions.toml` | 1 | dependency/config/rules |
+
+
+<a id="auth3-latest"></a>
+
+# Hoàn thiện phần còn thiếu Auth3-1 — trạng thái mới nhất
+
+**PARTIAL, chưa nghiệm thu staging/production.** Kết quả dưới đây thay thế các mục lịch sử về
+claims writer, registrations và số bài test ở phía trên. Branch feature/auth-phu;
+HEAD vẫn 5efb1f37cc8ca75fed8b861fb0a782aabacd5d5b. Không stage/commit/push/merge/deploy/tạo PR.
+Đã kiểm tra lại README, Design, tài liệu Auth3-1 và toàn bộ file task trong working tree;
+không ghi đè các thay đổi có sẵn của thành viên khác.
+
+## Thực hiện thêm trong lượt này
+
+- Thêm withClaimsLock dùng atomic Firestore create theo UID; verifyUthAccount đọc/kiểm tra Admin record
+  bên trong khóa và giữ claim/role hợp lệ. Các writer hợp tác được serialize; callback đọc lại record
+  trước ghi. Kết quả ghi không xác định giữ khóa để owner đối soát; không tự lấy lại khóa cũ theo TTL.
+- Client map lỗi contention TooManyRequests sang thông báo thử lại, không bỏ qua Firebase gate.
+- Rules registrations chỉ cho owner UTH verified hoặc ORGANIZER/ADMIN verified đọc; chặn student
+  đọc UID khác/list roster, account chưa verify và anonymous. Quyền staff/owner hợp lệ có test tác động.
+- Thêm kiểm thử writer cấp role đồng thời verify; thu hồi false đồng thời verify bằng token cũ;
+  lock kẹt từ chối writer sau và client không đọc/xóa được lock.
+- Cập nhật README M0, cây repo, hướng dẫn Console và tài liệu staging có checklist thật,
+  quy trình đối soát lock, MSSV/cache, nội dung PR và hướng dẫn GIF. Chưa tạo PR hoặc ghi GIF giả.
+
+## Checklist theo yêu cầu mới
+
+| Mục | Trạng thái | Kết quả |
+|---|---|---|
+| I. Git/tài liệu/checklist/bảo toàn | PASS | Đúng branch, 67 file task; .idea/integration_backups giữ nguyên; index chưa stage |
+| II. Console staging | BLOCKED | CLI login:list JSON có authenticatedAccounts=0; thiếu project staging được chọn, JSON Android; không xác nhận được providers/billing/SHA/OAuth/templates |
+| III. UID/Admin/domain/verified/claims/idempotency | PASS local | Giữ test trước, thêm khóa hợp tác và kiểm thử đồng thời; không tự cấp MSSV/role đặc quyền |
+| III. Mọi writer backend/nhất quán trên cloud | PARTIAL | Phải đưa writer ngoài repo vào helper và giới hạn IAM; không có CAS để chặn Admin writer bỏ qua khóa |
+| IV. beforeUserCreated | PARTIAL/BLOCKED | Handler domain-only đã chuẩn bị, chưa export; không xác nhận Identity Platform/Blaze và chưa deploy/test trigger thật |
+| V. Rules hồ sơ/claims/metadata/registrations | PASS local | Chặn hồ sơ UID khác/tự sửa quyền và vé người khác; giữ staff access; staging deployment BLOCKED |
+| V. Toàn bộ policy module khác | PARTIAL | Không tự đổi orgIds/attendance/checkIn vì chưa có hợp đồng backend; cần owner review trước production |
+| VI. Auth thật/Google/email/reset/collision/link | BLOCKED | Chưa có môi trường/tài khoản thật; app xử lý collision, không tự link theo email; chưa có luồng link có consent/reauth để nhận PASS chức năng link |
+| VII. Profile/session/logout/biometric | PASS local, PARTIAL thật | Kiểm thử gate/Back/restore còn đạt; Firestore REST thật, token cũ, cache legacy và phần cứng còn cần nghiệm thu |
+| VIII. MSSV | PASS ranh giới, BLOCKED dữ liệu | Auth3-1 là email trường; không có API học vụ UTH hoặc mapping email→MSSV; studentId null, client không tự xác minh |
+| IX. Hồi quy | PASS | Build/136 Unit/28 Android/28 Emulator/diff check; không sửa Home/Schedule/Utilities/toolchain |
+| X. Tài liệu/staging/PR/GIF | PASS chuẩn bị | AUTH3_STAGING_ACCEPTANCE.md; không tạo PR trước nghiệm thu |
+| XI. Báo cáo | PASS | Có evidence, file inventory, giới hạn và điều kiện bàn giao |
+
+Không còn FAIL đã xác minh trong các kiểm thử Auth3-1 cuối lượt. Không chuyển BLOCKED thành PASS
+vì test dùng Emulator/fake. Phần liên kết tài khoản có consent và nghiệm thu provider thật chưa đạt.
+
+## Bằng chứng quan trọng
+
+- `functions/src/claims-writer.cjs:7`
+- `functions/index.cjs:16`
+- `firestore.rules:60`
+- `functions/test/auth3.emulator.test.cjs:216`
+- `functions/test/auth3.emulator.test.cjs:230`
+- `functions/test/auth3.emulator.test.cjs:246`
+- `functions/test/auth3.emulator.test.cjs:259`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt:242`
+
+## Kết quả thực tế
+
+- Lệnh Gradle cuối: gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest.
+  **BUILD SUCCESSFUL**, 136 Unit Test và 28 Android Test, 0 failure/error/skip trong XML.
+  Dùng GRADLE_USER_HOME trỏ cache hiện có của người dùng, không đổi Gradle Wrapper.
+- AVD Medium_Phone_API_37.0 được khởi động ẩn, không wipe; emulator-5554 chạy toàn bộ UI test.
+- Firebase Emulator cuối: **28/28 PASS, 0 fail/skip**, CLI exit0, project demo-uth-auth3,
+  Functions/Auth/Firestore localhost; không truy cập dữ liệu staging/production.
+- Lượt đầu Gradle không thấy device; đã khởi động AVD và chạy lại. Lượt đầu Emulator không load
+  Functions trong discovery timeout10s; giữ nguyên assertions, chạy lại với FUNCTIONS_DISCOVERY_TIMEOUT=60
+  đã đạt. Không lấy các lượt lỗi đó làm PASS hoặc bỏ qua bài test.
+- Node portable hiện chỉ có node.exe, npm CLI không còn trong runtime folder. Đã audit mới qua
+  npm registry bulk advisory API với chính package-lock và semver: bốn advisory gốc moderate ở
+  @opentelemetry/core, glob, minimatch, uuid; mọi node ảnh hưởng đều dev=true; **runtime affected nodes=0**.
+  Số 13 package cảnh báo lan theo dependency là kết quả npm audit của lượt kiểm định trước;
+  không nhận là đã chạy npm audit CLI mới trong lượt này. Package-lock/dependency versions không thay đổi.
+- Không nâng AGP/Kotlin/SDK/Hilt/Firebase BoM/Gradle. git diff --check PASS (chỉ thông báo LF→CRLF).
+- XML: app/build/test-results/testDebugUnitTest/ và app/build/outputs/androidTest-results/connected/debug/.
+
+## File sửa thêm trong lượt này
+
+- `functions/src/claims-writer.cjs`
+- `functions/index.cjs`
+- `functions/test/auth3.emulator.test.cjs`
+- `firestore.rules`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt`
+- `README.md`
+- `docs/REPO_TREE.md`
+- `docs/AUTH3_FIREBASE_SETUP.md`
+- `docs/AUTH3_STAGING_ACCEPTANCE.md`
+- `docs/AUTH_PROFILE_STATUS.md`
+
+## Phần còn cần người dùng/backend/UTH
+
+1. Owner đăng nhập Firebase CLI/Console, chọn hoặc tạo staging riêng và cung cấp project ID/config Android;
+   bật providers/Enumeration Protection/Password Policy, xác nhận OAuth consent/Web client/SHA,
+   templates tiếng Việt và billing/IAM/Identity Platform. Không tạo credentials giả.
+2. Phê duyệt deploy staging rồi chạy đúng phạm vi theo AUTH3_STAGING_ACCEPTANCE.md;
+   chưa có quyền/phê duyệt này nên không deploy. Tất cả kiểm thử Firebase staging hiện BLOCKED.
+3. Backend owner đưa mọi claims writer vào khóa, review IAM, giám sát và xử lý lock kẹt.
+   Writer bỏ qua helper có thể vẫn ghi đè; Auth token cũ không mất hiệu lực tức thì chỉ nhờ lock/Rules.
+4. Cache SDK từ bản cũ dùng chung chưa có thông tin phiên bản/UID/retention để purge an toàn;
+   không xóa cache chung hoặc dữ liệu demo của nhóm. Profile mới không ghi cache đĩa riêng.
+5. UTH cần cung cấp API, quyền và schema học vụ nếu muốn xác minh MSSV thực tế; không suy luận từ email.
+6. Owner sự kiện cần xử lý mâu thuẫn có sẵn: FirestoreEventRepository.registerEvent/cancelRegistration
+   cập nhật registeredCount từ client, trong khi Rules chỉ cho staff sửa events. Không mở quyền sửa event
+   cho STUDENT để che lỗi tích hợp. Policy orgIds/attendance rộng hơn README cũng cần review riêng.
+7. Chạy ma trận Firebase thật, Google collision/reset/verification links và thiết bị biometric;
+   nghiệm thu Profile REST/process death/refresh token và các module trước tạo PR theo yêu cầu.
+
+Auth3-1 chỉ hoàn thành hoàn toàn khi các mục BLOCKED có evidence thật, policy backend được owner phê duyệt,
+không còn thất bại chức năng yêu cầu, và không còn rủi ro quyền/cache chưa được chấp nhận.
+
+## Danh sách sẵn sàng review trước commit thủ công
+
+**67 file task** dưới đây sẵn sàng review/stage theo phạm vi; không đồng nghĩa đã nghiệm thu cloud hoặc
+được phép deploy. Loại .idea/, integration_backups/, build/, .gradle/, local.properties, credentials,
+node_modules và emulator logs. Chưa stage/commit file nào. Hai file mới từ baseline65 là claims-writer.cjs
+và AUTH3_STAGING_ACCEPTANCE.md. Danh sách thay thế inventory cũ cho lượt này.
+
+- `.gitignore`
+- `README.md`
+- `app/build.gradle.kts`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/Auth3FlowUiTest.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/AuthProfileFlowUiTest.kt`
+- `app/src/androidTest/java/com/giathinh/uthconnect/presentation/auth/FirebaseAuthErrorMappingTest.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseAuthSource.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/FirebaseProfileRemoteStore.kt`
+- `app/src/main/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/model/AuthIdentity.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/model/StudentProfile.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/repository/AuthRepository.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/CheckVerificationUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/ManageAuthAccountUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/RefreshClaimsUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SendVerificationUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignInWithGoogleUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignOutUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/SignUpUseCase.kt`
+- `app/src/main/java/com/giathinh/uthconnect/domain/validation/LoginValidator.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/README.md`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/forgotpassword/ForgotPasswordViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailAction.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailRoute.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailUiState.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/verifyemail/VerifyEmailViewModel.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileScreen.kt`
+- `app/src/main/java/com/giathinh/uthconnect/presentation/profile/ProfileViewModel.kt`
+- `app/src/main/res/values-en/strings.xml`
+- `app/src/main/res/values/strings.xml`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuth3RepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/FirebaseAuthRepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/data/repository/PreferencesSessionRepositoryTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/domain/validation/Auth3ValidatorTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3Fakes.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3UseCaseTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/Auth3ViewModelTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/ForgotPasswordViewModelTest.kt`
+- `app/src/test/java/com/giathinh/uthconnect/presentation/auth/VerifyEmailViewModelTest.kt`
+- `docs/AUTH3_FIREBASE_SETUP.md`
+- `docs/AUTH3_STAGING_ACCEPTANCE.md`
+- `docs/AUTH_PROFILE_STATUS.md`
+- `docs/REPO_TREE.md`
+- `firebase.json`
+- `firestore.rules`
+- `functions/index.cjs`
+- `functions/package-lock.json`
+- `functions/package.json`
+- `functions/src/claims-writer.cjs`
+- `functions/src/optional-blocking.cjs`
+- `functions/src/policy.cjs`
+- `functions/test/auth3.emulator.test.cjs`
+- `functions/test/baseline.security.test.cjs`
 - `gradle/libs.versions.toml`

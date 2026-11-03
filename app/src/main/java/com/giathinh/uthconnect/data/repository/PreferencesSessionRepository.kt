@@ -8,9 +8,11 @@ import com.giathinh.uthconnect.domain.repository.StudentSession
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -32,7 +34,12 @@ class PreferencesSessionRepository @Inject constructor(
             try {
                 val grants = preferences.read()
                 if (grants.rememberedId == null && grants.biometricId == null) {
-                    auth.signOut()
+                    val identity = auth.currentIdentity().getOrThrow()
+                    if (identity == null) auth.signOut()
+                    else if (identity.emailVerified) {
+                        val pending = auth.observePendingIdentity().first()
+                        if (pending == null) auth.signOut()
+                    }
                     current.value = StudentSession(isRestoring = false)
                 } else {
                     val profile = auth.restoreAuthenticatedProfile().getOrThrow()
@@ -75,12 +82,27 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
-    override suspend fun monitorAuthChanges() {
-        auth.authChanges.collect { signedIn ->
-            if (!signedIn) mutex.withLock {
-                if (current.value.profile != null || current.value.biometricStudentId != null) {
-                    current.value = StudentSession(isRestoring = false)
-                    restored = false
+    override suspend fun monitorAuthChanges() = kotlinx.coroutines.coroutineScope {
+        launch {
+            auth.authChanges.collect { signedIn ->
+                if (!signedIn) mutex.withLock {
+                    if (current.value.profile != null || current.value.biometricStudentId != null) {
+                        current.value = StudentSession(isRestoring = false)
+                        restored = false
+                    }
+                }
+            }
+        }
+        auth.observeProfileChanges().collect { profile ->
+            mutex.withLock {
+                val active = current.value.profile
+                // Token refresh không được tự mở khóa cổng biometric ở cold start.
+                if (active != null) {
+                    if (profile != null && profile.authUid == active.authUid) current.value = current.value.copy(profile = profile)
+                    else {
+                        current.value = StudentSession(isRestoring = false, failure = SessionFailure.RestoreFailed)
+                        restored = false
+                    }
                 }
             }
         }
@@ -125,7 +147,7 @@ class PreferencesSessionRepository @Inject constructor(
             current.value = current.value.copy(profile = profile, failure = null)
         }
     }
-    override suspend fun signOut() {
+    override suspend fun signOut() = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
         mutex.withLock {
             auth.signOut()
             // Đĩa lỗi vẫn phải thu hồi credential Firebase và profile trong bộ nhớ.

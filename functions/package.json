@@ -1,0 +1,29 @@
+{
+  "name": "uth-connect-auth3-functions",
+  "private": true,
+  "version": "1.0.0",
+  "main": "index.cjs",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/auth3.emulator.test.cjs",
+    "test:baseline": "node --test test/baseline.security.test.cjs",
+    "emulators:test": "firebase emulators:exec --config ../firebase.json --project demo-uth-auth3 --only auth,firestore,functions \"npm test\""
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.34.2"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7",
+    "rimraf": {
+      "glob": "^14.0.3"
+    }
+  }
+}

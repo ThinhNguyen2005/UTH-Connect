@@ -181,7 +181,7 @@
 
     <!-- Auth/Profile V3 -->
     <string name="auth_verified_demo_badge">Verified (demo only, not UTH)</string>
-    <string name="auth_unverified_badge">Not UTH verified</string>
+    <string name="auth_unverified_badge">Not UTH email verified</string>
     <string name="auth_organizer_demo_badge">Organizer (demo)</string>
     <string name="auth_logout_retry">Retry</string>
     <!-- Auth/Profile V3.1: login retry -->
@@ -244,7 +244,22 @@
     <string name="auth_restore_retry">Retry session restore</string>
     <string name="auth_service_notice">Sign in with your provisioned and verified university account.</string>
     <string name="auth_profile_source">Student profile</string>
-    <string name="auth_verified_badge">UTH verified</string>
+    <string name="auth_verified_badge">UTH email verified</string>
     <string name="auth_organizer_badge">Organizer</string>
     <string name="auth_admin_badge">Administrator</string>
+    <string name="auth3_signup">Sign up</string>
+    <string name="auth3_email">Email @ut.edu.vn</string>
+    <string name="auth3_google">Sign in with Google</string>
+    <string name="auth3_domain">Only an email belonging to the exact @ut.edu.vn domain is allowed.</string>
+    <string name="auth3_email_in_use">Unable to register this email. Try signing in or resetting your password.</string>
+    <string name="auth3_collision">This account uses another sign-in method. Use that method; accounts are never linked automatically.</string>
+    <string name="auth3_verify_title">Verify university email</string>
+    <string name="auth3_verify_body">Check your inbox and spam folder, open the verification link, then return here. Access requires server verification of your email and claims.</string>
+    <string name="auth3_not_verified">Email is not verified yet. Open the link in the message and retry.</string>
+    <string name="auth3_verification_sent">Verification email sent.</string>
+    <string name="auth3_check_verified">I have verified – check again</string>
+    <string name="auth3_resend">Resend verification email</string>
+    <string name="auth3_cooldown">Resend in %1$d seconds</string>
+    <string name="auth3_student_id_pending">Student ID not yet verified</string>
+    <string name="auth3_account_heading">UTH account</string>
 </resources>

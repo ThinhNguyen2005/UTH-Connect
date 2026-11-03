@@ -1,6 +1,11 @@
 package com.giathinh.uthconnect.presentation.auth
 
 sealed interface AuthAction {
+    data class ChangeMode(val signUp: Boolean) : AuthAction
+    data object RequestGoogle : AuthAction
+    data class GoogleTokenReceived(val token: String) : AuthAction
+    data class GoogleFailed(val configuration: Boolean = false) : AuthAction
+    data object GoogleCancelled : AuthAction
     data class IdentifierChanged(val value: String) : AuthAction
     data class PasswordChanged(val value: String) : AuthAction
     data class RememberChanged(val value: Boolean) : AuthAction

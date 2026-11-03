@@ -90,6 +90,8 @@ class AuthProfileFlowUiTest {
         rule.onNodeWithTag("auth_identifier").assertExists()
         rule.onNodeWithTag("profile_name").assertDoesNotExist()
         rule.runOnIdle { assertNull(backend.session.value.profile) }
+        androidx.test.espresso.Espresso.pressBackUnconditionally()
+        assertNull(backend.session.value.profile)
     }
 
     @Test fun invalidPasswordKeepsProfileBehindAuthGate() {

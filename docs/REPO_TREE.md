@@ -117,7 +117,29 @@ test/presentation/lostfound/ LostFoundViewModelTest.kt
 - Có README riêng trong `presentation/auth/`, `presentation/profile/`; Android AuthProfileLocaleUiTest
   kiểm tra VI/EN với font scale 200% mà không đổi locale thiết bị.
 
+### Auth3-1 — 03/11/2026 (mở rộng được yêu cầu trên feature/auth-phu)
+
+```text
+presentation/auth/verifyemail/     VerifyEmail{Action,UiState,ViewModel,Route,Screen}.kt
+presentation/auth/forgotpassword/  ForgotPassword{Action,UiState,ViewModel,Route,Screen}.kt
+domain/model/AuthIdentity.kt
+domain/usecase/                    SignUp, SignInWithGoogle, ManageAuthAccount,
+                                   SendVerification, CheckVerification, SignOut, RefreshClaims (UseCase.kt)
+data/repository/FirebaseProfileRemoteStore.kt
+functions/                         index.cjs, src/{policy,optional-blocking}.cjs,
+                                   test/{auth3.emulator,baseline.security}.test.cjs,
+                                   package.json, package-lock.json
+firebase.json                      cấu hình Emulator/Functions, không chọn cloud project
+```
+
+Credential Manager, Google ID và Firebase Functions là dependency trực tiếp Auth3-1.
+Unit/UI test mới cùng package auth/repository trong test source sets; fake chỉ trong test.
+Không đổi các module/tab khác hoặc toolchain. Quyền owner backend production/deploy giữ nguyên.
+
 ## 3. Cây đích: mỗi người một nhánh
+
+Auth3-1 bổ sung `functions/src/claims-writer.cjs` (khóa backend theo UID) và
+`docs/AUTH3_STAGING_ACCEPTANCE.md` (Console/deploy/test thật/PR/GIF), thuộc phạm vi owner Auth/backend.
 
 Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
 
@@ -125,7 +147,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 |---|---|---|---|---|---|
 | **Anh** | `feature/events-qr-checkin-anh` | `events/` (5 file MVVM) · `tickets/` · `scanner/` · `home/` (nâng HomeScreen thành slice thật) | `model/Event.kt` `model/Registration.kt` `model/Ticket.kt` · `repository/EventRepository.kt` `repository/AttendanceRepository.kt` · `usecase/GetEventsUseCase.kt` `CheckInUseCase.kt` … | `repository/` `remote/firestore/EventFirestoreRepository.kt` · `di/EventsDataModule.kt` | `presentation/events/` `presentation/tickets/` `presentation/scanner/` |
 | **Bạn B** | `feature/checkin-<tên>` | gộp vào nhánh events (QR + máy quét là một luồng) — nếu tách người thì tạo `presentation/scanner/` và **thỏa thuận boundary với Anh trước**, không tự chia | `model/Attendance.kt` | `di/CheckInDataModule.kt` | `presentation/scanner/` |
-| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` (2 × 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `FirebaseAuthRepository`, `FirebaseAuthSource`, `PreferencesSessionRepository`, `SessionPreferences`, `AuthDataModule` (demo cũ không bind) | Auth/Profile unit + UI tests |
+| **Bạn C** | `feature/auth-phu` | `auth/` · `profile/` và auth/{verifyemail,forgotpassword}/ (mỗi slice 5 file) | `StudentProfile`, `AuthRepository`, `SessionRepository`, `StudentContactRepository`, `ChangePasswordUseCase`, `UpdateStudentContactUseCase`, validators | `FirebaseAuthRepository`, `FirebaseAuthSource`, `PreferencesSessionRepository`, `SessionPreferences`, `AuthDataModule` (demo cũ không bind) | Auth/Profile unit + UI tests |
 | **Bạn D** | `feature/timetable-<tên>` | `schedule/` | `model/Course.kt` `model/Deadline.kt` `model/StudyGroup.kt` · `repository/TimetableRepository.kt` `repository/DeadlineRepository.kt` · `usecase/GetWeekScheduleUseCase.kt` `ScheduleReminderUseCase.kt` | `local/room/…` (Room) · `di/TimetableDataModule.kt` | `presentation/schedule/` |
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Anh Phú** | `feature/auth-phu` | `auth/` · `profile/` | model và hợp đồng auth/session | repository và DI auth/session | auth · profile |
@@ -256,3 +278,6 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | v1.1 | 29/10/2026 | **Navigation chuyển type-safe.** `UthDestination.kt`: 4 destination thành `@Serializable object` (`HomeDestination`…), enum `UthDestination` giữ nhãn/icon + `routeClass`; `fromRoute(String)` → `from(NavDestination)` dùng `hasRoute`. `UthApp.kt`: `composable<T>`, `navigate(T)`, `popUpTo(T)`. Build: thêm plugin `org.jetbrains.kotlin.plugin.serialization` (khớp Kotlin 2.2.10) + `kotlinx-serialization-json 1.9.0`; `app/build.gradle.kts` và gốc bật plugin. Không thêm/bớt package nào. `:app:assembleDebug` + `:app:testDebugUnitTest` xanh (5 test). |
 | v1.0 | 29/10/2026 | **Chuyển DI sang Hilt.** Xoá `core/di/AppContainer.kt` + `core/di/LocalAppContainer` (không còn `ProvidableCompositionLocal` mang dependency), xoá `presentation/utilities/UtilitiesViewModelFactory.kt` → module còn **5 file** thay vì 6. Thêm `UTHConnectApplication.kt` (`@HiltAndroidApp`), `data/di/UtilitiesDataModule.kt` (`@Binds`), manifest khai `android:name`. `MainActivity` gắn `@AndroidEntryPoint`; `UtilitiesRoute` dùng `hiltViewModel()` (artifact `androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0`). Build: KSP 2.3.12 + Hilt 2.60.1 trên AGP 9.3.3 built-in Kotlin — `:app:assembleDebug` + `:app:testDebugUnitTest` xanh. |
 | trước v1.0 | 28/10/2026 | Dựng cây Clean Architecture `core/ · data/ · domain/ · presentation/`; xoá `ui/theme/` của template Android Studio (chuyển vào `core/designsystem/theme/`); thêm slice MVVM mẫu ở `presentation/utilities/` + `test/testing/MainDispatcherRule.kt`. |
+
+- 03/11/2026 — Auth3-1: mở rộng cây mục 2 và phạm vi owner auth mục 3; thêm Credential Manager/Functions, model/usecases, backend và Emulator tests theo yêu cầu task. Backend deploy vẫn do owner phê duyệt.
+- 03/11/2026 — Hoàn thiện Auth3-1: thêm claims-writer backend và tài liệu staging; registrations private theo owner/staff, không đổi cây module khác.

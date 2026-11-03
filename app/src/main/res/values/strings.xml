@@ -248,7 +248,22 @@
     <string name="auth_restore_retry">Thử khôi phục phiên lại</string>
     <string name="auth_service_notice">Đăng nhập bằng tài khoản trường đã được cấp và xác minh.</string>
     <string name="auth_profile_source">Hồ sơ sinh viên</string>
-    <string name="auth_verified_badge">Đã xác minh UTH</string>
+    <string name="auth_verified_badge">Đã xác thực email UTH</string>
     <string name="auth_organizer_badge">Ban tổ chức</string>
     <string name="auth_admin_badge">Quản trị viên</string>
+    <string name="auth3_signup">Đăng ký</string>
+    <string name="auth3_email">Email @ut.edu.vn</string>
+    <string name="auth3_google">Đăng nhập bằng Google</string>
+    <string name="auth3_domain">Chỉ chấp nhận địa chỉ email thuộc đúng @ut.edu.vn.</string>
+    <string name="auth3_email_in_use">Không thể đăng ký với email này. Hãy đăng nhập hoặc đặt lại mật khẩu.</string>
+    <string name="auth3_collision">Tài khoản đã dùng phương thức đăng nhập khác. Hãy dùng phương thức trước đó; ứng dụng không tự liên kết tài khoản.</string>
+    <string name="auth3_verify_title">Xác thực email trường</string>
+    <string name="auth3_verify_body">Kiểm tra hộp thư và thư rác, mở liên kết xác thực rồi quay lại đây. Chỉ sau khi máy chủ xác minh email và quyền, bạn mới có thể vào ứng dụng.</string>
+    <string name="auth3_not_verified">Email chưa được xác thực. Hãy mở liên kết trong thư rồi thử lại.</string>
+    <string name="auth3_verification_sent">Đã gửi email xác thực.</string>
+    <string name="auth3_check_verified">Tôi đã xác thực – kiểm tra lại</string>
+    <string name="auth3_resend">Gửi lại email xác thực</string>
+    <string name="auth3_cooldown">Gửi lại sau %1$d giây</string>
+    <string name="auth3_student_id_pending">Chưa được đối chiếu MSSV</string>
+    <string name="auth3_account_heading">Tài khoản UTH</string>
 </resources>

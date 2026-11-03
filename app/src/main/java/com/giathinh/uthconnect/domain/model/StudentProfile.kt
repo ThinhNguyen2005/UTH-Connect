@@ -17,5 +17,6 @@ data class StudentProfile(
     val authUid: String = "",
 ) {
     val sessionIdentity: String get() = authUid.ifBlank { studentId }
-    init { require(studentId.isNotBlank()) { "studentId is required" } }
+    // Tài khoản mới có UID nhưng chưa có MSSV được nhà trường đối chiếu.
+    init { require(studentId.isNotBlank() || authUid.isNotBlank()) { "studentId or authUid is required" } }
 }

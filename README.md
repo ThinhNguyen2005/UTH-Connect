@@ -601,7 +601,9 @@ docs/                   # ADR, thiết kế UI, test plan
 > Firebase BoM 33.10.0/Google Services 4.4.2 và Storage được giữ từ remote; Auth không dùng demo fallback.
 
 
-**Auth/Profile trên `feature/auth-phu`:** có repository Firebase Auth/Firestore, session theo UID,
+**Auth3-1 trên `feature/auth-phu`:** đã bổ sung đăng ký email @ut.edu.vn, Google Credential Manager, Verify Email, callable/claims và Rules kiểm thử local; chưa nghiệm thu Firebase production (thiếu cấu hình). Xem [hướng dẫn](docs/AUTH3_FIREBASE_SETUP.md).
+
+**Auth/Profile kế thừa trên `feature/auth-phu`:** có repository Firebase Auth/Firestore, session theo UID,
 reset email, đổi mật khẩu và cập nhật liên hệ. Cần `app/google-services.json`, bật Email/Password,
 cấp hồ sơ và claims từ backend. Không dùng demo để xác thực ứng dụng. MSSV chờ hợp đồng ánh xạ;
 dùng email trường khi cấu hình đầy đủ. Xem [báo cáo Auth/Profile](docs/AUTH_PROFILE_STATUS.md)
@@ -707,7 +709,7 @@ Lộ trình này ánh xạ các giai đoạn trong `docs/Design.md` mục 3 sang
 
 | Mốc | Tuần | Kết quả cần đạt |
 |---|---|---|
-| **M0** | 1 | ✅ **Đã xong:** cấu trúc package Clean Architecture (`core/ · data/ · domain/ · presentation/`), design token Navy/Gold theo `docs/Design-system.md` (tắt `dynamicColor`), component dùng chung, khung navigation 4 tab, **sườn MVVM + slice mẫu Tiện ích** (`MainDispatcherRule` + 4 test ViewModel), **DI bằng Hilt + KSP** (đã xoá `AppContainer` và toàn bộ `ViewModelFactory`), `docs/CODING_STANDARDS.md`, `docs/REPO_TREE.md` (cây thư mục + phân quyền sở hữu), nhánh `develop` + `docs/GIT_WORKFLOW.md`. ⏳ **Còn lại:** CI (build + test) + ktlint/spotless, `hilt-android-testing` cho Compose UI test, login + verify email/MSSV + custom claims. Tách multi-module **chưa** làm (mục 7.2) — đang ở single-module. |
+| **M0** | 1 | ✅ **Đã xong:** cấu trúc package Clean Architecture (`core/ · data/ · domain/ · presentation/`), design token Navy/Gold theo `docs/Design-system.md` (tắt `dynamicColor`), component dùng chung, khung navigation 4 tab, **sườn MVVM + slice mẫu Tiện ích** (`MainDispatcherRule` + 4 test ViewModel), **DI bằng Hilt + KSP** (đã xoá `AppContainer` và toàn bộ `ViewModelFactory`), `docs/CODING_STANDARDS.md`, `docs/REPO_TREE.md` (cây thư mục + phân quyền sở hữu), nhánh `develop` + `docs/GIT_WORKFLOW.md`. ⏳ **Còn lại:** CI (build + test) + ktlint/spotless, `hilt-android-testing` cho Compose UI test; nghiệm thu Firebase thật/OAuth/email và deploy backend đã duyệt. Auth3-1 đã có mã đăng ký/Google/verify/claims, khóa writer theo UID, Rules riêng tư và Emulator tests; đã chuẩn bị [quy trình staging/kiểm thử thật/PR](docs/AUTH3_STAGING_ACCEPTANCE.md); xác minh MSSV cần nguồn học vụ, chưa hoàn tất. Xem [trạng thái Auth3-1](docs/AUTH_PROFILE_STATUS.md) và [cấu hình Firebase](docs/AUTH3_FIREBASE_SETUP.md). Tách multi-module **chưa** làm (mục 7.2) — đang ở single-module. |
 | **M1** | 2–4 | 3.1 tạo/đăng ký sự kiện, `getTicketToken` + `TicketQr` QR động, callable `checkIn` chống trùng |
 | **M2** | 5–6 | `AttendanceScanner` hoàn thiện (haptic/queue khi mất mạng), `EventStats` + export CSV, Admin Dashboard duyệt Organizer |
 | **M3** | 7–8 | Pilot 1 CLB + 60 sinh viên chạy **một sự kiện thật**; sửa lỗi bảo mật/hiệu năng ghi nhận từ pilot |

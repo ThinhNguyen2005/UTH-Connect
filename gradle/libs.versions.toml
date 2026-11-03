@@ -1,4 +1,6 @@
 [versions]
+credentials = "1.5.0"
+googleId = "1.1.1"
 agp = "8.13.0"
 coreKtx = "1.18.0"
 junit = "4.13.2"
@@ -30,6 +32,10 @@ googleServices = "4.4.2"
 firebaseBom = "33.10.0"
 
 [libraries]
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+google-identity = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
+firebase-functions = { module = "com.google.firebase:firebase-functions" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

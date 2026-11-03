@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -56,8 +58,16 @@ fun AuthScreen(
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
         Text(stringResource(R.string.auth_subtitle), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
+        PrimaryTabRow(selectedTabIndex = if (uiState.isSignUp) 1 else 0) {
+            Tab(selected = !uiState.isSignUp, enabled = enabled,
+                onClick = { onAction(AuthAction.ChangeMode(false)) }, modifier = Modifier.testTag("auth_tab_login"),
+                text = { Text(stringResource(R.string.auth_title)) })
+            Tab(selected = uiState.isSignUp, enabled = enabled,
+                onClick = { onAction(AuthAction.ChangeMode(true)) }, modifier = Modifier.testTag("auth_tab_signup"),
+                text = { Text(stringResource(R.string.auth3_signup)) })
+        }
         UthCard(modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.auth_title), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.auth3_account_heading), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(UthDimens.Spacing.Lg))
             OutlinedTextField(
                 value = uiState.identifier,
@@ -65,12 +75,12 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth().testTag("auth_identifier"),
                 enabled = enabled,
                 singleLine = true,
-                label = { Text(stringResource(R.string.auth_identifier_label)) },
+                label = { Text(stringResource(R.string.auth3_email)) },
                 isError = uiState.identifierError != null,
                 supportingText = {
                     uiState.identifierError?.let { Text(stringResource(identifierErrorRes(it))) }
                 },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
             OutlinedTextField(
@@ -89,11 +99,12 @@ fun AuthScreen(
                 },
                 isError = uiState.passwordError != null,
                 supportingText = {
-                    uiState.passwordError?.let { Text(stringResource(R.string.auth_required)) }
+                    uiState.passwordError?.let { Text(stringResource(identifierErrorRes(it))) }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onAction(AuthAction.Submit) }),
             )
+            if (uiState.isSignUp) Text(stringResource(R.string.auth_password_policy), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = uiState.rememberMe,
@@ -101,7 +112,7 @@ fun AuthScreen(
                     enabled = enabled)
                 Text(stringResource(R.string.auth_remember), modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { onAction(AuthAction.ForgotPassword) }) {
+                TextButton(onClick = { onAction(AuthAction.ForgotPassword) }, modifier = Modifier.testTag("auth_forgot_password")) {
                     Text(stringResource(R.string.auth_forgot))
                 }
             }
@@ -129,13 +140,16 @@ fun AuthScreen(
             }
             Spacer(Modifier.height(UthDimens.Spacing.Lg))
             UthPrimaryButton(
-                text = stringResource(R.string.auth_sign_in),
+                text = stringResource(if (uiState.isSignUp) R.string.auth3_signup else R.string.auth_sign_in),
                 onClick = { onAction(AuthAction.Submit) },
                 enabled = enabled,
                 loading = uiState.isSigningIn,
                 modifier = Modifier.fillMaxWidth().testTag("auth_sign_in"),
             )
         }
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
+        OutlinedButton(onClick = { onAction(AuthAction.RequestGoogle) }, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().testTag("auth_google")) { Text(stringResource(R.string.auth3_google)) }
         if (uiState.biometricAvailable) {
             Spacer(Modifier.height(UthDimens.Spacing.Md))
             OutlinedButton(
@@ -181,11 +195,18 @@ fun AuthScreen(
 }
 
 private fun identifierErrorRes(error: LoginFieldError) = when (error) {
+    LoginFieldError.DomainNotAllowed -> R.string.auth3_domain
+    LoginFieldError.WeakPassword -> R.string.auth_password_weak
     LoginFieldError.Required -> R.string.auth_required
     LoginFieldError.InvalidIdentifier -> R.string.auth_invalid_identifier
 }
 
 private fun failureRes(failure: AuthFailure) = when (failure) {
+    AuthFailure.DomainNotAllowed -> R.string.auth3_domain
+    AuthFailure.EmailAlreadyInUse -> R.string.auth3_email_in_use
+    AuthFailure.WeakPassword -> R.string.auth_password_weak
+    AuthFailure.AccountCollision -> R.string.auth3_collision
+    AuthFailure.Unknown -> R.string.auth_unexpected
     AuthFailure.InvalidCredentials -> R.string.auth_invalid_credentials
     AuthFailure.Configuration -> R.string.auth_configuration
     AuthFailure.Network -> R.string.auth_network

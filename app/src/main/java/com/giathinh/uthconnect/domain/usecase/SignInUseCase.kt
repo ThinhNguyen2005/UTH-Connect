@@ -25,7 +25,7 @@ class SignInUseCase @Inject constructor(
         if (idError != null || passwordError != null) {
             return SignInResult.InvalidForm(idError, passwordError)
         }
-        return auth.authenticate(identifier.trim(), password).fold(
+        return auth.authenticate(if (identifier.contains('@')) validator.normalizeEmail(identifier) else identifier.trim(), password).fold(
             onSuccess = { student ->
                 if (student == null) SignInResult.InvalidCredentials
                 else {

@@ -8,29 +8,45 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Danh tính UTH chỉ đến từ ID token do Firebase ký và backend cấp claims.
+    function isUthVerified() {
+      return isAuthenticated()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.uthVerified == true
+        && request.auth.token.email.lower().matches('^[a-z0-9_%+-]([a-z0-9._%+-]{0,62}[a-z0-9_%+-])?@ut[.]edu[.]vn$')
+        && !request.auth.token.email.matches('.*[.][.].*');
+    }
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isUthVerified() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.role == 'admin' || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      return isUthVerified() && request.auth.token.role is string && request.auth.token.role.lower() == 'admin';
     }
 
     function isOrganizer() {
-      return isAuthenticated() && 
-        (isAdmin() || 
-         request.auth.token.role == 'organizer' || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer');
+      return isUthVerified() && request.auth.token.role is string && request.auth.token.role.lower() in ['organizer', 'admin'];
     }
 
-    // --- USERS COLLECTION ---
+    // Hồ sơ riêng: server tạo dữ liệu học tập; client chỉ cập nhật liên hệ của chính mình.
     match /users/{userId} {
-      // Bất kỳ user đã đăng nhập đều có thể đọc profile cơ bản (để hiển thị tên tác giả/bạn học)
-      allow read: if isAuthenticated();
-      // Chỉ chính user hoặc Admin mới được cập nhật profile cá nhân
-      allow write: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId);
+      allow list, create, delete: if false;
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['phoneNumber', 'personalEmail', 'currentAddress'])
+        && request.resource.data.phoneNumber is string
+        && request.resource.data.phoneNumber.size() <= 12
+        && (request.resource.data.phoneNumber == ''
+          || request.resource.data.phoneNumber.matches('(0[0-9]{9}|[+]84[0-9]{9})'))
+        && request.resource.data.personalEmail is string
+        && request.resource.data.personalEmail.size() <= 254
+        && (request.resource.data.personalEmail == ''
+          || request.resource.data.personalEmail.matches("^[^\\s@]+@[^\\s@]+[.][^\\s@]+$"))
+        && request.resource.data.currentAddress is string
+        && request.resource.data.currentAddress.size() <= 200;
     }
 
     // --- EVENTS COLLECTION ---
@@ -42,7 +58,7 @@ service cloud.firestore {
 
       // Subcollection: Đăng ký tham gia sự kiện
       match /registrations/{userId} {
-        allow read: if isAuthenticated();
+        allow read: if isOwner(userId) || isOrganizer();
         // Sinh viên chỉ được tạo/huỷ đăng ký của chính mình
         allow create, delete: if isOwner(userId);
         allow update: if isOrganizer();
@@ -67,7 +83,7 @@ service cloud.firestore {
     // --- SCHEDULES (THỜI KHOÁ BIỂU) ---
     match /schedules/{scheduleId} {
       // Chỉ sinh viên sở hữu thời khoá biểu mới có thể đọc
-      allow read: if isAuthenticated() && (
+      allow read: if isUthVerified() && (
         resource.data.studentId == request.auth.token.studentId || 
         resource.data.uid == request.auth.uid ||
         isAdmin()
@@ -78,7 +94,7 @@ service cloud.firestore {
     // --- GRADES (BẢNG ĐIỂM) ---
     match /grades/{gradeId} {
       // Tuyệt đối bảo mật: chỉ sinh viên sở hữu mới được xem điểm của mình
-      allow read: if isAuthenticated() && (
+      allow read: if isUthVerified() && (
         resource.data.studentId == request.auth.token.studentId || 
         resource.data.uid == request.auth.uid ||
         isAdmin()

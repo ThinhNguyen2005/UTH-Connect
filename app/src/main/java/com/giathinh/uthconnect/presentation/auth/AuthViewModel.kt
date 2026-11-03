@@ -25,20 +25,37 @@ class AuthViewModel @Inject constructor(
     private val signIn: SignInUseCase,
     private val sessions: AccessStudentSessionUseCase,
     private val resetPassword: ResetPasswordUseCase,
+    private val signUp: com.giathinh.uthconnect.domain.usecase.SignUpUseCase? = null,
+    private val google: com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase? = null,
+    private val account: com.giathinh.uthconnect.domain.usecase.ManageAuthAccountUseCase? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     private val eventChannel = Channel<AuthEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
 
+    private var googleJob: kotlinx.coroutines.Job? = null
     private var refreshing = false
     init {
+        account?.let { manager -> viewModelScope.launch {
+            manager.observePendingIdentity().collect { identity ->
+                val previous = _uiState.value.pendingIdentity
+                _uiState.update { it.copy(pendingIdentity = identity,
+                    password = if (identity != null) "" else it.password,
+                    passwordVisible = if (identity != null) false else it.passwordVisible) }
+                if (previous != null && identity == null && _uiState.value.student == null) {
+                    eventChannel.send(AuthEvent.ClearCredentials)
+                }
+            }
+        } }
         viewModelScope.launch { sessions.monitorAuthChanges() }
         viewModelScope.launch {
             try { sessions.restore() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { _uiState.update { it.copy(isRestoring = false, failure = AuthFailure.SessionRestore) } }
             sessions.observe().collect { current ->
+                val signedOut = _uiState.value.student != null && current.profile == null
+                if (signedOut) eventChannel.send(AuthEvent.ClearCredentials)
                 _uiState.update {
                     val justLoggedOut = it.student != null && current.profile == null
                     it.copy(
@@ -59,6 +76,15 @@ class AuthViewModel @Inject constructor(
 
     fun onAction(action: AuthAction) {
         when (action) {
+            is AuthAction.ChangeMode -> if (!_uiState.value.isSigningIn) _uiState.update {
+                it.copy(isSignUp = action.signUp, failure = null, identifierError = null, passwordError = null)
+            }
+            AuthAction.RequestGoogle -> requestGoogle()
+            is AuthAction.GoogleTokenReceived -> googleSignIn(action.token)
+            AuthAction.GoogleCancelled -> _uiState.update { it.copy(isSigningIn = false) }
+            is AuthAction.GoogleFailed -> _uiState.update {
+                it.copy(isSigningIn = false, failure = if (action.configuration) AuthFailure.Configuration else AuthFailure.Unknown)
+            }
             is AuthAction.IdentifierChanged -> _uiState.update {
                 it.copy(identifier = action.value, identifierError = null, failure = null)
             }
@@ -99,6 +125,20 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(isSigningIn = true, failure = null) }
         viewModelScope.launch {
             try {
+                if (snapshot.isSignUp) {
+                    val validator = com.giathinh.uthconnect.domain.validation.LoginValidator()
+                    val emailError = validator.emailError(snapshot.identifier)
+                    val passwordError = validator.signUpPasswordError(snapshot.password)
+                    if (emailError != null || passwordError != null) {
+                        _uiState.update { it.copy(identifierError = emailError, passwordError = passwordError) }
+                        return@launch
+                    }
+                    val result = signUp?.invoke(snapshot.identifier, snapshot.password)
+                    result?.fold(onSuccess = { _uiState.update { it.copy(password = "", passwordVisible = false) } },
+                        onFailure = { error -> _uiState.update { it.copy(failure = mapFailure((error as? AuthException)?.reason ?: AuthError.Unknown)) } })
+                        ?: _uiState.update { it.copy(failure = AuthFailure.Configuration) }
+                    return@launch
+                }
                 when (val outcome = signIn(snapshot.identifier, snapshot.password, snapshot.rememberMe)) {
                     is SignInResult.Success -> _uiState.update {
                         it.copy(isSigningIn = false, password = "", passwordVisible = false, identifierError = null, passwordError = null)
@@ -172,6 +212,33 @@ class AuthViewModel @Inject constructor(
         AuthError.TooManyRequests -> AuthFailure.TooManyRequests
         AuthError.StudentIdUnavailable -> AuthFailure.StudentIdUnavailable
         AuthError.Unexpected -> AuthFailure.Unexpected
+        AuthError.EmailNotVerified -> AuthFailure.VerificationRequired
+        AuthError.DomainNotAllowed -> AuthFailure.DomainNotAllowed
+        AuthError.EmailAlreadyInUse -> AuthFailure.EmailAlreadyInUse
+        AuthError.WeakPassword -> AuthFailure.WeakPassword
+        AuthError.AccountCollision -> AuthFailure.AccountCollision
+        AuthError.Unknown -> AuthFailure.Unknown
+    }
+
+    private fun requestGoogle() {
+        if (_uiState.value.isSigningIn || _uiState.value.isRestoring) return
+        _uiState.update { it.copy(isSigningIn = true, failure = null) }
+        viewModelScope.launch { eventChannel.send(AuthEvent.RequestGoogle) }
+    }
+
+    private fun googleSignIn(token: String) {
+        if (googleJob?.isActive == true) return
+        _uiState.update { it.copy(isSigningIn = true) }
+        googleJob = viewModelScope.launch {
+            try {
+                val result = google?.invoke(token, _uiState.value.rememberMe)
+                result?.onFailure { error -> _uiState.update { it.copy(failure =
+                    mapFailure((error as? AuthException)?.reason ?: AuthError.Unknown)) } }
+                    ?: _uiState.update { it.copy(failure = AuthFailure.Configuration) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { _uiState.update { it.copy(failure = AuthFailure.Unknown) } }
+            finally { _uiState.update { it.copy(isSigningIn = false, password = "") } }
+        }
     }
 
 }
