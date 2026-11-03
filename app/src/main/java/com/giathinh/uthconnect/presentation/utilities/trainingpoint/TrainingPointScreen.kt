@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -58,7 +57,7 @@ fun TrainingPointScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại",
+                            contentDescription = stringResource(R.string.common_back),
                         )
                     }
                 },
@@ -92,7 +91,7 @@ fun TrainingPointScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     UthStatusBadge(
-                        text = "XẾP LOẠI: ${uiState.rank}",
+                        text = stringResource(R.string.training_point_rank_label, uiState.rank),
                         tone = BadgeTone.Success,
                     )
                 }
@@ -115,10 +114,13 @@ fun TrainingPointScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = " / ${uiState.maxScore} điểm",
+                        text = stringResource(R.string.training_point_max_score, uiState.maxScore),
                         style = MaterialTheme.typography.titleMedium,
                         color = UthTheme.extendedColors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
+                        modifier = Modifier.padding(
+                            bottom = UthDimens.Spacing.Sm,
+                            start = UthDimens.Spacing.Xs,
+                        ),
                     )
                 }
 
@@ -127,7 +129,7 @@ fun TrainingPointScreen(
                     progress = { uiState.totalScore.toFloat() / uiState.maxScore.toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp),
+                        .height(UthDimens.Spacing.Sm),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
@@ -154,7 +156,7 @@ fun TrainingPointScreen(
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            text = "${criteria.score}/${criteria.maxScore} đ",
+                            text = stringResource(R.string.training_point_criteria_score, criteria.score, criteria.maxScore),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -173,7 +175,7 @@ fun TrainingPointScreen(
                         progress = { criteria.score.toFloat() / criteria.maxScore.toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp),
+                            .height(UthDimens.Size.TrainingProgressTrack),
                         color = MaterialTheme.colorScheme.secondary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )

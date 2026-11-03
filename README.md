@@ -2,7 +2,7 @@
 
 # UTH Connect
 
-**Ứng dụng nội bộ dành cho sinh viên UTH — hẹp, sâu, dùng được thật.**
+**Ứng dụng nội bộ dành cho sinh viên UTH.**
 
 `Android · Kotlin · Jetpack Compose · Material 3`
 

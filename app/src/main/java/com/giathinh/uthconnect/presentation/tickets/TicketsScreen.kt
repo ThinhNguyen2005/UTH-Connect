@@ -200,12 +200,12 @@ private fun TicketsTopBar(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .background(colors.primary)
             .drawBehind {
-                val radius = size.width * TopBarRingRadiusFraction
+                val radius = size.width * UthDimens.Layout.TicketRingRadiusFraction
                 drawCircle(
-                    color = colors.onPrimary.copy(alpha = TopBarRingAlpha),
+                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.TicketHeaderRing),
                     radius = radius,
-                    center = Offset(size.width * TopBarRingCenterFraction, 0f),
-                    style = Stroke(width = size.width * TopBarRingStrokeFraction),
+                    center = Offset(size.width * UthDimens.Layout.TicketRingCenterFraction, 0f),
+                    style = Stroke(width = size.width * UthDimens.Layout.TicketRingStrokeFraction),
                 )
             }
             .padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Lg),
@@ -351,7 +351,7 @@ private fun TicketsFilterTab(
             maxLines = 1,
             modifier = Modifier
                 .clip(MaterialTheme.shapes.extraSmall)
-                .background(if (selected) colors.onPrimary.copy(alpha = SelectedCountAlpha) else colors.surface)
+                .background(if (selected) colors.onPrimary.copy(alpha = UthDimens.Opacity.TicketSelectedCount) else colors.surface)
                 .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Xxs),
         )
     }
@@ -534,7 +534,10 @@ private fun TicketPerforation(modifier: Modifier = Modifier) {
             end = Offset(x, size.height),
             strokeWidth = UthDimens.Size.Stroke.toPx(),
             pathEffect = PathEffect.dashPathEffect(
-                intervals = floatArrayOf(size.width * DashedLineDashFactor, size.width * DashedLineGapFactor),
+                intervals = floatArrayOf(
+                    size.width * UthDimens.Layout.TicketDashedLineDashFactor,
+                    size.width * UthDimens.Layout.TicketDashedLineGapFactor,
+                ),
             ),
         )
     }
@@ -551,7 +554,7 @@ private fun TicketStub(
     Column(
         modifier = modifier
             .width(UthDimens.Size.TicketStub)
-            .background(colors.surfaceVariant.copy(alpha = StubFillAlpha))
+            .background(colors.surfaceVariant.copy(alpha = UthDimens.Opacity.TicketStub))
             .clickable(role = Role.Button, onClick = onOpenTicket)
             .padding(UthDimens.Spacing.Sm),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -663,6 +666,12 @@ private const val SelectedCountAlpha = 0.24f
 private const val StubFillAlpha = 0.5f
 private const val DashedLineDashFactor = 1f
 private const val DashedLineGapFactor = 1.2f
+private const val QrModuleCount = 21
+private const val QrFinderModules = 7
+private const val QrSeedMask = 0x7FFFFFFFL
+private const val QrSeedMultiplier = 1103515245L
+private const val QrSeedIncrement = 12345L
+private const val QrSeedShift = 16
 
 /**
  * Màn chi tiết vé dạng boarding pass: nửa trên là thông tin sự kiện + sinh viên, đường xé có

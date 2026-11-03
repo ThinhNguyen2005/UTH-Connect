@@ -139,8 +139,11 @@
     <string name="training_point_rank_excellent">EXCELLENT</string>
     <string name="training_point_rank_good">GOOD</string>
     <string name="training_point_rank_fair">FAIR</string>
+    <string name="training_point_rank_label">RANK: %1$s</string>
     <string name="training_point_criteria_header">Evaluation criteria breakdown</string>
     <string name="training_point_total_label">Overall training score</string>
+    <string name="training_point_max_score"> / %1$d points</string>
+    <string name="training_point_criteria_score">%1$d/%2$d pts</string>
 
     <!-- Campuses & Directory -->
     <string name="campuses_title">Campuses &amp; Directory</string>
@@ -264,6 +267,7 @@
     <string name="timetable_english">English</string>
     <string name="timetable_title">Timetable</string>
     <string name="timetable_urgent_badge">Due soon</string>
+    <string name="timetable_warning_badge">Due this week</string>
     <string name="timetable_upcoming_badge">Upcoming</string>
     <string name="timetable_loading">Loading timetable…</string>
     <string name="timetable_form_hint">Choose a course and enter when it is due.</string>
