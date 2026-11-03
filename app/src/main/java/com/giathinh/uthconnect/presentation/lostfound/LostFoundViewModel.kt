@@ -136,10 +136,10 @@ class LostFoundViewModel @Inject constructor(
                 description = form.description.trim(),
                 kind = form.kind,
                 category = form.category,
-                location = form.location.ifBlank { "Cơ sở 1 UTH (Võ Oanh)" },
+                location = form.location.trim(),
                 date = today,
-                contactName = form.contactName.ifBlank { "Sinh viên UTH" },
-                contactPhone = form.contactPhone.ifBlank { "02838992862" },
+                contactName = form.contactName.trim(),
+                contactPhone = form.contactPhone.trim(),
             )
 
             reportItemUseCase(newListing).fold(

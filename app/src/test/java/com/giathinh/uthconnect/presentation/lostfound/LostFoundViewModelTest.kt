@@ -150,6 +150,30 @@ class LostFoundViewModelTest {
     }
 
     @Test
+    fun `submitReport_withEmptyOptionalFields_keepsThemBlankWithoutDefaultFakeData`() {
+        val viewModel = createViewModel()
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+
+        val title = "Rơi máy tính Casio fx-580VN X"
+        val desc = "Để quên ở giảng đường B204 sáng nay sau giờ học"
+
+        viewModel.onAction(LostFoundAction.UpdateReportTitle(title))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription(desc))
+        // Không điền location, contactName, contactPhone
+
+        viewModel.onAction(LostFoundAction.SubmitReport)
+
+        val state = viewModel.uiState.value
+        assertEquals("Tổng số bài phải tăng lên 9", 9, state.listings.size)
+        val created = state.listings.first()
+        assertEquals(title, created.title)
+        assertEquals(desc, created.description)
+        assertEquals("Địa điểm phải để trống nếu không nhập, không gán mặc định", "", created.location)
+        assertEquals("Tên liên hệ phải để trống nếu không nhập, không gán mặc định", "", created.contactName)
+        assertEquals("SĐT liên hệ phải để trống nếu không nhập, không gán mặc định", "", created.contactPhone)
+    }
+
+    @Test
     fun `dismissMessage_clearsUserMessage`() {
         val viewModel = createViewModel()
         viewModel.onAction(LostFoundAction.OpenReportDialog)
