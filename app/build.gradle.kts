@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.play.services)
     // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
     // (kapt không tương thích built-in Kotlin của AGP 9).
