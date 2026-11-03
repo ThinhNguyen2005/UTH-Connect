@@ -66,6 +66,13 @@ class RegisterEventUseCaseTest {
         assertTrue(useCase("career-day").isFailure)
     }
 
+    @Test
+    fun `blank student ID prevents registration`() = runTest {
+        val result = registerWith("   ")("career-day")
+
+        assertTrue(result.isFailure)
+    }
+
     private fun registerWith(studentId: String): RegisterEventUseCase {
         val studentIdProvider = object : StudentIdProvider {
             override suspend fun studentId() = Result.success(studentId)
