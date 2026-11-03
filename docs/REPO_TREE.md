@@ -1,5 +1,7 @@
 # UTH Connect — Cây thư mục & phân quyền sở hữu
 
+Scanner CHECKIN-2: `presentation/scanner/` gồm Screen, Route, ViewModel, UiState, Action và thành phần camera `QrCameraPreview.kt`; `domain/usecase/CheckInUseCase.kt` kiểm tra role và mã vé. QR trong `Ticket.kt` dùng payload ID vé đầy đủ; `MockTicketRepository` lưu Attendance trong bộ nhớ và cập nhật trạng thái vé. Test ở `test/.../domain/usecase/CheckInUseCaseTest.kt`, `test/.../presentation/scanner/ScannerViewModelTest.kt` và `test/.../presentation/tickets/TicketsQrEncodingTest.kt`. Build thêm ZXing core để tạo QR; mã demo chưa được backend ký/xác minh.
+
 > **Phiên bản:** v1.4 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
 > **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
@@ -62,7 +64,9 @@ app/src/main/java/com/giathinh/uthconnect/
 app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
 └── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test, đang xanh)            [utilities]
-    └── presentation/tickets/ TicketsViewModelTest.kt                                      [checkin]
+    ├── presentation/tickets/ TicketsViewModelTest.kt · TicketsQrEncodingTest.kt             [checkin]
+    ├── presentation/scanner/ ScannerViewModelTest.kt                                        [checkin]
+    └── domain/usecase/ CheckInUseCaseTest.kt                                                [checkin]
 ```
 
 Đây là snapshot checkout `main` tại `9267f65`; `schedule/` vẫn là placeholder, Events và Check-in chưa có package presentation trên `main`. **Cây `origin/develop` đã tiến lên `3f545c3`**, khác `main` vì PR #20 đã merge Lost & Found. Phần chênh lệch được xác minh bằng `git diff --name-status 9267f65..origin/develop`:
@@ -128,7 +132,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Anh Phú** | `feature/auth-phu` | `auth/` · `profile/` | model và hợp đồng auth/session | repository và DI auth/session | auth · profile |
 | **Văn Tạ Huy Thiên** | `feature/events-van` | `events/` | Event · Registration · use case | repository và DI events | events |
-| **Đức Dịch Viết** | `feature/checkin-duc` | `tickets/` · `scanner/` | Ticket · Attendance · use case | repository và DI check-in | tickets · scanner |
+| **Đức Dịch Viết** | `feature/checking-duc` | `tickets/` · `scanner/` | Ticket · Attendance · payload QR · CheckInUseCase | MockTicketRepository và TicketDataModule | tickets · scanner · usecase |
 | **Trọng Nghĩa** | `feature/timetable-nghia` | `schedule/` | model và use case thời khóa biểu | repository và DI thời khóa biểu | schedule |
 | **Thắng Nguyễn Minh** | `feature/lostfound-thang` | `lostfound/` | model và use case Lost & Found | repository và DI Lost & Found | lostfound |
 | **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
@@ -243,6 +247,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 ## 8. Nhật ký cấu trúc
 
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.5-checkin | 03/11/2026 | QR máy đọc được bằng ZXing core; QR payload trong Ticket.kt, scanner xử lý mã đầy đủ; MockTicketRepository giữ Attendance trong bộ nhớ; thêm ScannerViewModelTest và TicketsQrEncodingTest. |
 | v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
 | v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
 | v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |

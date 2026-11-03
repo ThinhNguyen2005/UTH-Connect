@@ -7,11 +7,13 @@ import com.giathinh.uthconnect.domain.model.TicketStatus
 /** Dữ liệu cho danh sách vé, tab đang lọc và vé đang mở. */
 @Immutable
 data class TicketsUiState(
+    val isOrganizer: Boolean = false,
     val isLoading: Boolean = true,
     val tickets: List<Ticket> = emptyList(),
     val failure: TicketsFailure? = null,
     val selectedTicket: Ticket? = null,
     val secondsRemaining: Int = 60,
+    val qrPayload: String? = null,
     val filter: TicketFilter = TicketFilter.Upcoming,
     /** Tên hiển thị của sinh viên đang đăng nhập — màn chi tiết vé in kèm MSSV. */
     val studentName: String? = null,

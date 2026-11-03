@@ -47,8 +47,8 @@
     <string name="tickets_detail_student_id">MSSV: %1$s</string>
     <string name="tickets_detail_copy">Sao chép mã vé</string>
     <string name="tickets_detail_copied">Đã sao chép mã vé %1$s</string>
-    <string name="tickets_countdown">Mã làm mới sau %1$d giây</string>
-    <string name="tickets_qr_notice">Mã QR thật sẽ được tích hợp sau khi backend cấp token.</string>
+    <string name="tickets_countdown">Hình QR đổi sau %1$d giây</string>
+    <string name="tickets_qr_notice">QR dùng được để soát vé demo. Chưa có xác minh bảo mật từ máy chủ.</string>
     <string name="tickets_qr_missing">Không tìm thấy dữ liệu vé. Hãy quay lại danh sách và mở vé lần nữa.</string>
     <string name="common_back">Quay lại</string>
 
@@ -350,7 +350,25 @@
     <string name="auth_logout_retry">Thử lại</string>
     <!-- Auth/Profile V3.1: login retry -->
     <string name="auth_login_retry">Thử đăng nhập lại</string>
-
+    <string name="scanner_open">Mở soát vé</string>
+    <string name="scanner_back">Quay lại</string>
+    <string name="scanner_title">Quét và soát vé</string>
+    <string name="scanner_forbidden">Chỉ ban tổ chức được soát vé.</string>
+    <string name="scanner_count">Đã check-in: %1$d</string>
+    <string name="scanner_code">Mã vé hoặc nội dung QR</string>
+    <string name="scanner_submit">Kiểm tra</string>
+    <string name="scanner_success">Check-in thành công</string>
+    <string name="scanner_duplicate">Vé đã được check-in</string>
+    <string name="scanner_not_registered">Mã chưa đăng ký</string>
+    <string name="scanner_invalid">Mã vé hoặc QR không hợp lệ</string>
+    <string name="scanner_error">Không thể kiểm tra vé. Hãy thử lại.</string>
+    <string name="scanner_camera_permission">Cho phép camera để quét mã QR</string>
+    <string name="scanner_camera_denied">Chưa cấp quyền camera. Bạn vẫn có thể nhập mã thủ công.</string>
+    <string name="scanner_camera_error">Không mở được camera. Hãy thử lại hoặc nhập mã thủ công.</string>
+    <string name="scanner_camera_retry">Thử mở camera lại</string>
+    <string name="scanner_camera_scanning">Đưa mã QR vào khung hình</string>
+    <string name="scanner_camera_received">Đã đọc mã. Chọn Quét mã khác để tiếp tục.</string>
+    <string name="scanner_scan_again">Quét mã khác</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
