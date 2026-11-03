@@ -44,6 +44,8 @@ fun TicketQrRoute(
         ticket = state.selectedTicket?.takeIf { it.id == ticketId },
         studentName = state.studentName,
         secondsRemaining = state.secondsRemaining,
+        qrToken = state.qrToken,
+        qrError = state.qrError,
         onBack = {
             viewModel.onAction(TicketsAction.CloseTicket)
             navController.popBackStack()

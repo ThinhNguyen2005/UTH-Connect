@@ -66,6 +66,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.BuildConfig
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -533,7 +540,7 @@ private fun TicketPerforation(modifier: Modifier = Modifier) {
     }
 }
 
-/** Cuống vé: nhãn vào cổng, QR mini mô phỏng và nhãn "Mở vé"; cả cột là một nút. */
+/** Cuống vé: mã QR chỉ xuất hiện sau khi nhận token hợp lệ từ server. */
 @Composable
 private fun TicketStub(
     ticket: Ticket,
@@ -557,7 +564,16 @@ private fun TicketStub(
             textAlign = TextAlign.Center,
             maxLines = 2,
         )
-        TicketQrPreview(seed = ticket.id.hashCode(), modifier = Modifier.size(UthDimens.Size.TicketStubQr))
+        if (BuildConfig.USE_SUPABASE) {
+            Box(
+                modifier = Modifier.size(UthDimens.Size.TicketStubQr),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant)
+            }
+        } else {
+            TicketQrPreview(seed = ticket.id.hashCode(), modifier = Modifier.size(UthDimens.Size.TicketStubQr))
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -680,8 +696,8 @@ private const val QrSeedShift = 16
  * Màn chi tiết vé dạng boarding pass: nửa trên là thông tin sự kiện + sinh viên, đường xé có
  * khuyết tròn, nửa dưới là khung QR lớn kèm mã vé sao chép được.
  *
- * Screen **stateless**: chỉ render [Ticket] đang mở trong state, không tự gọi repository. QR vẫn
- * là hình mô phỏng tất định từ id vé — chưa có token thật từ backend.
+ * Screen **stateless**: chỉ render [Ticket] đang mở trong state, không tự gọi repository.
+ * Bản Supabase chỉ hiển thị QR ký bởi server; backend demo giữ QR minh họa.
  */
 @Composable
 fun TicketQrScreen(
@@ -690,6 +706,8 @@ fun TicketQrScreen(
     secondsRemaining: Int,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -713,6 +731,8 @@ fun TicketQrScreen(
                 ticket = ticket,
                 studentName = studentName,
                 secondsRemaining = secondsRemaining,
+                qrToken = qrToken,
+                qrError = qrError,
             )
             Spacer(Modifier.height(UthDimens.Spacing.Xl))
         }
@@ -785,6 +805,8 @@ private fun TicketPassCard(
     studentName: String?,
     secondsRemaining: Int,
     modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
 ) {
     val context = LocalContext.current
     val copyLabel = stringResource(R.string.tickets_detail_copy)
@@ -819,14 +841,63 @@ private fun TicketPassCard(
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 TicketSecurityRibbon(secondsRemaining = secondsRemaining)
-                TicketQrPanel(seed = ticket.id.hashCode())
-                TicketCodeRow(code = ticket.fallbackCode, copyLabel = copyLabel, onCopy = onCopy)
+                if (BuildConfig.USE_SUPABASE) {
+                    if (!qrToken.isNullOrBlank() && secondsRemaining > 0) {
+                        LiveTicketQrPanel(qrToken)
+                    } else {
+                        Box(
+                            Modifier.size(UthDimens.Size.QrMin)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = qrError ?: "Đang cấp mã QR bảo mật...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                } else {
+                    TicketQrPanel(seed = ticket.id.hashCode())
+                    TicketCodeRow(code = ticket.fallbackCode, copyLabel = copyLabel, onCopy = onCopy)
+                }
                 Text(
                     text = stringResource(R.string.tickets_qr_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = UthTheme.extendedColors.textSecondary,
                     textAlign = TextAlign.Center,
                 )
+            }
+        }
+    }
+}
+
+/** Scannable ZXing matrix. No logo overlay: all QR modules remain readable. */
+@Composable
+private fun LiveTicketQrPanel(token: String, modifier: Modifier = Modifier) {
+    val qr = remember(token) {
+        QRCodeWriter().encode(
+            token, BarcodeFormat.QR_CODE, 320, 320,
+            mapOf(EncodeHintType.MARGIN to 2),
+        )
+    }
+    Canvas(
+        modifier = modifier.size(UthDimens.Size.QrMin)
+            .semantics { contentDescription = "Mã QR điểm danh, tự cập nhật sau 60 giây" },
+    ) {
+        drawRect(Color.White)
+        val side = size.minDimension
+        val step = side / qr.width
+        for (y in 0 until qr.height) {
+            for (x in 0 until qr.width) {
+                if (qr.get(x, y)) {
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(x * step, y * step),
+                        size = Size(step + 0.1f, step + 0.1f),
+                    )
+                }
             }
         }
     }

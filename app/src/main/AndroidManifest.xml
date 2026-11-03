@@ -16,6 +16,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.UTHConnect">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.checkin.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/checkin_camera_paths" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:exported="true"

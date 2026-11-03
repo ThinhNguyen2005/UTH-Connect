@@ -12,6 +12,8 @@ data class TicketsUiState(
     val failure: TicketsFailure? = null,
     val selectedTicket: Ticket? = null,
     val secondsRemaining: Int = 60,
+    val qrToken: String? = null,
+    val qrError: String? = null,
     val filter: TicketFilter = TicketFilter.Upcoming,
     /** Tên hiển thị của sinh viên đang đăng nhập — màn chi tiết vé in kèm MSSV. */
     val studentName: String? = null,
