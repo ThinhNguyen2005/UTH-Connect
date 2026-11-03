@@ -9,6 +9,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.giathinh.uthconnect.presentation.scanner.ScannerDestination
 
 /** Nối state holder với màn danh sách và điều hướng đến vé đã chọn. */
 @Composable
@@ -20,6 +21,7 @@ fun TicketsRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
+                TicketsEvent.OpenScanner -> navController.navigate(ScannerDestination)
                 is TicketsEvent.OpenQr -> navController.navigate(TicketQrDestination(event.ticketId))
             }
         }
@@ -44,6 +46,7 @@ fun TicketQrRoute(
         ticket = state.selectedTicket?.takeIf { it.id == ticketId },
         studentName = state.studentName,
         secondsRemaining = state.secondsRemaining,
+        qrPayload = state.qrPayload,
         onBack = {
             viewModel.onAction(TicketsAction.CloseTicket)
             navController.popBackStack()

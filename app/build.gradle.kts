@@ -1,16 +1,22 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services) apply false
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
+    }
+}
+
 val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()
-if (!useMockData) {
-    apply(plugin = "com.google.gms.google-services")
+if (!useMockData) { pluginManager.apply(libs.plugins.google.services.get().pluginId)
 }
 
 android {
@@ -45,8 +51,8 @@ android {
         compose = true
         buildConfig = true
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    lint {
+        disable += "OldTargetRuntime"
     }
 }
 
@@ -63,7 +69,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.zxing.core)
     implementation(libs.kotlinx.serialization.json)
 
     // Firebase
@@ -72,19 +83,26 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation(libs.kotlinx.coroutines.play.services)
-    // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
-    // (kapt không tương thích built-in Kotlin của AGP 9).
+
+    // DI
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
+    ksp(libs.kotlin.metadata.jvm)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.concurrent:concurrent-futures:1.2.0")
+    }
 }
 
 tasks.configureEach {

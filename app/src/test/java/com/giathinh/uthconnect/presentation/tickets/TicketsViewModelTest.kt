@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.repository.TicketRepository
+import com.giathinh.uthconnect.domain.repository.TicketCheckInOutcome
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.GetTicketsUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
@@ -102,6 +103,8 @@ class TicketsViewModelTest {
             requestedStudentId = studentId
             return result
         }
+        override suspend fun checkIn(identifier: String, organizerId: String): Result<TicketCheckInOutcome> =
+            Result.success(TicketCheckInOutcome.NOT_REGISTERED)
     }
 
     private class FakeSessionRepository : SessionRepository {
@@ -110,6 +113,10 @@ class TicketsViewModelTest {
         )
         override suspend fun restore() = Unit
         override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+        override suspend fun updateProfile(profile: StudentProfile) = Unit
+        override suspend fun enableBiometric(studentId: String) = Unit
+        override suspend fun disableBiometric() = Unit
+        override suspend fun unlockWithBiometric() = Unit
         override suspend fun signOut() = Unit
     }
 

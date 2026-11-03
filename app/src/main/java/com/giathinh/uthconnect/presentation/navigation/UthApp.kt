@@ -32,6 +32,7 @@ import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
+import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 
 /**
  * Cửa vào app: 4 tab chỉ mở sau khi xác thực demo.
@@ -125,6 +126,7 @@ private fun UthNavHost(
         }
         composable<ProfileDestination> { ProfileRoute() }
         ticketsGraph(navController)
+        scannerGraph(navController)
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
