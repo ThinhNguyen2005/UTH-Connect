@@ -11,6 +11,8 @@
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+    <string name="profile_utilities_title">Student Utilities Center</string>
+    <string name="profile_utilities_desc">Tuition, training points, campuses &amp; services</string>
 
     <string name="home_uni_name">University of Transport and Communications</string>
     <string name="home_uni_tagline">Connected student portal</string>

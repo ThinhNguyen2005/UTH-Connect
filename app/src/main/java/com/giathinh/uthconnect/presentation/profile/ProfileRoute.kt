@@ -10,8 +10,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ProfileRoute(
     modifier: Modifier = Modifier,
+    onOpenUtilities: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ProfileScreen(uiState, onAction = viewModel::onAction, modifier = modifier)
+    ProfileScreen(
+        uiState = uiState,
+        onAction = viewModel::onAction,
+        onOpenUtilities = onOpenUtilities,
+        modifier = modifier,
+    )
 }

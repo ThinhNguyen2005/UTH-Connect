@@ -1,7 +1,9 @@
 package com.giathinh.uthconnect.presentation.utilities
 
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,40 +16,49 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.giathinh.uthconnect.R
-import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
-import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
-import com.giathinh.uthconnect.domain.model.DeliveryPhase
-import com.giathinh.uthconnect.domain.model.UtilityModule
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 
 /**
- * Screen **stateless**: chỉ render [UtilitiesUiState] và phát [UtilitiesAction]
- * hoặc kích hoạt các callback điều hướng con.
+ * Screen **stateless**: Hiển thị Trung tâm Tiện ích theo phong cách Lưới dịch vụ MoMo.
  */
 @Composable
 fun UtilitiesScreen(
@@ -57,146 +68,201 @@ fun UtilitiesScreen(
     onNavigateToTrainingPoint: () -> Unit = {},
     onNavigateToCampuses: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = UthDimens.Spacing.Xl),
     ) {
-        Spacer(Modifier.height(UthDimens.Spacing.Xl))
-        Text(
-            text = stringResource(R.string.utilities_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Xs))
-        Text(
-            text = stringResource(R.string.utilities_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = UthTheme.extendedColors.textSecondary,
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Lg))
-
-        // Lưới Grid 4 dịch vụ tiện ích sinh viên chính
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
-        ) {
-            UtilityGridCard(
-                title = stringResource(R.string.utilities_grid_tuition),
-                subtitle = stringResource(R.string.utilities_grid_tuition_desc),
-                icon = Icons.Filled.DateRange,
-                onClick = onNavigateToTuition,
-                modifier = Modifier.weight(1f),
-            )
-            UtilityGridCard(
-                title = stringResource(R.string.utilities_grid_training_point),
-                subtitle = stringResource(R.string.utilities_grid_training_point_desc),
-                icon = Icons.Filled.Star,
-                onClick = onNavigateToTrainingPoint,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
         Spacer(Modifier.height(UthDimens.Spacing.Md))
 
+        // Top Header với nút Quay lại và Tiêu đề
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            UtilityGridCard(
-                title = stringResource(R.string.utilities_grid_campuses),
-                subtitle = stringResource(R.string.utilities_grid_campuses_desc),
-                icon = Icons.Filled.Place,
-                onClick = onNavigateToCampuses,
-                modifier = Modifier.weight(1f),
-            )
-            UtilityGridCard(
-                title = stringResource(R.string.utilities_grid_settings),
-                subtitle = stringResource(R.string.utilities_grid_settings_desc),
-                icon = Icons.Filled.Settings,
-                onClick = onNavigateToSettings,
-                modifier = Modifier.weight(1f),
-            )
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Xs))
+            Column {
+                Text(
+                    text = stringResource(R.string.utilities_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(R.string.utilities_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UthTheme.extendedColors.textSecondary,
+                )
+            }
         }
 
-        Spacer(Modifier.height(UthDimens.Spacing.Section))
-
-        // Khu vực các dịch vụ lộ trình tiếp theo
-        UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
+        Spacer(Modifier.height(UthDimens.Spacing.Lg))
 
         when {
             uiState.isLoading -> UtilitiesLoading()
             uiState.failure != null -> UtilitiesError(
                 onRetry = { onAction(UtilitiesAction.Retry) },
             )
-            uiState.isEmpty -> UthEmptyState(
-                title = stringResource(R.string.utilities_empty_title),
-                body = stringResource(R.string.utilities_empty_body),
-            )
-            else -> uiState.modules.forEach { module ->
-                UthModuleRow(
-                    module = module,
-                    onClick = { onAction(UtilitiesAction.OpenModule(module.id)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = UthDimens.Spacing.Md),
-                )
+            else -> {
+                // Nhóm 1: Tiện ích Học tập & Quản lý
+                UthSectionHeader(title = "Dịch vụ Học tập & Quản lý")
+                UthCard(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = UthDimens.Spacing.Sm),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                    ) {
+                        MomoGridItem(
+                            title = stringResource(R.string.utilities_grid_tuition),
+                            icon = Icons.Filled.DateRange,
+                            containerColor = Color(0xFFE8F0FE),
+                            iconTint = Color(0xFF1967D2),
+                            onClick = onNavigateToTuition,
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.utilities_grid_training_point),
+                            icon = Icons.Filled.Star,
+                            containerColor = Color(0xFFFEF7E0),
+                            iconTint = Color(0xFFF29900),
+                            onClick = onNavigateToTrainingPoint,
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.utilities_grid_campuses),
+                            icon = Icons.Filled.Place,
+                            containerColor = Color(0xFFE6F4EA),
+                            iconTint = Color(0xFF137333),
+                            onClick = onNavigateToCampuses,
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.utilities_grid_settings),
+                            icon = Icons.Filled.Settings,
+                            containerColor = Color(0xFFF1F3F4),
+                            iconTint = Color(0xFF5F6368),
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(UthDimens.Spacing.Lg))
+
+                // Nhóm 2: Đời sống & Tiện ích Sinh viên (MoMo Grid)
+                UthSectionHeader(title = "Đời sống & Hỗ trợ Sinh viên")
+                UthCard(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = UthDimens.Spacing.Sm),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                    ) {
+                        MomoGridItem(
+                            title = stringResource(R.string.module_lost_found_title),
+                            icon = Icons.Filled.Search,
+                            containerColor = Color(0xFFF3E8FD),
+                            iconTint = Color(0xFF9334E6),
+                            onClick = { onAction(UtilitiesAction.OpenModule(UtilityModuleId.LOST_FOUND)) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.module_books_title),
+                            icon = Icons.Filled.ShoppingCart,
+                            containerColor = Color(0xFFFCE8E6),
+                            iconTint = Color(0xFFC5221F),
+                            onClick = {
+                                Toast.makeText(context, "Chợ giáo trình đang được hoàn thiện!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.module_housing_title),
+                            icon = Icons.Filled.Home,
+                            containerColor = Color(0xFFE8F4F8),
+                            iconTint = Color(0xFF1A73E8),
+                            onClick = {
+                                Toast.makeText(context, "Tìm phòng ghép trọ đang được hoàn thiện!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        MomoGridItem(
+                            title = stringResource(R.string.module_rideshare_title),
+                            icon = Icons.Filled.Share,
+                            containerColor = Color(0xFFE6F7F0),
+                            iconTint = Color(0xFF0D904F),
+                            onClick = {
+                                Toast.makeText(context, "Dịch vụ ghép xe đang được hoàn thiện!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(Modifier.height(UthDimens.Spacing.Xl))
+        Spacer(Modifier.height(UthDimens.Spacing.Xxl))
     }
 }
 
 /**
- * Card dịch vụ dạng ô lưới Grid.
+ * Item tiện ích dạng nút ứng dụng bo góc kiểu MoMo.
  */
 @Composable
-private fun UtilityGridCard(
+private fun MomoGridItem(
     title: String,
-    subtitle: String,
     icon: ImageVector,
+    containerColor: Color,
+    iconTint: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    UthCard(
-        modifier = modifier,
-        onClick = onClick,
+    Column(
+        modifier = modifier
+            .clip(UthDimens.Radius.MdShape)
+            .clickable(onClick = onClick)
+            .padding(vertical = UthDimens.Spacing.Sm, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .size(UthDimens.Size.UtilityIconContainer)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = MaterialTheme.shapes.small,
-                ),
+                .size(52.dp)
+                .background(containerColor, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(UthDimens.Size.Icon),
+                contentDescription = title,
+                tint = iconTint,
+                modifier = Modifier.size(26.dp),
             )
         }
-
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(Modifier.height(UthDimens.Spacing.Xs))
-
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = UthTheme.extendedColors.textSecondary,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 14.sp,
         )
     }
 }
@@ -234,103 +300,12 @@ private fun UtilitiesError(onRetry: () -> Unit) {
     )
 }
 
+@Preview(name = "Momo Grid Utilities", showBackground = true)
 @Composable
-private fun UthModuleRow(
-    module: UtilityModule,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val (tone, labelRes) = module.phase.badgeSpec()
-    UthCard(
-        modifier = modifier,
-        onClick = if (module.enabled) onClick else null,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(module.id.titleRes()),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                Text(
-                    text = stringResource(module.id.descRes()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = UthTheme.extendedColors.textSecondary,
-                )
-                if (!module.enabled) {
-                    Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                    Text(
-                        text = stringResource(R.string.utilities_not_available),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = UthTheme.extendedColors.textSecondary,
-                    )
-                }
-            }
-            Spacer(Modifier.width(UthDimens.Spacing.Sm))
-            UthStatusBadge(text = stringResource(labelRes), tone = tone)
-        }
-    }
-}
-
-private fun DeliveryPhase.badgeSpec(): Pair<BadgeTone, Int> = when (this) {
-    DeliveryPhase.MVP -> BadgeTone.Accent to R.string.phase_mvp
-    DeliveryPhase.PHASE_2 -> BadgeTone.Info to R.string.phase_2
-    DeliveryPhase.PHASE_3 -> BadgeTone.Info to R.string.phase_3
-    DeliveryPhase.BACKLOG -> BadgeTone.Neutral to R.string.phase_backlog
-}
-
-@StringRes
-private fun UtilityModuleId.titleRes(): Int = when (this) {
-    UtilityModuleId.EVENTS -> R.string.module_events_title
-    UtilityModuleId.TIMETABLE -> R.string.module_timetable_title
-    UtilityModuleId.LOST_FOUND -> R.string.module_lost_found_title
-    UtilityModuleId.BOOKS -> R.string.module_books_title
-    UtilityModuleId.HOUSING -> R.string.module_housing_title
-    UtilityModuleId.RIDE_SHARE -> R.string.module_rideshare_title
-}
-
-@StringRes
-private fun UtilityModuleId.descRes(): Int = when (this) {
-    UtilityModuleId.EVENTS -> R.string.module_events_desc
-    UtilityModuleId.TIMETABLE -> R.string.module_timetable_desc
-    UtilityModuleId.LOST_FOUND -> R.string.module_lost_found_desc
-    UtilityModuleId.BOOKS -> R.string.module_books_desc
-    UtilityModuleId.HOUSING -> R.string.module_housing_desc
-    UtilityModuleId.RIDE_SHARE -> R.string.module_rideshare_desc
-}
-
-private val PreviewModules = listOf(
-    UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = true),
-    UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
-    UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = false),
-    UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.BACKLOG, enabled = false),
-)
-
-@Composable
-private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = false) =
-    UthPreview(darkTheme = darkTheme) {
+private fun UtilitiesContentPreview() =
+    UthPreview {
         UtilitiesScreen(
-            uiState = state,
+            uiState = UtilitiesUiState(isLoading = false),
             onAction = {},
         )
     }
-
-@Preview(name = "content light", showBackground = true)
-@Composable
-private fun UtilitiesContentPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
-
-@Preview(name = "content dark", showBackground = true)
-@Composable
-private fun UtilitiesContentDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules), darkTheme = true)
-
-@Preview(name = "loading light", showBackground = true)
-@Composable
-private fun UtilitiesLoadingPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = true))
-
-@Preview(name = "error light", showBackground = true)
-@Composable
-private fun UtilitiesErrorPreview() = UtilitiesStatePreview(
-    UtilitiesUiState(isLoading = false, failure = UtilitiesFailure.LoadFailed),
-)

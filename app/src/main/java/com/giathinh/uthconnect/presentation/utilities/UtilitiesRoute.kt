@@ -27,6 +27,7 @@ import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionScreen
 fun UtilitiesRoute(
     modifier: Modifier = Modifier,
     onOpenModule: (UtilityModuleId) -> Unit = {},
+    onBack: () -> Unit = {},
     viewModel: UtilitiesViewModel = hiltViewModel(),
     navController: NavHostController = rememberNavController(),
 ) {
@@ -58,6 +59,7 @@ fun UtilitiesRoute(
                 onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
                 onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },
                 onNavigateToSettings = { navController.navigate(UtilitiesDestination.Settings) },
+                onBack = onBack,
             )
         }
 

@@ -12,6 +12,8 @@
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+    <string name="profile_utilities_title">Trung tâm Tiện ích sinh viên</string>
+    <string name="profile_utilities_desc">Tra cứu học phí, điểm rèn luyện, cơ sở &amp; dịch vụ</string>
 
     <!-- Trang chủ / bảng tin (presentation/home) -->
     <string name="home_uni_name">ĐH Giao thông Vận tải TP.HCM</string>

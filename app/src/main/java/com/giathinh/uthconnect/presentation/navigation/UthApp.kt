@@ -120,9 +120,14 @@ private fun UthNavHost(
                         else -> Unit // Các graph khác được nối khi module hoàn tất review.
                     }
                 },
+                onBack = { navController.popBackStack() },
             )
         }
-        composable<ProfileDestination> { ProfileRoute() }
+        composable<ProfileDestination> {
+            ProfileRoute(
+                onOpenUtilities = { navController.navigate(UtilitiesDestination) },
+            )
+        }
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
