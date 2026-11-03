@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.home
 
+import android.animation.ValueAnimator
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -10,7 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,9 +45,14 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -219,19 +226,19 @@ private fun HomeHeader(
             .fillMaxWidth()
             .background(colors.primary)
             .drawBehind {
-                val ringRadius = size.width * HeaderRingRadiusFraction
-                val ringStroke = size.width * HeaderRingStrokeFraction
+                val ringRadius = size.width * UthDimens.Layout.HomeRingRadiusFraction
+                val ringStroke = size.width * UthDimens.Layout.HomeRingStrokeFraction
                 drawCircle(
-                    color = colors.onPrimary.copy(alpha = HeaderRingAlpha),
+                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HomeHeaderRing),
                     radius = ringRadius,
-                    center = Offset(size.width + ringRadius * 0.3f, size.height),
+                    center = Offset(size.width + ringRadius * UthDimens.Layout.HomeRingOffsetFraction, size.height),
                     style = Stroke(width = ringStroke),
                 )
                 drawCircle(
-                    color = colors.secondary.copy(alpha = HeaderRingGoldAlpha),
-                    radius = ringRadius * 0.66f,
-                    center = Offset(size.width * 0.92f, 0f),
-                    style = Stroke(width = ringStroke * 0.6f),
+                    color = colors.secondary.copy(alpha = UthDimens.Opacity.HomeHeaderAccentRing),
+                    radius = ringRadius * UthDimens.Layout.HomeAccentRingRadiusFactor,
+                    center = Offset(size.width * UthDimens.Layout.HomeAccentRingCenterFraction, 0f),
+                    style = Stroke(width = ringStroke * UthDimens.Layout.HomeAccentRingStrokeFactor),
                 )
             }
             .padding(
@@ -249,15 +256,11 @@ private fun HomeHeader(
                     text = stringResource(R.string.home_uni_name).uppercase(),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.onPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = stringResource(R.string.home_uni_tagline),
                     style = MaterialTheme.typography.labelSmall,
-                    color = colors.onPrimary.copy(alpha = HeaderMetaAlpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderMetadata),
                 )
             }
             Spacer(Modifier.width(UthDimens.Spacing.Sm))
@@ -269,7 +272,7 @@ private fun HomeHeader(
         Text(
             text = stringResource(R.string.home_greeting_hello),
             style = MaterialTheme.typography.bodySmall,
-            color = colors.onPrimary.copy(alpha = HeaderMetaAlpha),
+            color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderMetadata),
         )
         Text(
             text = stringResource(R.string.home_greeting_name),
@@ -279,9 +282,7 @@ private fun HomeHeader(
         Text(
             text = stringResource(R.string.home_greeting_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = colors.onPrimary.copy(alpha = HeaderMetaAlpha),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderMetadata),
         )
     }
 }
@@ -322,28 +323,25 @@ private fun HomeNotificationButton(
         stringResource(R.string.home_notifications)
     }
 
-    Box(
-        modifier = modifier
-            .size(UthDimens.Size.MinTouchTarget)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(UthDimens.Size.MinTouchTarget),
     ) {
         Box(
             modifier = Modifier
                 .size(UthDimens.Size.Avatar)
                 .clip(MaterialTheme.shapes.small)
-                .background(colors.onPrimary.copy(alpha = HeaderButtonFillAlpha))
+                .background(colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderActionFill))
                 .border(
                     width = UthDimens.Size.Stroke,
-                    color = colors.onPrimary.copy(alpha = HeaderButtonBorderAlpha),
+                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
                     shape = MaterialTheme.shapes.small,
                 ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.Notifications,
-                contentDescription = null,
+                contentDescription = label,
                 tint = colors.onPrimary,
                 modifier = Modifier.size(UthDimens.Size.Icon),
             )
@@ -384,7 +382,7 @@ private fun HomeHighlightsSection(
     val listState = rememberLazyListState()
 
     // Thẻ đang xem là thẻ gần **giữa khung nhìn**, không phải `firstVisibleItemIndex`: carousel
-    // snap giữa và mỗi thẻ chỉ rộng [BannerWidthFraction], nên sau khi lướt sang thẻ kế tiếp thẻ
+    // snap giữa và mỗi thẻ chỉ rộng [UthDimens.Layout.HomeBannerWidthFraction], nên sau khi lướt sang thẻ kế tiếp thẻ
     // cũ vẫn còn "ló" ở mép trái — `firstVisibleItemIndex` không tăng và bộ đếm đứng yên ở 1.
     val position by remember {
         derivedStateOf {
@@ -455,7 +453,7 @@ private fun HomeHighlightHeader(
 }
 
 /**
- * Carousel snap ngang: mỗi thẻ chiếm [BannerWidthFraction] bề rộng để thẻ kế tiếp "ló" ra,
+ * Carousel snap ngang: mỗi thẻ chiếm [UthDimens.Layout.HomeBannerWidthFraction] bề rộng để thẻ kế tiếp "ló" ra,
  * gợi ý còn nội dung. `key` theo id để state cuộn không nhảy khi dữ liệu đổi.
  */
 @Composable
@@ -467,7 +465,7 @@ private fun HomeBannerCarousel(
     modifier: Modifier = Modifier,
 ) {
     LazyRow(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().selectableGroup(),
         state = listState,
         contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
         horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
@@ -479,7 +477,7 @@ private fun HomeBannerCarousel(
                 onClick = { onOpen(banner) },
                 // Thẻ chiếm phần lớn bề rộng để thẻ kế tiếp "ló" ra,
                 // gợi ý còn nội dung.
-                modifier = Modifier.fillParentMaxWidth(BannerWidthFraction),
+                modifier = Modifier.fillParentMaxWidth(UthDimens.Layout.HomeBannerWidthFraction),
             )
         }
     }
@@ -552,8 +550,6 @@ private fun HomeBannerCard(
                 text = banner.announcement.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = colors.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(UthDimens.Spacing.Md))
             HorizontalDivider(
@@ -604,7 +600,7 @@ private fun HomeBannerCover(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(CoverAspectRatio)
+            .aspectRatio(UthDimens.Layout.CoverAspectRatio)
             .background(
                 Brush.linearGradient(
                     listOf(colors.primaryContainer, UthTheme.extendedColors.surfaceSubtle),
@@ -614,7 +610,7 @@ private fun HomeBannerCover(
         Icon(
             imageVector = category.icon(),
             contentDescription = null,
-            tint = colors.primary.copy(alpha = CoverGlyphAlpha),
+            tint = colors.primary.copy(alpha = UthDimens.Opacity.CoverPlaceholder),
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(UthDimens.Size.AvatarLarge),
@@ -634,7 +630,7 @@ private fun HomeBannerCover(
                 .padding(UthDimens.Spacing.Md)
                 .size(UthDimens.Size.ChipHeight)
                 .clip(CircleShape)
-                .background(colors.surface.copy(alpha = CoverChipAlpha)),
+                .background(colors.surface.copy(alpha = UthDimens.Opacity.CoverLabelSurface)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -662,7 +658,7 @@ private fun HomeBannerCover(
                     modifier = Modifier
                         .weight(1f, fill = false)
                         .clip(MaterialTheme.shapes.extraSmall)
-                        .background(colors.surface.copy(alpha = CoverChipAlpha))
+                        .background(colors.surface.copy(alpha = UthDimens.Opacity.CoverLabelSurface))
                         .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xxs),
                 )
                 Spacer(Modifier.width(UthDimens.Spacing.Sm))
@@ -673,7 +669,7 @@ private fun HomeBannerCover(
                 color = colors.primary,
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.extraSmall)
-                    .background(colors.surface.copy(alpha = CoverChipAlpha))
+                    .background(colors.surface.copy(alpha = UthDimens.Opacity.CoverLabelSurface))
                     .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xxs),
             )
         }
@@ -757,10 +753,7 @@ private fun HomeFeedHeader(
     }
 }
 
-/**
- * Nút "Bộ lọc": icon + chữ, không chỉ icon (mục 6 — người mù màu vẫn đọc được ý nghĩa).
- * Bọc trong vùng chạm [UthDimens.Size.MinTouchTarget] vì chip chỉ cao [UthDimens.Size.ChipHeight].
- */
+/** Nút lọc dùng OutlinedButton Material 3 với nhãn rõ ràng và kích thước từ Design System. */
 @Composable
 private fun HomeFilterButton(
     onClick: () -> Unit,
@@ -768,38 +761,16 @@ private fun HomeFilterButton(
 ) {
     val colors = MaterialTheme.colorScheme
 
-    Box(
-        modifier = modifier
-            .height(UthDimens.Size.MinTouchTarget)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = UthDimens.Size.MinTouchTarget),
+        shape = MaterialTheme.shapes.small,
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+        contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Sm),
     ) {
-        Row(
-            modifier = Modifier
-                .height(UthDimens.Size.ChipHeight)
-                .clip(MaterialTheme.shapes.small)
-                .background(colors.surface)
-                .border(
-                    width = UthDimens.Size.Stroke,
-                    color = colors.outline,
-                    shape = MaterialTheme.shapes.small,
-                )
-                .padding(horizontal = UthDimens.Spacing.Sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Menu,
-                contentDescription = null,
-                tint = colors.primary,
-                modifier = Modifier.size(UthDimens.Size.IconBadge),
-            )
-            Spacer(Modifier.width(UthDimens.Spacing.Xs))
-            Text(
-                text = stringResource(R.string.home_filter),
-                style = MaterialTheme.typography.labelMedium,
-                color = colors.primary,
-            )
-        }
+        Icon(Icons.Filled.Menu, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconBadge))
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Text(stringResource(R.string.home_filter), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -851,41 +822,32 @@ private fun HomeCategoryChip(
 ) {
     val colors = MaterialTheme.colorScheme
 
-    Box(
-        modifier = modifier
-            .height(UthDimens.Size.MinTouchTarget)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            modifier = Modifier
-                .height(UthDimens.Size.ChipHeight)
-                .clip(MaterialTheme.shapes.small)
-                .background(if (selected) colors.primaryContainer else colors.surface)
-                .border(
-                    width = UthDimens.Size.Stroke,
-                    color = if (selected) colors.primary else colors.outline,
-                    shape = MaterialTheme.shapes.small,
-                )
-                .padding(horizontal = UthDimens.Spacing.Md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = colors.primary,
-                    modifier = Modifier.size(UthDimens.Size.IconBadge),
-                )
-                Spacer(Modifier.width(UthDimens.Spacing.Xs))
-            }
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier.heightIn(min = UthDimens.Size.MinTouchTarget),
+        shape = MaterialTheme.shapes.small,
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = colors.primaryContainer,
+            selectedLabelColor = colors.primary,
+            selectedLeadingIconColor = colors.primary,
+        ),
+        label = {
             Text(
                 text = stringResource(R.string.home_chip_count, label, count),
                 style = MaterialTheme.typography.labelMedium,
-                color = if (selected) colors.primary else colors.onSurface,
             )
-        }
-    }
+        },
+        leadingIcon = if (selected) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+            }
+        } else null,
+    )
 }
 
 /**
@@ -934,7 +896,7 @@ private fun AnnouncementRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(UthDimens.Spacing.Lg),
     ) {
         AnnouncementThumbnail(category = announcement.category)
@@ -1132,19 +1094,24 @@ private fun HomeFooter(
 @Composable
 private fun HomeLoading(modifier: Modifier = Modifier) {
     val label = stringResource(R.string.home_loading)
-    val shimmer = rememberInfiniteTransition(label = "homeSkeleton")
-    val shimmerProgress by shimmer.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = UthDimens.Motion.ShimmerMillis,
-                easing = LinearEasing,
+    // Hệ thống tắt animation: skeleton đứng yên, không chạy infinite transition.
+    val motionEnabled = ValueAnimator.areAnimatorsEnabled()
+    val shimmerProgress = if (motionEnabled) {
+        val shimmer = rememberInfiniteTransition(label = "homeSkeleton")
+        val progress by shimmer.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = UthDimens.Motion.ShimmerMillis,
+                    easing = LinearEasing,
+                ),
+                repeatMode = RepeatMode.Restart,
             ),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "homeSkeletonProgress",
-    )
+            label = "homeSkeletonProgress",
+        )
+        progress
+    } else null
 
     Column(
         modifier = modifier
@@ -1161,10 +1128,10 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
             progress = shimmerProgress,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(CoverAspectRatio),
+                .aspectRatio(UthDimens.Layout.CoverAspectRatio),
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
-        repeat(SkeletonRowCount) { index ->
+        repeat(UthDimens.Layout.HomeSkeletonRowCount) { index ->
             if (index > 0) Spacer(Modifier.height(UthDimens.Spacing.Lg))
             Row(modifier = Modifier.fillMaxWidth()) {
                 SkeletonBlock(
@@ -1176,7 +1143,7 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
                     SkeletonBlock(
                         progress = shimmerProgress,
                         modifier = Modifier
-                            .fillMaxWidth(SkeletonTitleFraction)
+                            .fillMaxWidth(UthDimens.Layout.HomeSkeletonTitleFraction)
                             .height(UthDimens.Spacing.Md),
                     )
                     Spacer(Modifier.height(UthDimens.Spacing.Sm))
@@ -1190,7 +1157,7 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
                     SkeletonBlock(
                         progress = shimmerProgress,
                         modifier = Modifier
-                            .fillMaxWidth(SkeletonMetaFraction)
+                            .fillMaxWidth(UthDimens.Layout.HomeSkeletonMetadataFraction)
                             .height(UthDimens.Spacing.Sm),
                     )
                 }
@@ -1204,29 +1171,30 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
  * ngang. Cả hai lớp vẽ trong [drawBehind] — đặt `.background()` trước nó thì dải sáng bị
  * nền che mất.
  *
- * @param progress 0f → 1f, do [HomeLoading] giữ để các khối sáng đồng nhịp.
+ * @param progress 0f → 1f; null nếu người dùng tắt chuyển động (chỉ vẽ nền tĩnh).
  */
 @Composable
-private fun SkeletonBlock(progress: Float, modifier: Modifier = Modifier) {
+private fun SkeletonBlock(progress: Float?, modifier: Modifier = Modifier) {
     val base = UthTheme.extendedColors.surfaceSubtle
-    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = ShimmerHighlightAlpha)
+    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = UthDimens.Opacity.ShimmerHighlight)
 
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.medium)
             .drawBehind {
-                val band = size.width * ShimmerBandFraction
-                val travel = size.width + band * 2
-                val start = -band + travel * progress
-
                 drawRect(color = base)
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color.Transparent, highlight, Color.Transparent),
-                        start = Offset(start, 0f),
-                        end = Offset(start + band, size.height),
-                    ),
-                )
+                if (progress != null) {
+                    val band = size.width * UthDimens.Layout.ShimmerBandFraction
+                    val travel = size.width + band * 2
+                    val start = -band + travel * progress
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color.Transparent, highlight, Color.Transparent),
+                            start = Offset(start, 0f),
+                            end = Offset(start + band, size.height),
+                        ),
+                    )
+                }
             },
     )
 }
@@ -1269,41 +1237,6 @@ private object HomeKey {
 
 /** Key của chip "Tất cả" — tách khỏi key item khác của `LazyRow`. */
 private const val CategoryAllKey = "home_category_all"
-
-/** Bề rộng thẻ banner theo phần bề rộng màn hình; phần còn lại để thẻ kế tiếp "ló" ra. */
-private const val BannerWidthFraction = 0.86f
-
-/** Ảnh bìa 16:9 theo mục 3.3. */
-private const val CoverAspectRatio = 16f / 9f
-
-/** Alpha của chữ phụ trên nền `primary` — vẫn ≥ 4.5:1 sau khi trộn với nền Navy. */
-private const val HeaderMetaAlpha = 0.78f
-
-/** Nền nút icon trên header: đủ tách khỏi Navy, không thành khối trắng chói. */
-private const val HeaderButtonFillAlpha = 0.14f
-private const val HeaderButtonBorderAlpha = 0.22f
-
-/** Vòng trang trí trên header: bán kính theo bề rộng khối, alpha rất thấp. */
-private const val HeaderRingRadiusFraction = 0.42f
-private const val HeaderRingStrokeFraction = 0.055f
-private const val HeaderRingAlpha = 0.06f
-private const val HeaderRingGoldAlpha = 0.10f
-
-/** Icon nhóm chìm trên ảnh bìa — đủ thấy là "chưa có ảnh", không tranh với badge. */
-private const val CoverGlyphAlpha = 0.28f
-
-/** Chip trên ảnh bìa: nền `surface` gần đặc để tương phản không phụ thuộc màu ảnh. */
-private const val CoverChipAlpha = 0.92f
-
-private const val SkeletonRowCount = 3
-private const val SkeletonTitleFraction = 0.62f
-private const val SkeletonMetaFraction = 0.38f
-
-/** Bề rộng dải sáng shimmer, tính theo bề rộng khối. */
-private const val ShimmerBandFraction = 0.6f
-
-/** Độ đậm dải sáng: đủ thấy chuyển động, không thành hiệu ứng nháy. */
-private const val ShimmerHighlightAlpha = 0.7f
 
 /** Định dạng ngày theo locale trường: `dd/MM/yyyy`. */
 private val FeedDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")

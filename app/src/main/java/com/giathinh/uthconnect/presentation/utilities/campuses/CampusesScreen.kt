@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
@@ -84,7 +83,7 @@ fun CampusesScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại",
+                            contentDescription = stringResource(R.string.common_back),
                         )
                     }
                 },
@@ -124,7 +123,7 @@ fun CampusesScreen(
                             imageVector = Icons.Filled.Place,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(UthDimens.Size.Icon),
                         )
                         Spacer(Modifier.width(UthDimens.Spacing.Sm))
                         Text(
@@ -157,7 +156,7 @@ fun CampusesScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         ) {
-                            Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
                             Text(campus.hotline, style = MaterialTheme.typography.bodySmall)
                         }
@@ -167,7 +166,7 @@ fun CampusesScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         ) {
-                            Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
                             Text(campus.email, style = MaterialTheme.typography.bodySmall)
                         }

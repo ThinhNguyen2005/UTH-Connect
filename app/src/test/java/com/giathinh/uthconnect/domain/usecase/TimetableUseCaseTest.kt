@@ -39,6 +39,26 @@ class TimetableUseCaseTest {
         ))
         assertEquals(listOf("overdue", "boundary"), TimetableUseCase.urgent(value, now).map { it.id })
     }
+    @Test fun priorityUsesSevenDayWarningAndFortyEightHourUrgentBoundaries() {
+        assertEquals(DeadlinePriority.OVERDUE, TimetableUseCase.priority(now.minusNanos(1), now))
+        assertEquals(DeadlinePriority.URGENT, TimetableUseCase.priority(now, now))
+        assertEquals(DeadlinePriority.URGENT, TimetableUseCase.priority(now.plusHours(48), now))
+        assertEquals(DeadlinePriority.WARNING, TimetableUseCase.priority(now.plusHours(48).plusNanos(1), now))
+        assertEquals(DeadlinePriority.WARNING, TimetableUseCase.priority(now.plusDays(7), now))
+        assertEquals(DeadlinePriority.UPCOMING, TimetableUseCase.priority(now.plusDays(7).plusNanos(1), now))
+    }
+    @Test fun urgentAndLaterGroupsShareTheSameBoundaryAndExcludeCompleted() {
+        val timetable = Timetable(deadlines = listOf(
+            Deadline("overdue", Course.ANDROID, "overdue", now.minusDays(1)),
+            Deadline("urgent", Course.ANDROID, "urgent", now.plusHours(48)),
+            Deadline("warning", Course.ANDROID, "warning", now.plusDays(7)),
+            Deadline("upcoming", Course.ANDROID, "upcoming", now.plusDays(8)),
+            Deadline("completed", Course.ANDROID, "completed", now.plusHours(1), true),
+        ))
+        assertEquals(listOf("overdue", "urgent"), TimetableUseCase.urgent(timetable, now).map { it.id })
+        assertEquals(listOf("warning", "upcoming"),
+            TimetableUseCase.pending(timetable).filterNot { TimetableUseCase.isUrgent(it.dueAt, now) }.map { it.id })
+    }
     @Test fun completionIsIdempotentAndRemovesUrgentDeadline() {
         useCase.complete("deadline-1")
         useCase.complete("deadline-1")
