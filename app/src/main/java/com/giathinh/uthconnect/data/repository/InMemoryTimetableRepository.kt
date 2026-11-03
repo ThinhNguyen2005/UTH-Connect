@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.update
 
 class InMemoryTimetableRepository(clock: Clock) : TimetableRepository {
     private val now = LocalDateTime.now(clock)
-    private val tomorrow = now.toLocalDate().plusDays(1)
+    private val today = now.toLocalDate()
+    private val tomorrow = today.plusDays(1)
     private val state = MutableStateFlow(Timetable(
         sessions = (0..4).map { index ->
-            val start = tomorrow.plusDays((index / 2).toLong()).atTime(7 + (index % 2) * 6, 0)
+            val day = if (index < 2) today else tomorrow.plusDays(((index - 2) / 2).toLong())
+            val start = day.atTime(7 + (index % 2) * 6, 0)
             ClassSession("session-$index", Course.entries[index % 3], start, start.plusHours(2), "B10$index")
         },
         deadlines = listOf(
