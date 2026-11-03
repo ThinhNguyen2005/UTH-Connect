@@ -64,6 +64,7 @@ fun ScheduleScreen(
     uiState: ScheduleUiState,
     onAction: (ScheduleAction) -> Unit,
     modifier: Modifier = Modifier,
+    onEnableReminders: () -> Unit = {},
 ) {
     var showScheduleForm by rememberSaveable { mutableStateOf(false) }
     var showDeadlineForm by rememberSaveable { mutableStateOf(false) }
@@ -83,6 +84,9 @@ fun ScheduleScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = UthTheme.extendedColors.textSecondary,
             )
+            TextButton(onClick = onEnableReminders) {
+                Text(stringResource(R.string.timetable_enable_reminders))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                 FilterChip(
                     selected = uiState.selectedTab == ScheduleTab.Classes,
@@ -353,7 +357,11 @@ private fun DeadlineCard(deadline: Deadline, onEdit: () -> Unit, onDelete: () ->
             Column(Modifier.weight(1f)) {
                 Text(deadline.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.timetable_due_date_format, deadline.dueDate.format(dateFormat)),
+                    stringResource(
+                        R.string.timetable_due_date_time_format,
+                        deadline.dueDate.format(dateFormat),
+                        deadline.dueTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                    ),
                     color = if (deadline.dueDate.isBefore(LocalDate.now())) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge,
@@ -474,9 +482,11 @@ private fun DeadlineFormDialog(
     var title by rememberSaveable(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
     var course by rememberSaveable(initial?.id) { mutableStateOf(initial?.courseName.orEmpty()) }
     var dueDate by rememberSaveable(initial?.id) { mutableStateOf(initial?.dueDate?.toString() ?: LocalDate.now().toString()) }
+    var dueTime by rememberSaveable(initial?.id) { mutableStateOf(initial?.dueTime?.toString() ?: "23:59") }
     var note by rememberSaveable(initial?.id) { mutableStateOf(initial?.note.orEmpty()) }
     val parsedDate = runCatching { LocalDate.parse(dueDate) }.getOrNull()
-    val valid = title.isNotBlank() && parsedDate != null
+    val parsedTime = runCatching { LocalTime.parse(dueTime) }.getOrNull()
+    val valid = title.isNotBlank() && parsedDate != null && parsedTime != null
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -489,6 +499,7 @@ private fun DeadlineFormDialog(
                 FormField(title, { title = it }, R.string.timetable_deadline_title)
                 FormField(course, { course = it }, R.string.timetable_course_name_optional)
                 FormField(dueDate, { dueDate = it }, R.string.timetable_due_date_iso)
+                FormField(dueTime, { dueTime = it }, R.string.timetable_due_time, numeric = false)
                 FormField(note, { note = it }, R.string.timetable_note)
                 if (!valid) Text(
                     stringResource(R.string.timetable_deadline_invalid),
@@ -508,6 +519,7 @@ private fun DeadlineFormDialog(
                             courseName = course.trim(),
                             dueDate = requireNotNull(parsedDate),
                             note = note.trim(),
+                            dueTime = requireNotNull(parsedTime),
                         ),
                     )
                 },
