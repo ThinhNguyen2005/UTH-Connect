@@ -148,4 +148,12 @@
     <string name="events_logistics_body">Trao đổi cùng cựu sinh viên về công việc kho vận, chứng từ và kỹ năng cần có khi thực tập. Buổi chia sẻ mẫu đã hủy.</string>
     <string name="events_welcome_title">Chào tân sinh viên: Kết nối câu lạc bộ UTH</string>
     <string name="events_welcome_body">Tìm hiểu các câu lạc bộ, hoạt động Đoàn – Hội và kinh nghiệm học tập từ sinh viên khóa trên.</string>
+    <string name="timetable_enable_reminders">Bật nhắc lịch</string>
+    <string name="timetable_due_date_time_format">Hạn: %1$s lúc %2$s</string>
+    <string name="timetable_due_time">Giờ đến hạn (HH:mm)</string>
+    <string name="timetable_reminder_channel">Nhắc lịch học và deadline</string>
+    <string name="timetable_class_reminder_body">Lớp học tại phòng %1$s, cơ sở %2$s bắt đầu sau 15 phút.</string>
+    <string name="timetable_deadline_reminder_3_days">%1$s hết hạn sau 3 ngày, lúc %2$s.</string>
+    <string name="timetable_deadline_reminder_1_day">%1$s hết hạn ngày mai, lúc %2$s.</string>
+    <string name="timetable_deadline_reminder_due">%1$s đến hạn hôm nay.</string>
 </resources>

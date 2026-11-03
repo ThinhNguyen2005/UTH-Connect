@@ -141,4 +141,12 @@
     <string name="events_logistics_body">Discuss warehousing, shipping documents and internship skills with alumni. This sample session has been cancelled.</string>
     <string name="events_welcome_title">Welcome freshmen: Meet UTH clubs</string>
     <string name="events_welcome_body">Discover student clubs, Youth Union activities and study tips from senior students.</string>
+    <string name="timetable_enable_reminders">Enable reminders</string>
+    <string name="timetable_due_date_time_format">Due: %1$s at %2$s</string>
+    <string name="timetable_due_time">Due time (HH:mm)</string>
+    <string name="timetable_reminder_channel">Class and deadline reminders</string>
+    <string name="timetable_class_reminder_body">Class in room %1$s, campus %2$s starts in 15 minutes.</string>
+    <string name="timetable_deadline_reminder_3_days">%1$s is due in 3 days, at %2$s.</string>
+    <string name="timetable_deadline_reminder_1_day">%1$s is due tomorrow, at %2$s.</string>
+    <string name="timetable_deadline_reminder_due">%1$s is due today.</string>
 </resources>

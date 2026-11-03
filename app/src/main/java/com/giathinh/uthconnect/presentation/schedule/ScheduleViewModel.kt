@@ -31,6 +31,7 @@ class ScheduleViewModel @Inject constructor(
     fun onAction(action: ScheduleAction) {
         when (action) {
             ScheduleAction.Retry -> observe()
+            ScheduleAction.RefreshReminders -> mutate { timetable.refreshReminders() }
             ScheduleAction.ShowClasses -> _uiState.update { it.copy(selectedTab = ScheduleTab.Classes) }
             ScheduleAction.ShowDeadlines -> _uiState.update { it.copy(selectedTab = ScheduleTab.Deadlines) }
             ScheduleAction.PreviousWeek -> _uiState.update {

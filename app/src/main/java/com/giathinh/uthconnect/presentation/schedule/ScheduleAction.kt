@@ -6,6 +6,7 @@ import java.time.LocalDate
 
 sealed interface ScheduleAction {
     data object Retry : ScheduleAction
+    data object RefreshReminders : ScheduleAction
     data object ShowClasses : ScheduleAction
     data object ShowDeadlines : ScheduleAction
     data object PreviousWeek : ScheduleAction

@@ -24,6 +24,8 @@ abstract class TimetableDataModule {
         @Provides
         @Singleton
         fun provideTimetableDatabase(@ApplicationContext context: Context): TimetableDatabase =
-            Room.databaseBuilder(context, TimetableDatabase::class.java, "timetable.db").build()
+            Room.databaseBuilder(context, TimetableDatabase::class.java, "timetable.db")
+                .addMigrations(TimetableDatabase.MIGRATION_1_2)
+                .build()
     }
 }

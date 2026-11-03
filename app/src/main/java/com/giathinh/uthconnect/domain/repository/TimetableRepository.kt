@@ -11,4 +11,5 @@ interface TimetableRepository {
     suspend fun deleteSchedule(id: String): Result<Unit>
     suspend fun saveDeadline(deadline: Deadline): Result<Unit>
     suspend fun deleteDeadline(id: String): Result<Unit>
+    suspend fun refreshReminders(): Result<Unit>
 }

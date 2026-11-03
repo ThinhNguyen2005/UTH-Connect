@@ -20,4 +20,6 @@ class TimetableUseCases @Inject constructor(
     suspend fun saveDeadline(deadline: Deadline): Result<Unit> = repository.saveDeadline(deadline)
 
     suspend fun deleteDeadline(id: String): Result<Unit> = repository.deleteDeadline(id)
+
+    suspend fun refreshReminders(): Result<Unit> = repository.refreshReminders()
 }

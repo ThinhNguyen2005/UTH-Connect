@@ -90,5 +90,7 @@ class ScheduleViewModelTest {
             deadlines.update { current -> current.filterNot { it.id == id } }
             return Result.success(Unit)
         }
+
+        override suspend fun refreshReminders(): Result<Unit> = Result.success(Unit)
     }
 }
