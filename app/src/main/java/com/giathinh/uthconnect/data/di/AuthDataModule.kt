@@ -7,6 +7,7 @@ import com.giathinh.uthconnect.data.repository.DemoAuthRepository
 import com.giathinh.uthconnect.data.repository.FirebaseAuthRepository
 import com.giathinh.uthconnect.data.repository.PreferencesSessionRepository
 import com.giathinh.uthconnect.data.repository.SharedPreferencesDemoAccountStore
+import com.giathinh.uthconnect.data.repository.SupabaseAuthRepository
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
@@ -38,6 +39,11 @@ abstract class AuthDataModule {
         fun provideAuth(
             demo: Provider<DemoAuthRepository>,
             firebase: Provider<FirebaseAuthRepository>,
-        ): AuthRepository = if (BuildConfig.USE_MOCK_DATA) demo.get() else firebase.get()
+            supabase: Provider<SupabaseAuthRepository>,
+        ): AuthRepository = when {
+            BuildConfig.USE_SUPABASE -> supabase.get()
+            BuildConfig.USE_MOCK_DATA -> demo.get()
+            else -> firebase.get()
+        }
     }
 }

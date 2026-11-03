@@ -16,7 +16,16 @@ kotlin {
 }
 
 val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()
-if (!useMockData) { pluginManager.apply(libs.plugins.google.services.get().pluginId)
+val useSupabase = providers.gradleProperty("useSupabase").orElse("false").get().toBooleanStrict()
+val supabaseUrl = providers.gradleProperty("supabaseUrl").orElse("").get().trimEnd('/')
+val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").orElse("").get()
+if (useSupabase) {
+    require(!useMockData) { "To enable Supabase, set -PuseMockData=false" }
+    require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
+        "Supply -PsupabaseUrl=https://... -PsupabasePublishableKey=sb_publishable_..."
+    }
+}
+if (!useMockData && !useSupabase) { pluginManager.apply(libs.plugins.google.services.get().pluginId)
 }
 
 android {
@@ -32,6 +41,9 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("boolean", "USE_MOCK_DATA", useMockData.toString())
+        buildConfigField("boolean", "USE_SUPABASE", useSupabase.toString())
+        buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabasePublishableKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -70,6 +82,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation("com.google.zxing:core:3.5.4")
 
     // Firebase
     implementation(platform(libs.firebase.bom))

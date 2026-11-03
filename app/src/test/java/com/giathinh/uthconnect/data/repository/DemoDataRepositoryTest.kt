@@ -34,6 +34,7 @@ class DemoDataRepositoryTest {
         val selected = AuthDataModule.provideAuth(
             Provider { demo },
             Provider { error("Mock login must not initialize Firebase") },
+            Provider { error("Mock login must not initialize Supabase") },
         )
         assertSame(demo, selected)
     }
