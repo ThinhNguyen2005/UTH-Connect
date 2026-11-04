@@ -14,7 +14,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
+import com.giathinh.uthconnect.presentation.utilities.books.BookMarketScreen
 import com.giathinh.uthconnect.presentation.utilities.campuses.CampusesScreen
+import com.giathinh.uthconnect.presentation.utilities.housing.HousingScreen
+import com.giathinh.uthconnect.presentation.utilities.rideshare.RideShareScreen
 import com.giathinh.uthconnect.presentation.utilities.settings.SettingsScreen
 import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointScreen
 import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionScreen
@@ -59,6 +62,10 @@ fun UtilitiesRoute(
                 onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
                 onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },
                 onNavigateToSettings = { navController.navigate(UtilitiesDestination.Settings) },
+                onNavigateToLostFound = { onOpenModule(UtilityModuleId.LOST_FOUND) },
+                onNavigateToBooks = { navController.navigate(UtilitiesDestination.BookMarket) },
+                onNavigateToHousing = { navController.navigate(UtilitiesDestination.Housing) },
+                onNavigateToRideShare = { navController.navigate(UtilitiesDestination.RideShare) },
                 onBack = onBack,
             )
         }
@@ -88,6 +95,24 @@ fun UtilitiesRoute(
                 uiState = settingsState,
                 onToggleTuitionReminder = viewModel::onToggleTuitionReminder,
                 onToggleTrainingPointNotif = viewModel::onToggleTrainingPointNotif,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.BookMarket> {
+            BookMarketScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.Housing> {
+            HousingScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<UtilitiesDestination.RideShare> {
+            RideShareScreen(
                 onBack = { navController.popBackStack() },
             )
         }

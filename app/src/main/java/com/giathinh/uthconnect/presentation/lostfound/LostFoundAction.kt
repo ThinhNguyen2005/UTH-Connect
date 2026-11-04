@@ -17,5 +17,6 @@ sealed interface LostFoundAction {
     data class UpdateReportContactPhone(val contactPhone: String) : LostFoundAction
     data object SubmitReport : LostFoundAction
     data object DismissMessage : LostFoundAction
+    data class DeleteListing(val id: String) : LostFoundAction
     data object Retry : LostFoundAction
 }

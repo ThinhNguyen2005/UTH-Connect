@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.presentation.utilities.tuition
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +30,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
@@ -213,6 +218,8 @@ fun TuitionScreen(
             }
 
             // Hướng dẫn chuyển khoản
+            val context = LocalContext.current
+            val clipboardManager = LocalClipboardManager.current
             UthSectionHeader(title = stringResource(R.string.tuition_payment_guide_header))
 
             UthCard(
@@ -225,19 +232,55 @@ fun TuitionScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                 )
+                Spacer(Modifier.height(UthDimens.Spacing.Sm))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            clipboardManager.setText(AnnotatedString("118000003666"))
+                            Toast.makeText(context, "Đã sao chép số tài khoản VietinBank UTH!", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(vertical = UthDimens.Spacing.Xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.tuition_bank_account_number),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "Sao chép",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
                 Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                Text(
-                    text = stringResource(R.string.tuition_bank_account_number),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = UthTheme.extendedColors.textSecondary,
-                )
-                Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                Text(
-                    text = stringResource(R.string.tuition_payment_syntax),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            clipboardManager.setText(AnnotatedString("2023040123 Nguyen Minh Anh HP HK1"))
+                            Toast.makeText(context, "Đã sao chép cú pháp nộp học phí!", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(vertical = UthDimens.Spacing.Xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.tuition_payment_syntax),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "Sao chép",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }

@@ -30,4 +30,16 @@ sealed interface UtilitiesDestination {
     /** Màn hình Cài đặt ứng dụng. */
     @Serializable
     data object Settings : UtilitiesDestination
+
+    /** Màn hình Chợ giáo trình sinh viên. */
+    @Serializable
+    data object BookMarket : UtilitiesDestination
+
+    /** Màn hình Ghép phòng trọ sinh viên. */
+    @Serializable
+    data object Housing : UtilitiesDestination
+
+    /** Màn hình Ghép xe đi chung. */
+    @Serializable
+    data object RideShare : UtilitiesDestination
 }

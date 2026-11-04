@@ -39,18 +39,17 @@ class LostFoundViewModelTest {
 
         assertFalse("isLoading phải là false sau khi tải xong", state.isLoading)
         assertFalse("isError phải là false khi tải thành công", state.isError)
-        assertEquals("Phải có 8 bài đăng mặc định", 8, state.listings.size)
+        assertEquals("Mặc định ban đầu danh sách phải trống", 0, state.listings.size)
         assertEquals("Mặc định chọn tab LOST", ListingKind.LOST, state.selectedKind)
         assertEquals("Mặc định chọn category ALL", ItemCategory.ALL, state.selectedCategory)
-        assertEquals("Số lượng bài LOST", 4, state.lostCount)
-        assertEquals("Số lượng bài FOUND", 4, state.foundCount)
-        assertEquals("Danh sách lọc mặc định chỉ gồm bài LOST", 4, state.filteredListings.size)
-        assertTrue(state.filteredListings.all { it.kind == ListingKind.LOST })
+        assertEquals("Số lượng bài LOST", 0, state.lostCount)
+        assertEquals("Số lượng bài FOUND", 0, state.foundCount)
+        assertEquals("Danh sách lọc mặc định rỗng", 0, state.filteredListings.size)
     }
 
     @Test
     fun `selectKindAndCategory_filtersListingsCorrectly`() {
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
 
         // Chuyển sang tab FOUND
         viewModel.onAction(LostFoundAction.SelectKind(ListingKind.FOUND))
@@ -81,7 +80,7 @@ class LostFoundViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("titleError phải là FormValidationError.TitleRequired", FormValidationError.TitleRequired, state.reportForm.titleError)
         assertNull("descriptionError không được có lỗi", state.reportForm.descriptionError)
-        assertEquals("Số lượng tin không được thay đổi", 8, state.listings.size)
+        assertEquals("Số lượng tin không được thay đổi", 0, state.listings.size)
         assertTrue("Dialog vẫn phải mở", state.isReportDialogOpen)
     }
 
@@ -100,7 +99,7 @@ class LostFoundViewModelTest {
         assertTrue("descriptionError phải là DescriptionTooShort", state.reportForm.descriptionError is FormValidationError.DescriptionTooShort)
         val err = state.reportForm.descriptionError as FormValidationError.DescriptionTooShort
         assertEquals(shortDesc.length, err.currentLength)
-        assertEquals("Số lượng tin không được thay đổi", 8, state.listings.size)
+        assertEquals("Số lượng tin không được thay đổi", 0, state.listings.size)
         assertTrue("Dialog vẫn phải mở", state.isReportDialogOpen)
     }
 
@@ -132,7 +131,7 @@ class LostFoundViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse("Dialog phải đóng sau khi đăng thành công", state.isReportDialogOpen)
-        assertEquals("Tổng số bài phải tăng lên 9", 9, state.listings.size)
+        assertEquals("Tổng số bài phải tăng lên 1", 1, state.listings.size)
         assertEquals("Bài mới phải nằm đầu danh sách", title, state.listings.first().title)
         assertEquals(desc, state.listings.first().description)
         assertEquals(location, state.listings.first().location)
@@ -164,7 +163,7 @@ class LostFoundViewModelTest {
         viewModel.onAction(LostFoundAction.SubmitReport)
 
         val state = viewModel.uiState.value
-        assertEquals("Tổng số bài phải tăng lên 9", 9, state.listings.size)
+        assertEquals("Tổng số bài phải tăng lên 1", 1, state.listings.size)
         val created = state.listings.first()
         assertEquals(title, created.title)
         assertEquals(desc, created.description)
@@ -190,7 +189,7 @@ class LostFoundViewModelTest {
     fun `repositoryFailure_setsErrorState_andRetryReloadsListings`() {
         var shouldFail = true
         val mockRepo = object : LostFoundRepository {
-            private val delegate = InMemoryLostFoundRepository()
+            private val delegate = InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings)
 
             override suspend fun getListings(): Result<List<LostFoundListing>> {
                 return if (shouldFail) {
@@ -220,5 +219,18 @@ class LostFoundViewModelTest {
         assertFalse("isLoading phải là false sau khi retry", state.isLoading)
         assertFalse("isError phải là false sau khi retry thành công", state.isError)
         assertEquals("Phải nạp lại đầy đủ 8 tin", 8, state.listings.size)
+    }
+
+    @Test
+    fun `deleteListing_removesItemFromListings`() {
+        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
+        val firstId = viewModel.uiState.value.listings.first().id
+        val initialSize = viewModel.uiState.value.listings.size
+
+        viewModel.onAction(LostFoundAction.DeleteListing(firstId))
+
+        val state = viewModel.uiState.value
+        assertEquals("Số lượng tin phải giảm đi 1", initialSize - 1, state.listings.size)
+        assertTrue("Không còn tin có ID vừa xóa", state.listings.none { it.id == firstId })
     }
 }

@@ -88,6 +88,11 @@ class LostFoundViewModel @Inject constructor(
             LostFoundAction.DismissMessage -> {
                 _uiState.update { it.copy(userMessage = null) }
             }
+            is LostFoundAction.DeleteListing -> {
+                _uiState.update { current ->
+                    current.copy(listings = current.listings.filterNot { it.id == action.id })
+                }
+            }
             LostFoundAction.Retry -> loadListings()
         }
     }
