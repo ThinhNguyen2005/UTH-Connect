@@ -68,6 +68,8 @@ internal fun JsonObject.toDomainProfile(): StudentProfile {
         faculty = string("faculty") ?: "Chưa cập nhật",
         avatarUrl = string("avatar_url"),
         phoneNumber = string("phone_number").orEmpty(),
+        personalEmail = string("personal_email").orEmpty(),
+        currentAddress = string("current_address").orEmpty(),
         role = when (string("role")) {
             "admin" -> UserRole.ADMIN
             "organizer" -> UserRole.ORGANIZER

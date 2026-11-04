@@ -24,6 +24,7 @@ class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
     private val refreshMutex = Mutex()
     @Volatile private var credentials: Credentials? = null
+    @Volatile var recoveryToken: String? = null
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
 
@@ -39,9 +40,39 @@ class SupabaseRestClient @Inject constructor() {
         credentials = parseCredentials(data)
     }
 
+    suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+        faculty: String,
+        redirectTo: String = "uthconnect://auth/callback",
+    ): JsonObject {
+        val encodedRedirect = urlEncode(redirectTo)
+        val payload = buildJsonObject {
+            put("email", email)
+            put("password", password)
+            put("data", buildJsonObject {
+                put("display_name", displayName)
+                put("faculty", faculty)
+            })
+        }
+        val response = send("/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject
+        if (response.containsKey("access_token") && response.containsKey("user")) {
+            runCatching { credentials = parseCredentials(response) }
+        }
+        return response
+    }
+
+    suspend fun recoverPassword(email: String, redirectTo: String = "uthconnect://auth/reset-password") {
+        val encodedRedirect = urlEncode(redirectTo)
+        val payload = buildJsonObject { put("email", email) }
+        send("/auth/v1/recover?redirect_to=$encodedRedirect", "POST", payload, bearer = null)
+    }
+
     suspend fun signOut() {
         val old = credentials
         credentials = null
+        recoveryToken = null
         if (old != null) runCatching { send("/auth/v1/logout", "POST", bearer = old.accessToken) }
     }
 
@@ -69,11 +100,16 @@ class SupabaseRestClient @Inject constructor() {
 
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    suspend fun patchTable(path: String, body: JsonObject): JsonElement =
+        authorized("/rest/v1/$path", "PATCH", body)
+
     suspend fun rpc(function: String, params: JsonObject): JsonElement =
         authorized("/rest/v1/rpc/$function", "POST", params)
 
-    suspend fun updatePassword(password: String): JsonElement =
-        authorized("/auth/v1/user", "PUT", buildJsonObject { put("password", password) })
+    suspend fun updatePassword(password: String): JsonElement {
+        val token = recoveryToken ?: freshToken()
+        return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
+    }
 
     private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
         val accessToken = freshToken()
@@ -119,7 +155,13 @@ class SupabaseRestClient @Inject constructor() {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
         try {
-            connection.requestMethod = method
+            if (method == "PATCH") {
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+                connection.setRequestProperty("Prefer", "return=representation")
+            } else {
+                connection.requestMethod = method
+            }
             connection.connectTimeout = 15_000
             connection.readTimeout = 15_000
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)

@@ -24,7 +24,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class AuthDataModule {
     @Binds abstract fun bindSession(implementation: PreferencesSessionRepository): SessionRepository
-    @Binds abstract fun bindContacts(implementation: DemoAuthRepository): StudentContactRepository
 
     companion object {
         @Provides
@@ -44,6 +43,16 @@ abstract class AuthDataModule {
             BuildConfig.USE_SUPABASE -> supabase.get()
             BuildConfig.USE_MOCK_DATA -> demo.get()
             else -> firebase.get()
+        }
+
+        @Provides
+        @Singleton
+        fun provideContacts(
+            demo: Provider<DemoAuthRepository>,
+            supabase: Provider<SupabaseAuthRepository>,
+        ): StudentContactRepository = when {
+            BuildConfig.USE_SUPABASE -> supabase.get()
+            else -> demo.get()
         }
     }
 }
