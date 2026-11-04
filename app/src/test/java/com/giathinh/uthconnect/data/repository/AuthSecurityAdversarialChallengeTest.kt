@@ -130,7 +130,7 @@ class AuthSecurityAdversarialChallengeTest {
             // Test repository-level predicate: email.endsWith("@ut.edu.vn", ignoreCase = true)
             assertTrue(
                 "Repository domain check must succeed for mixed case: $email",
-                email.endsWith("@ut.edu.vn", ignoreCase = true),
+                email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true),
             )
             // Test presentation-level validator
             assertNull("LoginValidator must accept: $email", validator.identifierError(email))
@@ -154,7 +154,7 @@ class AuthSecurityAdversarialChallengeTest {
             "student@notut.edu.vn",
             "student@fake-ut.edu.vn",
             "student@ut.edu.com",
-            "student@uth.edu.vn", // Staff/University main site, but student email is strictly @ut.edu.vn
+            "student@uth.edu.vn.evil.com",
             "student@hcmut.edu.vn",
             // Consumer mail providers
             "student@gmail.com",
@@ -169,7 +169,7 @@ class AuthSecurityAdversarialChallengeTest {
         )
 
         for (email in rejectedEmails) {
-            val passedDomainCheck = email.endsWith("@ut.edu.vn", ignoreCase = true)
+            val passedDomainCheck = email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true)
             assertFalse(
                 "Domain check must REJECT adversarial or spoofed email: '$email'",
                 passedDomainCheck,

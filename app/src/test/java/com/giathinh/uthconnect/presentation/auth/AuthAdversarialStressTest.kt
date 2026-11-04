@@ -237,7 +237,7 @@ class AuthAdversarialStressTest {
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("attacker@subdomain.ut.edu.vn"))
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("attacker@notut.edu.vn"))
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("attacker@fake-ut.edu.vn"))
-        assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("attacker@uth.edu.vn")) // UTH university staff domain, not student
+        assertNull(validator.identifierError("attacker@uth.edu.vn")) // UTH university domain is accepted
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("@ut.edu.vn")) // empty local-part
     }
 

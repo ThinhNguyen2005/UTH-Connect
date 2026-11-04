@@ -60,9 +60,6 @@ class AuthViewModelTest {
     @Test fun `Google token never creates a session when the backend lacks Google`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
-        // FakeAuthRepository keeps the interface default (GoogleSignInUnsupportedException),
-        // so this holds in both build modes: googleSignInAvailable is a BuildConfig mirror,
-        // while the invariant under test is that no token can open a student session here.
         vm.onAction(AuthAction.GoogleIdTokenReceived("id-token", "raw-nonce"))
         advanceUntilIdle()
         assertNull(vm.uiState.value.student)
@@ -109,6 +106,7 @@ class AuthViewModelTest {
         assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
         assertNull(vm.uiState.value.student)
     }
+
     @Test fun `wrong password emits single one off event`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
@@ -121,7 +119,6 @@ class AuthViewModelTest {
         assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
         assertNull(vm.uiState.value.student)
     }
-
 
     @Test fun `Retry tries previous credentials and preserves error after failure`() = runTest {
         val vm = newViewModel(FakeSession())
@@ -200,5 +197,32 @@ class AuthViewModelTest {
         assertEquals(AuthFailure.BiometricUnavailable, vm.uiState.value.failure)
         assertFalse(vm.uiState.value.isSigningIn)
     }
-}
 
+    @Test fun `ContinueIdentifier accepts uth edu vn domain and transitions to Password step`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.IdentifierChanged("student@uth.edu.vn"))
+        vm.onAction(AuthAction.ContinueIdentifier)
+        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
+        assertNull(vm.uiState.value.identifierError)
+    }
+
+    @Test fun `DeepLinkReceived transitions to ResetPassword step`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.DeepLinkReceived(token = "fake-recovery-token", type = "recovery"))
+        assertEquals(AuthScreenStep.ResetPassword, vm.uiState.value.screenStep)
+    }
+
+    @Test fun `ForgotPassword dialog opens and Submits successfully`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.ForgotPassword)
+        assertTrue(vm.uiState.value.forgotDialogOpen)
+
+        vm.onAction(AuthAction.ForgotEmailChanged("student@ut.edu.vn"))
+        vm.onAction(AuthAction.SubmitForgotPassword)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.forgotSuccessNotice)
+    }
+}

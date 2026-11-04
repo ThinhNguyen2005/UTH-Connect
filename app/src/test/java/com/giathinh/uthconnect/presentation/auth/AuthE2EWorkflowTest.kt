@@ -189,7 +189,7 @@ class AuthE2EWorkflowTest {
         // Rejected domains
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("student@gmail.com"))
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("student@yahoo.com"))
-        assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("student@uth.edu.vn"))
+        assertNull(validator.identifierError("student@uth.edu.vn"))
         assertEquals(LoginFieldError.InvalidIdentifier, validator.identifierError("student@hcmut.edu.vn"))
     }
 
