@@ -37,4 +37,17 @@ class AuthScreenUiTest {
         }
         rule.onNodeWithTag("auth_retry").assertDoesNotExist()
     }
+
+    @Test fun biometricElementsDoNotExistOnAuthScreen() {
+        rule.setContent {
+            UTHConnectTheme {
+                AuthScreen(uiState = AuthUiState(isRestoring = false), onAction = {})
+            }
+        }
+        rule.onNodeWithTag("auth_mode_biometric").assertDoesNotExist()
+        rule.onNodeWithTag("auth_biometric_card").assertDoesNotExist()
+        rule.onNodeWithTag("auth_biometric_touch_zone").assertDoesNotExist()
+        rule.onNodeWithTag("auth_biometric_login").assertDoesNotExist()
+        rule.onNodeWithTag("auth_mode_password").assertDoesNotExist()
+    }
 }
