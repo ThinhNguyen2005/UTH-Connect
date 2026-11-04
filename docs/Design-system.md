@@ -253,6 +253,44 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
 - Sheet: dùng `ModalBottomSheet` của Material 3, shape `MaterialTheme.shapes.large` từ Design System và drag handle mặc định (`BottomSheetDefaults.DragHandle`). Để Material 3 quản lý insets, gesture và giới hạn chiều cao; nội dung dùng padding `UthDimens.Spacing.Lg` khi phù hợp bố cục.
 - Dialog: tối đa 2 action, action phá huỷ (xóa sự kiện, hủy đăng ký hàng loạt) dùng `ErrorOnContainer` và phải có bước xác nhận.
 
+### 4.11. Auth Screen (Giao diện Xác thực / Đăng nhập Modern Minimalist)
+
+Màn hình đăng nhập áp dụng triết lý Modern Minimalist ("Hello Again"), tối giản phân cấp thị giác để tạo cảm giác nhẹ nhàng, hiện đại và tập trung cho sinh viên UTH.
+
+#### A. Nguyên lý Bố cục
+- **Trực tiếp trên Canvas**: Không sử dụng `UthCard` bọc toàn bộ form đăng nhập (loại bỏ kiểu form-in-card thô cứng). Các input field, nút bấm và liên kết hỗ trợ nằm trực tiếp trên nền `MaterialTheme.colorScheme.background`.
+- **Lớp nền mỹ thuật (Artistic Ambient Canvas)**:
+  - Một `Canvas` đặt làm layer nền ngay bên trong `Box` gốc (`Modifier.fillMaxSize()`).
+  - Vẽ một hình tròn ambient mềm mại ở góc trên bên phải:
+    - Bán kính: `size.width * UthDimens.Layout.AuthAmbientRadiusFraction` (0.45f).
+    - Tâm vẽ: `Offset(size.width * UthDimens.Layout.AuthAmbientCenterFractionX, size.height * UthDimens.Layout.AuthAmbientCenterFractionY)` (1.05f, -0.05f).
+    - Màu sắc: `MaterialTheme.colorScheme.primaryContainer.copy(alpha = UthDimens.Opacity.AuthAmbientShape)` (0.45f).
+- **Window Insets bắt buộc**:
+  - `statusBarsPadding()`: Đẩy nội dung xuống dưới status bar / camera cutout.
+  - `navigationBarsPadding()`: Đẩy nội dung lên trên gesture pill hoặc thanh 3 phím điều hướng đáy.
+  - `imePadding()`: Tự động nâng nội dung khi bàn phím ảo xuất hiện.
+  - `verticalScroll(rememberScrollState())`: Cho phép cuộn form linh hoạt trên thiết bị có chiều cao khiêm tốn.
+  - Lề ngang màn hình: `UthDimens.Spacing.Xl` (24.dp).
+
+#### B. Trường nhập liệu (Auth TextFields)
+- **Bo góc**: `UthDimens.Radius.Lg` = **16.dp** (`UthDimens.Radius.LgShape`), mang lại cảm giác bo tròn thân thiện hơn so với 8.dp (`Md`) của form thông thường.
+- **Nền input**: `UthTheme.extendedColors.surfaceSubtle` (sáng: `#F0F3F6`, tối: `#1C2C3D`).
+- **Viền bình thường (unfocused)**: `MaterialTheme.colorScheme.outlineVariant` kết hợp alpha `UthDimens.Opacity.AuthInputUnfocusedBorder` (0.40f). Độ dày viền: `UthDimens.Size.Stroke` (1.dp).
+- **Viền đang nhập (focused)**: `MaterialTheme.colorScheme.primary` (Navy `#003366` / `#7FB2E5`).
+- **Chiều cao tối thiểu**: 56.dp (chuẩn Material 3).
+- **Icon đại diện**: `UthDimens.Size.Icon` (24.dp), màu `textSecondary`.
+
+#### C. Chữ & Tương phản (WCAG AAA)
+- **Tiêu đề "Chào bạn trở lại! / Hello Again!"**: `MaterialTheme.typography.headlineLarge` (32sp / 40sp / 600) màu `onBackground` — đạt **16.0:1 (AAA)**.
+- **Phụ đề**: `MaterialTheme.typography.bodyMedium` (14sp / 20sp / 400) màu `textSecondary` — đạt **5.5:1 (AA)**.
+- **Nút đăng nhập chính**: `UthPrimaryButton` cao 48dp (`Size.ButtonHeight`), nền Navy, chữ trắng in hoa `labelLarge` (14sp / 20sp / 500) — đạt **12.6:1 (AAA)**.
+- **Nút Google SSO**: `OutlinedButton` nền `surfaceSubtle`, viền `outlineVariant` alpha 0.45f, chữ `labelLarge` màu `onSurface`, icon Google kích thước `UthDimens.Size.IconInline` (18.dp).
+- **Footer Bảo mật**: Icon ổ khóa `UthDimens.Size.SecurityIconSize` (16.dp) + text `labelSmall` màu `textTertiary`, toàn bộ footer có độ mờ nhẹ `alpha = UthDimens.Opacity.AuthFooter` (0.45f).
+
+#### D. Loại bỏ hoàn toàn Sinh trắc học (No Biometrics)
+- Màn hình Auth **không** chứa tab hoặc pill chuyển đổi giữa Mật khẩu và Sinh trắc học.
+- Đăng nhập chỉ gồm 2 phương thức: Mật khẩu (luồng thông minh Identifier -> Password) và Google SSO (@ut.edu.vn).
+
 ---
 
 ## 5. Motion
