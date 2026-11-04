@@ -1,5 +1,7 @@
 # UTH Connect — Cây thư mục & phân quyền sở hữu
 
+Scanner CHECKIN-2: `presentation/scanner/` gồm Screen, Route, ViewModel, UiState, Action và thành phần camera `QrCameraPreview.kt`; `domain/usecase/CheckInUseCase.kt` kiểm tra role và mã vé. QR trong `Ticket.kt` dùng payload ID vé đầy đủ; `MockTicketRepository` lưu Attendance trong bộ nhớ và cập nhật trạng thái vé. Test ở `test/.../domain/usecase/CheckInUseCaseTest.kt`, `test/.../presentation/scanner/ScannerViewModelTest.kt` và `test/.../presentation/tickets/TicketsQrEncodingTest.kt`. Build thêm ZXing core để tạo QR; mã demo chưa được backend ký/xác minh.
+
 > **Phiên bản:** v1.4 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
 > **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
@@ -22,6 +24,10 @@ Giải thích vì sao chia theo cây dọc (vertical slice) chứ không phải 
 
 ## 2. Cây hiện tại (đã kiểm chứng bằng `Get-ChildItem`, không phải cây trên giấy)
 
+**Bổ sung trên `feature/checking-duc-v2` (03/11/2026):** `presentation/attendance/` gồm `AttendanceScreen`, `AttendanceRoute`, `AttendanceViewModel`, `AttendanceUiState`, `AttendanceAction`, `AttendanceNavigation`; `domain/model/AttendanceRoster.kt`, `domain/repository/AttendanceRosterRepository.kt`, `domain/usecase/{GetAttendanceRosterUseCase,ExportAttendanceCsvUseCase}.kt`; `data/repository/SupabaseAttendanceRosterRepository.kt`, `data/di/AttendanceRosterDataModule.kt`; unit tests tương ứng trong `test/presentation/attendance/` và `test/domain/usecase/`. Màn chi tiết được nối bằng một nút trên thẻ sự kiện và một graph con trong `UthApp.kt`.
+
+**Bổ sung trên `feature/checking-duc-v2` (04/11/2026):** `presentation/scanner/` gồm 4 file `QrScannerScreen`, `QrScannerRoute`, `QrScannerUiState`, `QrScannerAction`. Scanner **không** có `ViewModel` và không phải một module đủ 5 file theo `docs/CODING_STANDARDS.md` mục 3.2, vì nó là Dialog quét nối trong `EventsRoute` chứ không có tab/route riêng, và `PreviewView.SurfaceProvider` mà CameraX cần thuộc về View — đưa binding camera vào ViewModel sẽ phạm mục 3.1 dòng "ViewModel cấm Compose/Context". Logic giải mã frame đẩy xuống `domain/qr/QrFrameDecoder.kt` (thuần JVM + zxing, test được) để `presentation/scanner/` không có file thứ sáu kiểu helper. Phần dịch mã lỗi server đặt ở `presentation/common/ServerErrorMessage.kt`: đây là ngoại lệ có chủ đích của mục 3.1 dòng "muốn dùng chung thì đẩy xuống domain/core", vì hàm là `@Composable` (`stringResource`) nên không xuống `domain` được, còn `core/designsystem` bị cấm import `domain`.
+
 ```
 app/src/main/java/com/giathinh/uthconnect/
 ├── MainActivity.kt                     @AndroidEntryPoint — điểm vào DI duy nhất     [chủ repo]
@@ -40,15 +46,20 @@ app/src/main/java/com/giathinh/uthconnect/
 └── presentation/
     ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo; extended for tickets]
     ├── tickets/       README · TicketsScreen · Route · ViewModel · UiState · Action · Navigation [checkin]
+    ├── scanner/       QrScannerScreen · QrScannerRoute · QrScannerUiState · QrScannerAction  [checkin]
+    ├── common/        ServerErrorMessage.kt — mã lỗi server → câu hướng xử lý (dùng chung)  [checkin]
+    ├── events/        EventsScreen · EventsRoute · EventsViewModel (UiState nằm trong VM)   [events]
+    ├── attendance/    Screen · Route · ViewModel · UiState · Action · Navigation        [checkin]
     ├── home/          HomeScreen.kt          (placeholder, chưa MVVM)                 [events]
 │   ├── di/            Auth · Events · Firebase · Grade · Home · Network · Notification · Schedule · User · Utilities
 │   ├── network/       NetworkMonitor · ConnectivityManagerNetworkMonitor
 │   ├── repository/    demo/Firebase auth, session, Firestore events, fake data, announcements, utilities
 │   └── seed/          FirestoreEventSeeder.kt
 ├── domain/
-│   ├── model/         Announcement · Event · HomeFeed · User · StudentProfile · CourseSchedule · …
+│   ├── model/         Announcement · Event · HomeFeed · User · StudentProfile · CourseSchedule · ServerErrorCode · …
 │   ├── repository/    Auth · Session · Event · Announcement · User · Schedule · Grade · Notification · Utilities
 │   ├── usecase/       SignIn · GetProfile · GetHomeFeed · GetAnnouncementDetail · GetUtilityModules
+│   ├── qr/            QrFrameDecoder.kt — nén luminance + giải mã QR, thuần JVM          [checkin]
 │   └── validation/    LoginValidator.kt
 └── presentation/
     ├── navigation/    UthApp.kt · UthDestination.kt                                   [chủ repo]
@@ -63,6 +74,9 @@ app/src/test/java/com/giathinh/uthconnect/
 ├── testing/           MainDispatcherRule.kt      (dùng chung — chỉ đọc, đừng sửa)     [chủ repo]
 └── presentation/utilities/  UtilitiesViewModelTest.kt  (4 test, đang xanh)            [utilities]
     └── presentation/tickets/ TicketsViewModelTest.kt                                      [checkin]
+    └── domain/qr/       QrFrameDecoderTest.kt  (6 test, mirror package của `domain/qr`)   [checkin]
+    └── domain/model/    ServerErrorCodeTest.kt  (7 test, hợp đồng 21 mã lỗi)              [checkin]
+    └── presentation/events/ EventEditorTimeTest.kt  (6 test, mặc định giờ tạo sự kiện)     [checkin]
 ```
 
 Đây là snapshot checkout `main` tại `9267f65`; `schedule/` vẫn là placeholder, Events và Check-in chưa có package presentation trên `main`. **Cây `origin/develop` đã tiến lên `3f545c3`**, khác `main` vì PR #20 đã merge Lost & Found. Phần chênh lệch được xác minh bằng `git diff --name-status 9267f65..origin/develop`:
@@ -128,7 +142,7 @@ Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là
 | **Bạn E** | `feature/lostfound-<tên>` | `utilities/` (đang có — kế thừa nguyên slice mẫu) · `lostfound/` | `model/LostFoundListing.kt` · `repository/LostFoundRepository.kt` · `usecase/…` | `repository/` `remote/firestore/LostFoundFirestoreRepository.kt` · `di/LostFoundDataModule.kt` | `presentation/utilities/` `presentation/lostfound/` |
 | **Anh Phú** | `feature/auth-phu` | `auth/` · `profile/` | model và hợp đồng auth/session | repository và DI auth/session | auth · profile |
 | **Văn Tạ Huy Thiên** | `feature/events-van` | `events/` | Event · Registration · use case | repository và DI events | events |
-| **Đức Dịch Viết** | `feature/checkin-duc` | `tickets/` · `scanner/` | Ticket · Attendance · use case | repository và DI check-in | tickets · scanner |
+| **Đức Dịch Viết** | `feature/checking-duc-v2` | `tickets/` · `scanner/` · `attendance/` · `common/` (chỉ `ServerErrorMessage.kt`, xem mục 5) | Ticket · Attendance · AttendanceRoster · `model/ServerErrorCode.kt` · `qr/QrFrameDecoder.kt` · use case | repository và DI check-in/danh sách | tickets · scanner · attendance · `domain/qr/` · `domain/model/` |
 | **Trọng Nghĩa** | `feature/timetable-nghia` | `schedule/` | model và use case thời khóa biểu | repository và DI thời khóa biểu | schedule |
 | **Thắng Nguyễn Minh** | `feature/lostfound-thang` | `lostfound/` | model và use case Lost & Found | repository và DI Lost & Found | lostfound |
 | **Chủ repo** | `chore/<việc>` | `navigation/` | `domain/common/` (kết quả phân trang, `DeliveryPhase` — chỉ để thứ thật sự dùng chung) | — | `testing/` |
@@ -182,6 +196,8 @@ Cấm: `@Component`/`@Subcomponent` tự chế, `ServiceLocator` dạng `object`
 | `app/src/main/res/drawable/` | chủ repo merge | thêm `ic_<module>_<tên>.xml` (vector tự vẽ) | đổi icon design-system của người khác |
 | `gradle/libs.versions.toml` · `build.gradle.kts` (gốc & app) · `gradle.properties` | chủ repo | yêu cầu dependency + mục đích | tự thêm plugin/annotation processor — KSP, Hilt, serialization đã bật sẵn, chỉ việc dùng |
 | `test/testing/MainDispatcherRule.kt` | chủ repo | dùng trong test của bạn | sửa; cần rule khác → tạo trong `test/presentation/<module>/` |
+| `presentation/common/ServerErrorMessage.kt` | Đức (`feature/checking-duc-v2`) | gọi `ServerErrorCode.messageText()` từ Screen/Route của module mình; thêm `when` nhánh khi migration khai mã mới | nhét nghiệp vụ riêng của một module vào đây; import file từ `presentation/<module>/` khác |
+| `domain/qr/QrFrameDecoder.kt` | Đức (`feature/checking-duc-v2`) | dùng trong máy quét nào cần giải mã frame YUV | chuyển thành lớp Android (CameraX/Bitmap) — mất khả năng test JVM |
 | `docs/REPO_TREE.md` (file này) | chủ repo | cập nhật mục 2/3 khi cây bạn đổi (bắt buộc, xem header) | tạo một tài liệu phân công thứ hai song song |
 
 Không gian tên `res/` là chung nên dễ trùng nhất: tên file resource **phải unique toàn app**; prefix module là cách rẻ nhất để đạt điều đó.
@@ -242,7 +258,16 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 
 ## 8. Nhật ký cấu trúc
 
+| v1.6e-conv | 04/11/2026 | Sửa hai lệch chuẩn kiến trúc trong cây của check-in. `presentation/tickets/TicketsScreen.kt` không còn chạm `Context`: clipboard + toast xác nhận chuyển hết sang `TicketQrRoute` (Route là nơi hợp lệ để lấy `LocalContext`), Screen nhận callback `onCopy: (String) -> Unit`; chuỗi "Đang cấp mã QR bảo mật…" cứng trong Screen thành key `tickets_qr_issuing` (vi+en); `TicketsRoute` đổi import `hiltViewModel` sang `androidx.hilt.lifecycle.viewmodel.compose` theo mục 13 (#8) CODING_STANDARDS. `presentation/attendance/` bỏ lỗi-bằng-chuỗi: `AttendanceUiState.error: String?` thay bằng `failure: AttendanceFailure` (`LoadFailed`/`ExportFailed`) + `errorCode: ServerErrorCode?` + `errorDetail: String?`, `AttendanceViewModel.showError("EXPORT")` thay bằng `showExportFailure(reason)`, Screen hết so `"FORBIDDEN"`/`"EXPORT"` và dùng `messageText()` chung; key `attendance_forbidden` thành chuỗi thừa (giữ lại vì `strings.xml` là file nóng, không xoá). Thêm 2 unit test attendance (tổng 119 test/23 suite, 0 failure). |
+| v1.6d-structure | 04/11/2026 | Chuẩn hoá cấu trúc theo `docs/CODING_STANDARDS.md` mục 3.1/3.2/5 cho các file mới của `feature/checking-duc-v2`. Tách `presentation/scanner/QrScanState.kt` thành `QrScannerUiState.kt` (enum `QrScannerOutcome` + data class `QrScannerUiState`) và `QrScannerAction.kt`, đổi tên loại `QrScanUiState/QrScanAction/QrScanOutcome` → `QrScanner*` để khớp khuôn `<Module>…`; chuyển `QrFrameDecoder` từ `presentation/scanner/` xuống `domain/qr/` (kèm test mirror `test/domain/qr/`) để scanner không có file thứ sáu; rename 23 key `error_*` → `common_error_*` (theo tiền lệ `common_retry`) và 12 key `event_editor_*` → `events_editor_*` cho đúng quy ước prefix module. Ghi rõ hai ngoại lệ vào mục 2: scanner không có ViewModel vì `PreviewView.SurfaceProvider` thuộc về View, còn `presentation/common/ServerErrorMessage.kt` là `@Composable` nên không xuống `domain`/`core` được. Bổ sung dòng sở hữu vào mục 3 và bảng file chung mục 5. Build + 23 suite/117 test, 0 failure. |
+| v1.6c-errors | 04/11/2026 | Mã lỗi server không còn hiện nguyên văn lên UI. Thêm `domain/model/ServerErrorCode.kt` — enum mô phỏng đúng 21 mã `raise exception` trích từ `supabase/migrations` cùng `fromMessage()`/`of()` (ưu tiên token dài, phân biệt `IOException` → `Network`); thêm package `presentation/common/` với `ServerErrorMessage.kt` cung cấp `ServerErrorCode.messageText(fallback)` dịch sang câu có hướng xử lý. `EventsUiState.errorCode` + `TicketsUiState.qrErrorCode` mang mã từ ViewModel tới Route/Screen (ViewModel không đụng Context); `EventsScreen`, `EventsRoute` (banner máy quét) và `TicketsRoute` (panel QR vé) ưu tiên câu dịch, chỉ in chuỗi thô khi mã là `Unknown`. 23 key `error_*` song ngữ; unit test `test/domain/model/ServerErrorCodeTest.kt` (7 test, có test hợp đồng liệt kê toàn bộ mã). |
+| v1.6b-events | 04/11/2026 | Sửa logic tạo/sửa sự kiện trong `presentation/events/EventsScreen.kt`: mặc định của sự kiện mới đổi từ "bây giờ + 24 giờ" sang `defaultEventWindow()` = bây giờ + 60 phút (làm tròn lên bội số 5 phút) kéo dài 120 phút, hết cảnh người tạo chỉ sửa giờ và quên sửa ngày; hộp thoại hiện **cửa sổ điểm danh** tính theo `start_at − 30 phút … end_at + 30 phút` (khớp `check_in_ticket_qr`) kèm cảnh báo còn bao lâu nữa mới quét được; validation tách từng trường với thông báo riêng thay vì một câu gộp, và chỉ bắt giờ bắt đầu ở tương lai khi *tạo mới* (sửa thì server cho phép lùi giờ). Ba hàm quy đổi thời gian thành `internal` để test; thêm 12 key `event_editor_*` song ngữ; unit test mới `test/presentation/events/EventEditorTimeTest.kt` (6 test). |
+| v1.6-checkin | 04/11/2026 | Máy quét QR điểm danh chuyển từ "mượn app Camera hệ thống chụp một tấm JPEG" sang quét live trong app: thêm package `presentation/scanner/` (`QrFrameDecoder` thuần JVM, `QrScanState`, `QrScannerScreen` stateless, `QrScannerRoute` sở hữu CameraX), dependency `androidx.camera` 1.6.2 (core/camera2/lifecycle/view), quyền `CAMERA` + ba `uses-feature` không bắt buộc, hai drawable `ic_scanner_torch_on/off`, 17 key `scanner_*` song ngữ, và `EventsViewModel.checkedInCount` + `clearCheckInResult()` thay `showError()`. `presentation/events/EventsRoute.kt` không còn FileProvider/TakePicture. Unit test `test/presentation/scanner/QrFrameDecoderTest.kt`. Migration `20261104000000_stable_ticket_qr.sql` đổi token sang `eventId.uid.hmac` không hết hạn. |
+
+| v1.5-checkin | 03/11/2026 | Thêm slice `presentation/attendance/`, domain model/repository/use case cho danh sách điểm danh và CSV, Supabase repository + Hilt binding, tests; nối graph type-safe từ sự kiện. Màn danh sách đọc `registrations` và `attendance` từ Supabase. Thêm migration `60000_preserve_attendance_history` và kiểm tra constraint trong SQL contract. |
+
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.5-checkin | 03/11/2026 | QR máy đọc được bằng ZXing core; QR payload trong Ticket.kt, scanner xử lý mã đầy đủ; MockTicketRepository giữ Attendance trong bộ nhớ; thêm ScannerViewModelTest và TicketsQrEncodingTest. |
 | v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
 | v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
 | v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |
