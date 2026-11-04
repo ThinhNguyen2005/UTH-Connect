@@ -2,15 +2,51 @@ package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
+import com.giathinh.uthconnect.domain.model.Attendance
+import com.giathinh.uthconnect.domain.repository.TicketCheckInOutcome
 import com.giathinh.uthconnect.domain.repository.TicketRepository
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Dữ liệu trình diễn cho CHECKIN-1; thay bằng nguồn sự kiện/đăng ký khi hợp đồng sẵn sàng. */
 @Singleton
 class MockTicketRepository @Inject constructor() : TicketRepository {
+    private val attendances = mutableMapOf<String, Attendance>()
+
     override suspend fun getTickets(studentId: String): Result<List<Ticket>> =
-        Result.success(mockTickets.filter { it.studentId == studentId })
+        Result.success(
+            synchronized(attendances) {
+                mockTickets.filter { it.studentId == studentId }.map { ticket ->
+                    if (ticket.id in attendances) ticket.copy(status = TicketStatus.CHECKED_IN) else ticket
+                }
+            },
+        )
+
+    override suspend fun checkIn(identifier: String, organizerId: String): Result<TicketCheckInOutcome> =
+        Result.success(
+            synchronized(attendances) {
+                val ticket = mockTickets.firstOrNull {
+                    it.id == identifier || it.fallbackCode.filterNot(Char::isWhitespace)
+                        .equals(identifier.filterNot(Char::isWhitespace), ignoreCase = true)
+                }
+                when {
+                    ticket == null || ticket.status == TicketStatus.CANCELLED -> TicketCheckInOutcome.NOT_REGISTERED
+                    ticket.status == TicketStatus.CHECKED_IN || ticket.id in attendances ->
+                        TicketCheckInOutcome.ALREADY_CHECKED_IN
+                    else -> {
+                        attendances[ticket.id] = Attendance(
+                            ticketId = ticket.id,
+                            eventId = ticket.eventId,
+                            studentId = ticket.studentId,
+                            checkedInAt = Instant.now().toString(),
+                            checkedInBy = organizerId,
+                        )
+                        TicketCheckInOutcome.SUCCESS
+                    }
+                }
+            },
+        )
 
     private companion object {
         val mockTickets = listOf(

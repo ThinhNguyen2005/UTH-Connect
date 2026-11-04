@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -26,16 +27,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.UserRole
+import com.giathinh.uthconnect.presentation.common.messageText
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 private val eventDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm")
     .withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
@@ -49,6 +54,7 @@ fun EventsScreen(
     onSave: (String?, EventDraft) -> Unit,
     onSetStatus: (String, EventStatus) -> Unit,
     onScan: () -> Unit,
+    onOpenAttendance: (String) -> Unit,
 ) {
     var editor by remember { mutableStateOf<EventEditorTarget?>(null) }
     var cancelEvent by remember { mutableStateOf<Event?>(null) }
@@ -96,7 +102,9 @@ fun EventsScreen(
                 }
             }
             state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            // Ưu tiên câu dịch theo mã server; chuỗi thô chỉ còn dùng khi mã không nhận diện được.
+            (state.errorCode?.messageText(state.error) ?: state.error)
+                ?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (state.loading) item { CircularProgressIndicator() }
         if (!state.loading && state.events.isEmpty()) {
@@ -110,6 +118,7 @@ fun EventsScreen(
                 canManage = isOrganizer && (state.role == UserRole.ADMIN || event.orgId == state.currentUserId),
                 onRegister = { onRegister(event.id) }, onCancel = { onCancel(event.id) },
                 onEdit = { editor = EventEditorTarget(event) },
+                onOpenAttendance = { onOpenAttendance(event.id) },
                 onSetStatus = { status ->
                     if (status == EventStatus.CANCELLED) cancelEvent = event
                     else onSetStatus(event.id, status)
@@ -128,6 +137,7 @@ private fun EventCard(
     onRegister: () -> Unit,
     onCancel: () -> Unit,
     onEdit: () -> Unit,
+    onOpenAttendance: () -> Unit,
     onSetStatus: (EventStatus) -> Unit,
 ) {
     val canRegister = event.status == EventStatus.PUBLISHED && event.startAt > System.currentTimeMillis() &&
@@ -170,13 +180,46 @@ private fun EventCard(
                     Text("Hủy sự kiện")
                 }
             }
+            if (canManage) {
+                OutlinedButton(onClick = onOpenAttendance) {
+                    Text(stringResource(R.string.attendance_open))
+                }
+            }
         }
     }
 }
 
 private data class EventEditorTarget(val event: Event?)
 
-private val editableDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+// Các hàm quy đổi thời gian của editor để `internal` cho unit test chống tái diễn lỗi mặc định sai ngày.
+internal val editableDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+
+/**
+ * Độ rộng cửa sổ điểm danh quanh sự kiện, khớp các khoảng trừ trong `check_in_ticket_qr`:
+ * quét sớm nhất `start_at - 30 phút`, muộn nhất `end_at + 30 phút`.
+ */
+private const val CHECKIN_EARLY_MINUTES = 30L
+private const val CHECKIN_LATE_MINUTES = 30L
+
+/** Sự kiện mới phải bắt đầu tối thiểu chừng này giây nữa, khớp điều kiện `p_start_at > now()`. */
+private const val MIN_LEAD_SECONDS = 60L
+
+/**
+ * Mặc định của sự kiện mới: bắt đầu sau 60 phút (làm tròn lên bội số 5 phút), kéo dài 120 phút.
+ * Mặc định cũ là "bây giờ + 24 giờ" nên người tạo chỉ sửa giờ mà quên sửa ngày: sự kiện rơi
+ * sang hôm sau, vé vẫn hợp lệ nhưng mọi lần quét đều nhận CHECKIN_NOT_OPEN không lời giải thích.
+ */
+internal fun defaultEventWindow(zone: ZoneId): Pair<LocalDateTime, LocalDateTime> {
+    val base = LocalDateTime.now(zone).plusMinutes(60).truncatedTo(ChronoUnit.MINUTES)
+    val start = base.plusMinutes((5L - base.minute % 5L) % 5L)
+    return start to start.plusMinutes(120)
+}
+
+internal fun parseEditableDateTime(text: String): LocalDateTime? =
+    runCatching { LocalDateTime.parse(text, editableDateFormatter) }.getOrNull()
+
+internal fun editableDateTime(millis: Long, zone: ZoneId): String =
+    Instant.ofEpochMilli(millis).atZone(zone).toLocalDateTime().format(editableDateFormatter)
 
 @Composable
 private fun EventEditorDialog(
@@ -186,19 +229,33 @@ private fun EventEditorDialog(
     onDismiss: () -> Unit,
     onSave: (EventDraft) -> Unit,
 ) {
+    val localZone = ZoneId.of("Asia/Ho_Chi_Minh")
+    val errTitle = stringResource(R.string.events_editor_err_title)
+    val errPlace = stringResource(R.string.events_editor_err_place)
+    val errFormat = stringResource(R.string.events_editor_err_format)
+    val errOrder = stringResource(R.string.events_editor_err_order)
+    val errFuture = stringResource(R.string.events_editor_err_future)
+    val errCapacity = stringResource(R.string.events_editor_err_capacity)
     var title by remember(event?.id) { mutableStateOf(event?.title.orEmpty()) }
     var description by remember(event?.id) { mutableStateOf(event?.description.orEmpty()) }
     var location by remember(event?.id) { mutableStateOf(event?.location.orEmpty()) }
     var campus by remember(event?.id) { mutableStateOf(event?.campus.orEmpty()) }
-    val localZone = ZoneId.of("Asia/Ho_Chi_Minh")
+    val defaults = remember(event?.id) { defaultEventWindow(localZone) }
     var startsAt by remember(event?.id) {
-        mutableStateOf(editableDateFormatter.format(Instant.ofEpochMilli(event?.startAt ?: System.currentTimeMillis() + 86_400_000L).atZone(localZone)))
+        val fromEvent = event?.let { editableDateTime(it.startAt, localZone) }
+        mutableStateOf(fromEvent ?: defaults.first.format(editableDateFormatter))
     }
     var endsAt by remember(event?.id) {
-        mutableStateOf(editableDateFormatter.format(Instant.ofEpochMilli(event?.endAt ?: System.currentTimeMillis() + 90_000_000L).atZone(localZone)))
+        val fromEvent = event?.let { editableDateTime(it.endAt, localZone) }
+        mutableStateOf(fromEvent ?: defaults.second.format(editableDateFormatter))
     }
     var capacity by remember(event?.id) { mutableStateOf((event?.capacity ?: 0).toString()) }
     var validationError by remember(event?.id) { mutableStateOf<String?>(null) }
+    val parsedStart = parseEditableDateTime(startsAt.trim())
+    val parsedEnd = parseEditableDateTime(endsAt.trim())
+    val openFrom = parsedStart?.minusMinutes(CHECKIN_EARLY_MINUTES)
+    val closeAfter = parsedEnd?.plusMinutes(CHECKIN_LATE_MINUTES)
+    val showWindow = openFrom != null && closeAfter != null && closeAfter.isAfter(openFrom)
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(if (event == null) "Tạo bản nháp sự kiện" else "Chỉnh sửa sự kiện") },
@@ -214,20 +271,71 @@ private fun EventEditorDialog(
                 OutlinedTextField(value = startsAt, onValueChange = { startsAt = it }, label = { Text("Bắt đầu (dd/MM/yyyy HH:mm)") }, singleLine = true)
                 OutlinedTextField(value = endsAt, onValueChange = { endsAt = it }, label = { Text("Kết thúc (dd/MM/yyyy HH:mm)") }, singleLine = true)
                 OutlinedTextField(value = capacity, onValueChange = { capacity = it }, label = { Text("Sức chứa (0 = không giới hạn)") }, singleLine = true)
+                if (showWindow) {
+                    val now = LocalDateTime.now(localZone)
+                    val minutesToOpen = ChronoUnit.MINUTES.between(now, openFrom)
+                    val minutesFromClose = ChronoUnit.MINUTES.between(closeAfter, now)
+                    val windowHint = when {
+                        minutesToOpen > 0 -> stringResource(
+                            R.string.events_editor_window_future,
+                            stringResource(R.string.events_editor_left, minutesToOpen / 60, minutesToOpen % 60),
+                        )
+                        minutesFromClose > 0 -> stringResource(R.string.events_editor_window_past)
+                        else -> stringResource(R.string.events_editor_window_open)
+                    }
+                    HorizontalDivider()
+                    Text(
+                        text = stringResource(
+                            R.string.events_editor_window,
+                            openFrom.format(editableDateFormatter),
+                            closeAfter.format(editableDateFormatter),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = windowHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (minutesToOpen > 0 || minutesFromClose > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    )
+                }
+                if (event == null) {
+                    Text(
+                        stringResource(R.string.events_editor_draft_note),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 (validationError ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton = {
             Button(onClick = {
-                try {
-                    val count = requireNotNull(capacity.toIntOrNull())
-                    val start = LocalDateTime.parse(startsAt.trim(), editableDateFormatter).atZone(localZone).toInstant().toEpochMilli()
-                    val end = LocalDateTime.parse(endsAt.trim(), editableDateFormatter).atZone(localZone).toInstant().toEpochMilli()
-                    require(title.trim().length >= 3 && location.isNotBlank() && campus.isNotBlank() && end > start && count >= 0)
-                    validationError = null
-                    onSave(EventDraft(title.trim(), description.trim(), location.trim(), campus.trim(), start, end, count))
-                } catch (_: Exception) {
-                    validationError = "Kiểm tra tên, thời gian, địa điểm và sức chứa trước khi lưu."
+                val count = capacity.trim().toIntOrNull()
+                val start = parseEditableDateTime(startsAt.trim())
+                val end = parseEditableDateTime(endsAt.trim())
+                val startsTooSoon = start?.atZone(localZone)?.toInstant()
+                    ?.isBefore(Instant.now().plusSeconds(MIN_LEAD_SECONDS)) == true
+                validationError = when {
+                    title.trim().length < 3 -> errTitle
+                    location.isBlank() || campus.isBlank() -> errPlace
+                    start == null || end == null -> errFormat
+                    !end.isAfter(start) -> errOrder
+                    count == null || count < 0 -> errCapacity
+                    event == null && startsTooSoon -> errFuture
+                    else -> null
+                }
+                if (validationError == null && start != null && end != null && count != null) {
+                    onSave(
+                        EventDraft(
+                            title.trim(), description.trim(), location.trim(), campus.trim(),
+                            start.atZone(localZone).toInstant().toEpochMilli(),
+                            end.atZone(localZone).toInstant().toEpochMilli(),
+                            count,
+                        ),
+                    )
                 }
             }, enabled = !busy) { Text("Lưu") }
         },

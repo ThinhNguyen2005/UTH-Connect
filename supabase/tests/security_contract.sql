@@ -146,6 +146,14 @@ begin
     raise exception 'Required row ownership / recipient policies missing';
   end if;
 
-  raise notice 'PASS: RLS, event statuses, identity constraint, privileges, and RPC permissions';
+  if (select count(*) from pg_constraint c
+      where c.conrelid = 'public.attendance'::regclass
+        and c.conname in ('attendance_event_id_fkey', 'attendance_user_id_fkey',
+                          'attendance_checked_in_by_fkey')
+        and c.confdeltype = 'r') <> 3 then
+    raise exception 'Attendance history foreign keys must restrict deletion';
+  end if;
+
+  raise notice 'PASS: RLS, event statuses, identity constraint, privileges, RPC permissions, and attendance retention';
 end;
 $contract$;

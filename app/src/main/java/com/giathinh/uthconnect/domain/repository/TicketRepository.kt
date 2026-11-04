@@ -10,3 +10,5 @@ interface TicketRepository {
     suspend fun checkIn(token: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("QR check-in unavailable"))
 }
+
+enum class TicketCheckInOutcome { SUCCESS, ALREADY_CHECKED_IN, NOT_REGISTERED }
