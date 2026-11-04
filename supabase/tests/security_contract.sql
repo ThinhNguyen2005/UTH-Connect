@@ -10,7 +10,7 @@ declare
 begin
   foreach v_table in array array[
     'profiles', 'events', 'registrations', 'attendance',
-    'notifications', 'schedules', 'grades'
+    'notifications', 'schedules', 'grades', 'student_verification_requests'
   ] loop
     select c.relrowsecurity into v_enabled
     from pg_class c where c.oid = format('public.%I', v_table)::regclass;
@@ -44,7 +44,10 @@ begin
     or has_table_privilege('authenticated', 'public.registrations', 'DELETE')
     or has_table_privilege('authenticated', 'public.attendance', 'INSERT')
     or has_table_privilege('authenticated', 'public.attendance', 'UPDATE')
-    or has_table_privilege('authenticated', 'public.attendance', 'DELETE') then
+    or has_table_privilege('authenticated', 'public.attendance', 'DELETE')
+    or has_table_privilege('authenticated', 'public.student_verification_requests', 'INSERT')
+    or has_table_privilege('authenticated', 'public.student_verification_requests', 'UPDATE')
+    or has_table_privilege('authenticated', 'public.student_verification_requests', 'DELETE') then
     raise exception 'Dangerous write privilege exposed to authenticated';
   end if;
 
@@ -94,6 +97,8 @@ begin
     or has_function_privilege('anon', 'public.check_in(text)', 'EXECUTE')
     or has_function_privilege('anon', 'public.admin_set_user_role(uuid,public.user_role)', 'EXECUTE')
     or has_function_privilege('anon', 'public.admin_verify_student(uuid,text)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.submit_student_verification_request(text)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.admin_review_student_verification(uuid,text,text)', 'EXECUTE')
     or has_function_privilege('anon', 'public.create_event(text,text,text,text,timestamptz,timestamptz,integer)', 'EXECUTE')
     or has_function_privilege('anon', 'public.edit_event(uuid,text,text,text,text,timestamptz,timestamptz,integer)', 'EXECUTE')
     or has_function_privilege('anon', 'public.set_event_status(uuid,public.event_status)', 'EXECUTE')
@@ -101,7 +106,9 @@ begin
     or not has_function_privilege('authenticated', 'public.register_for_event(uuid)', 'EXECUTE')
     or not has_function_privilege('authenticated', 'public.create_event(text,text,text,text,timestamptz,timestamptz,integer)', 'EXECUTE')
     or not has_function_privilege('authenticated', 'public.edit_event(uuid,text,text,text,text,timestamptz,timestamptz,integer)', 'EXECUTE')
-    or not has_function_privilege('authenticated', 'public.set_event_status(uuid,public.event_status)', 'EXECUTE') then
+    or not has_function_privilege('authenticated', 'public.set_event_status(uuid,public.event_status)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.submit_student_verification_request(text)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.admin_review_student_verification(uuid,text,text)', 'EXECUTE') then
     raise exception 'RPC EXECUTE grants do not match authenticated-only contract';
   end if;
 
@@ -116,7 +123,9 @@ begin
       'public.admin_verify_student(uuid,text)'::regprocedure,
       'public.create_event(text,text,text,text,timestamptz,timestamptz,integer)'::regprocedure,
       'public.edit_event(uuid,text,text,text,text,timestamptz,timestamptz,integer)'::regprocedure,
-      'public.set_event_status(uuid,public.event_status)'::regprocedure
+      'public.set_event_status(uuid,public.event_status)'::regprocedure,
+      'public.submit_student_verification_request(text)'::regprocedure,
+      'public.admin_review_student_verification(uuid,text,text)'::regprocedure
     ]) and not p.prosecdef
   ) then
     raise exception 'Privileged RPC is missing SECURITY DEFINER';
@@ -130,7 +139,10 @@ begin
                      and policyname='registrations_select')
     or not exists (select 1 from pg_policies
                    where schemaname='public' and tablename='attendance'
-                     and policyname='attendance_select') then
+                     and policyname='attendance_select')
+    or not exists (select 1 from pg_policies
+                   where schemaname='public' and tablename='student_verification_requests'
+                     and policyname='student_verif_select') then
     raise exception 'Required row ownership / recipient policies missing';
   end if;
 
