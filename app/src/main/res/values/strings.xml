@@ -188,6 +188,10 @@
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
     <string name="nav_back">Quay lại</string>
     <string name="books_title">Chợ sách giáo trình</string>
+    <string name="books_header_subtitle">Mua bán và trao đổi giáo trình cùng sinh viên UTH</string>
+    <string name="books_deal_type">Hình thức giao dịch</string>
+    <string name="books_price_range">Khoảng giá</string>
+    <string name="books_result_count">%1$d bài đăng</string>
     <string name="books_photo">Ảnh bìa sách</string>
     <string name="books_pick_photo">Chọn ảnh bìa</string>
     <string name="books_back">Quay lại</string>

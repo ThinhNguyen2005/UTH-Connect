@@ -185,6 +185,10 @@
     <string name="lostfound_msg_post_failed">Failed to post item</string>
     <string name="nav_back">Back</string>
     <string name="books_title">Textbook market</string>
+    <string name="books_header_subtitle">Buy and exchange textbooks with UTH students</string>
+    <string name="books_deal_type">Listing type</string>
+    <string name="books_price_range">Price range</string>
+    <string name="books_result_count">%1$d listings</string>
     <string name="books_photo">Book cover</string>
     <string name="books_pick_photo">Choose cover photo</string>
     <string name="books_back">Back</string>

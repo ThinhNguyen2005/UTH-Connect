@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,14 +24,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,12 +50,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
+import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.domain.model.BookCondition
@@ -79,101 +87,130 @@ fun BooksScreen(
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.books_back))
+            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.books_back))
+                    }
+                    Column {
+                        Text(stringResource(R.string.books_title), style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.books_header_subtitle), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-                Text(stringResource(R.string.books_title), style = MaterialTheme.typography.headlineSmall)
-            }
-            OutlinedTextField(
-                value = uiState.query,
-                onValueChange = { onAction(BooksAction.Search(it)) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.books_search)) },
-                singleLine = true,
-            )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
-            ) {
-                BooksFilter.entries.forEach { filter ->
-                    FilterChip(
-                        selected = uiState.filter == filter,
-                        onClick = { onAction(BooksAction.SetFilter(filter)) },
-                        label = {
-                            Text(stringResource(when (filter) {
-                                BooksFilter.ALL -> R.string.books_filter_all
-                                BooksFilter.SALE -> R.string.books_filter_sale
-                                BooksFilter.EXCHANGE -> R.string.books_filter_exchange
-                            }))
-                        },
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
-            ) {
-                FilterChip(
-                    selected = uiState.condition == null,
-                    onClick = { onAction(BooksAction.SetCondition(null)) },
-                    label = { Text(stringResource(R.string.books_condition_all)) },
-                )
-                BookCondition.entries.forEach { condition ->
-                    FilterChip(
-                        selected = uiState.condition == condition,
-                        onClick = { onAction(BooksAction.SetCondition(condition)) },
-                        label = { Text(stringResource(condition.label)) },
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                 OutlinedTextField(
-                    value = uiState.minimumPrice,
-                    onValueChange = { onAction(BooksAction.SetPriceRange(it, uiState.maximumPrice)) },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(stringResource(R.string.books_min_price)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    value = uiState.query,
+                    onValueChange = { onAction(BooksAction.Search(it)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.books_search)) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
                 )
-                OutlinedTextField(
-                    value = uiState.maximumPrice,
-                    onValueChange = { onAction(BooksAction.SetPriceRange(uiState.minimumPrice, it)) },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(stringResource(R.string.books_max_price)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                )
-            }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
-            ) {
-                BooksSort.entries.forEach { sort ->
+                Text(stringResource(R.string.books_deal_type), style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                ) {
+                    BooksFilter.entries.forEach { filter ->
+                        FilterChip(
+                            selected = uiState.filter == filter,
+                            onClick = { onAction(BooksAction.SetFilter(filter)) },
+                            label = {
+                                Text(stringResource(when (filter) {
+                                    BooksFilter.ALL -> R.string.books_filter_all
+                                    BooksFilter.SALE -> R.string.books_filter_sale
+                                    BooksFilter.EXCHANGE -> R.string.books_filter_exchange
+                                }))
+                            },
+                        )
+                    }
+                }
+                Text(stringResource(R.string.books_condition), style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                ) {
                     FilterChip(
-                        selected = uiState.sort == sort,
-                        onClick = { onAction(BooksAction.SetSort(sort)) },
-                        label = { Text(stringResource(when (sort) {
-                            BooksSort.NEWEST -> R.string.books_sort_newest
-                            BooksSort.PRICE_LOW -> R.string.books_sort_price_low
-                            BooksSort.PRICE_HIGH -> R.string.books_sort_price_high
-                        })) },
+                        selected = uiState.condition == null,
+                        onClick = { onAction(BooksAction.SetCondition(null)) },
+                        label = { Text(stringResource(R.string.books_condition_all)) },
+                    )
+                    BookCondition.entries.forEach { condition ->
+                        FilterChip(
+                            selected = uiState.condition == condition,
+                            onClick = { onAction(BooksAction.SetCondition(condition)) },
+                            label = { Text(stringResource(condition.label)) },
+                        )
+                    }
+                }
+                Text(stringResource(R.string.books_price_range), style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                    OutlinedTextField(
+                        value = uiState.minimumPrice,
+                        onValueChange = { onAction(BooksAction.SetPriceRange(it, uiState.maximumPrice)) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.books_min_price)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = uiState.maximumPrice,
+                        onValueChange = { onAction(BooksAction.SetPriceRange(uiState.minimumPrice, it)) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.books_max_price)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
                     )
                 }
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                ) {
+                    BooksSort.entries.forEach { sort ->
+                        FilterChip(
+                            selected = uiState.sort == sort,
+                            onClick = { onAction(BooksAction.SetSort(sort)) },
+                            label = { Text(stringResource(when (sort) {
+                                BooksSort.NEWEST -> R.string.books_sort_newest
+                                BooksSort.PRICE_LOW -> R.string.books_sort_price_low
+                                BooksSort.PRICE_HIGH -> R.string.books_sort_price_high
+                            })) },
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilterChip(
+                        selected = uiState.includeSold,
+                        onClick = { onAction(BooksAction.IncludeSold(!uiState.includeSold)) },
+                        label = { Text(stringResource(R.string.books_show_sold)) },
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        stringResource(R.string.books_result_count, uiState.visibleListings.size),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                UthPrimaryButton(
+                    text = stringResource(R.string.books_create),
+                    onClick = { editing = null; showForm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-            FilterChip(
-                selected = uiState.includeSold,
-                onClick = { onAction(BooksAction.IncludeSold(!uiState.includeSold)) },
-                label = { Text(stringResource(R.string.books_show_sold)) },
-            )
-            UthPrimaryButton(
-                text = stringResource(R.string.books_create),
-                onClick = { editing = null; showForm = true },
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
 
-        if (uiState.isLoading) item { Text(stringResource(R.string.books_loading)) }
+        if (uiState.isLoading) item {
+            Row(Modifier.fillMaxWidth().padding(UthDimens.Spacing.Lg), horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
+                Text(stringResource(R.string.books_loading), modifier = Modifier.padding(start = UthDimens.Spacing.Sm),
+                    style = MaterialTheme.typography.bodyMedium)
+            }
+        }
         else if (uiState.failure == BooksFailure.SAVE_FAILED) item {
             Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
         }
@@ -218,9 +255,11 @@ fun BooksScreen(
                     listing.photoUrl?.let {
                         AsyncImage(it, listing.title, modifier = Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
                     }
-                    Text(listing.subject)
-                    Text(stringResource(R.string.books_condition_format, stringResource(listing.condition.label)))
-                    Text(if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange))
+                    Text(listing.subject, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
+                        style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     Text(listing.description)
                     Text(stringResource(R.string.books_seller_format, listing.sellerName))
                 }
@@ -257,27 +296,46 @@ private fun ListingCard(
     onSetStatus: (BookListingStatus) -> Unit,
 ) {
     UthCard(modifier = Modifier.fillMaxWidth(), onClick = onOpen) {
-        listing.photoUrl?.let {
-            AsyncImage(it, contentDescription = listing.title, modifier = Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Crop)
+        if (listing.photoUrl != null) {
+            AsyncImage(listing.photoUrl, contentDescription = listing.title,
+                modifier = Modifier.fillMaxWidth().height(176.dp), contentScale = ContentScale.Crop)
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth().height(112.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("UTH", style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(listing.title, style = MaterialTheme.typography.titleLarge)
-                Text(listing.subject, style = MaterialTheme.typography.bodyMedium)
+                Text(listing.title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(listing.subject, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (canManage) {
                 IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit)) }
                 IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete)) }
             }
         }
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
         Text(
             if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
             color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
-            Text(stringResource(listing.condition.label), style = MaterialTheme.typography.labelMedium)
-            Text(stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_available else R.string.books_sold))
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
+            UthStatusBadge(stringResource(listing.condition.label), BadgeTone.Info)
+            UthStatusBadge(
+                stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_available else R.string.books_sold),
+                if (listing.status == BookListingStatus.AVAILABLE) BadgeTone.Success else BadgeTone.Neutral,
+            )
         }
         if (canManage) {
             TextButton(onClick = {
@@ -341,12 +399,18 @@ private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSa
                 }
                 if (dealType == BookDealType.SALE) FormField(price, { price = it }, R.string.books_price, numeric = true)
                 FormField(description, { description = it }, R.string.books_description, singleLine = false)
-                AsyncImage(
-                    model = photoUri ?: initial?.photoUrl,
-                    contentDescription = stringResource(R.string.books_photo),
+                Surface(
                     modifier = Modifier.fillMaxWidth().height(160.dp),
-                    contentScale = ContentScale.Crop,
-                )
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    AsyncImage(
+                        model = photoUri ?: initial?.photoUrl,
+                        contentDescription = stringResource(R.string.books_photo),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 Button(onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                     Text(stringResource(R.string.books_pick_photo))
                 }
