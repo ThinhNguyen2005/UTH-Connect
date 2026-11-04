@@ -31,6 +31,15 @@ class BookListingUseCasesTest {
     }
 
     @Test
+    fun `exchange listing with a price is rejected before persistence`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).save(listing(dealType = BookDealType.EXCHANGE, price = 1000))
+
+        assertTrue(result.isFailure)
+        assertFalse(repository.saved)
+    }
+
+    @Test
     fun `invalid contact is rejected`() = runTest {
         val repository = FakeBookListingRepository()
         val result = BookListingUseCases(repository).save(listing(contact = "not contact"))

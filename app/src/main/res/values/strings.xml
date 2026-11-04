@@ -192,6 +192,9 @@
     <string name="books_deal_type">Hình thức giao dịch</string>
     <string name="books_price_range">Khoảng giá</string>
     <string name="books_result_count">%1$d bài đăng</string>
+    <string name="books_photo_too_large">Ảnh phải nhỏ hơn 5 MB. Hãy chọn ảnh khác.</string>
+    <string name="books_contact_failed_title">Không mở được ứng dụng liên hệ</string>
+    <string name="books_contact_failed_body">Thiết bị chưa có ứng dụng phù hợp. Bạn vẫn có thể chọn và sao chép thông tin liên hệ trong bài đăng.</string>
     <string name="books_photo">Ảnh bìa sách</string>
     <string name="books_pick_photo">Chọn ảnh bìa</string>
     <string name="books_back">Quay lại</string>

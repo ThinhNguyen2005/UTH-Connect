@@ -16,7 +16,8 @@ class BookListingUseCases @Inject constructor(private val repository: BookListin
             listing.sellerName.isBlank() || listing.sellerName.length > 100 ||
             listing.description.length > 2000 || listing.contact.length > 254 ||
             !isValidContact(listing.contact) ||
-            (listing.dealType == BookDealType.SALE && (listing.priceVnd ?: 0) <= 0)
+            (listing.dealType == BookDealType.SALE && (listing.priceVnd ?: 0) <= 0) ||
+            (listing.dealType == BookDealType.EXCHANGE && listing.priceVnd != null)
         ) return Result.failure(IllegalArgumentException("Invalid book listing"))
         return repository.saveListing(listing)
     }

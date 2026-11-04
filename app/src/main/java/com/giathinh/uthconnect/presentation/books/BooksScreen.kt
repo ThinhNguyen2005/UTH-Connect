@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.books
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -38,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +84,19 @@ fun BooksScreen(
     var editing by remember { mutableStateOf<BookListing?>(null) }
     var details by remember { mutableStateOf<BookListing?>(null) }
     var pendingDelete by remember { mutableStateOf<BookListing?>(null) }
+    var savePending by rememberSaveable { mutableStateOf(false) }
+    var saveFailed by rememberSaveable { mutableStateOf(false) }
+    var showContactError by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(savePending, uiState.isSaving, uiState.failure) {
+        if (savePending && !uiState.isSaving) {
+            if (uiState.failure == null) {
+                showForm = false
+                editing = null
+            } else saveFailed = true
+            savePending = false
+        }
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = UthDimens.Spacing.Lg),
@@ -197,8 +213,9 @@ fun BooksScreen(
                 }
                 UthPrimaryButton(
                     text = stringResource(R.string.books_create),
-                    onClick = { editing = null; showForm = true },
+                    onClick = { editing = null; saveFailed = false; showForm = true },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = uiState.currentUserUid != null,
                 )
             }
         }
@@ -211,7 +228,7 @@ fun BooksScreen(
                     style = MaterialTheme.typography.bodyMedium)
             }
         }
-        else if (uiState.failure == BooksFailure.SAVE_FAILED) item {
+        else if (uiState.failure == BooksFailure.SAVE_FAILED && !showForm) item {
             Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
         }
         if (!uiState.isLoading && uiState.failure == BooksFailure.LOAD_FAILED) item {
@@ -232,7 +249,7 @@ fun BooksScreen(
                 listing = listing,
                 canManage = listing.ownerUid == uiState.currentUserUid,
                 onOpen = { details = listing },
-                onEdit = { editing = listing; showForm = true },
+                onEdit = { editing = listing; saveFailed = false; showForm = true },
                 onDelete = { pendingDelete = listing },
                 onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
             )
@@ -242,8 +259,10 @@ fun BooksScreen(
 
     if (showForm) ListingFormDialog(
         initial = editing,
-        onDismiss = { showForm = false; editing = null },
-        onSave = { listing -> onAction(BooksAction.Save(listing)); showForm = false; editing = null },
+        saving = uiState.isSaving,
+        saveFailed = saveFailed,
+        onDismiss = { showForm = false; editing = null; savePending = false; saveFailed = false },
+        onSave = { listing -> savePending = true; saveFailed = false; onAction(BooksAction.Save(listing)) },
     )
     details?.let { listing ->
         val uriHandler = LocalUriHandler.current
@@ -262,17 +281,26 @@ fun BooksScreen(
                         style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     Text(listing.description)
                     Text(stringResource(R.string.books_seller_format, listing.sellerName))
+                    SelectionContainer { Text(listing.contact, style = MaterialTheme.typography.bodyMedium) }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     val contact = listing.contact.trim()
-                    uriHandler.openUri(if ('@' in contact) "mailto:${Uri.encode(contact)}" else "tel:${Uri.encode(contact)}")
+                    runCatching {
+                        uriHandler.openUri(if ('@' in contact) "mailto:${Uri.encode(contact)}" else "tel:${Uri.encode(contact)}")
+                    }.onSuccess { details = null }.onFailure { showContactError = true }
                 }) { Text(stringResource(R.string.books_contact_seller)) }
             },
             dismissButton = { TextButton(onClick = { details = null }) { Text(stringResource(R.string.books_close)) } },
         )
     }
+    if (showContactError) AlertDialog(
+        onDismissRequest = { showContactError = false },
+        title = { Text(stringResource(R.string.books_contact_failed_title)) },
+        text = { Text(stringResource(R.string.books_contact_failed_body)) },
+        confirmButton = { TextButton(onClick = { showContactError = false }) { Text(stringResource(R.string.books_close)) } },
+    )
     pendingDelete?.let { listing ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
@@ -348,7 +376,13 @@ private fun ListingCard(
 }
 
 @Composable
-private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSave: (BookListing) -> Unit) {
+private fun ListingFormDialog(
+    initial: BookListing?,
+    saving: Boolean,
+    saveFailed: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (BookListing) -> Unit,
+) {
     val context = LocalContext.current
     var photoUri by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
     var title by rememberSaveable(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
@@ -359,23 +393,30 @@ private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSa
     var description by rememberSaveable(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }
     var seller by rememberSaveable(initial?.id) { mutableStateOf(initial?.sellerName.orEmpty()) }
     var contact by rememberSaveable(initial?.id) { mutableStateOf(initial?.contact.orEmpty()) }
+    var photoTooLarge by rememberSaveable(initial?.id) { mutableStateOf(false) }
     val priceValue = price.toLongOrNull()
     val normalizedContact = contact.trim()
     val contactValid = normalizedContact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
         (normalizedContact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && normalizedContact.filter(Char::isDigit).length >= 8)
     val valid = title.isNotBlank() && title.length <= 160 && subject.isNotBlank() && subject.length <= 100 &&
         seller.isNotBlank() && seller.length <= 100 && description.length <= 2000 &&
-        normalizedContact.length <= 254 && contactValid &&
+        normalizedContact.length <= 254 && contactValid && !photoTooLarge &&
         (dealType == BookDealType.EXCHANGE || (priceValue != null && priceValue > 0))
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            photoUri = uri.toString()
+            val size = runCatching {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getLong(0) else null
+                }
+            }.getOrNull()
+            photoTooLarge = size != null && size >= MAX_BOOK_PHOTO_BYTES
+            if (!photoTooLarge) photoUri = uri.toString()
         }
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!saving) onDismiss() },
         title = { Text(stringResource(if (initial == null) R.string.books_create else R.string.books_edit)) },
         text = {
             Column(
@@ -411,15 +452,17 @@ private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSa
                         contentScale = ContentScale.Crop,
                     )
                 }
-                Button(onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                Button(enabled = !saving, onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                     Text(stringResource(R.string.books_pick_photo))
                 }
+                if (photoTooLarge) Text(stringResource(R.string.books_photo_too_large), color = MaterialTheme.colorScheme.error)
                 FormField(seller, { seller = it }, R.string.books_seller)
                 FormField(contact, { contact = it }, R.string.books_contact)
+                if (saveFailed) Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
                 if (!valid) Text(stringResource(R.string.books_form_invalid), color = MaterialTheme.colorScheme.error)
             }
         },
-        confirmButton = { TextButton(enabled = valid, onClick = {
+        confirmButton = { TextButton(enabled = valid && !saving, onClick = {
             onSave(BookListing(
                 id = initial?.id ?: UUID.randomUUID().toString(),
                 title = title.trim(), subject = subject.trim(), condition = condition, dealType = dealType,
@@ -430,8 +473,11 @@ private fun ListingFormDialog(initial: BookListing?, onDismiss: () -> Unit, onSa
                 status = initial?.status ?: BookListingStatus.AVAILABLE,
                 createdAt = initial?.createdAt ?: System.currentTimeMillis(),
             ))
-        }) { Text(stringResource(R.string.books_save)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.books_cancel)) } },
+        }) {
+            if (saving) CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
+            else Text(stringResource(R.string.books_save))
+        } },
+        dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text(stringResource(R.string.books_cancel)) } },
     )
 }
 
@@ -455,6 +501,8 @@ private fun FormField(
 
 @Composable
 private fun priceText(value: Long?): String = NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value ?: 0) + " ₫"
+
+private const val MAX_BOOK_PHOTO_BYTES = 5L * 1024 * 1024
 
 private val BookCondition.label: Int
     get() = when (this) {

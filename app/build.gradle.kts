@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.google.services) apply false
 }
 
-val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()
+val useMockData = providers.gradleProperty("useMockData").orElse((!file("google-services.json").isFile).toString()).get().toBooleanStrict()
 if (!useMockData) {
     apply(plugin = "com.google.gms.google-services")
 }

@@ -35,7 +35,7 @@ class BooksViewModel @Inject constructor(
             is BooksAction.SetPriceRange -> _uiState.update { it.copy(minimumPrice = action.minimum, maximumPrice = action.maximum) }
             is BooksAction.SetSort -> _uiState.update { it.copy(sort = action.value) }
             is BooksAction.IncludeSold -> _uiState.update { it.copy(includeSold = action.value) }
-            is BooksAction.Save -> mutate { listings.save(action.listing) }
+            is BooksAction.Save -> save(action.listing)
             is BooksAction.SetStatus -> mutate { listings.save(action.listing.copy(status = action.status)) }
             is BooksAction.Delete -> mutate { listings.delete(action.id) }
         }
@@ -58,6 +58,16 @@ class BooksViewModel @Inject constructor(
             action().fold(
                 onSuccess = { _uiState.update { it.copy(failure = null) } },
                 onFailure = { _uiState.update { it.copy(failure = BooksFailure.SAVE_FAILED) } },
+            )
+        }
+    }
+
+    private fun save(listing: BookListing) {
+        _uiState.update { it.copy(isSaving = true, failure = null) }
+        viewModelScope.launch {
+            listings.save(listing).fold(
+                onSuccess = { _uiState.update { it.copy(isSaving = false, failure = null) } },
+                onFailure = { _uiState.update { it.copy(isSaving = false, failure = BooksFailure.SAVE_FAILED) } },
             )
         }
     }

@@ -189,6 +189,9 @@
     <string name="books_deal_type">Listing type</string>
     <string name="books_price_range">Price range</string>
     <string name="books_result_count">%1$d listings</string>
+    <string name="books_photo_too_large">Photos must be smaller than 5 MB. Choose another image.</string>
+    <string name="books_contact_failed_title">No contact app available</string>
+    <string name="books_contact_failed_body">This device has no app that can handle this contact. You can still select and copy the contact details in the listing.</string>
     <string name="books_photo">Book cover</string>
     <string name="books_pick_photo">Choose cover photo</string>
     <string name="books_back">Back</string>

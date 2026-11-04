@@ -26,7 +26,15 @@ service cloud.firestore {
     }
 
     function validBookListing() {
-      return request.resource.data.title is string
+      return request.resource.data.keys().hasAll([
+          'title', 'subject', 'condition', 'dealType', 'priceVnd', 'description',
+          'sellerName', 'contact', 'ownerUid', 'photoUrl', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'title', 'subject', 'condition', 'dealType', 'priceVnd', 'description',
+          'sellerName', 'contact', 'ownerUid', 'photoUrl', 'status', 'createdAt'
+        ])
+        && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 160
         && request.resource.data.subject is string
@@ -48,8 +56,9 @@ service cloud.firestore {
         && request.resource.data.status in ['AVAILABLE', 'SOLD']
         && request.resource.data.createdAt is int
         && (request.resource.data.photoUrl == null || request.resource.data.photoUrl is string)
-        && (request.resource.data.dealType == 'EXCHANGE'
-          || (request.resource.data.priceVnd is int && request.resource.data.priceVnd > 0));
+        && ((request.resource.data.dealType == 'EXCHANGE' && request.resource.data.priceVnd == null)
+          || (request.resource.data.dealType == 'SALE'
+            && request.resource.data.priceVnd is int && request.resource.data.priceVnd > 0));
     }
 
     // --- USERS COLLECTION ---
@@ -112,6 +121,7 @@ service cloud.firestore {
       allow update: if isAuthenticated()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == resource.data.createdAt
         && validBookListing();
       allow delete: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
     }

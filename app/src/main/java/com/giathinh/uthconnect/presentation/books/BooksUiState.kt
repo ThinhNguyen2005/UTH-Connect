@@ -9,6 +9,7 @@ enum class BooksFailure { LOAD_FAILED, SAVE_FAILED }
 
 data class BooksUiState(
     val isLoading: Boolean = true,
+    val isSaving: Boolean = false,
     val currentUserUid: String? = null,
     val listings: List<BookListing> = emptyList(),
     val query: String = "",
