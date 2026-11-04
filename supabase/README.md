@@ -24,6 +24,8 @@ existing Firebase production data.
    - `migrations/20261103030000_enforce_verified_checkin.sql`
    - `migrations/20261103040000_remove_legacy_capacity_check.sql`
    - `migrations/20261103050000_identity_uniqueness.sql`
+   - `migrations/20261103060000_preserve_attendance_history.sql`
+   - `migrations/20261104000000_stable_ticket_qr.sql`
 
    The `05000` migration adds an enum value that must be committed before it is
    used. The `07500` migration removes the original capacity CHECK **before**
@@ -34,7 +36,12 @@ existing Firebase production data.
    schedules and grades. The `30000` migration prevents unverified students
    from issuing/using QR tokens. The `40000` and `50000` migrations defend
    against remaining legacy capacity checks; `50000` also enforces normalized
-   uniqueness of verified student numbers.
+   uniqueness of verified student numbers. The `60000` migration prevents
+   deleting an event or profile while an attendance row still refers to it.
+   Data retention and privacy erasure still require a reviewed administrative
+   policy and backup procedure. The `040000` migration adds a stable signed
+   ticket QR; the scanner still enforces the event check-in window and rejects
+   duplicate attendance.
 
    **Existing projects:** Check the recorded migration history and SQL schema
    before running anything. Never modify or re-run an already-applied migration

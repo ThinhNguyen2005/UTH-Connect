@@ -54,12 +54,12 @@ class SupabaseTicketRepository @Inject constructor(
     }
 
     override suspend fun issueCheckInToken(eventId: String): Result<String> = runCatching {
-        client.rpc("issue_checkin_token", buildJsonObject { put("p_event_id", java.util.UUID.fromString(eventId).toString()) })
+        client.rpc("issue_ticket_qr", buildJsonObject { put("p_event_id", java.util.UUID.fromString(eventId).toString()) })
             .jsonPrimitive.content
     }
 
     override suspend fun checkIn(token: String): Result<Unit> = runCatching {
-        client.rpc("check_in", buildJsonObject { put("p_token", token) })
+        client.rpc("check_in_ticket_qr", buildJsonObject { put("p_token", token) })
         Unit
     }
 }
