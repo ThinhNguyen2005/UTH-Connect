@@ -28,7 +28,7 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
-        client.table("events?select=*&id=eq.${uuid(eventId)}").jsonArray
+        client.table("events?select=*&id=eq.${urlEncode(uuid(eventId))}").jsonArray
             .singleOrNull()?.jsonObject?.toDomainEvent()
     }
 
@@ -48,7 +48,7 @@ class SupabaseEventRepository @Inject constructor(
 
     override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = revision.map {
         if (uid != client.userId) return@map false
-        client.table("registrations?select=status&event_id=eq.${uuid(eventId)}&user_id=eq.$uid")
+        client.table("registrations?select=status&event_id=eq.${urlEncode(uuid(eventId))}&user_id=eq.${urlEncode(uuid(uid))}")
             .jsonArray.any { row -> row.jsonObject.string("status") == "REGISTERED" }
     }
 
@@ -60,7 +60,7 @@ class SupabaseEventRepository @Inject constructor(
         cancelRegistration(eventId, client.userId)
 
     override fun currentUserRegistrations(): Flow<Set<String>> = revision.map {
-        client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${client.userId}")
+        client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${urlEncode(uuid(client.userId))}")
             .jsonArray.mapNotNull { row -> row.jsonObject.string("event_id") }.toSet()
     }
 
@@ -90,6 +90,4 @@ class SupabaseEventRepository @Inject constructor(
         })
         refresh()
     }
-
-    private fun uuid(id: String): String = java.util.UUID.fromString(id).toString()
 }

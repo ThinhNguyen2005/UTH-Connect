@@ -45,6 +45,28 @@ class SupabaseRestClient @Inject constructor() {
         if (old != null) runCatching { send("/auth/v1/logout", "POST", bearer = old.accessToken) }
     }
 
+    /**
+     * Adopts a session that was established outside this client — today only the
+     * supabase-kt native Google exchange. The tokens behave identically to a password
+     * login, so [freshToken] can still refresh them through `grant_type=refresh_token`.
+     *
+     * Kept in memory only: a Google session is not a remembered-login grant
+     * (see PreferencesSessionRepository, which refuses remember-me under Supabase).
+     */
+    suspend fun attachSession(
+        userId: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresInSeconds: Long,
+    ) {
+        credentials = Credentials(
+            userId = userId,
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            expiresAtMillis = System.currentTimeMillis() + expiresInSeconds.coerceAtLeast(0L) * 1000L,
+        )
+    }
+
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
     suspend fun rpc(function: String, params: JsonObject): JsonElement =
