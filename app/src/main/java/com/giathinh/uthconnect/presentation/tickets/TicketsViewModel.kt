@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.tickets
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.GetTicketsUseCase
@@ -12,8 +13,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 
-/** Tải vé, xử lý chọn vé và giữ nhịp đếm ngược cho QR placeholder. */
+/** Tải vé, xử lý chọn vé và cấp mã QR vé ổn định từ backend. */
 @HiltViewModel
 class TicketsViewModel @Inject constructor(
     private val getTickets: GetTicketsUseCase,
@@ -58,7 +57,9 @@ class TicketsViewModel @Inject constructor(
             is TicketsAction.OpenTicket -> openTicket(action.ticketId)
             TicketsAction.CloseTicket -> {
                 qrJob?.cancel()
-                _uiState.update { it.copy(selectedTicket = null, qrToken = null, qrError = null) }
+                _uiState.update {
+                    it.copy(selectedTicket = null, qrToken = null, qrError = null, qrErrorCode = null)
+                }
             }
         }
     }
@@ -84,7 +85,7 @@ class TicketsViewModel @Inject constructor(
         qrJob?.cancel()
         _uiState.update { it.copy(
             selectedTicket = ticket, secondsRemaining = if (BuildConfig.USE_SUPABASE) 0 else QR_TTL_SECONDS,
-            qrToken = null, qrError = null,
+            qrToken = null, qrError = null, qrErrorCode = null,
         ) }
         viewModelScope.launch { _events.send(TicketsEvent.OpenQr(ticketId)) }
         qrJob = viewModelScope.launch {
@@ -102,33 +103,24 @@ class TicketsViewModel @Inject constructor(
     }
 
     private suspend fun refreshLiveQr(ticket: com.giathinh.uthconnect.domain.model.Ticket) {
-        while (_uiState.value.selectedTicket?.id == ticket.id) {
-            if (ticket.status != com.giathinh.uthconnect.domain.model.TicketStatus.VALID) {
-                _uiState.update { it.copy(qrToken = null, qrError = "Vé không còn hiệu lực") }
-                return
+        if (ticket.status != com.giathinh.uthconnect.domain.model.TicketStatus.VALID) {
+            _uiState.update {
+                it.copy(qrToken = null, qrError = null, qrErrorCode = ServerErrorCode.TicketUnavailable)
             }
-            val response = ticketRepository.issueCheckInToken(ticket.eventId)
-            if (response.isFailure) {
-                _uiState.update { it.copy(qrToken = null, secondsRemaining = 0,
-                    qrError = response.exceptionOrNull()?.message ?: "Không thể cấp mã QR" ) }
-                delay(5_000L)
-                continue
-            }
-            val token = response.getOrThrow()
-            val expiry = token.split('.').getOrNull(2)?.toLongOrNull()?.times(1000L)
-            if (expiry == null) {
-                _uiState.update { it.copy(qrToken = null, secondsRemaining = 0, qrError = "Mã QR không hợp lệ") }
-                delay(5_000L)
-                continue
-            }
-            while (currentCoroutineContext().isActive && _uiState.value.selectedTicket?.id == ticket.id) {
-                val left = ((expiry - System.currentTimeMillis()) / 1_000L).toInt().coerceAtLeast(0)
-                if (left <= 3) break
-                _uiState.update { it.copy(qrToken = token, qrError = null, secondsRemaining = left) }
-                delay(1_000L)
-            }
-            _uiState.update { it.copy(qrToken = null, secondsRemaining = 0) }
+            return
         }
+        ticketRepository.issueCheckInToken(ticket.eventId).fold(
+            onSuccess = { token ->
+                _uiState.update {
+                    it.copy(qrToken = token, qrError = null, qrErrorCode = null, secondsRemaining = 0)
+                }
+            },
+            onFailure = { error ->
+                _uiState.update {
+                    it.copy(qrToken = null, qrError = error.message, qrErrorCode = ServerErrorCode.of(error))
+                }
+            },
+        )
     }
 
     private companion object {
