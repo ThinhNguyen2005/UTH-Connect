@@ -129,6 +129,15 @@ object UthDimens {
         /** Ô vuông chữ "UTH" đặt giữa mã QR — che phần lõi nên chỉ dùng cho QR mô phỏng. */
         val QrMonogram: Dp = 40.dp
 
+        /** Khung ngắm vuông của máy quét QR điểm danh — lớn hơn [QrMin] để vùng lấy nét dư dật. */
+        val ScannerFrame: Dp = 260.dp
+
+        /** Nét vẽ khung ngắm + vạch quét đang chạy trên màn máy quét. */
+        val ScannerStroke: Dp = 3.dp
+
+        /** Vòng bao hình chữ nhật của nút đèn pin / đóng trên nền camera. */
+        val ScannerIconButton: Dp = 44.dp
+
         /**
          * Filter chip cao 32.dp (`docs/Design-system.md` mục 4.4). Phần nhìn thấy cao
          * 32.dp nhưng phải bọc trong vùng chạm [MinTouchTarget] — chip không tự đạt 48.dp.
@@ -159,6 +168,9 @@ object UthDimens {
     object Motion {
         const val RouteFadeMillis = 200
         const val ShimmerMillis = 1200
+
+        /** Một lượt quét vạch sáng đi hết khung ngắm trên màn máy quét QR. */
+        const val ScannerSweepMillis = 1600
     }
 
     /** Độ trong suốt của lớp trang trí; màu chữ quan trọng vẫn dùng semantic color. */
@@ -175,6 +187,12 @@ object UthDimens {
         const val TicketSelectedCount = 0.24f
         const val TicketStub = 0.50f
         const val SubtleDivider = 0.50f
+
+        /** Lớp phủ tối quanh khung ngắm để vạch quét nổi lên trên hình camera thật. */
+        const val ScannerScrim = 0.55f
+
+        /** Nền panel kết quả / thanh công cụ nổi trên preview của máy quét. */
+        const val ScannerPanel = 0.92f
     }
 
     /** Tỷ lệ bố cục và hình trang trí của các màn hiện có; không thay thế quy tắc đo của M3. */
