@@ -30,6 +30,8 @@ import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.attendance.AttendanceDestination
+import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.events.EventsRoute
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
@@ -130,7 +132,10 @@ private fun UthNavHost(
             )
         }
         composable<ProfileDestination> { ProfileRoute() }
-        composable<EventsDestination> { EventsRoute() }
+        composable<EventsDestination> {
+            EventsRoute(onOpenAttendance = { eventId -> navController.navigate(AttendanceDestination(eventId)) })
+        }
+        attendanceGraph(navController)
         ticketsGraph(navController)
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;

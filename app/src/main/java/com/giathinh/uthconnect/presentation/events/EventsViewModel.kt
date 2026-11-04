@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.repository.TicketRepository
@@ -28,8 +29,15 @@ data class EventsUiState(
     val loading: Boolean = true,
     val busyEvent: String? = null,
     val checkingIn: Boolean = false,
+    val checkedInCount: Int = 0,
     val message: String? = null,
+    /**
+     * Chuỗi lỗi thô từ tầng data. Để debug và làm fallback khi `errorCode == Unknown`;
+     * giao diện luôn ưu tiên `errorCode?.messageText(error)`.
+     */
     val error: String? = null,
+    /** Mã lỗi server nhận diện được để màn hình dịch ra câu có người đọc được. */
+    val errorCode: ServerErrorCode? = null,
 )
 
 @HiltViewModel
@@ -56,19 +64,30 @@ class EventsViewModel @Inject constructor(
     fun reload() {
         eventJob?.cancel()
         registrationJob?.cancel()
-        _state.update { it.copy(loading = true, error = null) }
+        _state.update { it.copy(loading = true, error = null, errorCode = null) }
         eventJob = viewModelScope.launch {
             events.getEvents().catch { error ->
                 if (error is CancellationException) throw error
-                _state.update { it.copy(loading = false, error = error.message ?: "Không thể tải sự kiện") }
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        error = error.message ?: "Không thể tải sự kiện",
+                        errorCode = ServerErrorCode.of(error),
+                    )
+                }
             }.collect { result ->
-                _state.update { it.copy(loading = false, events = result, error = null) }
+                _state.update { it.copy(loading = false, events = result, error = null, errorCode = null) }
             }
         }
         registrationJob = viewModelScope.launch {
             events.currentUserRegistrations().catch { error ->
                 if (error is CancellationException) throw error
-                _state.update { it.copy(error = error.message ?: "Không thể tải đăng ký") }
+                _state.update {
+                    it.copy(
+                        error = error.message ?: "Không thể tải đăng ký",
+                        errorCode = ServerErrorCode.of(error),
+                    )
+                }
             }.collect { ids -> _state.update { it.copy(registeredIds = ids) } }
         }
         events.refresh()
@@ -90,7 +109,7 @@ class EventsViewModel @Inject constructor(
         operation: suspend () -> Result<Unit>,
     ) {
         if (_state.value.busyEvent != null) return
-        _state.update { it.copy(busyEvent = eventId, error = null, message = null) }
+        _state.update { it.copy(busyEvent = eventId, error = null, errorCode = null, message = null) }
         viewModelScope.launch {
             try {
                 operation().getOrThrow()
@@ -98,7 +117,12 @@ class EventsViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                _state.update { it.copy(error = error.message ?: "Thao tác thất bại") }
+                _state.update {
+                    it.copy(
+                        error = error.message ?: "Thao tác thất bại",
+                        errorCode = ServerErrorCode.of(error),
+                    )
+                }
             } finally {
                 _state.update { it.copy(busyEvent = null) }
             }
@@ -107,20 +131,33 @@ class EventsViewModel @Inject constructor(
 
     fun checkIn(token: String) {
         if (_state.value.checkingIn) return
-        _state.update { it.copy(checkingIn = true, message = null, error = null) }
+        _state.update { it.copy(checkingIn = true, message = null, error = null, errorCode = null) }
         viewModelScope.launch {
             try {
                 tickets.checkIn(token).getOrThrow()
-                _state.update { it.copy(message = "Điểm danh thành công") }
+                _state.update {
+                    it.copy(message = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                _state.update { it.copy(error = error.message ?: "Không thể điểm danh") }
+                _state.update {
+                    it.copy(
+                        error = error.message ?: "Không thể điểm danh",
+                        errorCode = ServerErrorCode.of(error),
+                    )
+                }
             } finally {
                 _state.update { it.copy(checkingIn = false) }
             }
         }
     }
 
-    fun showError(message: String) { _state.update { it.copy(error = message, message = null) } }
+    /**
+     * Xoá kết quả một lượt quét để máy quét về trạng thái chờ mã tiếp theo. Màn quét
+     * suy ra `QrScannerOutcome` từ `message`/`error` nên bắt buộc phải có lệnh này.
+     */
+    fun clearCheckInResult() {
+        _state.update { it.copy(message = null, error = null, errorCode = null) }
+    }
 }
