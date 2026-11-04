@@ -5,6 +5,7 @@ import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.SignInUseCase
+import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.async
@@ -49,7 +50,20 @@ class AuthViewModelTest {
             override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(demo)
             override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
         }
-        return AuthViewModel(SignInUseCase(auth, session), AccessStudentSessionUseCase(session))
+        return AuthViewModel(
+            SignInUseCase(auth, session),
+            AccessStudentSessionUseCase(session),
+            SignInWithGoogleUseCase(auth, session),
+        )
+    }
+
+    @Test fun `Google token never creates a session when the backend lacks Google`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.GoogleIdTokenReceived("id-token", "raw-nonce"))
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.student)
+        assertFalse(vm.uiState.value.isSigningInWithGoogle)
     }
 
     @Test fun `Tai man hinh dau loading sau do hien form rong`() = runTest {
@@ -92,6 +106,7 @@ class AuthViewModelTest {
         assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
         assertNull(vm.uiState.value.student)
     }
+
     @Test fun `wrong password emits single one off event`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
@@ -104,7 +119,6 @@ class AuthViewModelTest {
         assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
         assertNull(vm.uiState.value.student)
     }
-
 
     @Test fun `Retry tries previous credentials and preserves error after failure`() = runTest {
         val vm = newViewModel(FakeSession())
@@ -135,5 +149,80 @@ class AuthViewModelTest {
         assertEquals("2023040123", vm.uiState.value.student?.studentId)
         assertEquals("", vm.uiState.value.password)
         assertNull(vm.uiState.value.failure)
+    }
+
+    @Test fun `SelectMode switches between Password and Biometric modes and clears failure`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
+        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+    }
+
+    @Test fun `SelectLanguage switches between VI and EN`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        assertEquals("VI", vm.uiState.value.selectedLanguage)
+
+        vm.onAction(AuthAction.SelectLanguage("EN"))
+        assertEquals("EN", vm.uiState.value.selectedLanguage)
+
+        vm.onAction(AuthAction.SelectLanguage("VI"))
+        assertEquals("VI", vm.uiState.value.selectedLanguage)
+    }
+
+    @Test fun `SwitchAccount resets to Password mode and clears credentials and error`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.IdentifierChanged("2023040123"))
+        vm.onAction(AuthAction.PasswordChanged("wrong"))
+        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
+        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SwitchAccount)
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+        assertEquals("", vm.uiState.value.identifier)
+        assertEquals("", vm.uiState.value.password)
+        assertNull(vm.uiState.value.failure)
+    }
+
+    @Test fun `BiometricFailed updates failure state to BiometricUnavailable`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.BiometricFailed)
+        assertEquals(AuthFailure.BiometricUnavailable, vm.uiState.value.failure)
+        assertFalse(vm.uiState.value.isSigningIn)
+    }
+
+    @Test fun `ContinueIdentifier accepts uth edu vn domain and transitions to Password step`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.IdentifierChanged("student@uth.edu.vn"))
+        vm.onAction(AuthAction.ContinueIdentifier)
+        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
+        assertNull(vm.uiState.value.identifierError)
+    }
+
+    @Test fun `DeepLinkReceived transitions to ResetPassword step`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.DeepLinkReceived(token = "fake-recovery-token", type = "recovery"))
+        assertEquals(AuthScreenStep.ResetPassword, vm.uiState.value.screenStep)
+    }
+
+    @Test fun `ForgotPassword dialog opens and Submits successfully`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.ForgotPassword)
+        assertTrue(vm.uiState.value.forgotDialogOpen)
+
+        vm.onAction(AuthAction.ForgotEmailChanged("student@ut.edu.vn"))
+        vm.onAction(AuthAction.SubmitForgotPassword)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.forgotSuccessNotice)
     }
 }

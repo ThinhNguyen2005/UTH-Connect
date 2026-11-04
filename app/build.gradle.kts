@@ -20,6 +20,11 @@ val useMockData = providers.gradleProperty("useMockData").orElse("true").get().t
 val useSupabase = providers.gradleProperty("useSupabase").orElse("false").get().toBooleanStrict()
 val supabaseUrl = providers.gradleProperty("supabaseUrl").orElse("").get().trimEnd('/')
 val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").orElse("").get()
+/**
+ * OAuth **Web** client ID — the value Supabase matches against the `aud` claim of the
+ * Google ID token. It is a public identifier, not a secret, so it can live in BuildConfig.
+ */
+val googleWebClientId = providers.gradleProperty("googleWebClientId").orElse("").get()
 if (useSupabase) {
     require(!useMockData) { "To enable Supabase, set -PuseMockData=false" }
     require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
@@ -45,6 +50,7 @@ android {
         buildConfigField("boolean", "USE_SUPABASE", useSupabase.toString())
         buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabasePublishableKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,7 +95,17 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.zxing.core)
     implementation(libs.kotlinx.serialization.json)
-    implementation("com.google.zxing:core:3.5.4")
+    implementation(libs.core)
+
+    // Supabase Auth SDK + Google Credential Manager.
+    // Declared unconditionally: the source set is shared, so SupabaseGoogleExchange must
+    // compile even in mock/Firebase builds. Runtime use is gated by BuildConfig.USE_SUPABASE.
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.credentials.core)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Máy quét QR điểm danh: preview + phân tích frame liên tục trong app.
     implementation(libs.androidx.camera.core)

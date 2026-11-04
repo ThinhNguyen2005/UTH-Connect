@@ -1,11 +1,14 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.UserRole
 import java.time.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,6 +70,71 @@ class SupabaseMappersTest {
                 objectFromJson(input).toDomainProfile()
             }
         }
+    }
+
+    @Test fun toDomainTicketMapsEmbeddedEventCorrectly() {
+        val raw = """
+            {
+              "event_id": "33333333-3333-4333-8333-333333333333",
+              "status": "REGISTERED",
+              "events": {
+                "id": "33333333-3333-4333-8333-333333333333",
+                "title": "Hội thảo AI 2026",
+                "location": "Hội trường A",
+                "start_at": "2026-11-03T12:30:00+07:00",
+                "organizer_name": "Đoàn Thanh niên"
+              }
+            }
+        """
+        val ticket = objectFromJson(raw).toDomainTicket(
+            studentId = "23510001",
+            userId = "11111111-1111-4111-8111-111111111111",
+            attendedEventIds = emptySet(),
+        )
+        assertNotNull(ticket)
+        assertEquals("33333333-3333-4333-8333-333333333333:11111111-1111-4111-8111-111111111111", ticket?.id)
+        assertEquals("23510001", ticket?.studentId)
+        assertEquals("Hội thảo AI 2026", ticket?.eventTitle)
+        assertEquals("Hội trường A", ticket?.eventLocation)
+        assertEquals("Đoàn Thanh niên", ticket?.organizerName)
+        assertEquals(TicketStatus.VALID, ticket?.status)
+        assertEquals("33333333", ticket?.fallbackCode)
+    }
+
+    @Test fun toDomainTicketDistinguishesStatuses() {
+        val base = """
+            {
+              "event_id": "33333333-3333-4333-8333-333333333333",
+              "events": { "title": "Sự kiện" }
+            }
+        """
+        val eventId = "33333333-3333-4333-8333-333333333333"
+
+        // Cancelled
+        val cancelled = objectFromJson("""{"event_id":"$eventId","status":"CANCELLED","events":{"title":"T"}}""")
+            .toDomainTicket("23510001", "uid-1", emptySet())
+        assertEquals(TicketStatus.CANCELLED, cancelled?.status)
+
+        // Checked in
+        val checkedIn = objectFromJson("""{"event_id":"$eventId","status":"REGISTERED","events":{"title":"T"}}""")
+            .toDomainTicket("23510001", "uid-1", setOf(eventId))
+        assertEquals(TicketStatus.CHECKED_IN, checkedIn?.status)
+
+        // Missing embedded event returns null
+        val missingEvent = objectFromJson("""{"event_id":"$eventId","status":"REGISTERED"}""")
+            .toDomainTicket("23510001", "uid-1", emptySet())
+        assertNull(missingEvent)
+    }
+
+    @Test fun uuidAndUrlEncodingBehaveSafely() {
+        val validId = "33333333-3333-4333-8333-333333333333"
+        assertEquals(validId, uuid(validId))
+        assertThrows(IllegalArgumentException::class.java) {
+            uuid("invalid-not-a-uuid; DROP TABLE users;")
+        }
+
+        assertEquals("a%2Bb%26c%3Dd", urlEncode("a+b&c=d"))
+        assertEquals("33333333-3333-4333-8333-333333333333", urlEncode(validId))
     }
 
     private fun objectFromJson(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
