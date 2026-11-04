@@ -5,6 +5,7 @@ import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.SignInUseCase
+import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.async
@@ -49,7 +50,23 @@ class AuthViewModelTest {
             override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(demo)
             override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
         }
-        return AuthViewModel(SignInUseCase(auth, session), AccessStudentSessionUseCase(session))
+        return AuthViewModel(
+            SignInUseCase(auth, session),
+            AccessStudentSessionUseCase(session),
+            SignInWithGoogleUseCase(auth, session),
+        )
+    }
+
+    @Test fun `Google token never creates a session when the backend lacks Google`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        // FakeAuthRepository keeps the interface default (GoogleSignInUnsupportedException),
+        // so this holds in both build modes: googleSignInAvailable is a BuildConfig mirror,
+        // while the invariant under test is that no token can open a student session here.
+        vm.onAction(AuthAction.GoogleIdTokenReceived("id-token", "raw-nonce"))
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.student)
+        assertFalse(vm.uiState.value.isSigningInWithGoogle)
     }
 
     @Test fun `Tai man hinh dau loading sau do hien form rong`() = runTest {
@@ -136,4 +153,52 @@ class AuthViewModelTest {
         assertEquals("", vm.uiState.value.password)
         assertNull(vm.uiState.value.failure)
     }
+
+    @Test fun `SelectMode switches between Password and Biometric modes and clears failure`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
+        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+    }
+
+    @Test fun `SelectLanguage switches between VI and EN`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        assertEquals("VI", vm.uiState.value.selectedLanguage)
+
+        vm.onAction(AuthAction.SelectLanguage("EN"))
+        assertEquals("EN", vm.uiState.value.selectedLanguage)
+
+        vm.onAction(AuthAction.SelectLanguage("VI"))
+        assertEquals("VI", vm.uiState.value.selectedLanguage)
+    }
+
+    @Test fun `SwitchAccount resets to Password mode and clears credentials and error`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.IdentifierChanged("2023040123"))
+        vm.onAction(AuthAction.PasswordChanged("wrong"))
+        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
+        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
+
+        vm.onAction(AuthAction.SwitchAccount)
+        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+        assertEquals("", vm.uiState.value.identifier)
+        assertEquals("", vm.uiState.value.password)
+        assertNull(vm.uiState.value.failure)
+    }
+
+    @Test fun `BiometricFailed updates failure state to BiometricUnavailable`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.BiometricFailed)
+        assertEquals(AuthFailure.BiometricUnavailable, vm.uiState.value.failure)
+        assertFalse(vm.uiState.value.isSigningIn)
+    }
 }
+
