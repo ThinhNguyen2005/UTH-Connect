@@ -7,6 +7,12 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Máy quét QR điểm danh chạy trong app nên cần quyền camera; không bắt buộc
+         để thiết bị không có vẫn cài được app (sinh viên chỉ hiện vé). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <application
         android:name=".UTHConnectApplication"
@@ -18,6 +24,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.UTHConnect">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.checkin.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/checkin_camera_paths" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:exported="true"

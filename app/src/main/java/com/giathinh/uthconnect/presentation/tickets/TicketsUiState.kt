@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.tickets
 
 import androidx.compose.runtime.Immutable
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
 
@@ -13,7 +14,10 @@ data class TicketsUiState(
     val failure: TicketsFailure? = null,
     val selectedTicket: Ticket? = null,
     val secondsRemaining: Int = 60,
-    val qrPayload: String? = null,
+    val qrToken: String? = null,
+    val qrError: String? = null,
+    /** Mã lỗi server khi xin QR; giao diện ưu tiên dịch mã này thay vì in chuỗi thô. */
+    val qrErrorCode: ServerErrorCode? = null,
     val filter: TicketFilter = TicketFilter.Upcoming,
     /** Tên hiển thị của sinh viên đang đăng nhập — màn chi tiết vé in kèm MSSV. */
     val studentName: String? = null,

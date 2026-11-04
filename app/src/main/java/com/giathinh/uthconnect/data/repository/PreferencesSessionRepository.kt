@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionFailure
@@ -37,14 +38,16 @@ class PreferencesSessionRepository @Inject constructor(
                 val rememberedId = prefs.getString(KEY_ID, null)
                 // Biometric opt-in always requires new OS authentication on a cold start.
                 val candidateId = biometricId ?: rememberedId
-                val candidateProfile = candidateId?.let { auth.findStudent(it).getOrThrow() }
-                if (candidateId != null && candidateProfile == null) {
+                // A remembered student ID is not an authenticated Supabase session.
+                val candidateProfile = if (BuildConfig.USE_SUPABASE) null
+                    else candidateId?.let { auth.findStudent(it).getOrThrow() }
+                if (candidateId != null && candidateProfile == null && !BuildConfig.USE_SUPABASE) {
                     check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit())
                 }
                 _session.value = StudentSession(
                     isRestoring = false,
                     profile = if (biometricId == null) candidateProfile else null,
-                    remembered = rememberedId != null,
+                    remembered = rememberedId != null && !BuildConfig.USE_SUPABASE,
                     biometricStudentId = if (candidateProfile != null) biometricId else null,
                 )
             } catch (cancelled: CancellationException) {
@@ -59,13 +62,14 @@ class PreferencesSessionRepository @Inject constructor(
     override suspend fun start(profile: StudentProfile, remember: Boolean) {
         mutex.withLock {
             val edit = prefs.edit()
-            if (remember) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)
+            if (remember && !BuildConfig.USE_SUPABASE) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)
             val biometricId = prefs.getString(KEY_BIO_ID, null)
             if (biometricId != null && biometricId != profile.studentId) edit.remove(KEY_BIO_ID)
             check(edit.commit()) { "Cannot save demo session" }
             _session.value = StudentSession(
-                isRestoring = false, profile = profile, remembered = remember,
-                biometricStudentId = biometricId?.takeIf { it == profile.studentId },
+                isRestoring = false, profile = profile,
+                remembered = remember && !BuildConfig.USE_SUPABASE,
+                biometricStudentId = biometricId?.takeIf { !BuildConfig.USE_SUPABASE && it == profile.studentId },
             )
         }
     }
@@ -79,6 +83,7 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun enableBiometric(studentId: String) {
         mutex.withLock {
+            check(!BuildConfig.USE_SUPABASE) { "Biometric unlock requires an authenticated Supabase session" }
             check(_session.value.profile?.studentId == studentId) { "No active session" }
             check(prefs.edit().putString(KEY_BIO_ID, studentId).commit()) { "Cannot save biometric preference" }
             _session.value = _session.value.copy(biometricStudentId = studentId)
@@ -94,6 +99,7 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun unlockWithBiometric() {
         mutex.withLock {
+            check(!BuildConfig.USE_SUPABASE) { "Supabase sign-in requires credentials" }
             val studentId = _session.value.biometricStudentId ?: error("Biometric login is not enabled")
             val profile = auth.findStudent(studentId).getOrThrow() ?: error("Student account is missing")
             _session.value = _session.value.copy(isRestoring = false, profile = profile, failure = null)
@@ -102,6 +108,7 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun signOut() {
         mutex.withLock {
+            auth.signOut()
             // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
             check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
             _session.value = StudentSession(isRestoring = false)

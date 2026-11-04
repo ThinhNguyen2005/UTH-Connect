@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.tickets
 
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.StudentProfile
@@ -53,11 +54,11 @@ class TicketsViewModelTest {
     }
 
     @Test
-    fun `mở vé - chọn vé, phát điều hướng QR và bắt đầu countdown`() = runBlocking {
+    fun `mở vé - điều hướng QR và dùng countdown theo backend`() = runBlocking {
         val viewModel = viewModel(FakeTicketRepository(Result.success(tickets)))
         viewModel.onAction(TicketsAction.OpenTicket("t2"))
         assertEquals(tickets[1], viewModel.uiState.value.selectedTicket)
-        assertEquals(60, viewModel.uiState.value.secondsRemaining)
+        assertEquals(if (BuildConfig.USE_SUPABASE) 0 else 60, viewModel.uiState.value.secondsRemaining)
         assertEquals(TicketsEvent.OpenQr("t2"), viewModel.events.first())
         viewModel.onAction(TicketsAction.CloseTicket)
         assertNull(viewModel.uiState.value.selectedTicket)
@@ -95,6 +96,7 @@ class TicketsViewModelTest {
     private fun viewModel(repository: FakeTicketRepository) = TicketsViewModel(
         GetTicketsUseCase(repository),
         GetProfileUseCase(FakeSessionRepository()),
+        repository,
     )
 
     private class FakeTicketRepository(private val result: Result<List<Ticket>>) : TicketRepository {

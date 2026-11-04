@@ -1,9 +1,5 @@
 package com.giathinh.uthconnect.presentation.tickets
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,7 +53,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -68,6 +63,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.BuildConfig
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -543,7 +545,7 @@ private fun TicketPerforation(modifier: Modifier = Modifier) {
     }
 }
 
-/** Cuống vé: nhãn vào cổng, QR mini và nhãn "Mở vé"; cả cột là một nút. */
+/** Cuống vé: mã QR chỉ xuất hiện sau khi nhận token hợp lệ từ server. */
 @Composable
 private fun TicketStub(
     ticket: Ticket,
@@ -567,10 +569,16 @@ private fun TicketStub(
             textAlign = TextAlign.Center,
             maxLines = 2,
         )
-        TicketQrPreview(
-            payload = TicketQrPayload.create(ticket.id, 0L),
-            modifier = Modifier.size(UthDimens.Size.TicketStubQr),
-        )
+        if (BuildConfig.USE_SUPABASE) {
+            Box(
+                modifier = Modifier.size(UthDimens.Size.TicketStubQr),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant)
+            }
+        } else {
+            TicketQrPreview(seed = ticket.id.hashCode(), modifier = Modifier.size(UthDimens.Size.TicketStubQr))
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -677,7 +685,8 @@ private const val QrSeedShift = 16
  * Màn chi tiết vé dạng boarding pass: nửa trên là thông tin sự kiện + sinh viên, đường xé có
  * khuyết tròn, nửa dưới là khung QR lớn kèm mã vé sao chép được.
  *
- * Screen **stateless**: chỉ render [Ticket] và mã QR trong state; mã demo chưa có chữ ký backend.
+ * Screen **stateless**: chỉ render [Ticket] đang mở trong state, không tự gọi repository.
+ * Bản Supabase chỉ hiển thị QR ký bởi server; backend demo giữ QR minh họa.
  */
 @Composable
 fun TicketQrScreen(
@@ -685,8 +694,10 @@ fun TicketQrScreen(
     studentName: String?,
     secondsRemaining: Int,
     onBack: () -> Unit,
-    qrPayload: String? = null,
+    onCopy: (String) -> Unit,
     modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -710,7 +721,9 @@ fun TicketQrScreen(
                 ticket = ticket,
                 studentName = studentName,
                 secondsRemaining = secondsRemaining,
-                qrPayload = qrPayload ?: TicketQrPayload.create(ticket.id, 0L),
+                onCopy = onCopy,
+                qrToken = qrToken,
+                qrError = qrError,
             )
             Spacer(Modifier.height(UthDimens.Spacing.Xl))
         }
@@ -782,20 +795,12 @@ private fun TicketPassCard(
     ticket: Ticket,
     studentName: String?,
     secondsRemaining: Int,
-    qrPayload: String,
+    onCopy: (String) -> Unit,
     modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
 ) {
-    val context = LocalContext.current
     val copyLabel = stringResource(R.string.tickets_detail_copy)
-    val copiedLabel = stringResource(R.string.tickets_detail_copied, ticket.fallbackCode)
-    val onCopy: () -> Unit = {
-        context.getSystemService(ClipboardManager::class.java)
-            ?.setPrimaryClip(ClipData.newPlainText(copyLabel, ticket.fallbackCode))
-        // Android 13+ tự hiện xác nhận sao chép; máy cũ cần toast để vẫn có phản hồi.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(context, copiedLabel, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     UthCard(modifier = modifier.fillMaxWidth(), contentPadding = false) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -817,15 +822,69 @@ private fun TicketPassCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
-                TicketSecurityRibbon(secondsRemaining = secondsRemaining)
-                TicketQrPanel(payload = qrPayload)
-                TicketCodeRow(code = ticket.fallbackCode, copyLabel = copyLabel, onCopy = onCopy)
+                if (BuildConfig.USE_SUPABASE) {
+                    if (!qrToken.isNullOrBlank()) {
+                        LiveTicketQrPanel(qrToken)
+                    } else {
+                        Box(
+                            Modifier.size(UthDimens.Size.QrMin)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = qrError ?: stringResource(R.string.tickets_qr_issuing),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                    Text(stringResource(R.string.tickets_qr_stable_notice), style = MaterialTheme.typography.bodySmall)
+                } else {
+                    TicketSecurityRibbon(secondsRemaining = secondsRemaining)
+                    TicketQrPanel(seed = ticket.id.hashCode())
+                    TicketCodeRow(
+                        code = ticket.fallbackCode,
+                        copyLabel = copyLabel,
+                        onCopy = { onCopy(ticket.fallbackCode) },
+                    )
+                }
                 Text(
                     text = stringResource(R.string.tickets_qr_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = UthTheme.extendedColors.textSecondary,
                     textAlign = TextAlign.Center,
                 )
+            }
+        }
+    }
+}
+
+/** Scannable ZXing matrix. No logo overlay: all QR modules remain readable. */
+@Composable
+private fun LiveTicketQrPanel(token: String, modifier: Modifier = Modifier) {
+    val qr = remember(token) {
+        QRCodeWriter().encode(
+            token, BarcodeFormat.QR_CODE, 320, 320,
+            mapOf(EncodeHintType.MARGIN to 2),
+        )
+    }
+    Canvas(
+        modifier = modifier.size(UthDimens.Size.QrMin)
+            .semantics { contentDescription = "Mã QR điểm danh, tự cập nhật sau 60 giây" },
+    ) {
+        drawRect(Color.White)
+        val side = size.minDimension
+        val step = side / qr.width
+        for (y in 0 until qr.height) {
+            for (x in 0 until qr.width) {
+                if (qr.get(x, y)) {
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(x * step, y * step),
+                        size = Size(step + 0.1f, step + 0.1f),
+                    )
+                }
             }
         }
     }
@@ -1246,7 +1305,7 @@ private fun TicketQrExpiredDarkPreview() = TicketQrStatePreview(PreviewTicket, 0
 @Preview(name = "QR font scale 1.3", showBackground = true, fontScale = 1.3f)
 @Composable
 private fun TicketQrFontScalePreview() = UthPreview {
-    TicketQrScreen(PreviewTicket, PreviewStudentName, 60, onBack = {})
+    TicketQrScreen(PreviewTicket, PreviewStudentName, 60, onBack = {}, onCopy = {})
 }
 
 @Preview(name = "QR missing light", showBackground = true)
@@ -1272,5 +1331,6 @@ private fun TicketQrStatePreview(
         studentName = PreviewStudentName,
         secondsRemaining = seconds,
         onBack = {},
+        onCopy = {},
     )
 }

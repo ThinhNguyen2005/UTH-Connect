@@ -19,6 +19,17 @@ data class Event(
     val coverUrl: String? = null,
 )
 
+/** Data an organizer can edit. Ownership and status are decided by the server. */
+data class EventDraft(
+    val title: String,
+    val description: String,
+    val location: String,
+    val campus: String,
+    val startAt: Long,
+    val endAt: Long,
+    val capacity: Int,
+)
+
 enum class EventStatus {
     DRAFT,
     PUBLISHED,

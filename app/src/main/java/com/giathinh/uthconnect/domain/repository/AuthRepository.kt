@@ -7,4 +7,5 @@ interface AuthRepository {
     suspend fun findStudent(studentId: String): Result<StudentProfile?>
     /** False if old password does not match. Result.failure means storage failure. */
     suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean>
+    suspend fun signOut() {}
 }
