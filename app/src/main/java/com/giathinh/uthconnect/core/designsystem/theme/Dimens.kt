@@ -104,6 +104,23 @@ object UthDimens {
         /** Nền icon trong ô Tiện ích; vùng chạm do UthCard của Material 3 cung cấp. */
         val UtilityIconContainer: Dp = 44.dp
 
+        /** Kích thước monogram logo UTH trên header thương hiệu. */
+        val BrandLogoMonogram: Dp = 48.dp
+
+        /** Chiều cao thanh segmented control chuyển đổi mode đăng nhập (≥ 48dp). */
+        val SegmentedControlHeight: Dp = 48.dp
+
+        /** Vùng chạm hình tròn quét vân tay / Face ID. */
+        val BiometricTouchZone: Dp = 80.dp
+        val BiometricTouchTarget: Dp = 72.dp
+        val BiometricTouchZoneRing: Dp = 96.dp
+        val BiometricIcon: Dp = 36.dp
+
+        /** Pill chuyển đổi ngôn ngữ VI / EN. */
+        val LanguagePillWidth: Dp = 48.dp
+        val LanguagePillHeight: Dp = 36.dp
+        val SecurityIconSize: Dp = 16.dp
+
         /** Chiều cao thanh tiến độ điểm rèn luyện. */
         val TrainingProgressTrack: Dp = 6.dp
 

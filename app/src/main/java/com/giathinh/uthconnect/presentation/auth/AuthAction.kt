@@ -14,4 +14,17 @@ sealed interface AuthAction {
     data object RequestBiometric : AuthAction
     data object BiometricVerified : AuthAction
     data object BiometricFailed : AuthAction
+
+    /** Route performs Credential Manager; the VM only receives its outcome. */
+    data object RequestGoogleSignIn : AuthAction
+    data class GoogleIdTokenReceived(val idToken: String, val rawNonce: String) : AuthAction
+    data object GoogleSignInCancelled : AuthAction
+    data object GoogleSignInUnavailable : AuthAction
+
+    /** Switch active login mode (Password vs Biometric). */
+    data class SelectMode(val mode: AuthMode) : AuthAction
+    /** Switch active interface language ("VI" or "EN"). */
+    data class SelectLanguage(val lang: String) : AuthAction
+    /** Switch to password mode and clear active account. */
+    data object SwitchAccount : AuthAction
 }

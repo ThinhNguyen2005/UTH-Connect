@@ -12,6 +12,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -21,7 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.data.repository.GoogleIdTokenResult
+import com.giathinh.uthconnect.data.repository.GoogleIdTokenSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /** Gate: platform biometric callback is required before granting a biometric demo session. */
 @Composable
@@ -32,6 +38,8 @@ fun AuthRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scopes = rememberCoroutineScope()
+    val googleIdTokens = rememberGoogleIdTokenSource()
     val snackbars = remember { SnackbarHostState() }
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
@@ -47,24 +55,60 @@ fun AuthRoute(
             AuthScreen(
             uiState = state,
             onAction = { action ->
-                if (action == AuthAction.RequestBiometric) {
-                    val activity = findAuthActivity(context)
-                    if (activity == null || !state.biometricAvailable) {
-                        viewModel.onAction(AuthAction.BiometricFailed)
-                    } else {
-                        showLoginBiometric(
-                            activity,
-                            onVerified = { viewModel.onAction(AuthAction.BiometricVerified) },
-                            onError = { viewModel.onAction(AuthAction.BiometricFailed) },
-                        )
+                when (action) {
+                    AuthAction.RequestBiometric -> {
+                        val activity = findAuthActivity(context)
+                        if (activity == null || !state.biometricAvailable) {
+                            viewModel.onAction(AuthAction.BiometricFailed)
+                        } else {
+                            showLoginBiometric(
+                                activity,
+                                onVerified = { viewModel.onAction(AuthAction.BiometricVerified) },
+                                onError = { viewModel.onAction(AuthAction.BiometricFailed) },
+                            )
+                        }
                     }
-                } else viewModel.onAction(action)
+                    AuthAction.RequestGoogleSignIn -> launchGoogleSignIn(
+                        activity = findAuthActivity(context),
+                        source = googleIdTokens,
+                        scopes = scopes,
+                        viewModel = viewModel,
+                    )
+                    else -> viewModel.onAction(action)
+                }
             },
             modifier = Modifier.fillMaxSize(),
         )
             SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
         }
         else -> signedInContent()
+    }
+}
+
+/**
+ * Google's account picker is platform UI, so Credential Manager runs here and reports back as
+ * actions — the ViewModel only ever sees a token, a cancellation, or an unavailable device.
+ */
+private fun launchGoogleSignIn(
+    activity: Activity?,
+    source: GoogleIdTokenSource,
+    scopes: CoroutineScope,
+    viewModel: AuthViewModel,
+) {
+    // Marks the button busy first: every early return below has to clear it again.
+    viewModel.onAction(AuthAction.RequestGoogleSignIn)
+    if (activity == null) {
+        viewModel.onAction(AuthAction.GoogleSignInUnavailable)
+        return
+    }
+    scopes.launch {
+        when (val result = source.request(activity, BuildConfig.GOOGLE_WEB_CLIENT_ID)) {
+            is GoogleIdTokenResult.Granted -> viewModel.onAction(
+                AuthAction.GoogleIdTokenReceived(result.idToken, result.rawNonce),
+            )
+            GoogleIdTokenResult.Cancelled -> viewModel.onAction(AuthAction.GoogleSignInCancelled)
+            GoogleIdTokenResult.Unavailable -> viewModel.onAction(AuthAction.GoogleSignInUnavailable)
+        }
     }
 }
 
