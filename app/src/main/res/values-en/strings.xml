@@ -528,9 +528,7 @@
     <string name="tickets_qr_issuing">Issuing a secure QR code…</string>
     <string name="scanner_open">Open check-in</string>
     <string name="scanner_back">Back</string>
-    <string name="scanner_title">Scan and check in</string>
     <string name="scanner_forbidden">Only organizers can check in tickets.</string>
-    <string name="scanner_count">Checked in: %1$d</string>
     <string name="scanner_code">Ticket code or QR content</string>
     <string name="scanner_submit">Check</string>
     <string name="scanner_success">Check-in successful</string>
@@ -540,8 +538,6 @@
     <string name="scanner_error">Could not check this ticket. Please retry.</string>
     <string name="scanner_camera_permission">Allow camera access to scan QR codes</string>
     <string name="scanner_camera_denied">Camera permission is off. You can still enter the code manually.</string>
-    <string name="scanner_camera_error">Could not open the camera. Retry or enter the code manually.</string>
-    <string name="scanner_camera_retry">Retry camera</string>
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>

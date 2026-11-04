@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 
 /** Tải vé, xử lý chọn vé và cấp mã QR vé ổn định từ backend. */
@@ -104,7 +103,7 @@ class TicketsViewModel @Inject constructor(
                     else if (state.secondsRemaining <= 1) {
                         state.copy(
                             secondsRemaining = QR_TTL_SECONDS,
-                            qrPayload = TicketQrPayload.create(ticketId, System.currentTimeMillis()),
+                            qrToken = TicketQrPayload.create(ticketId, System.currentTimeMillis()),
                         )
                     } else state.copy(secondsRemaining = state.secondsRemaining - 1)
                 }
