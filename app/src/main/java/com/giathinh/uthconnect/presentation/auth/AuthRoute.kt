@@ -3,9 +3,6 @@ package com.giathinh.uthconnect.presentation.auth
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.hardware.biometrics.BiometricManager
-import android.hardware.biometrics.BiometricPrompt
-import android.os.CancellationSignal
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,7 +25,7 @@ import com.giathinh.uthconnect.data.repository.GoogleIdTokenSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** Gate: platform biometric callback is required before granting a biometric demo session. */
+/** Gate: validates student session before displaying signed-in content. */
 @Composable
 fun AuthRoute(
     signedInContent: @Composable () -> Unit,
@@ -79,18 +76,6 @@ fun AuthRoute(
                 uiState = state,
                 onAction = { action ->
                     when (action) {
-                        AuthAction.RequestBiometric -> {
-                            val activity = findAuthActivity(context)
-                            if (activity == null || !state.biometricAvailable) {
-                                viewModel.onAction(AuthAction.BiometricFailed)
-                            } else {
-                                showLoginBiometric(
-                                    activity,
-                                    onVerified = { viewModel.onAction(AuthAction.BiometricVerified) },
-                                    onError = { viewModel.onAction(AuthAction.BiometricFailed) },
-                                )
-                            }
-                        }
                         AuthAction.RequestGoogleSignIn -> launchGoogleSignIn(
                             activity = findAuthActivity(context),
                             source = googleIdTokens,
@@ -142,35 +127,4 @@ private fun findAuthActivity(context: Context): Activity? {
         current = current.baseContext
     }
     return null
-}
-
-private fun showLoginBiometric(
-    activity: Activity,
-    onVerified: () -> Unit,
-    onError: () -> Unit,
-) {
-    val prompt = BiometricPrompt.Builder(activity)
-        .setTitle(activity.getString(R.string.auth_biometric_touch_zone))
-        .setNegativeButton(
-            activity.getString(R.string.auth_cancel),
-            activity.mainExecutor,
-        ) { _, _ -> onError() }
-        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-        .build()
-
-    prompt.authenticate(
-        CancellationSignal(),
-        activity.mainExecutor,
-        object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
-                onVerified()
-            }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
-                onError()
-            }
-            override fun onAuthenticationFailed() {
-                onError()
-            }
-        },
-    )
 }
