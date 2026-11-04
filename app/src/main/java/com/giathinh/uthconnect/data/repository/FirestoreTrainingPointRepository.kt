@@ -15,13 +15,8 @@ class FirestoreTrainingPointRepository @Inject constructor() : TrainingPointRepo
     private val firestore by lazy { FirebaseFirestore.getInstance() }
     private val auth by lazy { FirebaseAuth.getInstance() }
 
-    private suspend fun ensureAuthUid(): String {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            return currentUser.uid
-        }
-        val result = auth.signInWithEmailAndPassword("2023040123@ut.edu.vn", "123456").awaitTask()
-        return result.user?.uid ?: "9umVXbv2kchxkNguQ9kUUMmutBv2"
+    private fun ensureAuthUid(): String {
+        return auth.currentUser?.uid ?: throw IllegalStateException("Chưa xác thực người dùng")
     }
 
     override suspend fun getTrainingPoint(): Result<TrainingPointInfo> = runCatching {
@@ -32,7 +27,7 @@ class FirestoreTrainingPointRepository @Inject constructor() : TrainingPointRepo
             mapSnapshot(userDoc)
         } else {
             val studentDoc = firestore.collection("students")
-                .document("2023040123")
+                .document(uid)
                 .collection("training_points")
                 .document("hk1")
                 .get()

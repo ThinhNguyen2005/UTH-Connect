@@ -19,13 +19,8 @@ class FirestoreTuitionRepository @Inject constructor() : TuitionRepository {
     private val firestore by lazy { FirebaseFirestore.getInstance() }
     private val auth by lazy { FirebaseAuth.getInstance() }
 
-    private suspend fun ensureAuthUid(): String {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            return currentUser.uid
-        }
-        val result = auth.signInWithEmailAndPassword("2023040123@ut.edu.vn", "123456").awaitTask()
-        return result.user?.uid ?: "9umVXbv2kchxkNguQ9kUUMmutBv2"
+    private fun ensureAuthUid(): String {
+        return auth.currentUser?.uid ?: throw IllegalStateException("Chưa xác thực người dùng")
     }
 
     override suspend fun getTuition(): Result<TuitionInfo> = runCatching {
@@ -35,9 +30,8 @@ class FirestoreTuitionRepository @Inject constructor() : TuitionRepository {
         if (userDoc.exists()) {
             mapSnapshot(userDoc)
         } else {
-            // Fallback sang doc students nếu có
             val studentDoc = firestore.collection("students")
-                .document("2023040123")
+                .document(uid)
                 .collection("tuition")
                 .document("hk1")
                 .get()

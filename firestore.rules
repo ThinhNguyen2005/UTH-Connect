@@ -102,5 +102,29 @@ service cloud.firestore {
       // Điểm số chỉ được cập nhật từ hệ thống đào tạo (Admin)
       allow write: if isAdmin();
     }
+
+    // --- STUDENTS (ĐIỂM RÈN LUYỆN & HỌC PHÍ) ---
+    match /students/{studentId} {
+      allow read: if isUthVerified() && (
+        resource.data.studentId == request.auth.token.studentId ||
+        resource.data.uid == request.auth.uid ||
+        request.auth.uid == studentId ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+
+      match /{allSubcollections=**} {
+        allow read: if isUthVerified() && (
+          request.auth.uid == studentId ||
+          isAdmin()
+        );
+        allow write: if isAdmin();
+      }
+    }
+
+    // --- CLAIM LOCKS (CHỐNG RACE CONDITION BACKEND) ---
+    match /_authClaimLocks/{uid} {
+      allow read, write: if false;
+    }
   }
 }
