@@ -236,7 +236,7 @@
     <string name="auth_new_student_confirm_password">Xác nhận mật khẩu</string>
     <string name="auth_new_student_submit">Hoàn tất kích hoạt</string>
     <string name="auth_new_student_success">Kích hoạt tài khoản thành công! Hãy đăng nhập bằng mật khẩu vừa tạo.</string>
-    <string name="auth_identifier_label">MSSV hoặc Email sinh viên (@ut.edu.vn / @uth.edu.vn)</string>
+    <string name="auth_identifier_label">Email sinh viên</string>
     <string name="auth_password_label">Mật khẩu</string>
     <string name="auth_remember">Ghi nhớ đăng nhập</string>
     <string name="auth_forgot">Quên mật khẩu?</string>
@@ -282,17 +282,11 @@
     <string name="auth_badge_pro">PRO</string>
     <string name="auth_lang_vi">VI</string>
     <string name="auth_lang_en">EN</string>
-    <string name="auth_mode_password">1. Nhập mật khẩu</string>
-    <string name="auth_mode_biometric">2. Sinh trắc học</string>
-    <string name="auth_biometric_enroll_checkbox">Kích hoạt vân tay lần sau</string>
+    <string name="auth_brand_monogram">U</string>
+    <string name="auth_verify_email_default_mailbox">hòm thư sinh viên</string>
     <string name="auth_divider_or">Hoặc</string>
     <string name="auth_google_sso">Tài khoản Google SV (@ut.edu.vn)</string>
     <string name="auth_student_verified_badge">SV đã xác thực</string>
-    <string name="auth_biometric_touch_zone">Chạm để quét vân tay / Face ID</string>
-    <string name="auth_biometric_switch_password">Đăng nhập bằng mật khẩu</string>
-    <string name="auth_biometric_switch_account">Chuyển tài khoản khác</string>
-    <string name="auth_biometric_empty_title">Chưa lưu sinh trắc học</string>
-    <string name="auth_biometric_empty_desc">Hãy đăng nhập bằng mật khẩu trước và chọn \"Kích hoạt vân tay lần sau\".</string>
     <string name="auth_ssl_indicator">Bảo mật chuẩn mã hóa SSL 256-bit UTH</string>
     <string name="auth_app_version">UTH Connect v0.3.1 (M3 Native)</string>
     <string name="auth_profile_title">Thông tin cá nhân</string>
@@ -398,7 +392,6 @@
     <string name="auth_cancel">Hủy</string>
     <string name="auth_biometric_enable">Bật đăng nhập bằng sinh trắc học</string>
     <string name="auth_biometric_disable">Tắt đăng nhập bằng sinh trắc học</string>
-    <string name="auth_biometric_login">Đăng nhập bằng vân tay / khuôn mặt</string>
     <string name="auth_biometric_subtitle">Xác thực sinh trắc học đã đăng ký trong cài đặt thiết bị</string>
     <string name="auth_biometric_note">Chỉ hoạt động khi thiết bị hỗ trợ và đã đăng ký sinh trắc học mạnh. Chức năng chỉ mở phiên demo trên thiết bị.</string>
     <string name="auth_biometric_error">Sinh trắc học không khả dụng hoặc xác thực bị hủy. Hãy cài đặt vân tay hoặc đăng nhập bằng mật khẩu.</string>

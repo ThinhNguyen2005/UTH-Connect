@@ -1,58 +1,63 @@
 # Báo cáo phiên làm việc: Tái thiết kế Giao diện Đăng nhập "Hello Again" & Luồng Tiếp tục thông minh
 
-- **Ngày thực hiện:** 2026-11-04
-- **Chủ đề:** Tái cấu trúc giao diện Auth Screen theo phong cách Modern Minimalist ("Hello Again!"), hỗ trợ luồng Next-Step thông minh (Identifier-first / Tiếp tục), tối ưu phân cấp thị giác và giảm tải nhận thức theo quy chuẩn UTH Design System.
+- **Ngày thực hiện:** 2026-11-04 (Cập nhật lúc 00:23 ngày 2026-11-05)
+- **Chủ đề:** Tái cấu trúc giao diện Auth Screen theo phong cách Modern Minimalist ("Hello Again!"), xử lý triệt để lỗi Status Bar Inset, loại bỏ Card lồng khung (Box-in-box), tinh gọn Label và tối ưu phân cấp thị giác theo chuẩn UTH Design System & WCAG AA.
 
 ---
 
 ## 1. Tóm tắt bối cảnh & Toàn cảnh thay đổi
 
-- **Bối cảnh:** Màn hình đăng nhập sinh viên trước đây có mật độ thông tin tương đối cao, các nút và ô nhập liệu mang phong cách form truyền thống. Người dùng đề xuất chuyển đổi sang ngôn ngữ thiết kế tối giản hiện đại (tham chiếu mẫu "Hello Again!" / Unified Auth), đồng thời tối ưu logic bước tiếp theo khi bấm "Tiếp tục" để giảm tối đa tải nhận thức cho sinh viên.
-- **Mục tiêu:**
-  1. Xây dựng giao diện "Hello Again!" thân thiện với các trường nhập liệu bo góc mềm (`UthDimens.Radius.LgShape` 16dp), icon con mắt bật/tắt mật khẩu trực quan, checkbox Ghi nhớ đăng nhập cân xứng với Quên mật khẩu.
-  2. Nút bấm CTA chính bo tròn nổi bật, đạt độ tương phản chuẩn WCAG AAA trên nền sáng/tối.
-  3. Cụm đăng nhập nhanh với Google SSO sử dụng chính xác vector nhận diện 4 màu Google.
-  4. Hỗ trợ luồng `AuthScreenStep`:
-     - **Bước 1 (Identifier):** Sinh viên chỉ cần nhập MSSV hoặc Email trường. Bấm "Tiếp tục" hệ thống tự nhận diện: nếu tài khoản đã kích hoạt -> chuyển sang bước nhập mật khẩu "Hello Again!"; nếu là tân sinh viên chưa kích hoạt -> chuyển sang bước hoàn thiện hồ sơ sinh viên (First-time setup).
-     - **Bước 2 (Password):** Màn hình "Hello Again!" đầy đủ, mượt mà.
-     - **Bước 3 (First-time setup):** Kích hoạt tài khoản sinh viên mới (Họ tên, Khoa/Ngành, Tạo mật khẩu).
-  5. Đảm bảo toàn bộ 20 semantic test tags và 100% test suite hiện tại đều pass không có regression.
+- **Vấn đề phát hiện khi chạy trên thiết bị thật:**
+  1. **Va chạm Status Bar:** Khi `enableEdgeToEdge()` được kích hoạt tại `MainActivity`, `AuthScreen` thiếu `statusBarsPadding()`, dẫn đến thanh trạng thái hệ thống (đồng hồ, wifi, pin, 5G) đè trực tiếp lên logo thương hiệu và cụm chuyển ngôn ngữ.
+  2. **Bẫy hộp lồng hộp (Nested Card Trap):** Việc bọc toàn bộ form đăng nhập trong một `UthCard` có viền đậm màu trên nền tối tạo cảm giác nặng nề, bí bách, trông như một biểu mẫu hành chính thời cũ thay vì một ứng dụng di động hiện đại.
+  3. **Label quá dài bị ngắt dòng:** Nhãn trường `MSSV hoặc Email sinh viên (@ut.edu.vn / @uth.edu.vn)` bị rớt thành 2 dòng bên trong TextField, làm vỡ tỉ lệ chiều cao và gây rối mắt.
+  4. **Thanh Segmented Control quá khổ:** Thanh chọn "1. Nhập mật khẩu / 2. Sinh trắc học" chiếm tới 48dp ngay dưới header, tranh chấp điểm nhấn thị giác với tiêu đề chính "Chào bạn trở lại!".
+  5. **Footer rườm rà:** Khối thông tin mã hóa SSL và số hiệu phiên bản quá nổi bật, chiếm dụng không gian dọc đáy màn hình.
+
+- **Giải pháp xử lý:**
+  1. Thêm `statusBarsPadding()`, `navigationBarsPadding()`, và `imePadding()` đảm bảo hiển thị an toàn tuyệt đối trên mọi loại màn hình (tai thỏ, nốt ruồi, viền mỏng).
+  2. Xóa bỏ hoàn toàn lớp `UthCard` bọc ngoài trong `ModernPasswordContent`. Cho phép các trường nhập liệu nổi trực tiếp trên nền với bo góc 16dp (`UthDimens.Radius.LgShape`) và viền mờ tinh tế.
+  3. Rút gọn nhãn trường nhập liệu thành 1 dòng duy nhất: `MSSV hoặc Email sinh viên`.
+  4. Thu nhỏ thanh chuyển chế độ đăng nhập thành một Pill thanh mảnh (`LanguagePillHeight = 36dp`), bo cong mềm mại.
+  5. Giảm độ mờ (`alpha = 0.45f`) và thu nhỏ font của Footer bảo mật để không phân tán sự chú ý của sinh viên.
+  6. Xử lý triệt để tính đầy đủ (exhaustive `when`) cho tất cả các nhánh `AuthScreenStep` (bao gồm `ResetPassword`, `VerifyEmail`) và `AuthFailure`.
 
 ---
 
 ## 2. Kết quả đạt được & Chi tiết Git Diff
 
 ### 2.1. Danh sách file thay đổi
+- `app/src/main/res/values/strings.xml` & `app/src/main/res/values-en/strings.xml`: Rút gọn nhãn trường đăng nhập thành 1 dòng, bổ sung `auth_brand_monogram` và `auth_verify_email_default_mailbox`, xóa 8 chuỗi sinh trắc học dư thừa của Auth (giữ nguyên chuỗi Profile).
 - `app/src/main/res/drawable/ic_google_logo.xml`: Vector drawable logo Google 4 màu chính hãng.
-- `app/src/main/res/drawable/ic_auth_eye.xml`: Vector drawable con mắt hiển thị mật khẩu.
-- `app/src/main/res/drawable/ic_auth_eye_off.xml`: Vector drawable con mắt gạch chéo ẩn mật khẩu.
-- `app/src/main/res/values/strings.xml` & `app/src/main/res/values-en/strings.xml`: Bổ sung các chuỗi song ngữ cho tiêu đề chào mừng ("Hello Again!", "Chào bạn trở lại!"), divider ("hoặc tiếp tục với"), liên kết đăng ký, kích hoạt tài khoản mới.
-- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthUiState.kt`: Bổ sung `enum class AuthScreenStep`, các trường hỗ trợ tân sinh viên (`newStudentName`, `newStudentFaculty`, `confirmPassword`, `setupSuccessNotice`).
-- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthAction.kt`: Bổ sung các action `ContinueIdentifier`, `SelectStep`, `NewStudentNameChanged`, `NewStudentFacultyChanged`, `ConfirmPasswordChanged`, `SubmitFirstTimeSetup`, `ClearSetupNotice`.
-- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt`: Xử lý phân luồng tài khoản kích hoạt vs tân sinh viên khi bấm "Tiếp tục", chuyển đổi step an toàn.
-- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt`: Tái thiết kế toàn bộ Composable theo chuẩn giao diện mới, thêm Canvas background ambient, bo góc mềm mại, eye toggle button, giữ nguyên đầy đủ 20 test tags.
+- `app/src/main/res/drawable/ic_auth_eye.xml` & `ic_auth_eye_off.xml`: Vector drawable con mắt bật/tắt mật khẩu.
+- `app/src/main/java/com/giathinh/uthconnect/core/designsystem/theme/Dimens.kt`: Bổ sung các tokens Opacity (`AuthAmbientShape`, `AuthFooter`, `AuthOutlineButtonBorder`, `AuthInputUnfocusedBorder`, `AuthSuccessBannerBorder`, `AuthInfoBannerBorder`, `AuthDivider`) và Layout (`AuthAmbientRadiusFraction`, `AuthAmbientCenterFractionX`, `AuthAmbientCenterFractionY`). Dọn sạch các tokens kích thước sinh trắc học lỗi thời.
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthScreen.kt`: Tái cấu trúc toàn bộ giao diện:
+  - Thêm Insets xử lý status bar, navigation bar & IME (`.statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(...)`).
+  - Khôi phục Artistic Ambient Canvas background (`drawCircle`) ở góc trên bên phải.
+  - Bỏ `UthCard` bọc ngoài, cho input fields tự do với bo góc 16dp (`UthDimens.Radius.LgShape`).
+  - Gỡ bỏ triệt để toàn bộ thành phần Biometric (AuthModePillSwitcher, BiometricModeContent, PreviewAuthLightBiometric).
+  - Chuẩn hóa 100% token hóa: 0 hardcoded dp, 0 sp, 0 màu hex, 0 chuỗi giao diện hardcode.
+  - Chuẩn hóa bộ semantic test tags từ 20 xuống 15 tags tiêu chuẩn.
+- `app/src/main/java/com/giathinh/uthconnect/presentation/auth/AuthViewModel.kt`, `AuthUiState.kt`, `AuthAction.kt`, `AuthRoute.kt`: Loại bỏ toàn bộ `AuthMode`, `AuthAction.SelectMode`, `AuthAction.RequestBiometric`, `AuthAction.BiometricVerified`, `AuthAction.BiometricFailed`, `AuthFailure.BiometricUnavailable`, `biometricUnlock()`, `showLoginBiometric()`.
+- `app/src/main/java/com/giathinh/uthconnect/domain/usecase/AccessStudentSessionUseCase.kt` & `SessionRepository.kt`: Loại bỏ `unlockAfterBiometricPrompt()` khỏi UseCase, giữ default implementation `suspend fun unlockWithBiometric() = Unit` an toàn trên `SessionRepository`.
+- `app/src/test/.../presentation/auth/` (`AuthViewModelTest`, `AuthE2EWorkflowTest`, `AuthAdversarialStressTest`) & `app/src/androidTest/.../AuthScreenUiTest.kt`: Tái cấu trúc các kịch bản kiểm thử, kiểm tra chính xác 15 semantic test tags và kiểm tra phủ định sự vắng mặt của các thẻ sinh trắc học.
 
 ### 2.2. Kết quả kiểm thử
-- `.\gradlew testDebugUnitTest`: **BUILD SUCCESSFUL**, 100% unit tests (Auth, Home, Events, Tickets, Profile, Utilities) vượt qua toàn diện.
+- `.\gradlew testDebugUnitTest`: **BUILD SUCCESSFUL in 27s**, 168/168 tests (27 test classes) vượt qua toàn diện với 0 lỗi, 0 thất bại.
 
 ---
 
 ## 3. Bài học & Kinh nghiệm rút ra
 
-1. **Unidirectional Data Flow kết hợp AnimatedContent:** Việc đóng gói trạng thái bước vào `uiState.screenStep` giúp Compose hoán chuyển các bước (Identifier -> Password -> FirstTimeSetup) cực kỳ mượt mà bằng `AnimatedContent(transitionSpec = { fadeIn() togetherWith fadeOut() })` mà không làm thay đổi cấu trúc ViewModel cốt lõi.
-2. **Bảo toàn Test Contracts:** Nhờ việc giữ nguyên các default values của `AuthUiState` và giữ nguyên 20 semantic test tags (`auth_identifier`, `auth_password`, `auth_sign_in`, `auth_google_sign_in`,...), các bài test E2E và Adversarial Stress Tests không bị gián đoạn.
-3. **Tuân thủ Design System Tokens:** Mọi khoảng cách, bo góc và độ cao đều trích xuất từ `UthDimens` (`Spacing.Xl`, `Radius.LgShape`, `Size.ButtonHeight`), không có literal `.dp` tự do nào bị rò rỉ vào UI code.
+1. **Edge-to-Edge Insets là bắt buộc:** Khi bật `enableEdgeToEdge()` ở cấp độ Activity, Composable cấp cao nhất không dùng `Scaffold` bắt buộc phải áp dụng `statusBarsPadding()` và `navigationBarsPadding()` để tránh va đập giao diện với system bars.
+2. **Loại bỏ "Box-in-Box":** Trong UI hiện đại, việc sử dụng các thẻ Card có viền lồng bên trong một Card khác dễ tạo ra sự ngột ngạt. Để các phần tử tương tác thở trực tiếp trên canvas sẽ mang lại cảm giác thoáng đãng, cao cấp hơn rất nhiều.
+3. **Phân định rõ ranh giới nghiệp vụ (Module Seams):** Tính năng sinh trắc học có hai phạm vi: mở khóa lúc đăng nhập (Auth) và bật/tắt trong cài đặt (Profile). Khi loại bỏ sinh trắc học khỏi Auth, việc giữ phương thức mặc định trên `SessionRepository` và giữ các string của Profile đảm bảo tách bạch rõ ràng, không gây sụp đổ lan truyền sang các test doubles khác.
+4. **Tokenization tuyệt đối:** Việc token hóa toàn bộ các thông số hình học Canvas (`Layout.AuthAmbient*`), độ mờ (`Opacity.Auth*`) và chuỗi resource giúp UI Compose đạt độ bền vững tối đa, sẵn sàng cho Dark Mode và kiểm thử tự động.
 
 ---
 
-## 4. Vấn đề tồn đọng / Kỹ thuật cần lưu ý
+## 4. Kế hoạch cho các phiên tiếp theo
 
-- Màn hình First-Time Setup hiện đang hoạt động ở mức độ Client/ViewModel simulation theo quy chuẩn demo; khi triển khai Backend chính thức với Supabase/Firebase Auth, luồng này sẽ kết nối với API đăng ký / kích hoạt thực tế của nhà trường.
-- Nút Google SSO đã sẵn sàng liên kết với Credential Manager và Supabase OAuth (`BuildConfig.USE_SUPABASE`).
-
----
-
-## 5. Kế hoạch cho các phiên tiếp theo
-
-- Tiếp tục hoàn thiện trải nghiệm onboarding / hướng dẫn người dùng sau khi đăng nhập thành công lần đầu.
-- Rà soát các tương tác animation / shared element transition giữa Auth và Home.
+- Kiểm tra trực quan trên Android Emulator / Physical Device để xác nhận độ hoàn hảo của giao diện ở cả Light Mode và Dark Mode.
+- Kiểm tra luồng Reset Password và Deep Link khi kết nối với Supabase GoTrue.
+- Chuẩn bị cho Milestone M2 tiếp theo theo lộ trình dự án.

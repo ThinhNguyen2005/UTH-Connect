@@ -240,7 +240,7 @@ class AuthE2EWorkflowTest {
         assertNull(state.student)
         assertEquals("", state.identifier)
         assertEquals("", state.password)
-        assertEquals(AuthMode.Password, state.authMode)
+        assertEquals(AuthScreenStep.Password, state.screenStep)
         assertEquals("VI", state.selectedLanguage)
         assertNull(state.failure)
     }
@@ -259,17 +259,9 @@ class AuthE2EWorkflowTest {
     }
 
     @Test
-    fun tier2_stateMachine_modeAndLanguageToggling() = runTest {
+    fun tier2_stateMachine_languageToggling() = runTest {
         val (vm, _, _) = createHarness(FakeAuthRepository(verifiedStudent))
         advanceUntilIdle()
-
-        // Toggle mode to Biometric
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
-        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
-
-        // Toggle mode back to Password
-        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
-        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
 
         // Toggle language to EN
         vm.onAction(AuthAction.SelectLanguage("EN"))
@@ -311,8 +303,6 @@ class AuthE2EWorkflowTest {
         assertTrue(UthDimens.Size.MinTouchTarget.value >= 48f)
         assertTrue(UthDimens.Size.ButtonHeight.value >= 48f)
         assertTrue(UthDimens.Size.SegmentedControlHeight.value >= 48f)
-        assertTrue(UthDimens.Size.BiometricTouchZone.value >= 48f)
-        assertTrue(UthDimens.Size.BiometricTouchTarget.value >= 48f)
     }
 
     @Test
@@ -320,8 +310,6 @@ class AuthE2EWorkflowTest {
         val requiredTags = listOf(
             "auth_brand_header",
             "auth_language_pill",
-            "auth_mode_password",
-            "auth_mode_biometric",
             "auth_identifier",
             "auth_password",
             "auth_password_toggle",
@@ -332,16 +320,13 @@ class AuthE2EWorkflowTest {
             "auth_error",
             "auth_google_sign_in",
             "auth_google_pending",
-            "auth_biometric_card",
-            "auth_biometric_touch_zone",
-            "auth_biometric_login",
             "auth_switch_account",
             "auth_footer_security",
             "auth_footer_version",
         )
 
-        // Assert all 20 semantic test tags are uniquely identified and non-blank
-        assertEquals(20, requiredTags.distinct().size)
+        // Assert all 15 semantic test tags are uniquely identified and non-blank
+        assertEquals(15, requiredTags.distinct().size)
         requiredTags.forEach { tag ->
             assertTrue(tag.startsWith("auth_"))
             assertTrue(tag.length > 5)
@@ -409,25 +394,25 @@ class AuthE2EWorkflowTest {
     }
 
     @Test
-    fun tier4_journey4_savedStudentProfile_biometricFingerprintUnlock_success() = runTest {
-        val session = FakeSessionRepository()
-        // Pre-populate biometric enrolled student
-        session.enableBiometric("2023040123")
-        val (vm, _, _) = createHarness(FakeAuthRepository(verifiedStudent), session)
+    fun tier4_journey4_studentIdentifierStepTransition_andPasswordLogin_success() = runTest {
+        val (vm, _, session) = createHarness(FakeAuthRepository(verifiedStudent))
         advanceUntilIdle()
 
-        // Switch to Biometric mode
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
-        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
-        assertTrue(vm.uiState.value.biometricAvailable)
+        // Step 1: User enters student identifier and continues
+        vm.onAction(AuthAction.IdentifierChanged("2023040123"))
+        vm.onAction(AuthAction.ContinueIdentifier)
+        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
+        assertNull(vm.uiState.value.identifierError)
 
-        // User touches biometric zone -> Biometric prompt succeeds
-        vm.onAction(AuthAction.BiometricVerified)
+        // Step 2: User completes password entry and submits
+        vm.onAction(AuthAction.PasswordChanged("secret"))
+        vm.onAction(AuthAction.Submit)
         advanceUntilIdle()
 
-        // Assert: Student session opened successfully via biometric unlock
+        // Assert: Session established with verified student profile
         assertNotNull(vm.uiState.value.student)
         assertEquals("2023040123", vm.uiState.value.student?.studentId)
+        assertEquals("2023040123", session.session.value.profile?.studentId)
     }
 
     @Test

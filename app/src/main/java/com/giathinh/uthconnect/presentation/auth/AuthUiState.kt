@@ -4,10 +4,6 @@ import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 
-enum class AuthMode {
-    Password,
-    Biometric,
-}
 
 enum class AuthScreenStep {
     /** Step 1: Identifier-first entry with Google SSO, reduced cognitive load. */
@@ -38,8 +34,6 @@ data class AuthUiState(
     val isSendingForgot: Boolean = false,
     val forgotSuccessNotice: Boolean = false,
     val forgotError: String? = null,
-    /** Enrollment is persisted; NOT a signed-in session until OS prompt succeeds. */
-    val biometricAvailable: Boolean = false,
     /** Google button only appears when the Supabase backend and a Web client ID are configured. */
     val googleSignInAvailable: Boolean = false,
     val isSigningInWithGoogle: Boolean = false,
@@ -49,10 +43,6 @@ data class AuthUiState(
     val isSubmittingVerification: Boolean = false,
     val verificationStatus: VerificationStatus? = null,
     val verificationNotice: String? = null,
-    /** Current authentication mode: Password or Biometric. */
-    val authMode: AuthMode = AuthMode.Password,
-    /** Saved student profile shown in Biometric mode. */
-    val savedStudent: StudentProfile? = null,
     /** Selected display language ("VI" or "EN"). */
     val selectedLanguage: String = "VI",
     /** Active step in the identifier-first auth flow. */
@@ -86,7 +76,6 @@ enum class AuthFailure {
     InvalidCredentials,
     Unexpected,
     SessionRestore,
-    BiometricUnavailable,
     /** Credential Manager has no Google account on this device. */
     GoogleUnavailable,
     /** Supabase rejected the ID token, or the exchange failed. */

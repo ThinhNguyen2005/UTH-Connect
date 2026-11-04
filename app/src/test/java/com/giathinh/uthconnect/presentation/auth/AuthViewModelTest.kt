@@ -151,18 +151,6 @@ class AuthViewModelTest {
         assertNull(vm.uiState.value.failure)
     }
 
-    @Test fun `SelectMode switches between Password and Biometric modes and clears failure`() = runTest {
-        val vm = newViewModel(FakeSession())
-        advanceUntilIdle()
-        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
-
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
-        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
-
-        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
-        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
-    }
-
     @Test fun `SelectLanguage switches between VI and EN`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
@@ -175,27 +163,20 @@ class AuthViewModelTest {
         assertEquals("VI", vm.uiState.value.selectedLanguage)
     }
 
-    @Test fun `SwitchAccount resets to Password mode and clears credentials and error`() = runTest {
+    @Test fun `SwitchAccount clears credentials, errors, and resets to Password step`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
         vm.onAction(AuthAction.IdentifierChanged("2023040123"))
         vm.onAction(AuthAction.PasswordChanged("wrong"))
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
-        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
+        vm.onAction(AuthAction.Submit)
+        advanceUntilIdle()
+        assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
 
         vm.onAction(AuthAction.SwitchAccount)
-        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
         assertEquals("", vm.uiState.value.identifier)
         assertEquals("", vm.uiState.value.password)
         assertNull(vm.uiState.value.failure)
-    }
-
-    @Test fun `BiometricFailed updates failure state to BiometricUnavailable`() = runTest {
-        val vm = newViewModel(FakeSession())
-        advanceUntilIdle()
-        vm.onAction(AuthAction.BiometricFailed)
-        assertEquals(AuthFailure.BiometricUnavailable, vm.uiState.value.failure)
-        assertFalse(vm.uiState.value.isSigningIn)
     }
 
     @Test fun `ContinueIdentifier accepts uth edu vn domain and transitions to Password step`() = runTest {

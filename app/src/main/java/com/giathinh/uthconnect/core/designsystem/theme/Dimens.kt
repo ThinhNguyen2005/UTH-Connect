@@ -110,11 +110,6 @@ object UthDimens {
         /** Chiều cao thanh segmented control chuyển đổi mode đăng nhập (≥ 48dp). */
         val SegmentedControlHeight: Dp = 48.dp
 
-        /** Vùng chạm hình tròn quét vân tay / Face ID. */
-        val BiometricTouchZone: Dp = 80.dp
-        val BiometricTouchTarget: Dp = 72.dp
-        val BiometricTouchZoneRing: Dp = 96.dp
-        val BiometricIcon: Dp = 36.dp
 
         /** Pill chuyển đổi ngôn ngữ VI / EN. */
         val LanguagePillWidth: Dp = 48.dp
@@ -205,6 +200,21 @@ object UthDimens {
         const val TicketStub = 0.50f
         const val SubtleDivider = 0.50f
 
+        // Modern Minimalist Auth & Translucent Borders
+        /** Lớp nền mỹ thuật ambient Canvas góc trên phải. */
+        const val AuthAmbientShape = 0.45f
+        /** Độ mờ nhẹ cho footer bản quyền & bảo mật. */
+        const val AuthFooter = 0.45f
+        /** Viền mờ cho nút phụ OutlinedButton (Google SSO). */
+        const val AuthOutlineButtonBorder = 0.45f
+        /** Viền không focus của input field trên nền Canvas. */
+        const val AuthInputUnfocusedBorder = 0.40f
+        /** Viền cho banner thông báo thành công. */
+        const val AuthSuccessBannerBorder = 0.40f
+        /** Viền cho banner thông báo thông tin / pending. */
+        const val AuthInfoBannerBorder = 0.30f
+        /** Đường kẻ phân cách "hoặc tiếp tục với". */
+        const val AuthDivider = 0.35f
         /** Lớp phủ tối quanh khung ngắm để vạch quét nổi lên trên hình camera thật. */
         const val ScannerScrim = 0.55f
 
@@ -219,6 +229,14 @@ object UthDimens {
         val LargeTextNavigationItemWidth: Dp = 144.dp
         const val LargeTextScale = 1.5f
         const val HomeBannerWidthFraction = 0.86f
+
+        // Auth Screen Artistic Background
+        /** Tỉ lệ bán kính hình tròn ambient Canvas so với chiều rộng màn hình. */
+        const val AuthAmbientRadiusFraction = 0.45f
+        /** Vị trí tâm X hình tròn ambient (lệch nhẹ sang mép phải ngoài màn hình). */
+        const val AuthAmbientCenterFractionX = 1.05f
+        /** Vị trí tâm Y hình tròn ambient (lệch nhẹ lên mép trên ngoài màn hình). */
+        const val AuthAmbientCenterFractionY = -0.05f
 
         const val HomeRingRadiusFraction = 0.42f
         const val HomeRingStrokeFraction = 0.055f

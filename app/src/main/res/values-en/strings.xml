@@ -233,7 +233,7 @@
     <string name="auth_new_student_confirm_password">Confirm Password</string>
     <string name="auth_new_student_submit">Complete Activation</string>
     <string name="auth_new_student_success">Account activated successfully! Please sign in with your new password.</string>
-    <string name="auth_identifier_label">Student ID or University Email (@ut.edu.vn / @uth.edu.vn)</string>
+    <string name="auth_identifier_label">Student ID or University Email</string>
     <string name="auth_password_label">Password</string>
     <string name="auth_remember">Remember me</string>
     <string name="auth_forgot">Forgot password?</string>
@@ -279,17 +279,11 @@
     <string name="auth_badge_pro">PRO</string>
     <string name="auth_lang_vi">VI</string>
     <string name="auth_lang_en">EN</string>
-    <string name="auth_mode_password">1. Password</string>
-    <string name="auth_mode_biometric">2. Biometric</string>
-    <string name="auth_biometric_enroll_checkbox">Enable fingerprint next time</string>
+    <string name="auth_brand_monogram">U</string>
+    <string name="auth_verify_email_default_mailbox">student email address</string>
     <string name="auth_divider_or">Or</string>
     <string name="auth_google_sso">Student Google Account (@ut.edu.vn)</string>
     <string name="auth_student_verified_badge">Verified Student</string>
-    <string name="auth_biometric_touch_zone">Touch to scan fingerprint / Face ID</string>
-    <string name="auth_biometric_switch_password">Sign in with password</string>
-    <string name="auth_biometric_switch_account">Switch account</string>
-    <string name="auth_biometric_empty_title">No biometric profile saved</string>
-    <string name="auth_biometric_empty_desc">Please sign in with password first and check \"Enable fingerprint next time\".</string>
     <string name="auth_ssl_indicator">Secured by UTH 256-bit SSL encryption</string>
     <string name="auth_app_version">UTH Connect v0.3.1 (M3 Native)</string>
     <string name="auth_profile_title">Personal profile</string>
@@ -395,7 +389,6 @@
     <string name="auth_cancel">Cancel</string>
     <string name="auth_biometric_enable">Enable biometric sign-in</string>
     <string name="auth_biometric_disable">Disable biometric sign-in</string>
-    <string name="auth_biometric_login">Sign in with fingerprint / face</string>
     <string name="auth_biometric_subtitle">Verify using biometrics enrolled in device settings</string>
     <string name="auth_biometric_note">Requires strong biometrics enrolled on the device. This only unlocks the local demo account.</string>
     <string name="auth_biometric_error">Biometrics unavailable or canceled. Enroll a fingerprint or use a password.</string>

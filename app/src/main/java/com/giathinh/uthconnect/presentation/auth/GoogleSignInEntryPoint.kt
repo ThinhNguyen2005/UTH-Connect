@@ -10,7 +10,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 
 /**
- * Credential Manager is platform UI, so — like Android BiometricPrompt — it is driven from the
+ * Credential Manager is platform UI, so it is driven from the
  * route and never from [AuthViewModel]. Hilt has no injection point inside a plain composable,
  * hence this entry point: the route reaches the singleton without the ViewModel ever holding an
  * Android dependency.

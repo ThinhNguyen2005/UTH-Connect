@@ -33,7 +33,7 @@ import org.junit.Test
  * Adversarial Stress & Edge Case Test Harness for Authentication UI & State Machine.
  *
  * Authored by Challenger 1 to empirically stress-test:
- * 1. Rapid mode toggling (Password <-> Biometric)
+ * 1. Rapid language toggling and state immutability
  * 2. Boundary and adversarial input validation (whitespace MSSV, 7/8/12/13 digits, SQL injection, domain spoofing)
  * 3. Form error clearance and self-healing password retry loops
  * 4. Language toggling and UI state persistence
@@ -132,60 +132,57 @@ class AuthAdversarialStressTest {
         return Triple(vm, auth, session)
     }
 
-    // ───────────────────────────────────────── 1. RAPID MODE TOGGLING ─────────────────────────────────────────
+    // ───────────────────────────────────────── 1. RAPID LANGUAGE TOGGLING ─────────────────────────────────────────
 
     @Test
-    fun `rapid mode toggling 50 times preserves entered credentials and leaves state consistent`() = runTest {
+    fun `rapid language toggling 50 times preserves entered credentials and leaves state consistent`() = runTest {
         val (vm, _, _) = createStressHarness()
         advanceUntilIdle()
 
-        // User typed credentials in password mode
         vm.onAction(AuthAction.IdentifierChanged("2023040123"))
         vm.onAction(AuthAction.PasswordChanged("secret_input"))
         vm.onAction(AuthAction.RememberChanged(true))
-        vm.onAction(AuthAction.SelectLanguage("EN"))
 
-        // Rapidly toggle back and forth between Password and Biometric
         for (i in 1..50) {
-            val targetMode = if (i % 2 == 1) AuthMode.Biometric else AuthMode.Password
-            vm.onAction(AuthAction.SelectMode(targetMode))
-            assertEquals(targetMode, vm.uiState.value.authMode)
+            val lang = if (i % 2 == 1) "EN" else "VI"
+            vm.onAction(AuthAction.SelectLanguage(lang))
+            assertEquals(lang, vm.uiState.value.selectedLanguage)
         }
 
         advanceUntilIdle()
-
-        // Settle back to Password mode
-        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
         val state = vm.uiState.value
-        assertEquals(AuthMode.Password, state.authMode)
+        assertEquals("VI", state.selectedLanguage)
         assertEquals("2023040123", state.identifier)
         assertEquals("secret_input", state.password)
         assertTrue(state.rememberMe)
-        assertEquals("EN", state.selectedLanguage)
         assertNull(state.failure)
         assertFalse(state.isSigningIn)
     }
 
     @Test
-    fun `switching mode clears transient failure message`() = runTest {
+    fun `retyping password or switching account clears transient failure message`() = runTest {
         val (vm, _, _) = createStressHarness()
         advanceUntilIdle()
 
-        // Trigger failure in Password mode
         vm.onAction(AuthAction.IdentifierChanged("2023040123"))
         vm.onAction(AuthAction.PasswordChanged("wrong_pass"))
         vm.onAction(AuthAction.Submit)
         advanceUntilIdle()
-
         assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
 
-        // Switching mode to Biometric must clear the failure banner
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
+        // Typing a new password immediately dismisses the failure banner
+        vm.onAction(AuthAction.PasswordChanged("new_attempt"))
         assertNull(vm.uiState.value.failure)
 
-        // Switching back to Password mode also keeps failure null
-        vm.onAction(AuthAction.SelectMode(AuthMode.Password))
+        // Re-trigger failure and test SwitchAccount clearance
+        vm.onAction(AuthAction.Submit)
+        advanceUntilIdle()
+        assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
+
+        vm.onAction(AuthAction.SwitchAccount)
         assertNull(vm.uiState.value.failure)
+        assertEquals("", vm.uiState.value.identifier)
+        assertEquals("", vm.uiState.value.password)
     }
 
     // ───────────────────────────────────────── 2. ADVERSARIAL VALIDATION ─────────────────────────────────────────
@@ -376,30 +373,25 @@ class AuthAdversarialStressTest {
     // ───────────────────────────────────────── 6. BIOMETRIC STATE TRANSITIONS & RESET ─────────────────────────────────────────
 
     @Test
-    fun `biometric failure and switch account reset lifecycle`() = runTest {
-        val session = InMemorySessionRepository()
-        session.enableBiometric("2023040123")
-        val (vm, _, _) = createStressHarness(session = session)
+    fun `switch account reset lifecycle preserves clean password step`() = runTest {
+        val (vm, _, _) = createStressHarness()
         advanceUntilIdle()
 
-        vm.onAction(AuthAction.SelectMode(AuthMode.Biometric))
-        assertEquals(AuthMode.Biometric, vm.uiState.value.authMode)
-
-        // Biometric fails (e.g. user canceled or hardware error)
-        vm.onAction(AuthAction.BiometricFailed)
+        vm.onAction(AuthAction.IdentifierChanged("2023040123"))
+        vm.onAction(AuthAction.PasswordChanged("temporary_pass"))
+        vm.onAction(AuthAction.Submit)
         advanceUntilIdle()
+        assertEquals(AuthFailure.InvalidCredentials, vm.uiState.value.failure)
 
-        assertEquals(AuthFailure.BiometricUnavailable, vm.uiState.value.failure)
-        assertFalse(vm.uiState.value.isSigningIn)
-
-        // User switches account -> must reset to Password mode, clear errors, clear fields
+        // SwitchAccount resets state to pristine entry point
         vm.onAction(AuthAction.SwitchAccount)
         advanceUntilIdle()
 
-        assertEquals(AuthMode.Password, vm.uiState.value.authMode)
+        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
         assertEquals("", vm.uiState.value.identifier)
         assertEquals("", vm.uiState.value.password)
         assertNull(vm.uiState.value.failure)
+        assertFalse(vm.uiState.value.isSigningIn)
     }
 
     // ───────────────────────────────────────── 7. ACCESSIBILITY CONTRACT (MIN 48DP) ─────────────────────────────────────────
@@ -409,9 +401,6 @@ class AuthAdversarialStressTest {
         assertTrue("MinTouchTarget must be >= 48dp", UthDimens.Size.MinTouchTarget.value >= 48f)
         assertTrue("ButtonHeight must be >= 48dp", UthDimens.Size.ButtonHeight.value >= 48f)
         assertTrue("SegmentedControlHeight must be >= 48dp", UthDimens.Size.SegmentedControlHeight.value >= 48f)
-        assertTrue("BiometricTouchZone must be >= 48dp", UthDimens.Size.BiometricTouchZone.value >= 48f)
-        assertTrue("BiometricTouchTarget must be >= 48dp", UthDimens.Size.BiometricTouchTarget.value >= 48f)
-        assertTrue("BiometricTouchZoneRing must be >= 48dp", UthDimens.Size.BiometricTouchZoneRing.value >= 48f)
         assertTrue("BrandLogoMonogram must be >= 48dp", UthDimens.Size.BrandLogoMonogram.value >= 48f)
         assertTrue("LanguagePillWidth must be >= 48dp", UthDimens.Size.LanguagePillWidth.value >= 48f)
     }

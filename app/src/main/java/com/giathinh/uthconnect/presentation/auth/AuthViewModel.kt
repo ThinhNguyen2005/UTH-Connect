@@ -89,14 +89,11 @@ class AuthViewModel @Inject constructor(
             sessions.observe().collect { current ->
                 _uiState.update {
                     val justLoggedOut = it.student != null && current.profile == null
-                    val saved = current.profile ?: it.savedStudent
                     it.copy(
                         isRestoring = current.isRestoring,
                         student = current.profile,
-                        savedStudent = saved,
                         identifier = if (justLoggedOut) "" else it.identifier,
                         password = if (justLoggedOut) "" else it.password,
-                        biometricAvailable = current.biometricStudentId != null,
                         rememberMe = current.remembered,
                         failure = if (current.failure != null) AuthFailure.SessionRestore else it.failure,
                     )
@@ -107,11 +104,9 @@ class AuthViewModel @Inject constructor(
 
     fun onAction(action: AuthAction) {
         when (action) {
-            is AuthAction.SelectMode -> _uiState.update { it.copy(authMode = action.mode, failure = null) }
             is AuthAction.SelectLanguage -> _uiState.update { it.copy(selectedLanguage = action.lang) }
             AuthAction.SwitchAccount -> _uiState.update {
                 it.copy(
-                    authMode = AuthMode.Password,
                     screenStep = AuthScreenStep.Password,
                     identifier = "",
                     password = "",
@@ -138,11 +133,6 @@ class AuthViewModel @Inject constructor(
             is AuthAction.ForgotEmailChanged -> _uiState.update { it.copy(forgotEmail = action.value, forgotError = null) }
             AuthAction.SubmitForgotPassword -> submitForgotPassword()
             AuthAction.Submit, AuthAction.Retry -> submit()
-            AuthAction.RequestBiometric -> Unit // platform prompt belongs to AuthRoute
-            AuthAction.BiometricVerified -> biometricUnlock()
-            AuthAction.BiometricFailed -> _uiState.update {
-                it.copy(isSigningIn = false, failure = AuthFailure.BiometricUnavailable)
-            }
             AuthAction.RequestGoogleSignIn -> _uiState.update {
                 if (googleEnabled && it.student == null) it.copy(isSigningInWithGoogle = true, failure = null) else it
             }
@@ -425,17 +415,6 @@ class AuthViewModel @Inject constructor(
             catch (_: Exception) {
                 _uiState.update { it.copy(isSigningInWithGoogle = false, failure = AuthFailure.GoogleRejected) }
             }
-        }
-    }
-
-    private fun biometricUnlock() {
-        if (_uiState.value.isSigningIn || !_uiState.value.biometricAvailable) return
-        _uiState.update { it.copy(isSigningIn = true, failure = null) }
-        viewModelScope.launch {
-            try { sessions.unlockAfterBiometricPrompt() }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { _uiState.update { it.copy(failure = AuthFailure.BiometricUnavailable) } }
-            finally { _uiState.update { it.copy(isSigningIn = false) } }
         }
     }
 

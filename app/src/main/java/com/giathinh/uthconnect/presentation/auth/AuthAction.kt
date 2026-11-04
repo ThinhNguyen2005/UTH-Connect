@@ -12,22 +12,15 @@ sealed interface AuthAction {
     data object DismissForgotPassword : AuthAction
     data class ForgotEmailChanged(val value: String) : AuthAction
     data object SubmitForgotPassword : AuthAction
-    /** Route performs Android BiometricPrompt. VM never invokes OS APIs. */
-    data object RequestBiometric : AuthAction
-    data object BiometricVerified : AuthAction
-    data object BiometricFailed : AuthAction
-
     /** Route performs Credential Manager; the VM only receives its outcome. */
     data object RequestGoogleSignIn : AuthAction
     data class GoogleIdTokenReceived(val idToken: String, val rawNonce: String) : AuthAction
     data object GoogleSignInCancelled : AuthAction
     data object GoogleSignInUnavailable : AuthAction
 
-    /** Switch active login mode (Password vs Biometric). */
-    data class SelectMode(val mode: AuthMode) : AuthAction
     /** Switch active interface language ("VI" or "EN"). */
     data class SelectLanguage(val lang: String) : AuthAction
-    /** Switch to password mode and clear active account. */
+    /** Clears active account credentials and error state. */
     data object SwitchAccount : AuthAction
 
     /** Next-step flow actions for cognitive load reduction & first-time setup */
