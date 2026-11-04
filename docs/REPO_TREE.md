@@ -1,5 +1,7 @@
 # UTH Connect — Cây thư mục & phân quyền sở hữu
 
+Scanner CHECKIN-2: `presentation/scanner/` gồm Screen, Route, ViewModel, UiState, Action và thành phần camera `QrCameraPreview.kt`; `domain/usecase/CheckInUseCase.kt` kiểm tra role và mã vé. QR trong `Ticket.kt` dùng payload ID vé đầy đủ; `MockTicketRepository` lưu Attendance trong bộ nhớ và cập nhật trạng thái vé. Test ở `test/.../domain/usecase/CheckInUseCaseTest.kt`, `test/.../presentation/scanner/ScannerViewModelTest.kt` và `test/.../presentation/tickets/TicketsQrEncodingTest.kt`. Build thêm ZXing core để tạo QR; mã demo chưa được backend ký/xác minh.
+
 > **Phiên bản:** v1.4 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
 > **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
@@ -265,6 +267,7 @@ Không cần giữ cây đẹp theo ngữ pháp `tree` — cái cần là **tên
 | v1.5-checkin | 03/11/2026 | Thêm slice `presentation/attendance/`, domain model/repository/use case cho danh sách điểm danh và CSV, Supabase repository + Hilt binding, tests; nối graph type-safe từ sự kiện. Màn danh sách đọc `registrations` và `attendance` từ Supabase. Thêm migration `60000_preserve_attendance_history` và kiểm tra constraint trong SQL contract. |
 
 | Bản | Ngày | Thay đổi cấu trúc |
+| v1.5-checkin | 03/11/2026 | QR máy đọc được bằng ZXing core; QR payload trong Ticket.kt, scanner xử lý mã đầy đủ; MockTicketRepository giữ Attendance trong bộ nhớ; thêm ScannerViewModelTest và TicketsQrEncodingTest. |
 | v1.3.1-auth | 31/10/2026 | AUTH-2.1: retry button on login errors; AuthAction.Retry, two ViewModel tests and AuthScreenUiTest. No other module changed. |
 | v1.3-auth | 31/10/2026 | AUTH-1/V3: UserRole and uthVerified, 2 demo accounts, badges, Retry logout, one-off events and tests. Owner review pending. |
 | v1.2-auth | 31/10/2026 | Auth/Profile: doi mat khau PBKDF2 demo, thong tin lien he, Android BiometricPrompt, confirm logout, test va backup exclusions. Owner review pending. |

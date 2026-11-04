@@ -38,8 +38,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +79,11 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.Ticket
+import com.giathinh.uthconnect.domain.model.TicketQrPayload
 import com.giathinh.uthconnect.domain.model.TicketStatus
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.common.BitMatrix
+import com.google.zxing.qrcode.QRCodeWriter
 
 /**
  * Tab Vé: thanh nhận diện rút gọn kiểu Trang chủ, bộ lọc hai nhóm và danh sách vé dạng
@@ -114,6 +120,10 @@ fun TicketsScreen(
 
             item(key = TicketsKey.Intro) {
                 TicketsIntro(ticketCount = ticketCount)
+            }
+
+            if (uiState.isOrganizer) {
+                item { Button(onClick = { onAction(TicketsAction.OpenScanner) }) { Text(stringResource(R.string.scanner_open)) } }
             }
 
             if (hasTickets) {
@@ -587,66 +597,42 @@ private fun TicketStub(
     }
 }
 
-/**
- * QR mini mô phỏng (chưa có token thật): 21×21 module sinh tất định từ id vé cộng ba ô định vị
- * góc — chỉ là hình in trên cuống vé nên không có `contentDescription`.
- */
+/** QR mini có dữ liệu vé thật; mở chi tiết để quét ở kích thước đủ lớn. */
 @Composable
-private fun TicketQrPreview(seed: Int, modifier: Modifier = Modifier) {
+private fun TicketQrPreview(payload: String, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
+    val light = UthTheme.extendedColors.isLight
+    val paper = if (light) colors.surface else colors.onSurface
+    val ink = if (light) colors.onSurface else colors.surface
+    val matrix = remember(payload) { encodeTicketQr(payload) }
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraSmall)
-            .background(colors.surface)
+            .background(paper)
             .border(UthDimens.Size.Stroke, colors.outlineVariant, MaterialTheme.shapes.extraSmall)
             .padding(UthDimens.Spacing.Xxs),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val cell = size.minDimension / QrModuleCount
-            drawQrModules(seed = seed, cell = cell, ink = colors.onSurface, paper = colors.surface)
+            drawQrMatrix(matrix, ink, paper)
         }
     }
 }
 
-private fun DrawScope.drawQrModules(seed: Int, cell: Float, ink: Color, paper: Color) {
-    var state = (seed.toLong() and QrSeedMask) or 1L
-    for (row in 0 until QrModuleCount) {
-        for (column in 0 until QrModuleCount) {
-            if (isInsideFinderModule(column, row)) continue
-            state = (state * QrSeedMultiplier + QrSeedIncrement) and QrSeedMask
-            if ((state ushr QrSeedShift) and 1L == 1L) {
-                drawRect(ink, Offset(column * cell, row * cell), Size(cell, cell))
+internal fun encodeTicketQr(payload: String): BitMatrix =
+    QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 0, 0)
+
+private fun DrawScope.drawQrMatrix(matrix: BitMatrix, ink: Color, paper: Color) {
+    drawRect(paper)
+    val cell = size.minDimension / matrix.width
+    val left = (size.width - matrix.width * cell) / 2f
+    val top = (size.height - matrix.height * cell) / 2f
+    for (row in 0 until matrix.height) {
+        for (column in 0 until matrix.width) {
+            if (matrix[column, row]) {
+                drawRect(ink, Offset(left + column * cell, top + row * cell), Size(cell, cell))
             }
         }
     }
-    val far = QrModuleCount - QrFinderModules
-    listOf(0 to 0, far to 0, 0 to far).forEach { (column, row) ->
-        drawFinderModule(column, row, cell, ink, paper)
-    }
-}
-
-private fun isInsideFinderModule(column: Int, row: Int): Boolean {
-    val far = QrModuleCount - QrFinderModules
-    val nearLeft = column < QrFinderModules
-    val nearTop = row < QrFinderModules
-    val nearRight = column >= far
-    val nearBottom = row >= far
-    return (nearLeft && nearTop) || (nearRight && nearTop) || (nearLeft && nearBottom)
-}
-
-/** Ba lớp vuông lồng nhau của ô định vị QR. */
-private fun DrawScope.drawFinderModule(column: Int, row: Int, cell: Float, ink: Color, paper: Color) {
-    drawRect(ink, Offset(column * cell, row * cell), Size(cell * QrFinderModules, cell * QrFinderModules))
-    drawRect(
-        paper,
-        Offset((column + 1) * cell, (row + 1) * cell),
-        Size(cell * (QrFinderModules - 2), cell * (QrFinderModules - 2)),
-    )
-    drawRect(
-        ink,
-        Offset((column + 2) * cell, (row + 2) * cell),
-        Size(cell * (QrFinderModules - 4), cell * (QrFinderModules - 4)),
-    )
 }
 
 /** Màu dải nhận diện: Navy khi vé còn dùng được, xám khi đã qua, đỏ khi bị hủy. */
@@ -680,6 +666,14 @@ private object TicketsKey {
     const val FilterEmpty = "tickets-filter-empty"
 }
 
+private const val TopBarRingRadiusFraction = 0.62f
+private const val TopBarRingStrokeFraction = 0.008f
+private const val TopBarRingCenterFraction = 0.95f
+private const val TopBarRingAlpha = 0.14f
+private const val SelectedCountAlpha = 0.24f
+private const val StubFillAlpha = 0.5f
+private const val DashedLineDashFactor = 1f
+private const val DashedLineGapFactor = 1.2f
 private const val QrModuleCount = 21
 private const val QrFinderModules = 7
 private const val QrSeedMask = 0x7FFFFFFFL
@@ -1101,16 +1095,20 @@ private fun TicketSecurityRibbon(secondsRemaining: Int, modifier: Modifier = Mod
     }
 }
 
-/** Khung QR cỡ máy quét: bốn góc ngắm, mã mô phỏng và ô chữ UTH ở giữa. */
+/** Khung QR cỡ máy quét với quiet zone; không che ô mã ở giữa. */
 @Composable
-private fun TicketQrPanel(seed: Int, modifier: Modifier = Modifier) {
+private fun TicketQrPanel(payload: String, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
+    val light = UthTheme.extendedColors.isLight
+    val paper = if (light) colors.surface else colors.onSurface
+    val ink = if (light) colors.onSurface else colors.surface
+    val matrix = remember(payload) { encodeTicketQr(payload) }
 
     Box(
         modifier = modifier
             .size(UthDimens.Size.QrMin)
             .clip(MaterialTheme.shapes.medium)
-            .background(colors.surface)
+            .background(paper)
             .border(UthDimens.Size.Stroke, colors.outlineVariant, MaterialTheme.shapes.medium),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1126,22 +1124,7 @@ private fun TicketQrPanel(seed: Int, modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(UthDimens.Spacing.Xl),
         ) {
-            val cell = size.minDimension / QrModuleCount
-            drawQrModules(seed = seed, cell = cell, ink = colors.onSurface, paper = colors.surface)
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(UthDimens.Size.QrMonogram)
-                .clip(MaterialTheme.shapes.small)
-                .background(colors.primary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.tickets_logo_abbr),
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onPrimary,
-            )
+            drawQrMatrix(matrix, ink, paper)
         }
     }
 }

@@ -27,6 +27,7 @@ fun TicketsRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
+                TicketsEvent.OpenScanner -> navController.navigate(ScannerDestination)
                 is TicketsEvent.OpenQr -> navController.navigate(TicketQrDestination(event.ticketId))
             }
         }
