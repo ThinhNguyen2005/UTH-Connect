@@ -1,5 +1,6 @@
 [versions]
 agp = "9.3.3"
+core = "3.5.4"
 coreKtx = "1.19.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -19,8 +20,19 @@ androidxHilt = "1.4.0"
 kotlinxSerialization = "1.12.0"
 googleServices = "4.5.0"
 firebaseBom = "35.1.0"
+supabase = "3.8.0"
+ktor = "3.6.1"
+credentials = "1.6.0"
+googleid = "1.2.1"
 
 [libraries]
+supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
+supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+credentials-core = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+core = { module = "com.google.zxing:core", version.ref = "core" }
 kotlin-metadata-jvm = { group = "org.jetbrains.kotlin", name = "kotlin-metadata-jvm", version.ref = "kotlin" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
