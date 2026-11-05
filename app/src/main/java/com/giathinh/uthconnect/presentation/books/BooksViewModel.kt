@@ -29,6 +29,17 @@ class BooksViewModel @Inject constructor(
     fun onAction(action: BooksAction) {
         when (action) {
             BooksAction.Retry -> observe()
+            BooksAction.ResetFilters -> _uiState.update {
+                it.copy(
+                    query = "",
+                    filter = BooksFilter.ALL,
+                    condition = null,
+                    minimumPrice = "",
+                    maximumPrice = "",
+                    sort = BooksSort.NEWEST,
+                    includeSold = false,
+                )
+            }
             is BooksAction.Search -> _uiState.update { it.copy(query = action.value) }
             is BooksAction.SetFilter -> _uiState.update { it.copy(filter = action.value) }
             is BooksAction.SetCondition -> _uiState.update { it.copy(condition = action.value) }

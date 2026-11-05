@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.model.BookCondition
 
 sealed interface BooksAction {
     data object Retry : BooksAction
+    data object ResetFilters : BooksAction
     data class Search(val value: String) : BooksAction
     data class SetFilter(val value: BooksFilter) : BooksAction
     data class SetCondition(val value: BookCondition?) : BooksAction

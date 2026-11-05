@@ -220,6 +220,7 @@
     <string name="books_empty_body">Bạn có thể đăng sách giáo trình để bán hoặc trao đổi.</string>
     <string name="books_no_results_title">Không tìm thấy sách</string>
     <string name="books_no_results_body">Thử đổi từ khóa hoặc bộ lọc.</string>
+    <string name="books_clear_filters">Xóa bộ lọc</string>
     <string name="books_edit">Sửa bài đăng</string>
     <string name="books_delete">Xóa</string>
     <string name="books_delete_title">Xóa bài đăng này?</string>

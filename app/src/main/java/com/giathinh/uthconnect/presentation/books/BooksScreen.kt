@@ -243,6 +243,8 @@ fun BooksScreen(
             UthEmptyState(
                 title = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_title else R.string.books_no_results_title),
                 body = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_body else R.string.books_no_results_body),
+                actionLabel = if (uiState.listings.isEmpty()) null else stringResource(R.string.books_clear_filters),
+                onAction = if (uiState.listings.isEmpty()) null else {{ onAction(BooksAction.ResetFilters) }},
             )
         } else if (!uiState.isLoading && uiState.failure != BooksFailure.LOAD_FAILED) items(uiState.visibleListings, key = { it.id }) { listing ->
             ListingCard(

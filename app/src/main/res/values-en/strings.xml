@@ -217,6 +217,7 @@
     <string name="books_empty_body">Post a textbook to sell or exchange it.</string>
     <string name="books_no_results_title">No matching books</string>
     <string name="books_no_results_body">Try a different search or filter.</string>
+    <string name="books_clear_filters">Clear filters</string>
     <string name="books_edit">Edit listing</string>
     <string name="books_delete">Delete</string>
     <string name="books_delete_title">Delete this listing?</string>
