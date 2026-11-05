@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.profile
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,13 +10,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -26,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,6 +56,7 @@ fun ProfileScreen(
     uiState: ProfileUiState,
     onAction: (ProfileAction) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenTickets: () -> Unit = {},
 ) {
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -75,7 +83,7 @@ fun ProfileScreen(
                         stringResource(R.string.auth_profile_empty),
                         stringResource(R.string.auth_profile_empty_body),
                     )
-                    else -> ProfileOverview(uiState, onAction)
+                    else -> ProfileOverview(uiState, onAction, onOpenTickets)
                 }
             }
         }
@@ -116,7 +124,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit) {
+private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit, onOpenTickets: () -> Unit) {
     val student = state.student ?: return
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StudentAvatar(student)
@@ -183,6 +191,15 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
             if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress,
         )
     }
+    Spacer(Modifier.height(UthDimens.Spacing.Lg))
+    // Vé rời thanh tab đáy để khung app giữ 4 điểm đến (docs/Design.md mục 8.1–8.2),
+    // nhưng vẫn là tác vụ lặp lại hằng ngày của sinh viên nên đặt ngay dưới hồ sơ.
+    ProfileNavRow(
+        iconRes = R.drawable.ic_profile_tickets,
+        label = stringResource(R.string.tab_tickets),
+        onClick = onOpenTickets,
+        modifier = Modifier.testTag("profile_open_tickets"),
+    )
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     OutlinedButton(
         onClick = { onAction(ProfileAction.OpenContact) },
@@ -383,6 +400,49 @@ private fun StudentAvatar(student: StudentProfile) {
     ) {
         Text(initials.ifEmpty { "SV" }, color = MaterialTheme.colorScheme.onPrimaryContainer,
             style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+/**
+ * Hàng điều hướng trong tab Cá nhân: icon duotone + nhãn + mũi tên.
+ *
+ * Card chiếm nguyên hàng nên vùng chạm vượt chuẩn tối thiểu `Size.MinTouchTarget`;
+ * mũi tên chỉ là gợi ý, không phải control riêng
+ * (tránh hai vùng chạm chồng lấn — `docs/UI-UX.mc` mục 4).
+ */
+@Composable
+private fun ProfileNavRow(
+    @DrawableRes iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(
+        modifier = modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget),
+        onClick = onClick,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(UthDimens.Size.UtilityIconContainer)
+                    .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null, // Nhãn chữ ngay bên cạnh đã mô tả hàng này.
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(UthDimens.Size.Icon),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
+            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
