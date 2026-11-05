@@ -1,11 +1,16 @@
 package com.giathinh.uthconnect.presentation.utilities
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -34,6 +39,17 @@ fun UtilitiesRoute(
     val tuitionState by viewModel.tuitionState.collectAsStateWithLifecycle()
     val trainingPointState by viewModel.trainingPointState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+
+    // Đổi ngôn ngữ chỉ có hiệu lực khi activity dựng lại tài nguyên: Locale được áp
+    // trong `MainActivity.attachBaseContext`, chạy trước mọi Composable.
+    val context = LocalContext.current
+    LaunchedEffect(viewModel, context) {
+        viewModel.events.collect { event ->
+            when (event) {
+                UtilitiesEvent.LanguageChanged -> activityOf(context)?.recreate()
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -84,10 +100,25 @@ fun UtilitiesRoute(
         composable<UtilitiesDestination.Settings> {
             SettingsScreen(
                 uiState = settingsState,
-                onToggleTuitionReminder = viewModel::onToggleTuitionReminder,
-                onToggleTrainingPointNotif = viewModel::onToggleTrainingPointNotif,
+                onToggleTuitionReminder = { viewModel.onAction(UtilitiesAction.TuitionReminderChanged(it)) },
+                onToggleTrainingPointNotif = { viewModel.onAction(UtilitiesAction.TrainingPointNotifChanged(it)) },
+                onSelectLanguage = { viewModel.onAction(UtilitiesAction.LanguageSelected(it)) },
+                onSelectThemeMode = { viewModel.onAction(UtilitiesAction.ThemeModeSelected(it)) },
                 onBack = { navController.popBackStack() },
             )
         }
     }
+}
+
+/**
+ * `LocalContext` trong `NavHost` là `ContextThemeWrapper`, cast thẳng ra Activity không
+ * được — phải đi ngược chuỗi `baseContext` (cùng cách `AuthRoute` đọc intent deep link).
+ */
+private fun activityOf(context: Context): Activity? {
+    var current = context
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }

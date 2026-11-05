@@ -16,11 +16,13 @@ import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPoin
 import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionCourse
 import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,6 +46,11 @@ class UtilitiesViewModel @Inject constructor(
     private val _trainingPointState = MutableStateFlow(TrainingPointUiState())
     val trainingPointState: StateFlow<TrainingPointUiState> = _trainingPointState.asStateFlow()
 
+    private val _events = Channel<UtilitiesEvent>(Channel.BUFFERED)
+
+    /** Event một lần, thu trong `UtilitiesRoute` — xem `docs/CODING_STANDARDS.md` mục 6. */
+    val events = _events.receiveAsFlow()
+
     val settingsState: StateFlow<SettingsUiState> = getSettings()
         .map { it.toUiState() }
         .stateIn(
@@ -65,21 +72,40 @@ class UtilitiesViewModel @Inject constructor(
                 loadTuition()
                 loadTrainingPoint()
             }
+
             is UtilitiesAction.OpenModule -> {
                 // Handled via navigation routes
+            }
+
+            is UtilitiesAction.TuitionReminderChanged -> viewModelScope.launch {
+                updateSettings.setTuitionReminder(action.enabled)
+            }
+
+            is UtilitiesAction.TrainingPointNotifChanged -> viewModelScope.launch {
+                updateSettings.setTrainingPointNotif(action.enabled)
+            }
+
+            is UtilitiesAction.LanguageSelected -> selectLanguage(action.languageTag)
+
+            // Chọn giao diện: không cần dựng lại activity vì theme là state flow đang compose.
+            is UtilitiesAction.ThemeModeSelected -> viewModelScope.launch {
+                updateSettings.setThemeMode(action.themeMode)
             }
         }
     }
 
-    fun onToggleTuitionReminder(enabled: Boolean) {
+    /**
+     * Đổi ngôn ngữ toàn app.
+     *
+     * Ghi store **trước** rồi mới phát event: Route gọi `recreate()` ngay, và
+     * `MainActivity.attachBaseContext` của activity mới phải đọc được tag vừa lưu.
+     */
+    private fun selectLanguage(languageTag: String) {
         viewModelScope.launch {
-            updateSettings.setTuitionReminder(enabled)
-        }
-    }
-
-    fun onToggleTrainingPointNotif(enabled: Boolean) {
-        viewModelScope.launch {
-            updateSettings.setTrainingPointNotif(enabled)
+            // Chọn lại đúng ngôn ngữ đang bật thì không dựng lại activity làm trắng màn hình.
+            if (languageTag == settingsState.value.languageTag) return@launch
+            updateSettings.setLanguageTag(languageTag)
+            _events.send(UtilitiesEvent.LanguageChanged)
         }
     }
 
@@ -137,6 +163,8 @@ class UtilitiesViewModel @Inject constructor(
     private fun AppSettings.toUiState() = SettingsUiState(
         tuitionReminderEnabled = tuitionReminderEnabled,
         trainingPointNotifEnabled = trainingPointNotifEnabled,
+        languageTag = languageTag,
+        themeMode = themeMode,
         appVersion = appVersion,
         buildNumber = buildNumber,
         developer = developer,

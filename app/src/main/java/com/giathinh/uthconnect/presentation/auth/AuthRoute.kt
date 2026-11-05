@@ -40,11 +40,16 @@ fun AuthRoute(
 
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
-            val message = when (event) {
-                AuthEvent.InvalidCredentials -> context.getString(R.string.auth_invalid_credentials)
-                is AuthEvent.GeneralMessage -> event.message
+            when (event) {
+                AuthEvent.InvalidCredentials ->
+                    snackbars.showSnackbar(context.getString(R.string.auth_invalid_credentials))
+
+                is AuthEvent.GeneralMessage -> snackbars.showSnackbar(event.message)
+
+                // Locale áp ở MainActivity.attachBaseContext → phải dựng lại activity,
+                // không có thông điệp snackbar cho event này.
+                AuthEvent.LanguageChanged -> findAuthActivity(context)?.recreate()
             }
-            snackbars.showSnackbar(message)
         }
     }
 
@@ -71,6 +76,7 @@ fun AuthRoute(
         state.isRestoring -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
+
         state.student == null -> Box(modifier.fillMaxSize()) {
             AuthScreen(
                 uiState = state,
@@ -82,6 +88,7 @@ fun AuthRoute(
                             scopes = scopes,
                             viewModel = viewModel,
                         )
+
                         else -> viewModel.onAction(action)
                     }
                 },
@@ -89,6 +96,7 @@ fun AuthRoute(
             )
             SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
         }
+
         else -> signedInContent()
     }
 }
@@ -114,7 +122,9 @@ private fun launchGoogleSignIn(
             is GoogleIdTokenResult.Granted -> viewModel.onAction(
                 AuthAction.GoogleIdTokenReceived(result.idToken, result.rawNonce),
             )
+
             GoogleIdTokenResult.Cancelled -> viewModel.onAction(AuthAction.GoogleSignInCancelled)
+
             GoogleIdTokenResult.Unavailable -> viewModel.onAction(AuthAction.GoogleSignInUnavailable)
         }
     }
