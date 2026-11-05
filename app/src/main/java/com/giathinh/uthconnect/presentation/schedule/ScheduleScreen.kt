@@ -177,6 +177,7 @@ fun ScheduleScreen(
                 studentName = "Nguyễn Minh Anh",
                 secondsRemaining = 60,
                 onBack = { selectedTicket = null },
+                onCopy = {},
             )
         }
     }

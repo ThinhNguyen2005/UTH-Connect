@@ -6,13 +6,16 @@
     <string name="common_meta_separator">•</string>
 
     <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
-    <string name="utilities_not_available">Chưa sẵn sàng</string>
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+
+    <!--
+      "Vé của tôi" không còn là tab đáy: nó là hàng điều hướng trong tab Cá nhân
+      (presentation/profile/ProfileScreen.kt).
+    -->
     <string name="tab_tickets">Vé của tôi</string>
-    <string name="tab_events">Sự kiện</string>
 
     <!-- Vé sự kiện / CHECKIN-1 -->
     <string name="tickets_title">Vé của tôi</string>
@@ -114,6 +117,7 @@
     <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
     <string name="utilities_grid_settings">Cài đặt</string>
     <string name="utilities_grid_settings_desc">Thông báo &amp; Phiên bản</string>
+    <string name="utilities_section_mine">Tiện ích của tôi</string>
     <string name="utilities_section_upcoming">Dịch vụ đang phát triển</string>
     <string name="utilities_loading">Đang tải danh sách module…</string>
     <string name="utilities_error_title">Không tải được danh sách</string>
@@ -254,6 +258,9 @@
     <string name="auth_forgot_submit">Gửi liên kết</string>
     <string name="auth_forgot_success">Nếu tài khoản tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư sinh viên của bạn.</string>
     <string name="auth_forgot_rate_limit">Bạn đã yêu cầu quá nhiều lần. Vui lòng chờ vài phút rồi thử lại.</string>
+    <string name="auth_verify_email">Email chưa được kích hoạt hoặc chưa xác thực. Vui lòng kiểm tra hộp thư sinh viên.</string>
+    <string name="auth_verify_email_prompt">Chưa kích hoạt email?</string>
+    <string name="auth_verify_email_action">Kích hoạt ngay</string>
     <string name="auth_network_error">Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.</string>
     <string name="auth_verification_submit">Gửi xác minh</string>
     <string name="auth_verification_input_label">Nhập MSSV của bạn</string>
@@ -409,9 +416,7 @@
     <string name="auth_login_retry">Thử đăng nhập lại</string>
     <string name="scanner_open">Mở soát vé</string>
     <string name="scanner_back">Quay lại</string>
-    <string name="scanner_title">Quét và soát vé</string>
     <string name="scanner_forbidden">Chỉ ban tổ chức được soát vé.</string>
-    <string name="scanner_count">Đã check-in: %1$d</string>
     <string name="scanner_code">Mã vé hoặc nội dung QR</string>
     <string name="scanner_submit">Kiểm tra</string>
     <string name="scanner_success">Check-in thành công</string>
@@ -421,8 +426,6 @@
     <string name="scanner_error">Không thể kiểm tra vé. Hãy thử lại.</string>
     <string name="scanner_camera_permission">Cho phép camera để quét mã QR</string>
     <string name="scanner_camera_denied">Chưa cấp quyền camera. Bạn vẫn có thể nhập mã thủ công.</string>
-    <string name="scanner_camera_error">Không mở được camera. Hãy thử lại hoặc nhập mã thủ công.</string>
-    <string name="scanner_camera_retry">Thử mở camera lại</string>
     <string name="scanner_camera_scanning">Đưa mã QR vào khung hình</string>
     <string name="scanner_camera_received">Đã đọc mã. Chọn Quét mã khác để tiếp tục.</string>
     <string name="scanner_scan_again">Quét mã khác</string>

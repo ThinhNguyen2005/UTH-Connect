@@ -14,6 +14,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.giathinh.uthconnect.presentation.scanner.ScannerDestination
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.presentation.common.messageText
 

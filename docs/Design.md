@@ -265,9 +265,22 @@ Nguyên tắc:
 ```
 Trang chủ      → HomeDestination     → nội dung module Sự kiện (MVP)
 Thời khóa biểu → ScheduleDestination → placeholder Phase 2
-Tiện ích       → UtilitiesDestination → danh sách module + badge giai đoạn
+Tiện ích       → UtilitiesDestination → lưới 2 khu vực: dịch vụ mở được + dịch vụ theo lộ trình
 Cá nhân        → ProfileDestination  → đăng nhập/xác thực + vé + cài đặt
 ```
+
+Con số **4 là chuẩn, không phải tuỳ hứng**: tài liệu Android của Google xếp navigation bar cho
+"three to five destinations of equal importance"; app từng phình lên 6 tab (thêm Vé của tôi và
+Sự kiện) nên vượt khuyến nghị và ba tab cùng dùng một icon `DateRange`. Hai tab thừa đã rút về
+điểm vào bên trong màn hình chủ quản:
+
+| Dịch vụ | Trước | Bây giờ |
+|---|---|---|
+| Vé của tôi (`TicketsDestination`) | tab đáy thứ 5 | hàng điều hướng trong tab **Cá nhân** (`ProfileNavRow`, testTag `profile_open_tickets`) |
+| Sự kiện (`EventsDestination`) | tab đáy thứ 6, chỉ hiện với build Supabase | ô trong lưới **Tiện ích** (`StaticUtilityModuleRepository` bật `EVENTS`) |
+
+`UthDestination` chỉ còn 4 entry; graph của màn con khai báo trong package của feature
+(`events/EventsNavigation.kt`, `tickets/TicketsNavigation.kt`) — thêm màn không cộng tab.
 
 Route là **type-safe**: 4 destination là `@Serializable object` (không tham số), không còn chuỗi phẳng. NavHost đăng ký bằng `composable<T>`, chọn tab dùng `popUpTo(start) + saveState/restoreState + launchSingleTop` để mỗi tab giữ trạng thái riêng và không xếp chồng bản sao. Tab đang chọn suy ra bằng `NavDestination.hasRoute(T::class)` từ `currentBackStackEntry`, không so chuỗi và không nhân bản sang biến state riêng.
 
@@ -288,7 +301,7 @@ Trong tab Trang chủ:    EventList → EventDetail → Register
 Trong tab Cá nhân:      MyTickets → TicketQr (QR động)
 Trong tab Cá nhân*:     OrganizerEvents → EventEditor → AttendanceScanner → EventStats
 Trong tab Cá nhân:      Profile → Settings (ngôn ngữ EN/VI, giao diện)
-Trong tab Tiện ích:    LostFound · Books · Housing · RideShare (mở dần theo giai đoạn)
+Trong tab Tiện ích:    Events · LostFound (ô lưới đã bật) — Books · Housing · RideShare (ô lộ trình)
 (*) chỉ hiện với Organizer
 ```
 

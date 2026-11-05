@@ -9,7 +9,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.giathinh.uthconnect.R
-import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
 
@@ -19,15 +18,19 @@ import kotlinx.serialization.Serializable
 @Serializable object ScheduleDestination
 @Serializable object UtilitiesDestination
 @Serializable object ProfileDestination
-@Serializable object EventsDestination
 
 /**
  * 4 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
  *
- * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon.
+ * Con số 4 không phải tuỳ hứng: khuyến nghị của Google cho navigation bar là
+ * **3–5 điểm đến ngang hàng** (developer.android.com — Navigation bar). Vượt 5 thì
+ * thanh đáy vỡ chuẩn khoảng chạm, nên màn ngoài tab phải đi vào qua lưới Tiện ích
+ * hoặc tab Cá nhân, không cộng thêm entry vào enum này.
+ *
+ * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon **khác nhau** —
+ * ba tab từng cùng dùng `DateRange` khiến người dùng không phân biệt được bằng hình.
  * Thêm màn hình chi tiết trong một module thì khai báo ở `navigation/` của
- * feature đó (graph riêng + `<Module>Navigation.kt`), không cộng thêm entry
- * vào enum này.
+ * feature đó (graph riêng + `<Module>Navigation.kt`), không cộng thêm entry vào enum này.
  */
 enum class UthDestination(
     /** Thể hiện route để `navigate(...)`/`popUpTo(...)` — instance của @Serializable object. */
@@ -56,13 +59,6 @@ enum class UthDestination(
         R.string.tab_profile,
         Icons.Filled.Person,
     ),
-    TICKETS(
-        TicketsDestination,
-        TicketsDestination::class,
-        R.string.tab_tickets,
-        Icons.Filled.DateRange,
-    ),
-    EVENTS(EventsDestination, EventsDestination::class, R.string.tab_events, Icons.Filled.DateRange),
     ;
 
     companion object {

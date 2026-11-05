@@ -6,7 +6,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import kotlinx.serialization.Serializable
 
-/** Route cấp tab của danh sách vé. */
+/**
+ * Điểm vào là hàng "Vé của tôi" trong tab Cá nhân (`docs/Design.md` mục 8.2), không còn
+ * là tab đáy — khung app giữ đúng 4 điểm đến theo khuyến nghị 3–5 của Google.
+ */
 @Serializable data object TicketsDestination
 
 /** Vé được chọn; id là khóa tra cứu trong ViewModel cùng graph. */

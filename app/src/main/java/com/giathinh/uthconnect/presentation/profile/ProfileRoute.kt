@@ -26,6 +26,7 @@ import com.giathinh.uthconnect.R
 @Composable
 fun ProfileRoute(
     modifier: Modifier = Modifier,
+    onOpenTickets: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,7 +58,7 @@ fun ProfileRoute(
                     onError = { viewModel.onAction(ProfileAction.BiometricFailed) })
             }
         } else viewModel.onAction(action)
-    }, modifier = Modifier.fillMaxSize())
+    }, modifier = Modifier.fillMaxSize(), onOpenTickets = onOpenTickets)
         SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }

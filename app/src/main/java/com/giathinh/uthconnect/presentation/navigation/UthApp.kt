@@ -3,7 +3,6 @@ package com.giathinh.uthconnect.presentation.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import com.giathinh.uthconnect.BuildConfig
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -30,15 +29,16 @@ import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
-import com.giathinh.uthconnect.presentation.attendance.AttendanceDestination
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
-import com.giathinh.uthconnect.presentation.events.EventsRoute
+import com.giathinh.uthconnect.presentation.events.EventsDestination
+import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
+import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
 import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 
@@ -127,18 +127,22 @@ private fun UthNavHost(
                 onOpenModule = { module ->
                     when (module) {
                         UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
-                        else -> Unit // Các graph khác được nối khi module hoàn tất review.
+                        UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
+                        // Module chưa có graph riêng thì ở lại lưới Tiện ích với badge giai đoạn;
+                        // graph của nó do branch feature của module đó thêm (docs/GIT_WORKFLOW.md mục 4).
+                        else -> Unit
                     }
                 },
             )
         }
-        composable<ProfileDestination> { ProfileRoute() }
-        composable<EventsDestination> {
-            EventsRoute(onOpenAttendance = { eventId -> navController.navigate(AttendanceDestination(eventId)) })
+        composable<ProfileDestination> {
+            // Vé chuyển từ tab đáy vào tab Cá nhân (docs/Design.md mục 8.2) để thanh nav giữ 4 điểm đến.
+            ProfileRoute(onOpenTickets = { navController.navigate(TicketsDestination) })
         }
         attendanceGraph(navController)
         ticketsGraph(navController)
         scannerGraph(navController)
+        eventsGraph(navController)
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
@@ -153,7 +157,7 @@ private fun UthBottomBar(
     onSelect: (UthDestination) -> Unit,
 ) {
     val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
-    val destinations = UthDestination.entries.filter { it != UthDestination.EVENTS || BuildConfig.USE_SUPABASE }
+    val destinations = UthDestination.entries
     val scrollState = rememberScrollState()
     NavigationBar(
         modifier = if (largeText) {

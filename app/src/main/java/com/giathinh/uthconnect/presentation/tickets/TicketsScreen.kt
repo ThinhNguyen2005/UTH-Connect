@@ -67,7 +67,6 @@ import com.giathinh.uthconnect.BuildConfig
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
-import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
@@ -81,9 +80,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketQrPayload
 import com.giathinh.uthconnect.domain.model.TicketStatus
-import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
-import com.google.zxing.qrcode.QRCodeWriter
 
 /**
  * Tab Vé: thanh nhận diện rút gọn kiểu Trang chủ, bộ lọc hai nhóm và danh sách vé dạng
@@ -577,7 +574,7 @@ private fun TicketStub(
                 Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant)
             }
         } else {
-            TicketQrPreview(seed = ticket.id.hashCode(), modifier = Modifier.size(UthDimens.Size.TicketStubQr))
+            TicketQrPreview(payload = ticket.id, modifier = Modifier.size(UthDimens.Size.TicketStubQr))
         }
         Box(
             modifier = Modifier
@@ -842,7 +839,7 @@ private fun TicketPassCard(
                     Text(stringResource(R.string.tickets_qr_stable_notice), style = MaterialTheme.typography.bodySmall)
                 } else {
                     TicketSecurityRibbon(secondsRemaining = secondsRemaining)
-                    TicketQrPanel(seed = ticket.id.hashCode())
+                    TicketQrPanel(payload = ticket.id)
                     TicketCodeRow(
                         code = ticket.fallbackCode,
                         copyLabel = copyLabel,

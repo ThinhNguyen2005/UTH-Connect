@@ -5,11 +5,12 @@
 
     <string name="common_retry">Retry</string>
     <string name="common_meta_separator">•</string>
-    <string name="utilities_not_available">Not yet available</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+
+    <!-- Vào từ hàng "My tickets" trong tab Profile, không phải tab đáy. -->
     <string name="tab_tickets">My tickets</string>
 
     <string name="tickets_title">My tickets</string>
@@ -111,6 +112,7 @@
     <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
     <string name="utilities_grid_settings">Settings</string>
     <string name="utilities_grid_settings_desc">Notifications &amp; version</string>
+    <string name="utilities_section_mine">My utilities</string>
     <string name="utilities_section_upcoming">Upcoming services</string>
     <string name="utilities_loading">Loading modules.</string>
     <string name="utilities_error_title">Could not load the list</string>
@@ -251,6 +253,9 @@
     <string name="auth_forgot_submit">Send Link</string>
     <string name="auth_forgot_success">If the account exists, instructions have been sent to your student email.</string>
     <string name="auth_forgot_rate_limit">Too many requests. Please wait a few minutes and try again.</string>
+    <string name="auth_verify_email">Email has not been verified. Please check your student inbox.</string>
+    <string name="auth_verify_email_prompt">Email not verified?</string>
+    <string name="auth_verify_email_action">Verify now</string>
     <string name="auth_network_error">Network connection error. Please check your network.</string>
     <string name="auth_verification_submit">Submit Verification</string>
     <string name="auth_verification_input_label">Enter your Student ID</string>
@@ -528,9 +533,7 @@
     <string name="tickets_qr_issuing">Issuing a secure QR code…</string>
     <string name="scanner_open">Open check-in</string>
     <string name="scanner_back">Back</string>
-    <string name="scanner_title">Scan and check in</string>
     <string name="scanner_forbidden">Only organizers can check in tickets.</string>
-    <string name="scanner_count">Checked in: %1$d</string>
     <string name="scanner_code">Ticket code or QR content</string>
     <string name="scanner_submit">Check</string>
     <string name="scanner_success">Check-in successful</string>
@@ -540,8 +543,6 @@
     <string name="scanner_error">Could not check this ticket. Please retry.</string>
     <string name="scanner_camera_permission">Allow camera access to scan QR codes</string>
     <string name="scanner_camera_denied">Camera permission is off. You can still enter the code manually.</string>
-    <string name="scanner_camera_error">Could not open the camera. Retry or enter the code manually.</string>
-    <string name="scanner_camera_retry">Retry camera</string>
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>

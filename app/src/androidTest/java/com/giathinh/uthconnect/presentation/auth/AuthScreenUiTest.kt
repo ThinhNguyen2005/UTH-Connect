@@ -1,5 +1,7 @@
 package com.giathinh.uthconnect.presentation.auth
 
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -49,5 +51,67 @@ class AuthScreenUiTest {
         rule.onNodeWithTag("auth_biometric_touch_zone").assertDoesNotExist()
         rule.onNodeWithTag("auth_biometric_login").assertDoesNotExist()
         rule.onNodeWithTag("auth_mode_password").assertDoesNotExist()
+    }
+
+    @Test fun forgotPasswordDialog_opens_andEmitsForgotActions() {
+        val actions = mutableListOf<AuthAction>()
+        rule.setContent {
+            UTHConnectTheme {
+                AuthScreen(
+                    uiState = AuthUiState(
+                        isRestoring = false,
+                        screenStep = AuthScreenStep.Password,
+                        forgotDialogOpen = true,
+                        forgotEmail = "2023040123@ut.edu.vn",
+                    ),
+                    onAction = { actions.add(it) },
+                )
+            }
+        }
+        rule.onNodeWithTag("auth_forgot_email").assertIsDisplayed()
+        rule.onNodeWithTag("auth_forgot_send").assertIsEnabled().performClick()
+        rule.runOnIdle {
+            assertEquals(listOf(AuthAction.SubmitForgotPassword), actions)
+        }
+    }
+
+    @Test fun forgotPasswordDialog_successBanner_andDismiss() {
+        val actions = mutableListOf<AuthAction>()
+        rule.setContent {
+            UTHConnectTheme {
+                AuthScreen(
+                    uiState = AuthUiState(
+                        isRestoring = false,
+                        forgotDialogOpen = true,
+                        forgotSuccessNotice = true,
+                    ),
+                    onAction = { actions.add(it) },
+                )
+            }
+        }
+        rule.onNodeWithTag("auth_forgot_success_banner").assertIsDisplayed()
+        rule.onNodeWithTag("auth_forgot_done").performClick()
+        rule.runOnIdle {
+            assertEquals(listOf(AuthAction.DismissForgotPassword), actions)
+        }
+    }
+
+    @Test fun emailVerificationShortcut_triggersStepSelection() {
+        val actions = mutableListOf<AuthAction>()
+        rule.setContent {
+            UTHConnectTheme {
+                AuthScreen(
+                    uiState = AuthUiState(
+                        isRestoring = false,
+                        screenStep = AuthScreenStep.Password,
+                    ),
+                    onAction = { actions.add(it) },
+                )
+            }
+        }
+        rule.onNodeWithTag("auth_goto_verify_email").performScrollTo().performClick()
+        rule.runOnIdle {
+            assertEquals(listOf(AuthAction.SelectStep(AuthScreenStep.VerifyEmail)), actions)
+        }
     }
 }
