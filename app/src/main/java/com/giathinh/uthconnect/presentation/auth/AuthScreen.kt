@@ -208,7 +208,6 @@ fun AuthScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("auth_forgot_success_banner")
-                                .testTag("auth_reset_sent"),
                         ) {
                             Row(
                                 modifier = Modifier.padding(UthDimens.Spacing.Md),
@@ -234,8 +233,7 @@ fun AuthScreen(
                             onValueChange = { onAction(AuthAction.ForgotEmailChanged(it)) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("auth_forgot_email")
-                                .testTag("auth_reset_email"),
+                                .testTag("auth_forgot_email"),
                             enabled = !uiState.isSendingForgot,
                             singleLine = true,
                             label = { Text(stringResource(R.string.auth_forgot_email_label)) },
@@ -283,7 +281,6 @@ fun AuthScreen(
                         shape = UthDimens.Radius.MdShape,
                         modifier = Modifier
                             .testTag("auth_forgot_send")
-                            .testTag("auth_reset_send"),
                     ) {
                         if (uiState.isSendingForgot) {
                             CircularProgressIndicator(

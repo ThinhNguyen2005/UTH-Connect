@@ -145,7 +145,17 @@ class AuthViewModel @Inject constructor(
             // Next-step flow actions
             AuthAction.ContinueIdentifier -> continueIdentifier()
             is AuthAction.SelectStep -> _uiState.update {
-                it.copy(screenStep = action.step, failure = null, identifierError = null, passwordError = null)
+                it.copy(
+                    screenStep = action.step,
+                    failure = null,
+                    identifierError = null,
+                    passwordError = null,
+                    registeredEmail = if (action.step == AuthScreenStep.VerifyEmail && it.registeredEmail.isBlank()) {
+                        it.forgotEmail.ifBlank { it.identifier }
+                    } else {
+                        it.registeredEmail
+                    },
+                )
             }
             is AuthAction.NewStudentNameChanged -> _uiState.update { it.copy(newStudentName = action.value) }
             is AuthAction.NewStudentFacultyChanged -> _uiState.update { it.copy(newStudentFaculty = action.value) }
@@ -357,10 +367,45 @@ class AuthViewModel @Inject constructor(
 
     private fun resendVerificationEmail() {
         val snapshot = _uiState.value
+        val targetEmail = snapshot.registeredEmail.ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }.trim()
+        if (targetEmail.isBlank()) {
+            viewModelScope.launch {
+                eventChannel.send(AuthEvent.GeneralMessage("Chưa có email sinh viên để gửi xác thực"))
+            }
+            return
+        }
         if (snapshot.verifyEmailCooldownSeconds > 0) return
         startVerifyEmailCooldown()
         viewModelScope.launch {
-            runCatching { forgotPassword(snapshot.registeredEmail) }
+            try {
+                when (val outcome = forgotPassword(targetEmail)) {
+                    ForgotPasswordOutcome.Success -> Unit
+                    is ForgotPasswordOutcome.InvalidEmail -> {
+                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
+                        cooldownJob?.cancel()
+                        eventChannel.send(AuthEvent.GeneralMessage(outcome.message))
+                    }
+                    ForgotPasswordOutcome.NetworkError -> {
+                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
+                        cooldownJob?.cancel()
+                        _uiState.update { it.copy(failure = AuthFailure.NetworkError) }
+                    }
+                    ForgotPasswordOutcome.RateLimited -> {
+                        _uiState.update { it.copy(failure = AuthFailure.RateLimited) }
+                    }
+                    is ForgotPasswordOutcome.Failure -> {
+                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
+                        cooldownJob?.cancel()
+                        eventChannel.send(AuthEvent.GeneralMessage(outcome.message))
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
+                cooldownJob?.cancel()
+                _uiState.update { it.copy(failure = AuthFailure.Unexpected) }
+            }
         }
     }
 
@@ -436,7 +481,6 @@ class AuthViewModel @Inject constructor(
                             isSigningIn = false,
                             failure = AuthFailure.VerificationRequired,
                             registeredEmail = outcome.email,
-                            googleVerification = GoogleVerificationNotice(outcome.email, outcome.displayName),
                         )
                     }
                     SignInResult.InvalidCredentials -> {
