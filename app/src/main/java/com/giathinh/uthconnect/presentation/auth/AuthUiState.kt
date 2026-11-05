@@ -83,6 +83,7 @@ enum class AuthFailure {
     RateLimited,
     NetworkError,
     TokenExpired,
+    VerificationRequired,
 }
 
 /** Non-sensitive display data taken from the unverified profile row. */

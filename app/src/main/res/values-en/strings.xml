@@ -251,6 +251,9 @@
     <string name="auth_forgot_submit">Send Link</string>
     <string name="auth_forgot_success">If the account exists, instructions have been sent to your student email.</string>
     <string name="auth_forgot_rate_limit">Too many requests. Please wait a few minutes and try again.</string>
+    <string name="auth_verify_email">Email has not been verified. Please check your student inbox.</string>
+    <string name="auth_verify_email_prompt">Email not verified?</string>
+    <string name="auth_verify_email_action">Verify now</string>
     <string name="auth_network_error">Network connection error. Please check your network.</string>
     <string name="auth_verification_submit">Submit Verification</string>
     <string name="auth_verification_input_label">Enter your Student ID</string>

@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -174,15 +175,126 @@ fun AuthScreen(
         }
     }
 
-    // Forgot Password Dialog
+    // Forgot Password Dialog (Khôi phục mật khẩu sinh viên)
     if (uiState.forgotDialogOpen) {
+        val extended = UthTheme.extendedColors
         AlertDialog(
-            onDismissRequest = { onAction(AuthAction.DismissForgotPassword) },
-            title = { Text(stringResource(R.string.auth_forgot_title)) },
-            text = { Text(stringResource(R.string.auth_forgot_message)) },
+            onDismissRequest = {
+                if (!uiState.isSendingForgot) onAction(AuthAction.DismissForgotPassword)
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.auth_forgot_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+                ) {
+                    Text(
+                        text = stringResource(R.string.auth_forgot_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    if (uiState.forgotSuccessNotice) {
+                        Surface(
+                            shape = UthDimens.Radius.MdShape,
+                            color = extended.successContainer.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder),
+                            border = BorderStroke(UthDimens.Size.Stroke, extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("auth_forgot_success_banner")
+                                .testTag("auth_reset_sent"),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(UthDimens.Spacing.Md),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = null,
+                                    tint = extended.success,
+                                    modifier = Modifier.size(UthDimens.Size.IconCompact),
+                                )
+                                Text(
+                                    text = stringResource(R.string.auth_forgot_success),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = extended.onSuccessContainer,
+                                )
+                            }
+                        }
+                    } else {
+                        OutlinedTextField(
+                            value = uiState.forgotEmail,
+                            onValueChange = { onAction(AuthAction.ForgotEmailChanged(it)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("auth_forgot_email")
+                                .testTag("auth_reset_email"),
+                            enabled = !uiState.isSendingForgot,
+                            singleLine = true,
+                            label = { Text(stringResource(R.string.auth_forgot_email_label)) },
+                            placeholder = { Text("mssv@ut.edu.vn") },
+                            shape = UthDimens.Radius.LgShape,
+                            isError = uiState.forgotError != null,
+                            supportingText = {
+                                uiState.forgotError?.let {
+                                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Send,
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onSend = { onAction(AuthAction.SubmitForgotPassword) },
+                            ),
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { onAction(AuthAction.DismissForgotPassword) },
+                    enabled = !uiState.isSendingForgot,
+                    modifier = Modifier.testTag("auth_forgot_cancel"),
+                ) {
+                    Text(stringResource(R.string.auth_cancel))
+                }
+            },
             confirmButton = {
-                TextButton(onClick = { onAction(AuthAction.DismissForgotPassword) }) {
-                    Text(stringResource(R.string.auth_ok))
+                if (uiState.forgotSuccessNotice) {
+                    Button(
+                        onClick = { onAction(AuthAction.DismissForgotPassword) },
+                        shape = UthDimens.Radius.MdShape,
+                        modifier = Modifier.testTag("auth_forgot_done"),
+                    ) {
+                        Text(stringResource(R.string.auth_ok))
+                    }
+                } else {
+                    Button(
+                        onClick = { onAction(AuthAction.SubmitForgotPassword) },
+                        enabled = !uiState.isSendingForgot && uiState.forgotEmail.isNotBlank(),
+                        shape = UthDimens.Radius.MdShape,
+                        modifier = Modifier
+                            .testTag("auth_forgot_send")
+                            .testTag("auth_reset_send"),
+                    ) {
+                        if (uiState.isSendingForgot) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(UthDimens.Size.ProgressInline),
+                                strokeWidth = UthDimens.Size.ProgressInlineStroke,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Text(stringResource(R.string.auth_forgot_submit))
+                        }
+                    }
                 }
             },
         )
@@ -640,6 +752,33 @@ private fun ModernPasswordContent(
                         onAction(AuthAction.SelectStep(AuthScreenStep.Identifier))
                     }
                     .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Xxs),
+            )
+        }
+
+        Spacer(Modifier.height(UthDimens.Spacing.Xxs))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.auth_verify_email_prompt),
+                style = MaterialTheme.typography.bodySmall,
+                color = extended.textSecondary,
+            )
+            Spacer(Modifier.width(UthDimens.Spacing.Xs))
+            Text(
+                text = stringResource(R.string.auth_verify_email_action),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(enabled = enabled) {
+                        onAction(AuthAction.SelectStep(AuthScreenStep.VerifyEmail))
+                    }
+                    .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Xxs)
+                    .testTag("auth_goto_verify_email"),
             )
         }
 
@@ -1237,6 +1376,7 @@ private fun failureRes(failure: AuthFailure) = when (failure) {
     AuthFailure.RateLimited -> R.string.auth_forgot_rate_limit
     AuthFailure.NetworkError -> R.string.auth_network_error
     AuthFailure.TokenExpired -> R.string.auth_reset_token_expired
+    AuthFailure.VerificationRequired -> R.string.auth_verify_email
 }
 
 // ───────────────────────────────────────── COMPOSE PREVIEWS ─────────────────────────────────────────

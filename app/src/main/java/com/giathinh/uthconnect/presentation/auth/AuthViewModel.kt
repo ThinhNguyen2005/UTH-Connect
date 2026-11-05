@@ -431,6 +431,14 @@ class AuthViewModel @Inject constructor(
                     is SignInResult.InvalidForm -> _uiState.update {
                         it.copy(isSigningIn = false, identifierError = outcome.identifier, passwordError = outcome.password)
                     }
+                    is SignInResult.VerificationRequired -> _uiState.update {
+                        it.copy(
+                            isSigningIn = false,
+                            failure = AuthFailure.VerificationRequired,
+                            registeredEmail = outcome.email,
+                            googleVerification = GoogleVerificationNotice(outcome.email, outcome.displayName),
+                        )
+                    }
                     SignInResult.InvalidCredentials -> {
                         _uiState.update { it.copy(isSigningIn = false, failure = AuthFailure.InvalidCredentials) }
                         eventChannel.send(AuthEvent.InvalidCredentials)
