@@ -85,3 +85,4 @@ Phiên làm việc tập trung giải quyết 3 nhóm nhiệm vụ quan trọng:
 1. **Khởi chạy nghiệm thu trên Android Studio**: Nhấn Run 'app' để kiểm tra toàn bộ chuỗi luồng: Đăng nhập $\rightarrow$ Quên mật khẩu $\rightarrow$ Đăng ký $\rightarrow$ Xác thực email.
 2. **Tích hợp Deep Link Handler**: Kiểm tra intent-filter deep link trong `AndroidManifest.xml` để đón các liên kết callback từ email đặt lại mật khẩu và kích hoạt tài khoản.
 3. **Chuẩn bị Pull Request**: Đẩy nhánh `feature/auth-thinh` lên GitHub và tạo PR hợp nhất vào `main` với đầy đủ tài liệu giải trình kỹ thuật.
+
