@@ -19,11 +19,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.domain.usecase.AttendanceCsvLabels
-import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 @Composable
 fun AttendanceRoute(
@@ -49,7 +49,10 @@ fun AttendanceRoute(
         missing = stringResource(R.string.attendance_missing),
     )
     val createCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri == null) { exporting = false; return@rememberLauncherForActivityResult }
+        if (uri == null) {
+            exporting = false
+            return@rememberLauncherForActivityResult
+        }
         scope.launch {
             try {
                 val csv = viewModel.createExport(labels, Instant.now()).getOrThrow()

@@ -2,13 +2,13 @@ package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.repository.TicketRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class SupabaseTicketRepository @Inject constructor(

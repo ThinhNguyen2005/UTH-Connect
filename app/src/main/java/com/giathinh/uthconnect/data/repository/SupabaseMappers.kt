@@ -6,12 +6,6 @@ import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.UserRole
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -19,6 +13,12 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 private val TICKET_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm")
@@ -26,17 +26,13 @@ private val TICKET_DATE_FORMATTER: DateTimeFormatter =
 
 internal fun uuid(id: String): String = UUID.fromString(id).toString()
 
-internal fun urlEncode(value: String): String =
-    URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+internal fun urlEncode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 
-internal fun JsonObject.string(name: String): String? =
-    (get(name) as? JsonPrimitive)?.takeIf { it.isString }?.content
+internal fun JsonObject.string(name: String): String? = (get(name) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
-internal fun JsonObject.int(name: String): Int =
-    (get(name) as? JsonPrimitive)?.intOrNull ?: 0
+internal fun JsonObject.int(name: String): Int = (get(name) as? JsonPrimitive)?.intOrNull ?: 0
 
-internal fun JsonObject.bool(name: String): Boolean =
-    (get(name) as? JsonPrimitive)?.booleanOrNull ?: false
+internal fun JsonObject.bool(name: String): Boolean = (get(name) as? JsonPrimitive)?.booleanOrNull ?: false
 
 internal fun JsonObject.toDomainEvent(): Event = Event(
     id = requireNotNull(string("id")) { "Missing event ID" },

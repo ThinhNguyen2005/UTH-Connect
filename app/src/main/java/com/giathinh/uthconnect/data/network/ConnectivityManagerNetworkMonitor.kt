@@ -53,9 +53,7 @@ class ConnectivityManagerNetworkMonitor @Inject constructor(
         }
     }.conflate()
 
-    private fun ConnectivityManager.isCurrentlyConnected(): Boolean {
-        return activeNetwork
-            ?.let(::getNetworkCapabilities)
-            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ?: false
-    }
+    private fun ConnectivityManager.isCurrentlyConnected(): Boolean = activeNetwork
+        ?.let(::getNetworkCapabilities)
+        ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ?: false
 }

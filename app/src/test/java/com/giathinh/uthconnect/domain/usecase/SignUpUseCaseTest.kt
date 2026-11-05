@@ -18,8 +18,7 @@ class SignUpUseCaseTest {
         override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
         override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
-        override suspend fun signUp(email: String, password: String, displayName: String, faculty: String): Result<SignUpResult> =
-            onSignUp(email, password, displayName, faculty)
+        override suspend fun signUp(email: String, password: String, displayName: String, faculty: String): Result<SignUpResult> = onSignUp(email, password, displayName, faculty)
     }
 
     @Test
@@ -130,4 +129,3 @@ class SignUpUseCaseTest {
         assertTrue(result is SignUpOutcome.DomainRestriction)
     }
 }
-

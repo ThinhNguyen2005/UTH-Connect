@@ -11,11 +11,11 @@ data class StudentGrade(
     val credits: Int,
     val semester: String, // ví dụ "HK1 2025-2026", "HK2 2025-2026"
     val attendanceScore: Float?, // Điểm chuyên cần (10%)
-    val midtermScore: Float?,    // Điểm giữa kỳ (30%)
-    val finalScore: Float?,      // Điểm cuối kỳ (60%)
-    val totalScore10: Float,     // Điểm tổng kết hệ 10
-    val totalScore4: Float,      // Điểm tổng kết hệ 4
-    val letterGrade: String,     // Điểm chữ: A, B+, B, C+, C, D+, D, F
+    val midtermScore: Float?, // Điểm giữa kỳ (30%)
+    val finalScore: Float?, // Điểm cuối kỳ (60%)
+    val totalScore10: Float, // Điểm tổng kết hệ 10
+    val totalScore4: Float, // Điểm tổng kết hệ 4
+    val letterGrade: String, // Điểm chữ: A, B+, B, C+, C, D+, D, F
 )
 
 data class SemesterGpa(

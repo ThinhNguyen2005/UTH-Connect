@@ -21,8 +21,15 @@ object FirestoreEventSeeder {
                 "orgName" to "CLB Thể Thao UTH",
                 "location" to "Sân vận động Cơ sở 2",
                 "campus" to "Quang Trung",
-                "startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 3); set(Calendar.HOUR_OF_DAY, 7); set(Calendar.MINUTE, 0) }.timeInMillis,
-                "endAt" to calendar.apply { set(Calendar.HOUR_OF_DAY, 17); set(Calendar.MINUTE, 0) }.timeInMillis,
+                "startAt" to calendar.apply {
+                    add(Calendar.DAY_OF_YEAR, 3)
+                    set(Calendar.HOUR_OF_DAY, 7)
+                    set(Calendar.MINUTE, 0)
+                }.timeInMillis,
+                "endAt" to calendar.apply {
+                    set(Calendar.HOUR_OF_DAY, 17)
+                    set(Calendar.MINUTE, 0)
+                }.timeInMillis,
                 "capacity" to 200,
                 "registeredCount" to 42,
                 "status" to "PUBLISHED",
@@ -36,8 +43,15 @@ object FirestoreEventSeeder {
                 "orgName" to "Đội CTXH Ánh Sáng",
                 "location" to "Hội trường A.102",
                 "campus" to "Nguyễn Tất Thành",
-                "startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 5); set(Calendar.HOUR_OF_DAY, 18); set(Calendar.MINUTE, 30) }.timeInMillis,
-                "endAt" to calendar.apply { set(Calendar.HOUR_OF_DAY, 21); set(Calendar.MINUTE, 0) }.timeInMillis,
+                "startAt" to calendar.apply {
+                    add(Calendar.DAY_OF_YEAR, 5)
+                    set(Calendar.HOUR_OF_DAY, 18)
+                    set(Calendar.MINUTE, 30)
+                }.timeInMillis,
+                "endAt" to calendar.apply {
+                    set(Calendar.HOUR_OF_DAY, 21)
+                    set(Calendar.MINUTE, 0)
+                }.timeInMillis,
                 "capacity" to 80,
                 "registeredCount" to 72,
                 "status" to "PUBLISHED",
@@ -51,8 +65,15 @@ object FirestoreEventSeeder {
                 "orgName" to "CLB Tin học UTH",
                 "location" to "Phòng Lab 3, Khu F",
                 "campus" to "Thủ Đức",
-                "startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 7); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0) }.timeInMillis,
-                "endAt" to calendar.apply { set(Calendar.HOUR_OF_DAY, 11); set(Calendar.MINUTE, 30) }.timeInMillis,
+                "startAt" to calendar.apply {
+                    add(Calendar.DAY_OF_YEAR, 7)
+                    set(Calendar.HOUR_OF_DAY, 9)
+                    set(Calendar.MINUTE, 0)
+                }.timeInMillis,
+                "endAt" to calendar.apply {
+                    set(Calendar.HOUR_OF_DAY, 11)
+                    set(Calendar.MINUTE, 30)
+                }.timeInMillis,
                 "capacity" to 60,
                 "registeredCount" to 58,
                 "status" to "PUBLISHED",

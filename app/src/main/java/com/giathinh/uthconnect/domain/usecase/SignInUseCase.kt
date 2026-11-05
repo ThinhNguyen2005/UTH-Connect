@@ -23,8 +23,9 @@ class SignInUseCase @Inject constructor(
         }
         return auth.authenticate(identifier.trim(), password).fold(
             onSuccess = { student ->
-                if (student == null) SignInResult.InvalidCredentials
-                else {
+                if (student == null) {
+                    SignInResult.InvalidCredentials
+                } else {
                     session.start(student, remember)
                     SignInResult.Success(student)
                 }

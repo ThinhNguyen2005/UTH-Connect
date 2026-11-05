@@ -8,20 +8,21 @@ import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
 import com.giathinh.uthconnect.domain.repository.VerificationRequestResult
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class SupabaseAuthRepository @Inject constructor(
     private val client: SupabaseRestClient,
     private val google: SupabaseGoogleExchange,
-) : AuthRepository, StudentContactRepository {
+) : AuthRepository,
+    StudentContactRepository {
 
     override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = runCatching {
         val trimmed = identifier.trim()
@@ -55,9 +56,8 @@ class SupabaseAuthRepository @Inject constructor(
         }
     }
 
-    private suspend fun ownProfile(): StudentProfile =
-        ownProfileRow()?.toDomainProfile()
-            ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
+    private suspend fun ownProfile(): StudentProfile = ownProfileRow()?.toDomainProfile()
+        ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
 
     private suspend fun ownProfileRow(): JsonObject? = client.table(
         "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url,phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",

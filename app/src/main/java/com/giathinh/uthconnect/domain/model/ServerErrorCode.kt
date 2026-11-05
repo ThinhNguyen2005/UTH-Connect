@@ -40,7 +40,8 @@ enum class ServerErrorCode(val token: String) {
 
     /** Không có mã nào của server trong lỗi — rơi về hai giá trị dưới. */
     Network(""),
-    Unknown("");
+    Unknown(""),
+    ;
 
     companion object {
         // Ưu tiên token dài hơn để INVALID_EVENT_STATUS không bị đọc nhầm thành INVALID_EVENT.
@@ -57,7 +58,6 @@ enum class ServerErrorCode(val token: String) {
          * Mã hoá một `Throwable` bất kỳ từ tầng data: ưu tiên mã server, rồi lỗi mạng,
          * cuối cùng là `Unknown` để giao diện còn có đường fallback về chuỗi gốc.
          */
-        fun of(error: Throwable?): ServerErrorCode =
-            fromMessage(error?.message) ?: if (error is IOException) Network else Unknown
+        fun of(error: Throwable?): ServerErrorCode = fromMessage(error?.message) ?: if (error is IOException) Network else Unknown
     }
 }

@@ -14,8 +14,14 @@ import org.junit.Test
 
 /** A Google session must never become a remembered-login grant, verified or not. */
 class SignInWithGoogleUseCaseTest {
-    private val student = StudentProfile("2023040123", "minh.anh@ut.edu.vn", "Nguyễn Minh Anh",
-        "CN23A", "Công nghệ thông tin", "Khoa Công nghệ thông tin")
+    private val student = StudentProfile(
+        "2023040123",
+        "minh.anh@ut.edu.vn",
+        "Nguyễn Minh Anh",
+        "CN23A",
+        "Công nghệ thông tin",
+        "Khoa Công nghệ thông tin",
+    )
 
     private class RecordingSession : SessionRepository {
         private val current = MutableStateFlow(StudentSession(isRestoring = false))
@@ -28,11 +34,15 @@ class SignInWithGoogleUseCaseTest {
             startedWithRemember = remember
             current.value = StudentSession(isRestoring = false, profile = profile, remembered = remember)
         }
-        override suspend fun updateProfile(profile: StudentProfile) { current.value = current.value.copy(profile = profile) }
+        override suspend fun updateProfile(profile: StudentProfile) {
+            current.value = current.value.copy(profile = profile)
+        }
         override suspend fun enableBiometric(studentId: String) = Unit
         override suspend fun disableBiometric() = Unit
         override suspend fun unlockWithBiometric() = Unit
-        override suspend fun signOut() { current.value = StudentSession(isRestoring = false) }
+        override suspend fun signOut() {
+            current.value = StudentSession(isRestoring = false)
+        }
     }
 
     private class FakeAuth(
@@ -47,7 +57,8 @@ class SignInWithGoogleUseCaseTest {
     @Test fun `Verified Google identity opens a non-remembered session`() = runBlocking {
         val session = RecordingSession()
         val result = SignInWithGoogleUseCase(
-            FakeAuth { Result.success(student) }, session,
+            FakeAuth { Result.success(student) },
+            session,
         )("id-token", "raw-nonce")
         assertEquals(SignInWithGoogleResult.Success(student), result)
         assertEquals(student, session.startedWith)
@@ -88,7 +99,8 @@ class SignInWithGoogleUseCaseTest {
 
     @Test fun `Google sign-in keeps the unsupported exception type reachable`() = runBlocking {
         val result = SignInWithGoogleUseCase(
-            FakeAuth { Result.failure(GoogleSignInUnsupportedException()) }, RecordingSession(),
+            FakeAuth { Result.failure(GoogleSignInUnsupportedException()) },
+            RecordingSession(),
         )("id-token", "raw-nonce")
         assertEquals(SignInWithGoogleResult.Unsupported, result)
     }

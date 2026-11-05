@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -568,7 +568,7 @@ private fun HomeBannerCard(
                     )
                     Text(
                         text = banner.announcement.source
-                            ?: FeedDateFormatter.format(banner.announcement.publishedAt),
+                            ?: FEED_DATE_FORMATTER.format(banner.announcement.publishedAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = UthTheme.extendedColors.textSecondary,
                         maxLines = 1,
@@ -664,7 +664,7 @@ private fun HomeBannerCover(
                 Spacer(Modifier.width(UthDimens.Spacing.Sm))
             }
             Text(
-                text = FeedDateFormatter.format(publishedAt),
+                text = FEED_DATE_FORMATTER.format(publishedAt),
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.primary,
                 modifier = Modifier
@@ -793,7 +793,7 @@ private fun HomeCategoryChips(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
     ) {
-        item(key = CategoryAllKey) {
+        item(key = CATEGORY_ALL_KEY) {
             HomeCategoryChip(
                 label = stringResource(R.string.home_category_all),
                 count = total,
@@ -846,7 +846,9 @@ private fun HomeCategoryChip(
                     modifier = Modifier.size(UthDimens.Size.IconBadge),
                 )
             }
-        } else null,
+        } else {
+            null
+        },
     )
 }
 
@@ -937,7 +939,7 @@ private fun AnnouncementRow(
             AnnouncementMeta(
                 publisher = announcement.publisher,
                 trailing = announcement.source
-                    ?: FeedDateFormatter.format(announcement.publishedAt),
+                    ?: FEED_DATE_FORMATTER.format(announcement.publishedAt),
             )
         }
     }
@@ -1111,7 +1113,9 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
             label = "homeSkeletonProgress",
         )
         progress
-    } else null
+    } else {
+        null
+    }
 
     Column(
         modifier = modifier
@@ -1222,7 +1226,13 @@ private fun HomeEmpty(modifier: Modifier = Modifier) {
     )
 }
 
-/** Khoá của các item trong `LazyColumn` — không dùng chuỗi rải rác trong code. */
+/**
+ * Khoá của các item trong `LazyColumn` — không dùng chuỗi rải rác trong code.
+ *
+ * Suppress `property-naming`: hằng nằm trong object private nhóm theo vai trò, không phải
+ * hằng cấp file cần SCREAMING_SNAKE.
+ */
+@Suppress("ktlint:standard:property-naming")
 private object HomeKey {
     const val Header = "home_header"
     const val Highlights = "home_highlights"
@@ -1236,10 +1246,10 @@ private object HomeKey {
 }
 
 /** Key của chip "Tất cả" — tách khỏi key item khác của `LazyRow`. */
-private const val CategoryAllKey = "home_category_all"
+private const val CATEGORY_ALL_KEY = "home_category_all"
 
 /** Định dạng ngày theo locale trường: `dd/MM/yyyy`. */
-private val FeedDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+private val FEED_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 /** Nhãn nhóm trong `strings.xml`; prefix `home_` giữ đúng quy ước mục 8. */
 @StringRes
@@ -1302,8 +1312,7 @@ private val PreviewBanners = listOf(
 )
 
 @Composable
-private fun HomeStatePreview(state: HomeUiState, darkTheme: Boolean = false) =
-    UthPreview(darkTheme = darkTheme) { HomeScreen(uiState = state, onAction = {}) }
+private fun HomeStatePreview(state: HomeUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) { HomeScreen(uiState = state, onAction = {}) }
 
 @Preview(name = "content light", showBackground = true)
 @Composable

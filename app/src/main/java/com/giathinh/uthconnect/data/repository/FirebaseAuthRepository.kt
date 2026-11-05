@@ -75,6 +75,7 @@ class FirebaseAuthRepository @Inject constructor(
                 "ERROR_USER_NOT_FOUND",
                 "ERROR_INVALID_EMAIL",
                 -> false
+
                 else -> throw e
             }
         }
@@ -132,17 +133,15 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
-    private fun DocumentSnapshot.toStudentProfile(fallbackStudentId: String): StudentProfile {
-        return StudentProfile(
-            studentId = getString(FIELD_STUDENT_ID) ?: fallbackStudentId,
-            email = getString(FIELD_EMAIL) ?: "",
-            displayName = getString(FIELD_DISPLAY_NAME) ?: "Sinh viên UTH",
-            className = getString(FIELD_CLASS_NAME) ?: "Chưa cập nhật",
-            major = getString(FIELD_MAJOR) ?: "Chưa cập nhật",
-            faculty = getString(FIELD_FACULTY) ?: "Chưa cập nhật",
-            avatarUrl = getString(FIELD_AVATAR_URL),
-        )
-    }
+    private fun DocumentSnapshot.toStudentProfile(fallbackStudentId: String): StudentProfile = StudentProfile(
+        studentId = getString(FIELD_STUDENT_ID) ?: fallbackStudentId,
+        email = getString(FIELD_EMAIL) ?: "",
+        displayName = getString(FIELD_DISPLAY_NAME) ?: "Sinh viên UTH",
+        className = getString(FIELD_CLASS_NAME) ?: "Chưa cập nhật",
+        major = getString(FIELD_MAJOR) ?: "Chưa cập nhật",
+        faculty = getString(FIELD_FACULTY) ?: "Chưa cập nhật",
+        avatarUrl = getString(FIELD_AVATAR_URL),
+    )
 
     companion object {
         private const val USERS_COLLECTION = "users"

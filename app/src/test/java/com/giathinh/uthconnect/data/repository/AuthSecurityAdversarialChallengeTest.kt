@@ -12,9 +12,6 @@ import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleResult
 import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 import com.giathinh.uthconnect.domain.validation.LoginValidator
-import java.security.MessageDigest
-import java.util.UUID
-import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
@@ -28,6 +25,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import java.security.MessageDigest
+import java.util.UUID
+import kotlin.random.Random
 
 /**
  * Empirical Adversarial Challenge Test Suite for UTH Connect Authentication & Security Invariants.
@@ -319,7 +319,7 @@ class AuthSecurityAdversarialChallengeTest {
     }
 
     @Test
-    fun `GoogleExchangeLogTag is correctly declared for observability`() {
-        assertEquals("SupabaseGoogleExchange", GoogleExchangeLogTag)
+    fun `GOOGLE_EXCHANGE_LOG_TAG is correctly declared for observability`() {
+        assertEquals("SupabaseGoogleExchange", GOOGLE_EXCHANGE_LOG_TAG)
     }
 }

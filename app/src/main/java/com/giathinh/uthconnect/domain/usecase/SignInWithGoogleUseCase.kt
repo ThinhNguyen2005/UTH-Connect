@@ -5,8 +5,8 @@ import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.GoogleSignInUnsupportedException
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
-import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import javax.inject.Inject
 
 /**
  * Google counterpart of [SignInUseCase]: redeems an ID token, then opens the local student
@@ -24,7 +24,9 @@ class SignInWithGoogleUseCase @Inject constructor(
             return when (error) {
                 is StudentVerificationRequiredException ->
                     SignInWithGoogleResult.VerificationPending(error.email, error.displayName)
+
                 is GoogleSignInUnsupportedException -> SignInWithGoogleResult.Unsupported
+
                 else -> SignInWithGoogleResult.Rejected
             }
         }
@@ -39,6 +41,7 @@ class SignInWithGoogleUseCase @Inject constructor(
 
 sealed interface SignInWithGoogleResult {
     data class Success(val student: StudentProfile) : SignInWithGoogleResult
+
     /** Signed in at Google, but an administrator has not confirmed the MSSV yet. */
     data class VerificationPending(val email: String, val displayName: String) : SignInWithGoogleResult
     data object Rejected : SignInWithGoogleResult

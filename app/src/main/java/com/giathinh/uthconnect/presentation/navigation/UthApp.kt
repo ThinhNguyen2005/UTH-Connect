@@ -28,19 +28,19 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
-import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
+import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
+import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
-import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
-import com.giathinh.uthconnect.presentation.scanner.scannerGraph
+import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
  * Cửa vào app: 4 tab chỉ mở sau khi xác thực demo.
@@ -127,7 +127,9 @@ private fun UthNavHost(
                 onOpenModule = { module ->
                     when (module) {
                         UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
+
                         UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
+
                         // Module chưa có graph riêng thì ở lại lưới Tiện ích với badge giai đoạn;
                         // graph của nó do branch feature của module đó thêm (docs/GIT_WORKFLOW.md mục 4).
                         else -> Unit
@@ -164,7 +166,9 @@ private fun UthBottomBar(
             Modifier
                 .horizontalScroll(scrollState)
                 .width(UthDimens.Layout.LargeTextNavigationItemWidth * destinations.size)
-        } else Modifier,
+        } else {
+            Modifier
+        },
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = UthDimens.Elevation.BottomBar,
     ) {

@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.validation.PasswordValidation
 
 enum class ProfilePage { Overview, ChangePassword, EditContact }
 enum class ProfileFailure { LogoutFailed, LoadFailed, SaveFailed, BiometricFailed }
+
 /** Each event is consumed once by ProfileRoute. Keep persistent form failures in UiState. */
 sealed interface ProfileEvent {
     data object LogoutFailed : ProfileEvent

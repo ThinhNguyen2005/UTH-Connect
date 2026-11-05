@@ -11,7 +11,6 @@ import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class EventsUiState(
     val events: List<Event> = emptyList(),
@@ -97,11 +97,9 @@ class EventsViewModel @Inject constructor(
 
     fun cancel(eventId: String) = mutate(eventId) { events.cancelCurrentRegistration(eventId) }
 
-    fun saveEvent(eventId: String?, draft: EventDraft) =
-        mutate(eventId ?: "new", "Đã lưu sự kiện") { events.saveEvent(eventId, draft) }
+    fun saveEvent(eventId: String?, draft: EventDraft) = mutate(eventId ?: "new", "Đã lưu sự kiện") { events.saveEvent(eventId, draft) }
 
-    fun setStatus(eventId: String, status: EventStatus) =
-        mutate(eventId, "Đã cập nhật trạng thái sự kiện") { events.setStatus(eventId, status) }
+    fun setStatus(eventId: String, status: EventStatus) = mutate(eventId, "Đã cập nhật trạng thái sự kiện") { events.setStatus(eventId, status) }
 
     private fun mutate(
         eventId: String,

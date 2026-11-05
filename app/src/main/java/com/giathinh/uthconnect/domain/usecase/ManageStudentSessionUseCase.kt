@@ -1,10 +1,10 @@
 package com.giathinh.uthconnect.domain.usecase
 
 import com.giathinh.uthconnect.domain.repository.SessionRepository
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 /** Authenticated profile-side session management. Native biometric verification is in Route. */
 class ManageStudentSessionUseCase @Inject constructor(

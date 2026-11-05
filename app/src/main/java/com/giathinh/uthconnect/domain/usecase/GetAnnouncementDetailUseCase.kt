@@ -14,6 +14,5 @@ class GetAnnouncementDetailUseCase @Inject constructor(
     private val repository: AnnouncementRepository,
 ) {
 
-    suspend operator fun invoke(announcementId: String): Result<AnnouncementDetail?> =
-        repository.detail(announcementId)
+    suspend operator fun invoke(announcementId: String): Result<AnnouncementDetail?> = repository.detail(announcementId)
 }

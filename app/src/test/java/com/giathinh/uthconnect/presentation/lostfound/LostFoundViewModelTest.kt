@@ -26,12 +26,10 @@ class LostFoundViewModelTest {
 
     private fun createViewModel(
         repository: LostFoundRepository = InMemoryLostFoundRepository(),
-    ): LostFoundViewModel {
-        return LostFoundViewModel(
-            getListingsUseCase = GetLostFoundListingsUseCase(repository),
-            reportItemUseCase = ReportLostFoundItemUseCase(repository),
-        )
-    }
+    ): LostFoundViewModel = LostFoundViewModel(
+        getListingsUseCase = GetLostFoundListingsUseCase(repository),
+        reportItemUseCase = ReportLostFoundItemUseCase(repository),
+    )
 
     @Test
     fun `initialState_loadsListingsSuccessfully`() {
@@ -231,17 +229,13 @@ class LostFoundViewModelTest {
         val mockRepo = object : LostFoundRepository {
             private val delegate = InMemoryLostFoundRepository()
 
-            override suspend fun getListings(): Result<List<LostFoundListing>> {
-                return if (shouldFail) {
-                    Result.failure(RuntimeException("Lỗi kết nối cơ sở dữ liệu"))
-                } else {
-                    delegate.getListings()
-                }
+            override suspend fun getListings(): Result<List<LostFoundListing>> = if (shouldFail) {
+                Result.failure(RuntimeException("Lỗi kết nối cơ sở dữ liệu"))
+            } else {
+                delegate.getListings()
             }
 
-            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> {
-                return delegate.reportItem(item)
-            }
+            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = delegate.reportItem(item)
         }
 
         val viewModel = createViewModel(mockRepo)

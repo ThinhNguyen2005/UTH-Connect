@@ -13,7 +13,6 @@ import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 import com.giathinh.uthconnect.domain.validation.LoginValidator
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Adversarial Stress & Edge Case Test Harness for Authentication UI & State Machine.

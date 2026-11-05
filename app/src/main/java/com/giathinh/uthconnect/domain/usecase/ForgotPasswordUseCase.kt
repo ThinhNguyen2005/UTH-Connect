@@ -38,9 +38,11 @@ class ForgotPasswordUseCase @Inject constructor(
                 when {
                     error is IOException || error.message?.contains("timeout", ignoreCase = true) == true ->
                         ForgotPasswordOutcome.NetworkError
+
                     error.message?.contains("429", ignoreCase = true) == true ||
-                    error.message?.contains("rate limit", ignoreCase = true) == true ->
+                        error.message?.contains("rate limit", ignoreCase = true) == true ->
                         ForgotPasswordOutcome.RateLimited
+
                     else ->
                         // Anti-enumeration: treat unknown backend responses as Success unless explicit network/rate limit
                         ForgotPasswordOutcome.Success
@@ -49,4 +51,3 @@ class ForgotPasswordUseCase @Inject constructor(
         )
     }
 }
-

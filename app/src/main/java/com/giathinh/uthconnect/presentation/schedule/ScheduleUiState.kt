@@ -2,9 +2,9 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import com.giathinh.uthconnect.domain.model.Course
 import com.giathinh.uthconnect.domain.model.Timetable
-import java.time.LocalDateTime
-import java.time.LocalDate
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 data class ScheduleUiState(
     val timetable: Timetable = Timetable(),
@@ -52,7 +52,13 @@ data class ScheduleEvent(
 enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
 enum class EventAccent { SUCCESS, PRIMARY, WARNING }
 
-enum class SchedulePeriod { ALL, MORNING, AFTERNOON, EVENING;
+enum class SchedulePeriod {
+    ALL,
+    MORNING,
+    AFTERNOON,
+    EVENING,
+    ;
+
     companion object {
         fun fromHour(hour: Int) = when {
             hour < 12 -> MORNING
