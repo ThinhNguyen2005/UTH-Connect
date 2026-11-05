@@ -31,8 +31,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -141,24 +141,28 @@ fun AuthScreen(
                         largeText = largeText,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
                     AuthScreenStep.Identifier -> ModernIdentifierContent(
                         uiState = uiState,
                         onAction = onAction,
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
                     AuthScreenStep.FirstTimeSetup -> ModernFirstTimeSetupContent(
                         uiState = uiState,
                         onAction = onAction,
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
                     AuthScreenStep.ResetPassword -> ModernResetPasswordContent(
                         uiState = uiState,
                         onAction = onAction,
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
                     AuthScreenStep.VerifyEmail -> ModernVerifyEmailContent(
                         uiState = uiState,
                         onAction = onAction,
@@ -207,7 +211,7 @@ fun AuthScreen(
                             border = BorderStroke(UthDimens.Size.Stroke, extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder)),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("auth_forgot_success_banner")
+                                .testTag("auth_forgot_success_banner"),
                         ) {
                             Row(
                                 modifier = Modifier.padding(UthDimens.Spacing.Md),
@@ -280,7 +284,7 @@ fun AuthScreen(
                         enabled = !uiState.isSendingForgot && uiState.forgotEmail.isNotBlank(),
                         shape = UthDimens.Radius.MdShape,
                         modifier = Modifier
-                            .testTag("auth_forgot_send")
+                            .testTag("auth_forgot_send"),
                     ) {
                         if (uiState.isSendingForgot) {
                             CircularProgressIndicator(
@@ -350,13 +354,13 @@ private fun AuthTopBar(
             ) {
                 LanguageOption(
                     text = stringResource(R.string.auth_lang_vi),
-                    isSelected = selectedLanguage == "VI",
-                    onClick = { onSelectLanguage("VI") },
+                    isSelected = selectedLanguage == LANGUAGE_CODE_VIETNAMESE,
+                    onClick = { onSelectLanguage(LANGUAGE_CODE_VIETNAMESE) },
                 )
                 LanguageOption(
                     text = stringResource(R.string.auth_lang_en),
-                    isSelected = selectedLanguage == "EN",
-                    onClick = { onSelectLanguage("EN") },
+                    isSelected = selectedLanguage == LANGUAGE_CODE_ENGLISH,
+                    onClick = { onSelectLanguage(LANGUAGE_CODE_ENGLISH) },
                 )
             }
         }
@@ -509,8 +513,11 @@ private fun ModernPasswordContent(
                 )
             },
             label = { Text(stringResource(R.string.auth_password_label)) },
-            visualTransformation = if (uiState.passwordVisible) VisualTransformation.None
-            else PasswordVisualTransformation(),
+            visualTransformation = if (uiState.passwordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
             trailingIcon = {
                 IconButton(
                     onClick = { onAction(AuthAction.TogglePassword) },

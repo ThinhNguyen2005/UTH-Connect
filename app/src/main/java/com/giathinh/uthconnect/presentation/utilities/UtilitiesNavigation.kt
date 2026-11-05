@@ -1,3 +1,8 @@
+// Đặt tên file theo quy ước `*Navigation.kt` của tầng điều hướng
+// (docs/CODING_STANDARDS.md mục 3.2.1) thay vì theo tên khai báo duy nhất bên trong,
+// nên tắt ktlint `filename` cho riêng file này.
+@file:Suppress("ktlint:standard:filename")
+
 package com.giathinh.uthconnect.presentation.utilities
 
 import kotlinx.serialization.Serializable

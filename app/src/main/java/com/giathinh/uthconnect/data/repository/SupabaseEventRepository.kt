@@ -3,10 +3,7 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
-import java.time.Instant
 import com.giathinh.uthconnect.domain.repository.EventRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -14,6 +11,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class SupabaseEventRepository @Inject constructor(
@@ -33,7 +33,10 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override suspend fun registerEvent(
-        eventId: String, uid: String, studentId: String, studentName: String,
+        eventId: String,
+        uid: String,
+        studentId: String,
+        studentName: String,
     ): Result<Unit> = runCatching {
         check(uid == client.userId) { "Cannot register for another user" }
         client.rpc("register_for_event", buildJsonObject { put("p_event_id", uuid(eventId)) })
@@ -53,18 +56,22 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override suspend fun registerCurrentUser(eventId: String): Result<Unit> = registerEvent(
-        eventId = eventId, uid = client.userId, studentId = "", studentName = "",
+        eventId = eventId,
+        uid = client.userId,
+        studentId = "",
+        studentName = "",
     )
 
-    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> =
-        cancelRegistration(eventId, client.userId)
+    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = cancelRegistration(eventId, client.userId)
 
     override fun currentUserRegistrations(): Flow<Set<String>> = revision.map {
         client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${urlEncode(uuid(client.userId))}")
             .jsonArray.mapNotNull { row -> row.jsonObject.string("event_id") }.toSet()
     }
 
-    override fun refresh() { revision.value++ }
+    override fun refresh() {
+        revision.value++
+    }
 
     override fun currentUserId(): String = client.userId
 
@@ -84,10 +91,13 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = runCatching {
-        client.rpc("set_event_status", buildJsonObject {
-            put("p_event_id", uuid(eventId))
-            put("p_status", status.name)
-        })
+        client.rpc(
+            "set_event_status",
+            buildJsonObject {
+                put("p_event_id", uuid(eventId))
+                put("p_status", status.name)
+            },
+        )
         refresh()
     }
 }

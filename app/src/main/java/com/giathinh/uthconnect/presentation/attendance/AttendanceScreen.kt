@@ -61,10 +61,14 @@ fun AttendanceScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                         Text(roster.eventTitle, style = MaterialTheme.typography.titleLarge)
-                        Text(stringResource(
-                            R.string.attendance_summary,
-                            roster.checkedInCount, roster.registeredCount, roster.notCheckedInCount,
-                        ))
+                        Text(
+                            stringResource(
+                                R.string.attendance_summary,
+                                roster.checkedInCount,
+                                roster.registeredCount,
+                                roster.notCheckedInCount,
+                            ),
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                             OutlinedButton(onClick = { onAction(AttendanceAction.Refresh) }) {
                                 Text(stringResource(R.string.attendance_refresh))
@@ -85,11 +89,17 @@ fun AttendanceScreen(
                                 FilterChip(
                                     selected = state.filter == filter,
                                     onClick = { onAction(AttendanceAction.Filter(filter)) },
-                                    label = { Text(stringResource(when (filter) {
-                                        AttendanceFilter.ALL -> R.string.attendance_all
-                                        AttendanceFilter.PRESENT -> R.string.attendance_present
-                                        AttendanceFilter.MISSING -> R.string.attendance_missing
-                                    })) },
+                                    label = {
+                                        Text(
+                                            stringResource(
+                                                when (filter) {
+                                                    AttendanceFilter.ALL -> R.string.attendance_all
+                                                    AttendanceFilter.PRESENT -> R.string.attendance_present
+                                                    AttendanceFilter.MISSING -> R.string.attendance_missing
+                                                },
+                                            ),
+                                        )
+                                    },
                                 )
                             }
                         }
@@ -101,6 +111,7 @@ fun AttendanceScreen(
                 item {
                     val message = when (failure) {
                         AttendanceFailure.ExportFailed -> stringResource(R.string.attendance_export_error)
+
                         AttendanceFailure.LoadFailed -> state.errorCode?.messageText(state.errorDetail)
                             ?: stringResource(R.string.attendance_load_error)
                     }
@@ -124,11 +135,17 @@ fun AttendanceScreen(
                     ) {
                         Text(entry.displayName.ifBlank { entry.studentId }, style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.attendance_student_id_value, entry.studentId))
-                        Text(stringResource(if (entry.checkedIn) R.string.attendance_present else R.string.attendance_missing),
-                            color = if (entry.checkedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(if (entry.checkedIn) R.string.attendance_present else R.string.attendance_missing),
+                            color = if (entry.checkedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         entry.checkedInAt?.let { timestamp ->
-                            Text(stringResource(R.string.attendance_time_value,
-                                attendanceTime.format(Instant.parse(timestamp))))
+                            Text(
+                                stringResource(
+                                    R.string.attendance_time_value,
+                                    attendanceTime.format(Instant.parse(timestamp)),
+                                ),
+                            )
                         }
                     }
                 }
@@ -141,12 +158,19 @@ fun AttendanceScreen(
 @Composable
 private fun AttendancePreview() = UthPreview {
     AttendanceScreen(
-        state = AttendanceUiState(loading = false, roster = AttendanceRoster(
-            eventId = "preview", eventTitle = "Hội thao UTH", entries = listOf(
-                AttendanceEntry("1", "20230001", "Nguyễn Minh Anh", "", "2026-11-03T08:00:00Z", "organizer"),
-                AttendanceEntry("2", "20230002", "Trần Gia Bảo", "", null, null),
+        state = AttendanceUiState(
+            loading = false,
+            roster = AttendanceRoster(
+                eventId = "preview",
+                eventTitle = "Hội thao UTH",
+                entries = listOf(
+                    AttendanceEntry("1", "20230001", "Nguyễn Minh Anh", "", "2026-11-03T08:00:00Z", "organizer"),
+                    AttendanceEntry("2", "20230002", "Trần Gia Bảo", "", null, null),
+                ),
             ),
-        )),
-        onAction = {}, onBack = {}, onExport = {},
+        ),
+        onAction = {},
+        onBack = {},
+        onExport = {},
     )
 }

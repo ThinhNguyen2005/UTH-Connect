@@ -5,6 +5,10 @@ import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SignUpResult
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -12,16 +16,13 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /** Two isolated demo accounts, without any UTH identity/role verification server. */
 @Singleton
 class DemoAuthRepository @Inject constructor(
     private val store: DemoAccountStore,
-) : AuthRepository, StudentContactRepository {
+) : AuthRepository,
+    StudentContactRepository {
     private val mutex = Mutex()
 
     private val student = StudentProfile(
@@ -52,8 +53,7 @@ class DemoAuthRepository @Inject constructor(
     }
 
     /** Keep original V2 student preference keys unchanged for backwards compatibility. */
-    private fun key(base: StudentProfile, field: String): String =
-        if (base.studentId == student.studentId) field else "organizer_$field"
+    private fun key(base: StudentProfile, field: String): String = if (base.studentId == student.studentId) field else "organizer_$field"
 
     private fun profile(base: StudentProfile): StudentProfile = base.copy(
         phoneNumber = store.getString(key(base, "phone")).orEmpty(),
@@ -75,28 +75,32 @@ class DemoAuthRepository @Inject constructor(
 
     private fun derivePassword(password: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(password.toCharArray(), salt, 180_000, 256)
-        return try { SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded }
-        finally { spec.clearPassword() }
+        return try {
+            SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        } finally {
+            spec.clearPassword()
+        }
     }
 
-    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> =
-        withContext(Dispatchers.Default) {
-            runCatching {
-                mutex.withLock {
-                    val base = listOf(student, organizer).firstOrNull {
-                        identifier == it.studentId || identifier.equals(it.email, ignoreCase = true)
-                    }
-                    base?.takeIf { passwordMatches(it, password) }?.let(::profile)
+    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = withContext(Dispatchers.Default) {
+        runCatching {
+            mutex.withLock {
+                val base = listOf(student, organizer).firstOrNull {
+                    identifier == it.studentId || identifier.equals(it.email, ignoreCase = true)
                 }
+                base?.takeIf { passwordMatches(it, password) }?.let(::profile)
             }
         }
+    }
 
     override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
         mutex.withLock { baseFor(studentId)?.let(::profile) }
     }
 
     override suspend fun changePassword(
-        studentId: String, oldPassword: String, newPassword: String,
+        studentId: String,
+        oldPassword: String,
+        newPassword: String,
     ): Result<Boolean> = withContext(Dispatchers.Default) {
         runCatching {
             mutex.withLock {
@@ -104,29 +108,36 @@ class DemoAuthRepository @Inject constructor(
                 if (!passwordMatches(base, oldPassword)) return@withLock false
                 val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
                 val hash = derivePassword(newPassword, salt)
-                check(store.putAll(
-                    mapOf(
-                        key(base, "password_salt") to Base64.getEncoder().encodeToString(salt),
-                        key(base, "password_hash") to Base64.getEncoder().encodeToString(hash),
-                    )
-                )) { "Password storage failed" }
+                check(
+                    store.putAll(
+                        mapOf(
+                            key(base, "password_salt") to Base64.getEncoder().encodeToString(salt),
+                            key(base, "password_hash") to Base64.getEncoder().encodeToString(hash),
+                        ),
+                    ),
+                ) { "Password storage failed" }
                 true
             }
         }
     }
 
     override suspend fun updateContact(
-        studentId: String, phone: String, personalEmail: String, currentAddress: String,
+        studentId: String,
+        phone: String,
+        personalEmail: String,
+        currentAddress: String,
     ): Result<StudentProfile> = runCatching {
         mutex.withLock {
             val base = requireNotNull(baseFor(studentId)) { "Unknown student" }
-            check(store.putAll(
-                mapOf(
-                    key(base, "phone") to phone,
-                    key(base, "personal_email") to personalEmail,
-                    key(base, "address") to currentAddress,
-                )
-            )) { "Contact storage failed" }
+            check(
+                store.putAll(
+                    mapOf(
+                        key(base, "phone") to phone,
+                        key(base, "personal_email") to personalEmail,
+                        key(base, "address") to currentAddress,
+                    ),
+                ),
+            ) { "Contact storage failed" }
             profile(base)
         }
     }
@@ -147,6 +158,7 @@ class DemoAuthRepository @Inject constructor(
     companion object {
         const val STUDENT_DEMO_PASSWORD = "UTH@123456"
         const val ORGANIZER_DEMO_PASSWORD = "UTH@Org123456"
+
         /** Backwards compatibility for V2 demos referencing the original constant. */
         const val DEMO_PASSWORD = STUDENT_DEMO_PASSWORD
     }

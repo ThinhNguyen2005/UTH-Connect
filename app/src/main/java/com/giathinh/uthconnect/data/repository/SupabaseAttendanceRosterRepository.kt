@@ -3,12 +3,12 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.AttendanceEntry
 import com.giathinh.uthconnect.domain.model.AttendanceRoster
 import com.giathinh.uthconnect.domain.repository.AttendanceRosterRepository
-import java.util.UUID
-import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import java.util.UUID
+import javax.inject.Inject
 
 class SupabaseAttendanceRosterRepository @Inject constructor(
     private val client: SupabaseRestClient,
@@ -27,7 +27,7 @@ class SupabaseAttendanceRosterRepository @Inject constructor(
         val uid = client.userId
         val role = client.table("profiles?select=role&id=eq.$uid")
             .jsonArray.singleOrNull()?.jsonObject?.string("role")
-        check(role == "admin" || role == "organizer" && event.string("organizer_id") == uid) {
+        check(role == "admin" || (role == "organizer" && event.string("organizer_id") == uid)) {
             "FORBIDDEN"
         }
         val registrations = allRows(
@@ -67,5 +67,7 @@ class SupabaseAttendanceRosterRepository @Inject constructor(
         return result
     }
 
-    private companion object { const val PAGE_SIZE = 500 }
+    private companion object {
+        const val PAGE_SIZE = 500
+    }
 }

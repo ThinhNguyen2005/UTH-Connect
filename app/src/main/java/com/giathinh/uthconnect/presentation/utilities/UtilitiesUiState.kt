@@ -26,3 +26,13 @@ enum class UtilitiesFailure {
     /** Không đọc được danh sách module. */
     LoadFailed,
 }
+
+/**
+ * Event một lần của tab Tiện ích — thu bằng `LaunchedEffect` trong Route
+ * (`docs/CODING_STANDARDS.md` mục 6), không nhét vào UiState vì UiState tái tạo
+ * liên tục còn event chỉ được xử lý một lần.
+ */
+sealed interface UtilitiesEvent {
+    /** Ngôn ngữ vừa đổi: Locale chỉ áp được khi activity dựng lại tài nguyên. */
+    data object LanguageChanged : UtilitiesEvent
+}

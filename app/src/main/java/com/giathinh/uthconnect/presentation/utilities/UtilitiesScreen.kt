@@ -6,8 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,13 +24,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.giathinh.uthconnect.R
@@ -72,6 +77,26 @@ fun UtilitiesScreen(
     val openedModules = uiState.modules.filter { it.enabled }
     val lockedModules = uiState.modules.filterNot { it.enabled }
 
+    // Chữ phóng lớn (>= Layout.LargeTextScale) khiến ô 3 cột chỉ còn ~66dp bề ngang
+    // chữ, nên khu dịch vụ hạ về 2 cột — cùng nhánh thích ứng đã dùng ở UthApp/AuthScreen.
+    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
+    val serviceColumns = if (largeText) {
+        UthDimens.Layout.ServiceGridColumnsLargeText
+    } else {
+        UthDimens.Layout.ServiceGridColumns
+    }
+
+    /** Một lần bấm ô lưới luôn đi qua đây, nên tile không cần giữ lambda. */
+    fun onTileTarget(target: UtilityTileTarget) {
+        when (target) {
+            UtilityTileTarget.Tuition -> onNavigateToTuition()
+            UtilityTileTarget.TrainingPoint -> onNavigateToTrainingPoint()
+            UtilityTileTarget.Campuses -> onNavigateToCampuses()
+            UtilityTileTarget.Settings -> onNavigateToSettings()
+            is UtilityTileTarget.Module -> onAction(UtilitiesAction.OpenModule(target.moduleId))
+        }
+    }
+
     // Một hàng đợi duy nhất cho "thứ sinh viên mở được ngay": 4 tiện ích tra cứu
     // và module đã bật, để hai khu vực không cùng tranh sự chú ý.
     val myUtilities = listOf(
@@ -79,32 +104,32 @@ fun UtilitiesScreen(
             icon = R.drawable.ic_utilities_tuition,
             title = stringResource(R.string.utilities_grid_tuition),
             subtitle = stringResource(R.string.utilities_grid_tuition_desc),
-            onClick = onNavigateToTuition,
+            target = UtilityTileTarget.Tuition,
         ),
         UtilityTile(
             icon = R.drawable.ic_utilities_training_point,
             title = stringResource(R.string.utilities_grid_training_point),
             subtitle = stringResource(R.string.utilities_grid_training_point_desc),
-            onClick = onNavigateToTrainingPoint,
+            target = UtilityTileTarget.TrainingPoint,
         ),
         UtilityTile(
             icon = R.drawable.ic_utilities_campuses,
             title = stringResource(R.string.utilities_grid_campuses),
             subtitle = stringResource(R.string.utilities_grid_campuses_desc),
-            onClick = onNavigateToCampuses,
+            target = UtilityTileTarget.Campuses,
         ),
         UtilityTile(
             icon = R.drawable.ic_utilities_settings,
             title = stringResource(R.string.utilities_grid_settings),
             subtitle = stringResource(R.string.utilities_grid_settings_desc),
-            onClick = onNavigateToSettings,
+            target = UtilityTileTarget.Settings,
         ),
     ) + openedModules.map { module ->
         UtilityTile(
             icon = module.id.iconRes(),
             title = stringResource(module.id.titleRes()),
             subtitle = stringResource(module.id.descRes()),
-            onClick = { onAction(UtilitiesAction.OpenModule(module.id)) },
+            target = UtilityTileTarget.Module(module.id),
         )
     }
 
@@ -127,8 +152,12 @@ fun UtilitiesScreen(
             color = UthTheme.extendedColors.textSecondary,
         )
         UthSectionHeader(title = stringResource(R.string.utilities_section_mine))
-        UtilityTileGrid(myUtilities, columns = 2) { tile, cellModifier ->
-            UtilityFeatureTile(tile = tile, modifier = cellModifier)
+        UtilityTileGrid(myUtilities, columns = UthDimens.Layout.FeatureGridColumns) { tile, cellModifier ->
+            UtilityFeatureTile(
+                tile = tile,
+                onClick = { onTileTarget(tile.target) },
+                modifier = cellModifier,
+            )
         }
 
         when {
@@ -152,7 +181,7 @@ fun UtilitiesScreen(
 
             else -> {
                 UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-                UtilityTileGrid(lockedModules, columns = 3) { module, cellModifier ->
+                UtilityTileGrid(lockedModules, columns = serviceColumns) { module, cellModifier ->
                     UtilityServiceTile(module = module, modifier = cellModifier)
                 }
             }
@@ -169,11 +198,12 @@ fun UtilitiesScreen(
 @Composable
 private fun UtilityFeatureTile(
     tile: UtilityTile,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     UthCard(
-        modifier = modifier,
-        onClick = tile.onClick,
+        modifier = modifier.fillMaxHeight(),
+        onClick = onClick,
     ) {
         UtilityIconFrame(
             iconRes = tile.icon,
@@ -189,6 +219,8 @@ private fun UtilityFeatureTile(
             text = tile.title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
 
         Spacer(Modifier.height(UthDimens.Spacing.Xxs))
@@ -197,6 +229,8 @@ private fun UtilityFeatureTile(
             text = tile.subtitle,
             style = MaterialTheme.typography.bodySmall,
             color = UthTheme.extendedColors.textSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -211,7 +245,7 @@ private fun UtilityServiceTile(
     modifier: Modifier = Modifier,
 ) {
     UthCard(
-        modifier = modifier,
+        modifier = modifier.fillMaxHeight(),
         // Ô 3 cột tự quản padding (`Sm` thay vì `Lg`) để dành bề ngang cho nhãn;
         // padding chuẩn của UthCard sẽ khiến nhãn gãy thành 3 dòng.
         contentPadding = false,
@@ -239,7 +273,10 @@ private fun UtilityServiceTile(
                 text = stringResource(module.id.titleRes()),
                 style = MaterialTheme.typography.labelLarge,
                 textAlign = TextAlign.Center,
+                // Không khai báo `overflow` thì M3 dùng TextOverflow.Clip: nhãn dài
+                // mất chữ mà người dùng không thấy dấu "…" nào.
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(Modifier.height(UthDimens.Spacing.Xxs))
@@ -252,6 +289,7 @@ private fun UtilityServiceTile(
                 color = UthTheme.extendedColors.textSecondary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -292,7 +330,12 @@ private fun UtilityIconFrame(
 
 /**
  * Lưới tile tổng quát: [columns] ô mỗi hàng, các ô chia đều bề ngang bằng
- * `weight(1f)`; hàng lẻ được đệm `Spacer` trọng số để ô cuối không bị kéo giãn.
+ * `weight(1f)`; hàng lẻ được đệm `Spacer` trọng số để ô thật không bị kéo giãn
+ * (chỗ trống bên phải là chủ ý, không phải lỗi căn chỉnh).
+ *
+ * `height(IntrinsicSize.Min)` là phần không thể bỏ: không nó, [Row] đo theo chiều cao
+ * nội dung của từng ô nên hai card cùng hàng so le đáy khi một nhãn gãy 2 dòng.
+ * Cùng idiom với thẻ vé ở `TicketsScreen`.
  */
 @Composable
 private fun <T> UtilityTileGrid(
@@ -309,7 +352,9 @@ private fun <T> UtilityTileGrid(
     ) {
         items.chunked(columns).forEach { rowItems ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 rowItems.forEach { item ->
@@ -324,12 +369,26 @@ private fun <T> UtilityTileGrid(
 }
 
 /** Một ô dịch vụ, nhãn đã giải quyết thành chuỗi để [UtilityTileGrid] không cần biết resource id. */
+@Immutable
 private data class UtilityTile(
     @param:DrawableRes val icon: Int,
     val title: String,
     val subtitle: String,
-    val onClick: () -> Unit,
+    val target: UtilityTileTarget,
 )
+
+/**
+ * Điểm đến của một ô lưới. Để [UtilityTile] thuần dữ liệu (không giữ lambda) — lambda
+ * ở lại phía screen, xem [UtilitiesScreen.onTileTarget].
+ */
+@Immutable
+private sealed interface UtilityTileTarget {
+    data object Tuition : UtilityTileTarget
+    data object TrainingPoint : UtilityTileTarget
+    data object Campuses : UtilityTileTarget
+    data object Settings : UtilityTileTarget
+    data class Module(val moduleId: UtilityModuleId) : UtilityTileTarget
+}
 
 @Composable
 private fun UtilitiesLoading() {
@@ -416,29 +475,36 @@ private val PreviewModules = listOf(
 )
 
 @Composable
-private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = false) =
-    UthPreview(darkTheme = darkTheme) {
-        UtilitiesScreen(
-            uiState = state,
-            onAction = {},
-        )
-    }
+private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) {
+    UtilitiesScreen(
+        uiState = state,
+        onAction = {},
+    )
+}
 
 @Preview(name = "content light", showBackground = true)
 @Composable
-private fun UtilitiesContentPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
-private fun UtilitiesContentDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules), darkTheme = true)
+private fun UtilitiesContentDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules), darkTheme = true)
 
-// Font scale 1.5: lưới 2 cột phải wrapping chứ không cắt nhãn (docs/UI-UX.mc mục phóng to chữ).
+// Font scale 1.5: lưới 2 cột phải wrapping chứ không cắt nhãn (docs/UI-UX.mc mục phóng to chữ);
+// khu 3 cột tự hạ về 2 cột theo Layout.ServiceGridColumnsLargeText.
 @Preview(name = "content large text", showBackground = true, fontScale = 1.5f)
 @Composable
-private fun UtilitiesContentLargeTextPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentLargeTextPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+
+// Màn hẹp nhất còn hỗ trợ: bề ngang chữ của ô 3 cột xuống ~66dp, cả hai khu phải còn
+// đọc được (nhãn gãy dòng có dấu "…", hai card cùng hàng bằng đáy).
+@Preview(name = "content narrow", showBackground = true, widthDp = 320, heightDp = 640)
+@Composable
+private fun UtilitiesContentNarrowPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+
+@Preview(name = "content narrow large text", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
+@Composable
+private fun UtilitiesContentNarrowLargeTextPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
 
 @Preview(name = "loading light", showBackground = true)
 @Composable
@@ -446,18 +512,15 @@ private fun UtilitiesLoadingPreview() = UtilitiesStatePreview(UtilitiesUiState(i
 
 @Preview(name = "loading dark", showBackground = true)
 @Composable
-private fun UtilitiesLoadingDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = true), darkTheme = true)
+private fun UtilitiesLoadingDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = true), darkTheme = true)
 
 @Preview(name = "empty light", showBackground = true)
 @Composable
-private fun UtilitiesEmptyPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = emptyList()))
+private fun UtilitiesEmptyPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = emptyList()))
 
 @Preview(name = "empty dark", showBackground = true)
 @Composable
-private fun UtilitiesEmptyDarkPreview() =
-    UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = emptyList()), darkTheme = true)
+private fun UtilitiesEmptyDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = emptyList()), darkTheme = true)
 
 @Preview(name = "error light", showBackground = true)
 @Composable

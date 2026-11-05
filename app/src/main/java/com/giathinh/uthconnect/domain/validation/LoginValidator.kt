@@ -14,11 +14,9 @@ class LoginValidator {
         }
     }
 
-    fun isUniversityEmail(email: String): Boolean =
-        universityEmailPattern.matches(email.trim())
+    fun isUniversityEmail(email: String): Boolean = universityEmailPattern.matches(email.trim())
 
-    fun passwordError(password: String): LoginFieldError? =
-        if (password.isBlank()) LoginFieldError.Required else null
+    fun passwordError(password: String): LoginFieldError? = if (password.isBlank()) LoginFieldError.Required else null
 }
 
 enum class LoginFieldError { Required, InvalidIdentifier }

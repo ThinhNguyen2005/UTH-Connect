@@ -8,11 +8,14 @@ interface SessionRepository {
     suspend fun restore()
     suspend fun start(profile: StudentProfile, remember: Boolean)
     suspend fun updateProfile(profile: StudentProfile)
+
     /** Only invoke after Android BiometricPrompt returned successful authentication. */
     suspend fun enableBiometric(studentId: String)
     suspend fun disableBiometric()
+
     /** Default implementation for backward compatibility; biometric login is removed from Auth UI. */
     suspend fun unlockWithBiometric() = Unit
+
     /** Removes both remembered and biometric sign-in grants for this device. */
     suspend fun signOut()
 }

@@ -9,19 +9,19 @@ import android.os.CancellationSignal
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import kotlinx.coroutines.flow.collect
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.R
+import kotlinx.coroutines.flow.collect
 
 @Composable
 fun ProfileRoute(
@@ -43,22 +43,29 @@ fun ProfileRoute(
         }
     }
     BackHandler(enabled = uiState.page != ProfilePage.Overview || uiState.confirmLogout) {
-        if (uiState.confirmLogout) viewModel.onAction(ProfileAction.CancelLogout)
-        else viewModel.onAction(ProfileAction.Back)
+        if (uiState.confirmLogout) {
+            viewModel.onAction(ProfileAction.CancelLogout)
+        } else {
+            viewModel.onAction(ProfileAction.Back)
+        }
     }
     Box(modifier.fillMaxSize()) {
         ProfileScreen(uiState, onAction = { action ->
-        if (action == ProfileAction.RequestBiometricEnroll) {
-            val activity = findProfileActivity(context)
-            if (activity == null || uiState.biometricEnabled) {
-                viewModel.onAction(ProfileAction.BiometricFailed)
+            if (action == ProfileAction.RequestBiometricEnroll) {
+                val activity = findProfileActivity(context)
+                if (activity == null || uiState.biometricEnabled) {
+                    viewModel.onAction(ProfileAction.BiometricFailed)
+                } else {
+                    showEnrollmentPrompt(
+                        activity,
+                        onVerified = { viewModel.onAction(ProfileAction.BiometricVerified) },
+                        onError = { viewModel.onAction(ProfileAction.BiometricFailed) },
+                    )
+                }
             } else {
-                showEnrollmentPrompt(activity,
-                    onVerified = { viewModel.onAction(ProfileAction.BiometricVerified) },
-                    onError = { viewModel.onAction(ProfileAction.BiometricFailed) })
+                viewModel.onAction(action)
             }
-        } else viewModel.onAction(action)
-    }, modifier = Modifier.fillMaxSize(), onOpenTickets = onOpenTickets)
+        }, modifier = Modifier.fillMaxSize(), onOpenTickets = onOpenTickets)
         SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
@@ -85,8 +92,16 @@ private fun showEnrollmentPrompt(activity: Activity, onVerified: () -> Unit, onE
         .setAllowedAuthenticators(strong)
         .setNegativeButton(activity.getString(R.string.auth_cancel), activity.mainExecutor) { _, _ -> Unit }
         .build()
-    prompt.authenticate(CancellationSignal(), activity.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
-        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onVerified() }
-        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { onError() }
-    })
+    prompt.authenticate(
+        CancellationSignal(),
+        activity.mainExecutor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                onVerified()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                onError()
+            }
+        },
+    )
 }

@@ -1,26 +1,26 @@
 package com.giathinh.uthconnect.presentation.tickets
 
 import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
-import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
-import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.repository.TicketCheckInOutcome
+import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.GetTicketsUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 class TicketsViewModelTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
@@ -105,8 +105,7 @@ class TicketsViewModelTest {
             requestedStudentId = studentId
             return result
         }
-        override suspend fun checkIn(identifier: String, organizerId: String): Result<TicketCheckInOutcome> =
-            Result.success(TicketCheckInOutcome.NOT_REGISTERED)
+        override suspend fun checkIn(identifier: String, organizerId: String): Result<TicketCheckInOutcome> = Result.success(TicketCheckInOutcome.NOT_REGISTERED)
     }
 
     private class FakeSessionRepository : SessionRepository {
@@ -122,5 +121,7 @@ class TicketsViewModelTest {
         override suspend fun signOut() = Unit
     }
 
-    private companion object { const val STUDENT_ID = "2023040123" }
+    private companion object {
+        const val STUDENT_ID = "2023040123"
+    }
 }

@@ -1,13 +1,10 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:EventsScreen.kt$validationError == null &amp;&amp; start != null &amp;&amp; end != null &amp;&amp; count != null</ID>
     <ID>ComplexCondition:LostFoundViewModel.kt$LostFoundViewModel$titleError != null || descriptionError != null || locationError != null || phoneError != null</ID>
     <ID>ComplexCondition:SignUpUseCase.kt$SignUpUseCase$nameError != null || emailError != null || passwordError != null || confirmError != null</ID>
-    <ID>ComposableParamOrder:QrCameraPreview.kt$QrCameraPreview</ID>
-    <ID>ComposableParamOrder:UtilitiesScreen.kt$UtilitiesScreen</ID>
-    <ID>CompositionLocalAllowlist:Theme.kt$LocalUthExtendedColors</ID>
     <ID>CyclomaticComplexMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
     <ID>CyclomaticComplexMethod:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator fun invoke(password: String, confirmPassword: String): CompletePasswordResetOutcome</ID>
     <ID>CyclomaticComplexMethod:FirestoreEventRepository.kt$FirestoreEventRepository$private fun DocumentSnapshot.toEvent(): Event?</ID>
@@ -17,16 +14,14 @@
     <ID>CyclomaticComplexMethod:PasswordChangeValidator.kt$PasswordChangeValidator$fun validate(old: String, updated: String, confirmation: String): PasswordValidation</ID>
     <ID>CyclomaticComplexMethod:ProfileViewModel.kt$ProfileViewModel$fun onAction(action: ProfileAction)</ID>
     <ID>CyclomaticComplexMethod:ScheduleViewModel.kt$ScheduleViewModel$fun onAction(action: ScheduleAction)</ID>
-    <ID>LambdaParameterEventTrailing:QrCameraPreview.kt$onError</ID>
-    <ID>LambdaParameterInRestartableEffect:LostFoundScreen.kt$onAction</ID>
-    <ID>LambdaParameterInRestartableEffect:QrScannerRoute.kt$onToken</ID>
-    <ID>LambdaParameterInRestartableEffect:ScheduleScreen.kt$onAction</ID>
     <ID>LongMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
+    <ID>LongMethod:AuthViewModel.kt$AuthViewModel$private fun submitFirstTimeSetup()</ID>
+    <ID>LongMethod:FirestoreEventSeeder.kt$FirestoreEventSeeder$suspend fun seedSampleEvents(firestore: FirebaseFirestore): Result&lt;Int&gt;</ID>
     <ID>LongMethod:HomeScreen.kt$private fun LazyListScope.homeFeed( state: HomeUiState, onOpen: (String) -&gt; Unit, onOpenFilter: () -&gt; Unit, onOpenArchive: () -&gt; Unit, onSelectCategory: (AnnouncementCategory?) -&gt; Unit, )</ID>
     <ID>LongMethod:LostFoundViewModel.kt$LostFoundViewModel$fun onAction(action: LostFoundAction)</ID>
     <ID>LongMethod:LostFoundViewModel.kt$LostFoundViewModel$private fun submitReport()</ID>
     <ID>LongMethod:ScheduleViewModel.kt$ScheduleViewModel$private fun sampleEvents(date: LocalDate, now: LocalDateTime): List&lt;ScheduleEvent&gt;</ID>
-    <ID>LongParameterList:AuthViewModel.kt$AuthViewModel$( private val signIn: SignInUseCase, private val sessions: AccessStudentSessionUseCase, private val signInWithGoogle: SignInWithGoogleUseCase, private val signUp: SignUpUseCase, private val forgotPassword: ForgotPasswordUseCase, private val completePasswordReset: CompletePasswordResetUseCase, private val submitVerification: SubmitVerificationRequestUseCase, private val supabaseRestClient: SupabaseRestClient, )</ID>
+    <ID>LongParameterList:AuthViewModel.kt$AuthViewModel$( private val signIn: SignInUseCase, private val sessions: AccessStudentSessionUseCase, private val signInWithGoogle: SignInWithGoogleUseCase, private val signUp: SignUpUseCase, private val forgotPassword: ForgotPasswordUseCase, private val completePasswordReset: CompletePasswordResetUseCase, private val submitVerification: SubmitVerificationRequestUseCase, private val supabaseRestClient: SupabaseRestClient, private val getSettings: GetSettingsUseCase, private val updateSettings: UpdateSettingsUseCase, )</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$1000L</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$12</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$60</ID>
@@ -117,11 +112,13 @@
     <ID>MatchingDeclarationName:ScannerRoute.kt$ScannerDestination</ID>
     <ID>MatchingDeclarationName:UthStatusBadge.kt$BadgeTone</ID>
     <ID>MatchingDeclarationName:UtilitiesNavigation.kt$UtilitiesDestination</ID>
+    <ID>MaxLineLength:AnnouncementScreen.kt$private</ID>
+    <ID>MaxLineLength:AnnouncementViewModelTest.kt$AnnouncementViewModelTest.FakeRepository$override suspend fun homeFeed(): Result&lt;HomeFeed&gt;</ID>
     <ID>MaxLineLength:AttendanceRosterDataModule.kt$AttendanceRosterDataModule$@Binds abstract fun bindRosterRepository(implementation: SupabaseAttendanceRosterRepository): AttendanceRosterRepository</ID>
-    <ID>MaxLineLength:AttendanceScreen.kt$Text</ID>
     <ID>MaxLineLength:AttendanceScreen.kt$Text(entry.displayName.ifBlank { entry.studentId }, style = MaterialTheme.typography.titleMedium)</ID>
     <ID>MaxLineLength:AttendanceScreen.kt$Text(stringResource(if (exporting) R.string.attendance_exporting else R.string.attendance_export))</ID>
     <ID>MaxLineLength:AttendanceScreen.kt$color = if (entry.checkedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:AttendanceScreen.kt$stringResource(if (entry.checkedIn) R.string.attendance_present else R.string.attendance_missing)</ID>
     <ID>MaxLineLength:AttendanceViewModelTest.kt$AttendanceViewModelTest$val vm = AttendanceViewModel(GetAttendanceRosterUseCase(FakeRepository(Result.success(roster))), ExportAttendanceCsvUseCase())</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest$// ───────────────────────────────────────── 5. DOUBLE SUBMIT &amp; RACE CONDITION RESILIENCE ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest$// ───────────────────────────────────────── 6. BIOMETRIC STATE TRANSITIONS &amp; RESET ─────────────────────────────────────────</ID>
@@ -130,12 +127,15 @@
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest$fun</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest.CountingAuthRepository$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest.CountingAuthRepository$val valid = (identifier.trim() == student.studentId || identifier.trim().equals(student.email, ignoreCase = true)) &amp;&amp; password == "correct_password"</ID>
+    <ID>MaxLineLength:AuthDataModule.kt$AuthDataModule.Companion$fun</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 1: DOMAIN VALIDATION &amp; CRYPTO ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 2: VIEWMODEL STATE MACHINE ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 3: UI SEMANTICS &amp; ACCESSIBILITY CONTRACT ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 4: HERMETIC E2E USER JOURNEYS ─────────────────────────────────────────</ID>
-    <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$override suspend</ID>
+    <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
+    <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$override suspend fun findStudent(studentId: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$val valid = (identifier.trim() == student.studentId || normalizedEmail.equals(student.email, ignoreCase = true)) &amp;&amp; password == "secret"</ID>
+    <ID>MaxLineLength:AuthRepository.kt$AuthRepository$suspend</ID>
     <ID>MaxLineLength:AuthScreen.kt$border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder))</ID>
     <ID>MaxLineLength:AuthScreen.kt$border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.SubtleDivider))</ID>
     <ID>MaxLineLength:AuthScreen.kt$border = BorderStroke(UthDimens.Size.Stroke, extended.info.copy(alpha = UthDimens.Opacity.AuthInfoBannerBorder))</ID>
@@ -148,7 +148,6 @@
     <ID>MaxLineLength:AuthSecurityAdversarialChallengeTest.kt$AuthSecurityAdversarialChallengeTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$AuthAction.ToggleResetPasswordVisibility -&gt; _uiState.update { it.copy(resetPasswordVisible = !it.resetPasswordVisible) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$_uiState.update { it.copy(isSubmittingVerification = false, verificationNotice = "Không thể gửi yêu cầu xác minh") }</ID>
-    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$catch (_: Exception) { _uiState.update { it.copy(isRestoring = false, failure = AuthFailure.SessionRestore) } }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$completePasswordReset</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$eventChannel.send(AuthEvent.GeneralMessage("Chỉ chấp nhận email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)"))</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$is AuthAction.ForgotEmailChanged -&gt; _uiState.update { it.copy(forgotEmail = action.value, forgotError = null) }</ID>
@@ -161,14 +160,22 @@
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$val targetEmail = snapshot.registeredEmail.ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }.trim()</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$verificationNotice = "Yêu cầu xác minh MSSV $studentId đã được gửi thành công và đang chờ Ban quản trị duyệt."</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
+    <ID>MaxLineLength:AuthViewModelTest.kt$AuthViewModelTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:AuthViewModelTest.kt$AuthViewModelTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
-    <ID>MaxLineLength:AuthViewModelTest.kt$AuthViewModelTest.FakeSession$override suspend fun updateProfile(profile: StudentProfile)</ID>
     <ID>MaxLineLength:CampusesScreen.kt$Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))</ID>
     <ID>MaxLineLength:CampusesScreen.kt$Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))</ID>
     <ID>MaxLineLength:CampusesUiState.kt$CampusesUiState$DepartmentInfo("Trung tâm Thông tin - Thư viện", "028 3899 1373", "thuvien@ut.edu.vn", "Tòa nhà Thư viện - CS1")</ID>
     <ID>MaxLineLength:CheckInUseCaseTest.kt$CheckInUseCaseTest.Companion$val profile = StudentProfile("organizer-1", "demo@ut.edu.vn", "Demo", "A", "IT", "IT", role = UserRole.ORGANIZER)</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
+    <ID>MaxLineLength:DemoAccountStore.kt$SharedPreferencesDemoAccountStore$override fun putAll(values: Map&lt;String, String&gt;): Boolean</ID>
+    <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$override suspend</ID>
+    <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$private</ID>
+    <ID>MaxLineLength:Event.kt$EventStatus.Companion$fun fromString(value: String?): EventStatus</ID>
+    <ID>MaxLineLength:EventRepository.kt$EventRepository$suspend</ID>
+    <ID>MaxLineLength:EventRepository.kt$EventRepository$suspend fun cancelCurrentRegistration(eventId: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:EventRepository.kt$EventRepository$suspend fun saveEvent(eventId: String?, draft: EventDraft): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:EventRepository.kt$EventRepository$suspend fun setStatus(eventId: String, status: EventStatus): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:EventsScreen.kt$EventStatus.HAPPENING</ID>
     <ID>MaxLineLength:EventsScreen.kt$EventStatus.PUBLISHED</ID>
     <ID>MaxLineLength:EventsScreen.kt$OutlinedTextField(value = campus, onValueChange = { campus = it }, label = { Text("Cơ sở") }, singleLine = true)</ID>
@@ -178,20 +185,25 @@
     <ID>MaxLineLength:EventsScreen.kt$OutlinedTextField(value = startsAt, onValueChange = { startsAt = it }, label = { Text("Bắt đầu (dd/MM/yyyy HH:mm)") }, singleLine = true)</ID>
     <ID>MaxLineLength:EventsScreen.kt$OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Tên sự kiện") }, singleLine = true)</ID>
     <ID>MaxLineLength:EventsScreen.kt$Text("Trạng thái: ${event.status.name} · Đã đăng ký: ${event.registeredCount}${if (event.capacity &gt; 0) "/${event.capacity}" else ""}")</ID>
+    <ID>MaxLineLength:EventsScreen.kt$internal fun editableDateTime(millis: Long, zone: ZoneId): String</ID>
+    <ID>MaxLineLength:EventsScreen.kt$internal fun parseEditableDateTime(text: String): LocalDateTime?</ID>
     <ID>MaxLineLength:EventsScreen.kt$modifier = Modifier.fillMaxWidth().heightIn(max = UthDimens.Spacing.Xxl * 15).verticalScroll(rememberScrollState())</ID>
+    <ID>MaxLineLength:EventsViewModel.kt$EventsViewModel$fun saveEvent(eventId: String?, draft: EventDraft)</ID>
+    <ID>MaxLineLength:EventsViewModel.kt$EventsViewModel$fun setStatus(eventId: String, status: EventStatus)</ID>
     <ID>MaxLineLength:FakeNotificationRepository.kt$FakeNotificationRepository$summary = "Khoa CNTT tổ chức workshop 'Nghề nghiệp CNTT 2025' với sự tham gia của doanh nghiệp FPT, Viettel."</ID>
+    <ID>MaxLineLength:FakeScheduleRepository.kt$FakeScheduleRepository$override</ID>
     <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"description" to "Buổi giao lưu chia sẻ về các hoạt động thiện nguyện, chiến dịch Mùa hè xanh và rèn luyện kỹ năng mềm."</ID>
     <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"description" to "Học cách xây dựng ứng dụng với Gemini API và Firebase Cloud Functions cùng diễn giả GDG."</ID>
     <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"description" to "Hội thao truyền thống sinh viên toàn trường. Thi đấu bóng đá, cầu lông, kéo co và cờ vua."</ID>
-    <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 3); set(Calendar.HOUR_OF_DAY, 7); set(Calendar.MINUTE, 0) }.timeInMillis</ID>
-    <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 5); set(Calendar.HOUR_OF_DAY, 18); set(Calendar.MINUTE, 30) }.timeInMillis</ID>
-    <ID>MaxLineLength:FirestoreEventSeeder.kt$FirestoreEventSeeder$"startAt" to calendar.apply { add(Calendar.DAY_OF_YEAR, 7); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0) }.timeInMillis</ID>
     <ID>MaxLineLength:ForgotPasswordUseCase.kt$ForgotPasswordUseCase$// Anti-enumeration: treat unknown backend responses as Success unless explicit network/rate limit</ID>
     <ID>MaxLineLength:ForgotPasswordUseCase.kt$ForgotPasswordUseCase$return ForgotPasswordOutcome.InvalidEmail("Vui lòng nhập đúng email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)")</ID>
     <ID>MaxLineLength:ForgotPasswordUseCaseTest.kt$ForgotPasswordUseCaseTest$val repo = createAuthRepo { Result.failure(IllegalStateException("429 Too Many Requests (rate limit exceeded)")) }</ID>
     <ID>MaxLineLength:ForgotPasswordUseCaseTest.kt$ForgotPasswordUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:ForgotPasswordUseCaseTest.kt$ForgotPasswordUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:GoogleIdTokenSource.kt$GoogleIdTokenSource$"Explicit sign-in failed [${failure.javaClass.simpleName}]: ${failure.message}; trying GetGoogleIdOption fallback"</ID>
+    <ID>MaxLineLength:GoogleNonce.kt$internal</ID>
+    <ID>MaxLineLength:HomeScreen.kt$private</ID>
+    <ID>MaxLineLength:HomeViewModelTest.kt$HomeViewModelTest.FakeRepository$override suspend fun homeFeed(): Result&lt;HomeFeed&gt;</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bên trong có CCCD mang tên Phạm Quốc Hưng, một ít tiền mặt và thẻ ATM Vietcombank. Ai nhặt được liên hệ giúp mình, xin cảm ơn và hậu tạ."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bóp viết vải màu xám bên trong có 3 cây bút bi, 1 bút chì và 1 thẻ sinh viên tên Đặng Ngọc Ánh. Mình đang giữ tại phòng CTSV."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Chùm chìa khóa xe máy có gắn móc khóa gấu bông màu nâu và thẻ chung cư, rơi dọc đoạn đường từ nhà xe sinh viên ra cổng số 2 CS2 Thủ Đức."</ID>
@@ -214,52 +226,49 @@
     <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$assertEquals("titleError phải là FormValidationError.TitleRequired", FormValidationError.TitleRequired, state.reportForm.titleError)</ID>
     <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$assertTrue("descriptionError phải là DescriptionTooShort", state.reportForm.descriptionError is FormValidationError.DescriptionTooShort)</ID>
     <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$viewModel.onAction(LostFoundAction.UpdateReportDescription("Đây là mô tả dài hơn hai mươi ký tự để pass kiểm tra"))</ID>
+    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest.&lt;no name provided&gt;$override suspend fun reportItem(item: LostFoundListing): Result&lt;LostFoundListing&gt;</ID>
+    <ID>MaxLineLength:MockTicketRepository.kt$MockTicketRepository$override suspend</ID>
     <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `accept strong distinct password`()</ID>
+    <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `reject whitespace and excessive password`()</ID>
+    <ID>MaxLineLength:PostNotification.kt$NotificationCategory.Companion$fun fromString(value: String?): NotificationCategory</ID>
     <ID>MaxLineLength:PreferencesSessionRepository.kt$PreferencesSessionRepository$if (remember &amp;&amp; !BuildConfig.USE_SUPABASE) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)</ID>
     <ID>MaxLineLength:ProfileScreen.kt$)</ID>
-    <ID>MaxLineLength:ProfileScreen.kt$@Composable</ID>
-    <ID>MaxLineLength:ProfileScreen.kt$Text</ID>
     <ID>MaxLineLength:ProfileScreen.kt$if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress</ID>
     <ID>MaxLineLength:ProfileScreen.kt$if (student.personalEmail.isBlank()) stringResource(R.string.auth_contact_not_set) else student.personalEmail</ID>
     <ID>MaxLineLength:ProfileScreen.kt$onClick = { onAction(if (state.biometricEnabled) ProfileAction.DisableBiometric else ProfileAction.RequestBiometricEnroll) }</ID>
+    <ID>MaxLineLength:ProfileScreen.kt$private</ID>
     <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$ProfileAction.Back -&gt; _uiState.update { it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), failure = null) }</ID>
     <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$_uiState.update { it.copy(isLoggingOut = false, confirmLogout = true, failure = ProfileFailure.LogoutFailed) }</ID>
     <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$_uiState.update { it.copy(notice = if (enable) ProfileNotice.BiometricEnabled else ProfileNotice.BiometricDisabled) }</ID>
     <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), notice = ProfileNotice.PasswordChanged)</ID>
-    <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$s.student?.phoneNumber.orEmpty()</ID>
-    <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$Result.success(demo.copy(phoneNumber = phone, personalEmail = personalEmail, currentAddress = currentAddress))</ID>
-    <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$override suspend</ID>
+    <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
+    <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$override suspend fun updateContact(studentId: String, phone: String, personalEmail: String, currentAddress: String)</ID>
     <ID>MaxLineLength:ScannerRoute.kt$ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED</ID>
     <ID>MaxLineLength:ScannerScreen.kt$TextButton(onClick = { onAction(ScannerAction.ClearScan) }) { Text(stringResource(R.string.scanner_scan_again)) }</ID>
     <ID>MaxLineLength:ScannerViewModel.kt$ScannerViewModel$is ScannerAction.CameraPermissionChanged -&gt; state.update { it.copy(cameraPermissionGranted = action.granted, cameraError = false) }</ID>
     <ID>MaxLineLength:ScannerViewModel.kt$ScannerViewModel$state.update { it.copy(code = "", result = null, cameraError = false, scanSession = it.scanSession + 1) }</ID>
     <ID>MaxLineLength:ScannerViewModelTest.kt$ScannerViewModelTest.Companion$val profile = StudentProfile("organizer-1", "demo@ut.edu.vn", "Demo", "A", "IT", "IT", role = UserRole.ORGANIZER)</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$"${event.startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))} - ${event.endAt.format(timeFormatter())}"</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$1 -&gt; rawEvents.filter { it.title.contains("Workshop", ignoreCase = true) || it.title.contains("Hội thảo", ignoreCase = true) || it.title.contains("Seminar", ignoreCase = true) || it.title.contains("AI", ignoreCase = true) }</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$2 -&gt; rawEvents.filter { it.title.contains("Hội thao", ignoreCase = true) || it.title.contains("Thể thao", ignoreCase = true) || it.title.contains("Sports", ignoreCase = true) || it.title.contains("Festival", ignoreCase = true) }</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$3 -&gt; rawEvents.filter { it.title.contains("Doanh nghiệp", ignoreCase = true) || it.title.contains("Logistics", ignoreCase = true) || it.title.contains("Career", ignoreCase = true) || it.title.contains("Đoàn", ignoreCase = true) }</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$event.accent == EventAccent.WARNING -&gt; Triple(Color(0xFFFFFBEB), Color(0xFFFDE68A), Color(0xFFB45309))</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}"</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$isRegistered || event.accent == EventAccent.PRIMARY -&gt; Triple(Color(0xFFEFF6FF), Color(0xFFBFDBFE), Color(0xFF003366))</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$text = "${event.location}\n${event.startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}"</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$val timeTextColor = if (event.accent == EventAccent.WARNING &amp;&amp; !isOngoing &amp;&amp; !isRegistered) Color(0xFF1A1C1F) else Color.White</ID>
     <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$state.update { it.copy(showForm = !valid, dateError = !valid, timeError = !valid, title = if (valid) "" else it.title) }</ID>
     <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event1Reg = if (registeredEventIds.contains("event-ai")) EventRegistration.REGISTERED else EventRegistration.CHECKED_IN</ID>
     <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event2Reg = if (registeredEventIds.contains("event-career")) EventRegistration.REGISTERED else EventRegistration.REGISTERED</ID>
     <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event3Reg = if (registeredEventIds.contains("event-sports")) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED</ID>
+    <ID>MaxLineLength:ServerErrorCode.kt$ServerErrorCode.Companion$fun</ID>
+    <ID>MaxLineLength:SignInUseCaseTest.kt$SignInUseCaseTest.&lt;no name provided&gt;$override suspend</ID>
     <ID>MaxLineLength:SignInUseCaseTest.kt$SignInUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
-    <ID>MaxLineLength:SignInUseCaseTest.kt$SignInUseCaseTest.&lt;no name provided&gt;$override suspend fun updateProfile(profile: StudentProfile)</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String)</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.FakeAuth$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
-    <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.RecordingSession$override suspend fun updateProfile(profile: StudentProfile)</ID>
     <ID>MaxLineLength:SignUpUseCaseTest.kt$SignUpUseCaseTest$Result.failure(IllegalStateException("DOMAIN_RESTRICTION: Only @ut.edu.vn or @uth.edu.vn addresses are allowed"))</ID>
-    <ID>MaxLineLength:SignUpUseCaseTest.kt$SignUpUseCaseTest.&lt;no name provided&gt;$override suspend</ID>
     <ID>MaxLineLength:SignUpUseCaseTest.kt$SignUpUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:SignUpUseCaseTest.kt$SignUpUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
+    <ID>MaxLineLength:SignUpUseCaseTest.kt$SignUpUseCaseTest.&lt;no name provided&gt;$override suspend fun signUp(email: String, password: String, displayName: String, faculty: String): Result&lt;SignUpResult&gt;</ID>
     <ID>MaxLineLength:StudentContactValidator.kt$StudentContactValidator$emailError = if (email.isNotBlank() &amp;&amp; (email.length &gt; 254 || !emailPattern.matches(email.trim()))) ContactFieldError.InvalidEmail else null</ID>
     <ID>MaxLineLength:StudentContactValidator.kt$StudentContactValidator$phoneError = if (phone.isNotBlank() &amp;&amp; !phonePattern.matches(phone.trim())) ContactFieldError.InvalidPhone else null</ID>
+    <ID>MaxLineLength:StudentContactValidatorTest.kt$StudentContactValidatorTest$@Test fun `accept vietnam phone and personal email`()</ID>
     <ID>MaxLineLength:SubmitVerificationRequestUseCaseTest.kt$SubmitVerificationRequestUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:SubmitVerificationRequestUseCaseTest.kt$SubmitVerificationRequestUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:SubmitVerificationRequestUseCaseTest.kt$SubmitVerificationRequestUseCaseTest.&lt;no name provided&gt;$override suspend fun submitVerificationRequest(studentId: String): Result&lt;VerificationRequestResult&gt;</ID>
@@ -267,24 +276,25 @@
     <ID>MaxLineLength:SupabaseAuthRepository.kt$SupabaseAuthRepository$override suspend</ID>
     <ID>MaxLineLength:SupabaseAuthRepository.kt$SupabaseAuthRepository$val isUtEmail = email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true)</ID>
     <ID>MaxLineLength:SupabaseEventRepository.kt$SupabaseEventRepository$client.table("registrations?select=status&amp;event_id=eq.${urlEncode(uuid(eventId))}&amp;user_id=eq.${urlEncode(uuid(uid))}")</ID>
+    <ID>MaxLineLength:SupabaseEventRepository.kt$SupabaseEventRepository$override suspend fun cancelCurrentRegistration(eventId: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:SupabaseRestClient.kt$SupabaseRestClient$suspend fun rpc(function: String, params: JsonObject): JsonElement</ID>
+    <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun checkIn(identifier: String, organizerId: String): Result&lt;TicketCheckInOutcome&gt;</ID>
+    <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun checkIn(token: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun issueCheckInToken(eventId: String): Result&lt;String&gt;</ID>
     <ID>MaxLineLength:TicketsScreen.kt$.</ID>
     <ID>MaxLineLength:TicketsScreen.kt$item { Button(onClick = { onAction(TicketsAction.OpenScanner) }) { Text(stringResource(R.string.scanner_open)) } }</ID>
+    <ID>MaxLineLength:TicketsScreen.kt$private</ID>
     <ID>MaxLineLength:TicketsViewModel.kt$TicketsViewModel$TicketsAction.OpenScanner -&gt; if (_uiState.value.isOrganizer) viewModelScope.launch { _events.send(TicketsEvent.OpenScanner) }</ID>
     <ID>MaxLineLength:TicketsViewModel.kt$TicketsViewModel$_uiState.update { it.copy(studentName = profile.displayName, isOrganizer = profile.role == UserRole.ORGANIZER) }</ID>
     <ID>MaxLineLength:TicketsViewModelTest.kt$TicketsViewModelTest$Ticket("t2", STUDENT_ID, "e2", "Giao lưu CLB", "Nguyễn Tất Thành", "15/11/2026", TicketStatus.CHECKED_IN, "654 321")</ID>
     <ID>MaxLineLength:TicketsViewModelTest.kt$TicketsViewModelTest.FakeSessionRepository$StudentSession(isRestoring = false, profile = StudentProfile(STUDENT_ID, "s@uth.edu.vn", "Sinh viên", "CN23A", "CNTT", "CNTT"))</ID>
+    <ID>MaxLineLength:TicketsViewModelTest.kt$TicketsViewModelTest.FakeTicketRepository$override suspend fun checkIn(identifier: String, organizerId: String): Result&lt;TicketCheckInOutcome&gt;</ID>
+    <ID>MaxLineLength:TimetableUseCase.kt$TimetableUseCase.Companion$fun isUrgent(dueAt: LocalDateTime, now: LocalDateTime): Boolean</ID>
+    <ID>MaxLineLength:TimetableUseCase.kt$TimetableUseCase.Companion$fun tomorrow(value: Timetable, today: LocalDate)</ID>
     <ID>MaxLineLength:TrainingPointScreen.kt$text = stringResource(R.string.training_point_criteria_score, criteria.score, criteria.maxScore)</ID>
-    <ID>ModifierMissing:AttendanceScreen.kt$AttendanceScreen</ID>
-    <ID>ModifierMissing:EventsScreen.kt$EventsScreen</ID>
-    <ID>ModifierMissing:ScannerRoute.kt$ScannerRoute</ID>
-    <ID>ModifierMissing:ScannerScreen.kt$ScannerScreen</ID>
-    <ID>MultipleEmitters:HomeScreen.kt$HomeBannerCarousel</ID>
-    <ID>MultipleEmitters:ProfileScreen.kt$ContactEditContent</ID>
-    <ID>MultipleEmitters:ProfileScreen.kt$DisplayFeedback</ID>
-    <ID>MultipleEmitters:ProfileScreen.kt$PasswordChangeContent</ID>
-    <ID>MultipleEmitters:ProfileScreen.kt$ProfileOverview</ID>
-    <ID>NewLineAtEndOfFile:ExampleUnitTest.kt$com.giathinh.uthconnect.ExampleUnitTest.kt</ID>
-    <ID>ParameterNaming:LostFoundScreen.kt$onCategorySelected</ID>
+    <ID>MaxLineLength:UthDestination.kt$UthDestination.Companion$fun</ID>
+    <ID>MaxLineLength:UtilitiesScreen.kt$private</ID>
+    <ID>MaxLineLength:UtilitiesViewModelTest.kt$UtilitiesViewModelTest.FakeUtilityRepository$override suspend fun modules(): Result&lt;List&lt;UtilityModule&gt;&gt;</ID>
     <ID>ReturnCount:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result&lt;StudentProfile&gt;</ID>
     <ID>ReturnCount:ChangePasswordUseCase.kt$ChangePasswordUseCase$suspend operator fun invoke(old: String, updated: String, confirmed: String): ChangePasswordResult</ID>
     <ID>ReturnCount:CheckInUseCase.kt$CheckInUseCase$suspend operator fun invoke(rawCode: String): CheckInResult</ID>
@@ -316,31 +326,6 @@
     <ID>TooManyFunctions:SupabaseRestClient.kt$SupabaseRestClient</ID>
     <ID>TooManyFunctions:TicketsScreen.kt$com.giathinh.uthconnect.presentation.tickets.TicketsScreen.kt</ID>
     <ID>TooManyFunctions:UtilitiesScreen.kt$com.giathinh.uthconnect.presentation.utilities.UtilitiesScreen.kt</ID>
-    <ID>TopLevelPropertyNaming:AnnouncementDetail.kt$/** Tốc độ đọc tham chiếu của người lớn (từ/phút) khi ước lượng thời lượng đọc. */ private const val WordsPerMinute = 200</ID>
-    <ID>TopLevelPropertyNaming:HomeScreen.kt$/** Key của chip "Tất cả" — tách khỏi key item khác của `LazyRow`. */ private const val CategoryAllKey = "home_category_all"</ID>
-    <ID>TopLevelPropertyNaming:SupabaseGoogleExchange.kt$/** Log tag for the Google ID-token exchange; visible with `adb logcat -s SupabaseGoogleExchange`. */ internal const val GoogleExchangeLogTag = "SupabaseGoogleExchange"</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val DashedLineDashFactor = 1f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val DashedLineGapFactor = 1.2f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val PreviewStudentName = "Nguyễn Minh Anh"</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrFinderModules = 7</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrModuleCount = 21</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrSeedIncrement = 12345L</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrSeedMask = 0x7FFFFFFFL</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrSeedMultiplier = 1103515245L</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val QrSeedShift = 16</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val SelectedCountAlpha = 0.24f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val StubFillAlpha = 0.5f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val TopBarRingAlpha = 0.14f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val TopBarRingCenterFraction = 0.95f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val TopBarRingRadiusFraction = 0.62f</ID>
-    <ID>TopLevelPropertyNaming:TicketsScreen.kt$private const val TopBarRingStrokeFraction = 0.008f</ID>
-    <ID>UnstableCollections:AnnouncementScreen.kt$List&lt;AnnouncementAttachment&gt;</ID>
-    <ID>UnstableCollections:AnnouncementScreen.kt$List&lt;Milestone&gt;</ID>
-    <ID>UnstableCollections:AnnouncementScreen.kt$List&lt;String&gt;</ID>
-    <ID>UnstableCollections:HomeScreen.kt$List&lt;Announcement&gt;</ID>
-    <ID>UnstableCollections:HomeScreen.kt$List&lt;HomeBanner&gt;</ID>
-    <ID>UnstableCollections:HomeScreen.kt$Map&lt;AnnouncementCategory, Int&gt;</ID>
-    <ID>UnstableCollections:UtilitiesScreen.kt$List&lt;T&gt;</ID>
     <ID>UnusedParameter:ScheduleScreen.kt$onViewQr: (ScheduleEvent) -&gt; Unit</ID>
     <ID>UnusedPrivateMember:AnnouncementScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun AnnouncementContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:AnnouncementScreen.kt$@Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f) @Composable private fun AnnouncementContentFontScalePreview()</ID>
@@ -380,8 +365,6 @@
     <ID>UnusedPrivateMember:QrScannerScreen.kt$@Preview(name = "Scanner permission light", showBackground = true) @Composable private fun ScannerPermissionPreview()</ID>
     <ID>UnusedPrivateMember:QrScannerScreen.kt$@Preview(name = "Scanner success light", showBackground = true) @Composable private fun ScannerSuccessPreview()</ID>
     <ID>UnusedPrivateMember:ScannerScreen.kt$@Preview(showBackground = true) @Composable private fun ScannerPreview()</ID>
-    <ID>UnusedPrivateMember:ScheduleScreen.kt$@Composable private fun EventDetailsDialog( event: ScheduleEvent, onDismiss: () -&gt; Unit, )</ID>
-    <ID>UnusedPrivateMember:ScheduleScreen.kt$@Composable private fun QrTicketDialog( event: ScheduleEvent, onDismiss: () -&gt; Unit, )</ID>
     <ID>UnusedPrivateMember:ScheduleScreen.kt$@Preview(showBackground = true) @Composable private fun DarkPreview()</ID>
     <ID>UnusedPrivateMember:ScheduleScreen.kt$@Preview(showBackground = true) @Composable private fun LightPreview()</ID>
     <ID>UnusedPrivateMember:SettingsScreen.kt$@Preview(name = "SettingsScreen Dark", showBackground = true) @Composable private fun SettingsScreenDarkPreview()</ID>
@@ -412,6 +395,8 @@
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun UtilitiesContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "content large text", showBackground = true, fontScale = 1.5f) @Composable private fun UtilitiesContentLargeTextPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "content light", showBackground = true) @Composable private fun UtilitiesContentPreview()</ID>
+    <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "content narrow large text", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f) @Composable private fun UtilitiesContentNarrowLargeTextPreview()</ID>
+    <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "content narrow", showBackground = true, widthDp = 320, heightDp = 640) @Composable private fun UtilitiesContentNarrowPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "empty dark", showBackground = true) @Composable private fun UtilitiesEmptyDarkPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "empty light", showBackground = true) @Composable private fun UtilitiesEmptyPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "error dark", showBackground = true) @Composable private fun UtilitiesErrorDarkPreview()</ID>
@@ -419,25 +404,9 @@
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "loading dark", showBackground = true) @Composable private fun UtilitiesLoadingDarkPreview()</ID>
     <ID>UnusedPrivateMember:UtilitiesScreen.kt$@Preview(name = "loading light", showBackground = true) @Composable private fun UtilitiesLoadingPreview()</ID>
     <ID>UnusedPrivateProperty:SupabaseMappersTest.kt$SupabaseMappersTest$val base = """ { "event_id": "33333333-3333-4333-8333-333333333333", "events": { "title": "Sự kiện" } } """</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val DashedLineDashFactor = 1f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val DashedLineGapFactor = 1.2f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrFinderModules = 7</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrModuleCount = 21</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrSeedIncrement = 12345L</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrSeedMask = 0x7FFFFFFFL</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrSeedMultiplier = 1103515245L</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val QrSeedShift = 16</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val SelectedCountAlpha = 0.24f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val StubFillAlpha = 0.5f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val TopBarRingAlpha = 0.14f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val TopBarRingCenterFraction = 0.95f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val TopBarRingRadiusFraction = 0.62f</ID>
-    <ID>UnusedPrivateProperty:TicketsScreen.kt$private const val TopBarRingStrokeFraction = 0.008f</ID>
     <ID>UseCheckOrError:FirestoreEventRepository.kt$FirestoreEventRepository$throw IllegalStateException("Sự kiện không tồn tại")</ID>
     <ID>UseCheckOrError:FirestoreEventRepository.kt$FirestoreEventRepository$throw IllegalStateException("Sự kiện đã hết số lượng đăng ký")</ID>
     <ID>UseCheckOrError:ProfileViewModelTest.kt$ProfileViewModelTest.FakeSession$throw IllegalStateException("Simulated profile storage failure")</ID>
     <ID>UseCheckOrError:ProfileViewModelTest.kt$ProfileViewModelTest.FakeSession$throw IllegalStateException("Simulated storage failure")</ID>
-    <ID>ViewModelInjection:TicketsRoute.kt$viewModel</ID>
-    <ID>WildcardImport:ExampleUnitTest.kt$import org.junit.Assert.*</ID>
   </CurrentIssues>
 </SmellBaseline>

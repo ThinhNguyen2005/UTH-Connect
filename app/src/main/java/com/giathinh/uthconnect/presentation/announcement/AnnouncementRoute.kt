@@ -56,12 +56,11 @@ fun AnnouncementRoute(
 }
 
 /** Share sheet chuẩn: chỉ gửi chữ thuần, không đính kèm tệp và không xin quyền gì thêm. */
-private fun shareChooser(text: String, subject: String, title: String): Intent =
-    Intent.createChooser(
-        Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, subject)
-            putExtra(Intent.EXTRA_TEXT, text)
-        },
-        title,
-    )
+private fun shareChooser(text: String, subject: String, title: String): Intent = Intent.createChooser(
+    Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, text)
+    },
+    title,
+)

@@ -9,14 +9,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.giathinh.uthconnect.R
-import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
+import kotlin.reflect.KClass
 
 // 4 route cấp 1 — @Serializable object, không có tham số. Navigation dựng
 // đường dẫn từ tên class, không còn chuỗi route tự do (docs/Design.md mục 8.1).
 @Serializable object HomeDestination
+
 @Serializable object ScheduleDestination
+
 @Serializable object UtilitiesDestination
+
 @Serializable object ProfileDestination
 
 /**
@@ -68,7 +71,6 @@ enum class UthDestination(
          * Tab chỉ được xác định bằng destination hiện tại của back stack, không bằng
          * biến state riêng. `hasRoute` so theo @Serializable class — không parse chuỗi.
          */
-        fun from(destination: NavDestination?): UthDestination? =
-            destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
+        fun from(destination: NavDestination?): UthDestination? = destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
     }
 }

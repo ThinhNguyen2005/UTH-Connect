@@ -31,7 +31,9 @@ class ExportAttendanceCsvUseCase @Inject constructor() {
             listOf(labels.studentId, labels.name, labels.email, labels.status, labels.checkedInAt, labels.checkedInBy),
         ) + roster.entries.map { entry ->
             listOf(
-                entry.studentId, entry.displayName, entry.email,
+                entry.studentId,
+                entry.displayName,
+                entry.email,
                 if (entry.checkedIn) labels.present else labels.missing,
                 entry.checkedInAt?.let { formatter.format(Instant.parse(it)) }.orEmpty(),
                 entry.checkedInBy.orEmpty(),

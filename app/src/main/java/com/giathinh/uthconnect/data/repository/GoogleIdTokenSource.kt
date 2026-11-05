@@ -20,8 +20,10 @@ import javax.inject.Singleton
 sealed interface GoogleIdTokenResult {
     /** A Google identity plus the nonce needed to redeem it at Supabase. */
     data class Granted(val idToken: String, val rawNonce: String) : GoogleIdTokenResult
+
     /** The user backed out of the picker; not an error and must not show one. */
     data object Cancelled : GoogleIdTokenResult
+
     /** No Google app/account on this device, or the build has no Web client ID. */
     data object Unavailable : GoogleIdTokenResult
 }
@@ -102,23 +104,23 @@ class GoogleIdTokenSource @Inject constructor() {
     private fun parseCredentialResponse(
         response: GetCredentialResponse,
         rawNonce: String,
-    ): GoogleIdTokenResult {
-        return try {
-            val idToken = GoogleIdTokenCredential.createFrom(response.credential.data).idToken
-            if (idToken.isNullOrBlank()) GoogleIdTokenResult.Unavailable
-            else GoogleIdTokenResult.Granted(idToken, rawNonce)
-        } catch (failure: GoogleIdTokenParsingException) {
-            Log.w(
-                TAG,
-                "Google ID token parsing failed [${failure.javaClass.simpleName}]: ${failure.message}",
-                failure,
-            )
+    ): GoogleIdTokenResult = try {
+        val idToken = GoogleIdTokenCredential.createFrom(response.credential.data).idToken
+        if (idToken.isNullOrBlank()) {
             GoogleIdTokenResult.Unavailable
+        } else {
+            GoogleIdTokenResult.Granted(idToken, rawNonce)
         }
+    } catch (failure: GoogleIdTokenParsingException) {
+        Log.w(
+            TAG,
+            "Google ID token parsing failed [${failure.javaClass.simpleName}]: ${failure.message}",
+            failure,
+        )
+        GoogleIdTokenResult.Unavailable
     }
 
     companion object {
         private const val TAG = "GoogleIdTokenSource"
     }
 }
-

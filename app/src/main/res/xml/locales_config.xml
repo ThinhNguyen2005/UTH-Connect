@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hai ngôn ngữ app hỗ trợ. Khai báo này để Android 13+ hiển thị "UTH Connect" trong
+  System Settings → Languages (per-app language). Còn trong app, người dùng đổi ở
+  Cài đặt → Ngôn ngữ; MainActivity.attachBaseContext là chỗ áp Locale, nên thiết bị
+  Android 12 vẫn đổi được bình thường.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="vi" />
+    <locale android:name="en" />
+</locale-config>

@@ -179,7 +179,7 @@ Tóm tắt; chi tiết và số đo tương phản ở `docs/Design-system.md`.
 
 Ba file **được phép** chứa literal: `Color.kt`, `Dimens.kt`, `Type.kt`. Kiểm tra nhanh trước khi push (không có kết quả nghĩa là đạt; lưu ý lệnh quét cả **comment**, nên đừng chép số hardcode vào comment):
 
-> Trạng thái đã kiểm chứng ở v1.0: lệnh dưới đây trả rỗng trên toàn bộ `app/src/main`.
+> Trạng thái đã kiểm chứng ở v1.0 và **lại một lần nữa ngày 05/11/2026**: lệnh dưới đây trả rỗng trên toàn bộ `app/src/main`. Lần kiểm tra thứ hai có giá trị hơn vì `presentation/schedule/ScheduleScreen.kt` — file duy nhất từng khiến lệnh này in kết quả — đã được token-hoá hết.
 
 ```powershell
 cd "d:\UTH Connect\app\src\main\java\com\giathinh\uthconnect"
@@ -200,6 +200,18 @@ Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBa
 - Số đếm dùng `<plurals>`; ngày giờ dùng `java.time` + `DateTimeFormatter` theo locale trường (dd/MM/yyyy HH:mm); tiền `1.500.000đ`.
 - MSSV, giờ, số liệu trong bảng: `MaterialTheme.typography.tabularFigures` để thẳng cột.
 - Không ghép chuỗi bằng `+` để dựng câu có nghĩa: dùng placeholder `%1$d`, `%2$s`.
+
+### 8.1. Cơ chế đổi ngôn ngữ/giao diện đã chọn (05/11/2026)
+
+Áp dụng khi người dùng bấm hàng **Ngôn ngữ** / **Giao diện** trong `presentation/utilities/settings/`:
+
+- Trạng thái nằm ở `domain/model/AppSettings` (`languageTag`, `themeMode`), repository là `PreferencesSettingsRepository` — **không** thêm dependency thư viện theme/ngôn ngữ nào.
+- `ThemeMode.resolveDarkTheme(systemInDarkTheme)` là hàm của **enum trong domain**, không đặt ở `core/designsystem/theme/`: mục 3.1 cấm `core/designsystem` import `domain`.
+- Locale áp trong `MainActivity.attachBaseContext` bằng `applyOverrideConfiguration(Configuration(...).apply { setLocale(tag) })` — chạy trước mọi Composable nên **phải đọc đồng bộ**; vì field injection của Hilt chưa chạy tại thời điểm đó, repository lấy qua `@EntryPoint` + `EntryPointAccessors.fromApplication` (`SettingsEntryPoint.kt`), không qua `@Inject` của activity.
+- Đổi ngôn ngữ ⇒ ghi store trước, phát `UtilitiesEvent.LanguageChanged`/`AuthEvent.LanguageChanged` (kênh một lần, mục 6), Route mới gọi `activity.recreate()`. Thứ tự ngược lại sẽ dựng lại activity với locale cũ.
+- Chọn lại đúng giá trị đang bật ⇒ **không** recreate.
+- `android:localeConfig="@xml/locales_config"` khai `vi` + `en` để Android 13+ hiện lựa chọn trong Settings hệ thống; thêm locale mới phải vào cả file xml lẫn `values-<locale>/`.
+- Giao diện sáng/tối áp ngay qua tham số `darkTheme` của `UTHConnectTheme`, không recreate.
 
 ---
 

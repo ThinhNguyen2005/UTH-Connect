@@ -3,12 +3,10 @@ package com.giathinh.uthconnect.presentation.attendance
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
-import com.giathinh.uthconnect.domain.usecase.GetAttendanceRosterUseCase
 import com.giathinh.uthconnect.domain.usecase.AttendanceCsvLabels
 import com.giathinh.uthconnect.domain.usecase.ExportAttendanceCsvUseCase
+import com.giathinh.uthconnect.domain.usecase.GetAttendanceRosterUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
-import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import javax.inject.Inject
 
 @HiltViewModel
 class AttendanceViewModel @Inject constructor(

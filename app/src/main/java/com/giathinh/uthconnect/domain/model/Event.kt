@@ -35,11 +35,10 @@ enum class EventStatus {
     PUBLISHED,
     HAPPENING,
     COMPLETED,
-    CANCELLED;
+    CANCELLED,
+    ;
 
     companion object {
-        fun fromString(value: String?): EventStatus {
-            return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: PUBLISHED
-        }
+        fun fromString(value: String?): EventStatus = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: PUBLISHED
     }
 }

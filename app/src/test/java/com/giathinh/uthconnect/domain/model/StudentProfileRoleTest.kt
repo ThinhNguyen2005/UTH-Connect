@@ -7,8 +7,12 @@ import org.junit.Test
 
 class StudentProfileRoleTest {
     private fun profile() = StudentProfile(
-        "2023040123", "demo@ut.edu.vn", "Nguyễn Minh Anh",
-        "CN23A", "Công nghệ thông tin", "Khoa Công nghệ thông tin",
+        "2023040123",
+        "demo@ut.edu.vn",
+        "Nguyễn Minh Anh",
+        "CN23A",
+        "Công nghệ thông tin",
+        "Khoa Công nghệ thông tin",
     )
 
     @Test fun `old constructors default to student and unverified`() {
@@ -27,5 +31,7 @@ class StudentProfileRoleTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `studentId must be present`() { profile().copy(studentId = "") }
+    fun `studentId must be present`() {
+        profile().copy(studentId = "")
+    }
 }

@@ -1,8 +1,6 @@
 package com.giathinh.uthconnect.presentation.scanner
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +8,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,16 +50,19 @@ fun ScannerScreen(
                     Text(stringResource(R.string.scanner_camera_denied))
                     Button(onClick = onRequestCamera) { Text(stringResource(R.string.scanner_camera_permission)) }
                 }
+
                 state.cameraError -> {
                     Text(stringResource(R.string.scanner_camera_error))
                     Button(onClick = { onAction(ScannerAction.ClearScan) }) {
                         Text(stringResource(R.string.scanner_camera_retry))
                     }
                 }
+
                 state.code.isNotBlank() -> {
                     Text(stringResource(R.string.scanner_camera_received))
                     TextButton(onClick = { onAction(ScannerAction.ClearScan) }) { Text(stringResource(R.string.scanner_scan_again)) }
                 }
+
                 else -> key(state.scanSession) {
                     ScannerCameraFrame(
                         onQrCode = { onAction(ScannerAction.CameraCodeDetected(it)) },
@@ -79,14 +82,18 @@ fun ScannerScreen(
                 Text(stringResource(R.string.scanner_submit))
             }
             state.result?.let { result ->
-                Text(stringResource(when (result) {
-                    CheckInResult.SUCCESS -> R.string.scanner_success
-                    CheckInResult.ALREADY_CHECKED_IN -> R.string.scanner_duplicate
-                    CheckInResult.NOT_REGISTERED -> R.string.scanner_not_registered
-                    CheckInResult.INVALID_CODE -> R.string.scanner_invalid
-                    CheckInResult.FORBIDDEN -> R.string.scanner_forbidden
-                    CheckInResult.ERROR -> R.string.scanner_error
-                }))
+                Text(
+                    stringResource(
+                        when (result) {
+                            CheckInResult.SUCCESS -> R.string.scanner_success
+                            CheckInResult.ALREADY_CHECKED_IN -> R.string.scanner_duplicate
+                            CheckInResult.NOT_REGISTERED -> R.string.scanner_not_registered
+                            CheckInResult.INVALID_CODE -> R.string.scanner_invalid
+                            CheckInResult.FORBIDDEN -> R.string.scanner_forbidden
+                            CheckInResult.ERROR -> R.string.scanner_error
+                        },
+                    ),
+                )
             }
         }
     }
@@ -127,4 +134,7 @@ private fun ScannerCameraFrame(
 }
 
 @Preview(showBackground = true)
-@Composable private fun ScannerPreview() { MaterialTheme { ScannerScreen(ScannerUiState(authorized = true), {}, {}) } }
+@Composable
+private fun ScannerPreview() {
+    MaterialTheme { ScannerScreen(ScannerUiState(authorized = true), {}, {}) }
+}

@@ -8,14 +8,14 @@ import com.giathinh.uthconnect.domain.repository.SessionFailure
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /** Only student ID / biometric opt-in; never password, raw biometric, session token. */
 @Singleton
@@ -39,8 +39,11 @@ class PreferencesSessionRepository @Inject constructor(
                 // Biometric opt-in always requires new OS authentication on a cold start.
                 val candidateId = biometricId ?: rememberedId
                 // A remembered student ID is not an authenticated Supabase session.
-                val candidateProfile = if (BuildConfig.USE_SUPABASE) null
-                    else candidateId?.let { auth.findStudent(it).getOrThrow() }
+                val candidateProfile = if (BuildConfig.USE_SUPABASE) {
+                    null
+                } else {
+                    candidateId?.let { auth.findStudent(it).getOrThrow() }
+                }
                 if (candidateId != null && candidateProfile == null && !BuildConfig.USE_SUPABASE) {
                     check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit())
                 }
@@ -67,7 +70,8 @@ class PreferencesSessionRepository @Inject constructor(
             if (biometricId != null && biometricId != profile.studentId) edit.remove(KEY_BIO_ID)
             check(edit.commit()) { "Cannot save demo session" }
             _session.value = StudentSession(
-                isRestoring = false, profile = profile,
+                isRestoring = false,
+                profile = profile,
                 remembered = remember && !BuildConfig.USE_SUPABASE,
                 biometricStudentId = biometricId?.takeIf { !BuildConfig.USE_SUPABASE && it == profile.studentId },
             )

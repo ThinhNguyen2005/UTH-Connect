@@ -3,7 +3,6 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.UserRole
-import java.time.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -12,11 +11,13 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class SupabaseMappersTest {
     @Test fun eventStatusAndTimestampMatchAndroidDomain() {
         for (status in EventStatus.entries) {
-            val event = objectFromJson("""
+            val event = objectFromJson(
+                """
                 {
                   "id":"33333333-3333-4333-8333-333333333333",
                   "title":"Ngày hội UTH",
@@ -27,7 +28,8 @@ class SupabaseMappersTest {
                   "current_registered":19,
                   "status":"${status.name}"
                 }
-            """).toDomainEvent()
+            """,
+            ).toDomainEvent()
             assertEquals(status, event.status)
             assertEquals(Instant.parse("2026-11-03T05:30:00Z").toEpochMilli(), event.startAt)
             assertEquals(Instant.parse("2026-11-03T08:30:00Z").toEpochMilli(), event.endAt)
@@ -43,7 +45,8 @@ class SupabaseMappersTest {
             "organizer" to UserRole.ORGANIZER,
             "admin" to UserRole.ADMIN,
         )) {
-            val profile = objectFromJson("""
+            val profile = objectFromJson(
+                """
                 {
                   "student_id":"23510001",
                   "student_id_verified":true,
@@ -52,7 +55,8 @@ class SupabaseMappersTest {
                   "class_name":"CN23A",
                   "role":"$remote"
                 }
-            """).toDomainProfile()
+            """,
+            ).toDomainProfile()
             assertEquals(expected, profile.role)
             assertEquals("23510001", profile.studentId)
             assertEquals("CN23A", profile.className)

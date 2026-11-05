@@ -1,10 +1,6 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.BuildConfig
-import java.net.HttpURLConnection
-import java.net.URL
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -17,13 +13,19 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.net.HttpURLConnection
+import java.net.URL
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
     private val refreshMutex = Mutex()
+
     @Volatile private var credentials: Credentials? = null
+
     @Volatile var recoveryToken: String? = null
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
@@ -33,8 +35,12 @@ class SupabaseRestClient @Inject constructor() {
         // Password confirmation is a separate flow and must preserve the current session on failure.
         if (replaceExisting) credentials = null
         val data = send(
-            "/auth/v1/token?grant_type=password", "POST",
-            buildJsonObject { put("email", email); put("password", password) },
+            "/auth/v1/token?grant_type=password",
+            "POST",
+            buildJsonObject {
+                put("email", email)
+                put("password", password)
+            },
             bearer = null,
         ).jsonObject
         credentials = parseCredentials(data)
@@ -51,10 +57,13 @@ class SupabaseRestClient @Inject constructor() {
         val payload = buildJsonObject {
             put("email", email)
             put("password", password)
-            put("data", buildJsonObject {
-                put("display_name", displayName)
-                put("faculty", faculty)
-            })
+            put(
+                "data",
+                buildJsonObject {
+                    put("display_name", displayName)
+                    put("faculty", faculty)
+                },
+            )
         }
         val response = send("/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject
         if (response.containsKey("access_token") && response.containsKey("user")) {
@@ -100,11 +109,9 @@ class SupabaseRestClient @Inject constructor() {
 
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
-    suspend fun patchTable(path: String, body: JsonObject): JsonElement =
-        authorized("/rest/v1/$path", "PATCH", body)
+    suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
-    suspend fun rpc(function: String, params: JsonObject): JsonElement =
-        authorized("/rest/v1/rpc/$function", "POST", params)
+    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
     suspend fun updatePassword(password: String): JsonElement {
         val token = recoveryToken ?: freshToken()
@@ -124,8 +131,10 @@ class SupabaseRestClient @Inject constructor() {
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {
                 val response = send(
-                    "/auth/v1/token?grant_type=refresh_token", "POST",
-                    buildJsonObject { put("refresh_token", latest.refreshToken) }, bearer = null,
+                    "/auth/v1/token?grant_type=refresh_token",
+                    "POST",
+                    buildJsonObject { put("refresh_token", latest.refreshToken) },
+                    bearer = null,
                 ).jsonObject
                 val updated = parseCredentials(response)
                 check(updated.userId == latest.userId) { "Session user changed" }
@@ -150,7 +159,10 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     private suspend fun send(
-        path: String, method: String, body: JsonObject? = null, bearer: String?,
+        path: String,
+        method: String,
+        body: JsonObject? = null,
+        bearer: String?,
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)

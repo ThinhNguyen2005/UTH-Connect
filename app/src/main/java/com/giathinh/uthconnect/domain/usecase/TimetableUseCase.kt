@@ -30,13 +30,10 @@ class TimetableUseCase @Inject constructor(private val repository: TimetableRepo
             else -> DeadlinePriority.UPCOMING
         }
 
-        fun isUrgent(dueAt: LocalDateTime, now: LocalDateTime): Boolean =
-            priority(dueAt, now).let { it == DeadlinePriority.OVERDUE || it == DeadlinePriority.URGENT }
+        fun isUrgent(dueAt: LocalDateTime, now: LocalDateTime): Boolean = priority(dueAt, now).let { it == DeadlinePriority.OVERDUE || it == DeadlinePriority.URGENT }
 
-        fun tomorrow(value: Timetable, today: LocalDate) =
-            value.sessions.filter { it.startsAt.toLocalDate() == today.plusDays(1) }.sortedBy { it.startsAt }
+        fun tomorrow(value: Timetable, today: LocalDate) = value.sessions.filter { it.startsAt.toLocalDate() == today.plusDays(1) }.sortedBy { it.startsAt }
         fun pending(value: Timetable) = value.deadlines.filterNot { it.completed }.sortedBy { it.dueAt }
-        fun urgent(value: Timetable, now: LocalDateTime) =
-            pending(value).filter { isUrgent(it.dueAt, now) }
+        fun urgent(value: Timetable, now: LocalDateTime) = pending(value).filter { isUrgent(it.dueAt, now) }
     }
 }

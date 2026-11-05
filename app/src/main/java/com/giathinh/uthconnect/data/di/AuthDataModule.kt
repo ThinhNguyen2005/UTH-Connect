@@ -1,7 +1,7 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.BuildConfig
 import android.content.Context
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.data.repository.DemoAccountStore
 import com.giathinh.uthconnect.data.repository.DemoAuthRepository
 import com.giathinh.uthconnect.data.repository.FirebaseAuthRepository
@@ -28,10 +28,9 @@ abstract class AuthDataModule {
     companion object {
         @Provides
         @Singleton
-        fun provideDemoAccountStore(@ApplicationContext context: Context): DemoAccountStore =
-            SharedPreferencesDemoAccountStore(
-                context.getSharedPreferences("uth_auth_demo_account", Context.MODE_PRIVATE),
-            )
+        fun provideDemoAccountStore(@ApplicationContext context: Context): DemoAccountStore = SharedPreferencesDemoAccountStore(
+            context.getSharedPreferences("uth_auth_demo_account", Context.MODE_PRIVATE),
+        )
 
         @Provides
         @Singleton

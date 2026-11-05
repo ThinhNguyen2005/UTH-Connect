@@ -2,14 +2,12 @@ package com.giathinh.uthconnect.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Bảng màu UTH Connect — nguồn sự thật: `docs/Design-system.md` mục 1.
- *
- * KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
- * `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).
- *
- * Tỷ số tương phản đã đo theo WCAG 2.2 trên các nền Surface/Background.
- */
+// Bảng màu UTH Connect — nguồn sự thật: `docs/Design-system.md` mục 1.
+//
+// KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
+// `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).
+//
+// Tỷ số tương phản đã đo theo WCAG 2.2 trên các nền Surface/Background.
 
 // ───────────────────────── Brand (màu nhận diện trường UTH) ─────────────────────────
 
@@ -74,6 +72,7 @@ val UthTextTertiaryLight = Color(0xFF8C99A6)
 val UthBackgroundDark = Color(0xFF0B1622)
 val UthSurfaceDark = Color(0xFF13202E)
 val UthSurfaceSubtleDark = Color(0xFF1C2C3D)
+
 /** Viền component dark: ≥3.6:1 trên Surface. */
 val UthOutlineDark = Color(0xFF65788E)
 val UthTextPrimaryDark = Color(0xFFEAF1F8)

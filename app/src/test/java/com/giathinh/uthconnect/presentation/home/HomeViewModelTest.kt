@@ -8,7 +8,6 @@ import com.giathinh.uthconnect.domain.model.HomeFeed
 import com.giathinh.uthconnect.domain.repository.AnnouncementRepository
 import com.giathinh.uthconnect.domain.usecase.GetHomeFeedUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.time.LocalDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,6 +15,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDateTime
 
 /**
  * Test dọc theo khung MVVM: ViewModel + UseCase + Repository giả (fake, không MockK —
@@ -137,11 +137,9 @@ class HomeViewModelTest {
         private val feed: HomeFeed,
         var failed: Boolean = false,
     ) : AnnouncementRepository {
-        override suspend fun homeFeed(): Result<HomeFeed> =
-            if (failed) Result.failure(IllegalStateException("mất mạng")) else Result.success(feed)
+        override suspend fun homeFeed(): Result<HomeFeed> = if (failed) Result.failure(IllegalStateException("mất mạng")) else Result.success(feed)
 
         // Tab Trang chủ không mở chi tiết — hành vi của màn Chi tiết có test riêng.
-        override suspend fun detail(id: String): Result<AnnouncementDetail?> =
-            Result.success(null)
+        override suspend fun detail(id: String): Result<AnnouncementDetail?> = Result.success(null)
     }
 }

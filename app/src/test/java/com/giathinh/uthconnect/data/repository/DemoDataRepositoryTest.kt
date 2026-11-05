@@ -51,9 +51,12 @@ class DemoDataRepositoryTest {
         val repository = FakeNotificationRepository()
         val feed = repository.getNewsfeed(NotificationCategory.ALL).first()
         assertTrue(feed.isNotEmpty())
-        assertEquals(feed.sortedWith(
-            compareByDescending<PostNotification> { it.isPinned }.thenByDescending { it.publishedAt }
-        ), feed)
+        assertEquals(
+            feed.sortedWith(
+                compareByDescending<PostNotification> { it.isPinned }.thenByDescending { it.publishedAt },
+            ),
+            feed,
+        )
         val category = feed.first().category
         assertEquals(feed.filter { it.category == category }, repository.getNewsfeed(category).first())
         assertNull(repository.getNotificationDetail("missing").getOrThrow())

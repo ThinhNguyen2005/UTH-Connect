@@ -4,17 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Clock
-import java.time.LocalDateTime
-import java.time.LocalDate
-import java.time.LocalTime
-import javax.inject.Inject
-import javax.inject.Named
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import javax.inject.Inject
+import javax.inject.Named
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
@@ -63,6 +63,7 @@ class ScheduleViewModel @Inject constructor(
                     events = sampleEvents(action.value, it.now),
                 )
             }
+
             ScheduleAction.JumpToToday -> {
                 val today = state.value.now.toLocalDate()
                 state.update {
@@ -72,14 +73,18 @@ class ScheduleViewModel @Inject constructor(
                     )
                 }
             }
+
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
+
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
+
             is ScheduleAction.RegisterEvent -> {
                 registeredEventIds.add(action.id)
                 state.update { current ->
                     current.copy(events = sampleEvents(current.selectedDate, current.now))
                 }
             }
+
             ScheduleAction.OpenForm -> state.update {
                 it.copy(
                     showForm = true,
@@ -89,14 +94,21 @@ class ScheduleViewModel @Inject constructor(
                     timeError = false,
                 )
             }
+
             ScheduleAction.CloseForm -> state.update {
                 it.copy(showForm = false, titleError = false, dateError = false, timeError = false)
             }
+
             is ScheduleAction.Title -> state.update { it.copy(title = action.value, titleError = false) }
+
             is ScheduleAction.Date -> state.update { it.copy(date = action.value, dateError = false) }
+
             is ScheduleAction.Time -> state.update { it.copy(time = action.value, timeError = false) }
+
             is ScheduleAction.SelectCourse -> state.update { it.copy(course = action.value) }
+
             is ScheduleAction.Complete -> useCase.complete(action.id)
+
             ScheduleAction.Save -> {
                 val value = state.value
                 val titleError = value.title.isBlank()

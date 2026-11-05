@@ -18,24 +18,23 @@ class FakeUserRepository @Inject constructor() : UserRepository {
     // -----------------------------------------------------------------------
     // In-memory state – giả lập một sinh viên đang đăng nhập
     // -----------------------------------------------------------------------
-    private val _currentUser = MutableStateFlow<User?>(DEMO_USER)
-    private val _userMap = MutableStateFlow(mapOf(DEMO_USER.uid to DEMO_USER))
+    private val currentUserFlow = MutableStateFlow<User?>(DEMO_USER)
+    private val userMapFlow = MutableStateFlow(mapOf(DEMO_USER.uid to DEMO_USER))
 
     // -----------------------------------------------------------------------
     // Interface implementation
     // -----------------------------------------------------------------------
 
-    override fun getUserProfile(uid: String): Flow<User?> =
-        _userMap.map { it[uid] }
+    override fun getUserProfile(uid: String): Flow<User?> = userMapFlow.map { it[uid] }
 
     override suspend fun updateProfile(user: User): Result<Unit> = runCatching {
-        _userMap.value = _userMap.value.toMutableMap().apply { put(user.uid, user) }
-        if (_currentUser.value?.uid == user.uid) {
-            _currentUser.value = user
+        userMapFlow.value = userMapFlow.value.toMutableMap().apply { put(user.uid, user) }
+        if (currentUserFlow.value?.uid == user.uid) {
+            currentUserFlow.value = user
         }
     }
 
-    override fun getCurrentUser(): Flow<User?> = _currentUser
+    override fun getCurrentUser(): Flow<User?> = currentUserFlow
 
     // -----------------------------------------------------------------------
     // Demo data

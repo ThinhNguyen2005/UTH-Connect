@@ -33,11 +33,9 @@ import javax.inject.Singleton
 @Singleton
 class StaticAnnouncementRepository @Inject constructor() : AnnouncementRepository {
 
-    override suspend fun homeFeed(): Result<HomeFeed> =
-        Result.success(HomeFeed(banners = banners, latest = latest))
+    override suspend fun homeFeed(): Result<HomeFeed> = Result.success(HomeFeed(banners = banners, latest = latest))
 
-    override suspend fun detail(id: String): Result<AnnouncementDetail?> =
-        Result.success(details[id])
+    override suspend fun detail(id: String): Result<AnnouncementDetail?> = Result.success(details[id])
 
     private val banners = listOf(
         HomeBanner(

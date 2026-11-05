@@ -57,6 +57,13 @@ object UthDimens {
         val MdShape = RoundedCornerShape(Md)
         val LgShape = RoundedCornerShape(Lg)
         val XlShape = RoundedCornerShape(topStart = Xl, topEnd = Xl, bottomStart = 0.dp, bottomEnd = 0.dp)
+
+        /**
+         * Bo góc bán nguyệt theo tỉ lệ (50%) — hình viên thuốc cho filter chip
+         * (`docs/Design-system.md` mục 4.4). Dùng percent thay vì `Shapes.full` vì
+         * bản Material 3 trong dự án chưa có `full`.
+         */
+        val PillShape = RoundedCornerShape(percent = 50)
     }
 
     object Size {
@@ -78,6 +85,9 @@ object UthDimens {
 
         /** Cạnh tối thiểu của QR để máy quét ở bàn check-in đọc được. */
         val QrMin: Dp = 220.dp
+
+        /** Dải màu nhấn dọc bên trái thẻ sự kiện/tuần trong tab Thời khóa biểu. */
+        val AccentStripe: Dp = 6.dp
 
         /** Viền chuẩn của card / text field. */
         val Stroke: Dp = 1.dp
@@ -121,11 +131,17 @@ object UthDimens {
         /** Chiều cao thanh segmented control chuyển đổi mode đăng nhập (≥ 48dp). */
         val SegmentedControlHeight: Dp = 48.dp
 
-
         /** Pill chuyển đổi ngôn ngữ VI / EN. */
         val LanguagePillWidth: Dp = 48.dp
         val LanguagePillHeight: Dp = 36.dp
         val SecurityIconSize: Dp = 16.dp
+
+        /**
+         * Chiều cao / cạnh ô của nút icon và nút "Hôm nay" nằm trong header gradient
+         * (tab Thời khóa biểu). Nhỏ hơn [Avatar] thì nhãn `labelSmall` không vừa;
+         * bằng [MinTouchTarget] thì hai nút chiếm hết bề ngang header màn hẹp.
+         */
+        val HeaderAction: Dp = 36.dp
 
         /** Chiều cao thanh tiến độ điểm rèn luyện. */
         val TrainingProgressTrack: Dp = 6.dp
@@ -172,7 +188,6 @@ object UthDimens {
 
         /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
         val IndicatorBar: Dp = 20.dp
-
     }
 
     /**
@@ -180,6 +195,9 @@ object UthDimens {
      * nhận `Dp` nên rất dễ bị viết số lẻ trực tiếp trong Composable.
      */
     object Elevation {
+        /** Surface phẳng: ô ngày chưa chọn, chip chưa chọn — không đổ bóng. */
+        val None: Dp = 0.dp
+
         /** Card 1.dp — phân tách bằng viền nhiều hơn bằng bóng (mục 4.1). */
         val Card: Dp = 1.dp
 
@@ -188,6 +206,9 @@ object UthDimens {
     }
 
     /** Duration (ms) cho các hiệu ứng được dự án quản lý trực tiếp. */
+    // Token giữ tên theo vai trò (`RouteFadeMillis`) vì `docs/Design-system.md` mục 5
+    // và mọi màn hình đang tham chiếu tên này; SCREAMING_SNAKE chỉ thêm viết hoa thô.
+    @Suppress("ktlint:standard:property-naming")
     object Motion {
         const val RouteFadeMillis = 200
         const val ShimmerMillis = 1200
@@ -197,6 +218,7 @@ object UthDimens {
     }
 
     /** Độ trong suốt của lớp trang trí; màu chữ quan trọng vẫn dùng semantic color. */
+    @Suppress("ktlint:standard:property-naming")
     object Opacity {
         const val HeaderMetadata = 0.78f
         const val HeaderActionFill = 0.14f
@@ -212,20 +234,28 @@ object UthDimens {
         const val SubtleDivider = 0.50f
 
         // Modern Minimalist Auth & Translucent Borders
+
         /** Lớp nền mỹ thuật ambient Canvas góc trên phải. */
         const val AuthAmbientShape = 0.45f
+
         /** Độ mờ nhẹ cho footer bản quyền & bảo mật. */
         const val AuthFooter = 0.45f
+
         /** Viền mờ cho nút phụ OutlinedButton (Google SSO). */
         const val AuthOutlineButtonBorder = 0.45f
+
         /** Viền không focus của input field trên nền Canvas. */
         const val AuthInputUnfocusedBorder = 0.40f
+
         /** Viền cho banner thông báo thành công. */
         const val AuthSuccessBannerBorder = 0.40f
+
         /** Viền cho banner thông báo thông tin / pending. */
         const val AuthInfoBannerBorder = 0.30f
+
         /** Đường kẻ phân cách "hoặc tiếp tục với". */
         const val AuthDivider = 0.35f
+
         /** Lớp phủ tối quanh khung ngắm để vạch quét nổi lên trên hình camera thật. */
         const val ScannerScrim = 0.55f
 
@@ -234,18 +264,32 @@ object UthDimens {
     }
 
     /** Tỷ lệ bố cục và hình trang trí của các màn hiện có; không thay thế quy tắc đo của M3. */
+    @Suppress("ktlint:standard:property-naming")
     object Layout {
         const val CoverAspectRatio = 16f / 9f
+
         /** Cho phép mục điều hướng có đủ chỗ khi chữ được phóng lớn. */
         val LargeTextNavigationItemWidth: Dp = 144.dp
         const val LargeTextScale = 1.5f
+
+        /**
+         * Mật độ lưới Tiện ích (`docs/Design-system.md` mục 4.12): khu "Tiện ích của tôi"
+         * 2 cột, khu "Dịch vụ đang phát triển" 3 cột. Ở cỡ chữ phóng lớn, 3 cột chỉ còn
+         * ~66dp bề ngang chữ nên khu nén hạ về [ServiceGridColumnsLargeText].
+         */
+        const val FeatureGridColumns = 2
+        const val ServiceGridColumns = 3
+        const val ServiceGridColumnsLargeText = 2
         const val HomeBannerWidthFraction = 0.86f
 
         // Auth Screen Artistic Background
+
         /** Tỉ lệ bán kính hình tròn ambient Canvas so với chiều rộng màn hình. */
         const val AuthAmbientRadiusFraction = 0.45f
+
         /** Vị trí tâm X hình tròn ambient (lệch nhẹ sang mép phải ngoài màn hình). */
         const val AuthAmbientCenterFractionX = 1.05f
+
         /** Vị trí tâm Y hình tròn ambient (lệch nhẹ lên mép trên ngoài màn hình). */
         const val AuthAmbientCenterFractionY = -0.05f
 

@@ -33,12 +33,12 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -57,18 +57,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.BuildConfig
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -80,7 +77,10 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketQrPayload
 import com.giathinh.uthconnect.domain.model.TicketStatus
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
+import com.google.zxing.qrcode.QRCodeWriter
 
 /**
  * Tab Vé: thanh nhận diện rút gọn kiểu Trang chủ, bộ lọc hai nhóm và danh sách vé dạng
@@ -615,8 +615,7 @@ private fun TicketQrPreview(payload: String, modifier: Modifier = Modifier) {
     }
 }
 
-internal fun encodeTicketQr(payload: String): BitMatrix =
-    QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 0, 0)
+internal fun encodeTicketQr(payload: String): BitMatrix = QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 0, 0)
 
 private fun DrawScope.drawQrMatrix(matrix: BitMatrix, ink: Color, paper: Color) {
     drawRect(paper)
@@ -653,7 +652,12 @@ private fun ticketStatusTone(status: TicketStatus): BadgeTone = when (status) {
     TicketStatus.CANCELLED -> BadgeTone.Danger
 }
 
-/** Khoá item của danh sách vé — một chỗ duy nhất thay vì chuỗi rải trong Composable. */
+/**
+ * Khoá item của danh sách vé — một chỗ duy nhất thay vì chuỗi rải trong Composable.
+ *
+ * Suppress `property-naming`: hằng trong object private nhóm theo vai trò, không phải hằng cấp file.
+ */
+@Suppress("ktlint:standard:property-naming")
 private object TicketsKey {
     const val Intro = "tickets-intro"
     const val Filters = "tickets-filters"
@@ -662,21 +666,6 @@ private object TicketsKey {
     const val Empty = "tickets-empty"
     const val FilterEmpty = "tickets-filter-empty"
 }
-
-private const val TopBarRingRadiusFraction = 0.62f
-private const val TopBarRingStrokeFraction = 0.008f
-private const val TopBarRingCenterFraction = 0.95f
-private const val TopBarRingAlpha = 0.14f
-private const val SelectedCountAlpha = 0.24f
-private const val StubFillAlpha = 0.5f
-private const val DashedLineDashFactor = 1f
-private const val DashedLineGapFactor = 1.2f
-private const val QrModuleCount = 21
-private const val QrFinderModules = 7
-private const val QrSeedMask = 0x7FFFFFFFL
-private const val QrSeedMultiplier = 1103515245L
-private const val QrSeedIncrement = 12345L
-private const val QrSeedShift = 16
 
 /**
  * Màn chi tiết vé dạng boarding pass: nửa trên là thông tin sự kiện + sinh viên, đường xé có
@@ -862,7 +851,10 @@ private fun TicketPassCard(
 private fun LiveTicketQrPanel(token: String, modifier: Modifier = Modifier) {
     val qr = remember(token) {
         QRCodeWriter().encode(
-            token, BarcodeFormat.QR_CODE, 320, 320,
+            token,
+            BarcodeFormat.QR_CODE,
+            320,
+            320,
             mapOf(EncodeHintType.MARGIN to 2),
         )
     }
@@ -1211,7 +1203,8 @@ private val PreviewPastTicket = Ticket(
 
 private val PreviewTickets = listOf(PreviewTicket, PreviewPastTicket)
 
-private const val PreviewStudentName = "Nguyễn Minh Anh"
+/** Tên sinh viên mẫu cho mọi `@Preview` vé — giữ một chỗ để các preview đồng nhất. */
+private const val PREVIEW_STUDENT_NAME = "Nguyễn Minh Anh"
 
 @Preview(name = "Tickets upcoming light", showBackground = true)
 @Composable
@@ -1220,7 +1213,8 @@ private fun TicketsPreview() = TicketsStatePreview(TicketsUiState(isLoading = fa
 @Preview(name = "Tickets upcoming dark", showBackground = true)
 @Composable
 private fun TicketsDarkPreview() = TicketsStatePreview(
-    TicketsUiState(isLoading = false, tickets = PreviewTickets), darkTheme = true,
+    TicketsUiState(isLoading = false, tickets = PreviewTickets),
+    darkTheme = true,
 )
 
 @Preview(name = "Tickets past light", showBackground = true)
@@ -1232,7 +1226,8 @@ private fun TicketsPastPreview() = TicketsStatePreview(
 @Preview(name = "Tickets past dark", showBackground = true)
 @Composable
 private fun TicketsPastDarkPreview() = TicketsStatePreview(
-    TicketsUiState(isLoading = false, tickets = PreviewTickets, filter = TicketFilter.Past), darkTheme = true,
+    TicketsUiState(isLoading = false, tickets = PreviewTickets, filter = TicketFilter.Past),
+    darkTheme = true,
 )
 
 @Preview(name = "Tickets font scale 1.3", showBackground = true, fontScale = 1.3f)
@@ -1258,7 +1253,8 @@ private fun TicketsErrorPreview() = TicketsStatePreview(
 @Preview(name = "Tickets error dark", showBackground = true)
 @Composable
 private fun TicketsErrorDarkPreview() = TicketsStatePreview(
-    TicketsUiState(isLoading = false, failure = TicketsFailure.LoadFailed), darkTheme = true,
+    TicketsUiState(isLoading = false, failure = TicketsFailure.LoadFailed),
+    darkTheme = true,
 )
 
 @Preview(name = "Tickets empty light", showBackground = true)
@@ -1268,7 +1264,8 @@ private fun TicketsEmptyPreview() = TicketsStatePreview(TicketsUiState(isLoading
 @Preview(name = "Tickets empty dark", showBackground = true)
 @Composable
 private fun TicketsEmptyDarkPreview() = TicketsStatePreview(
-    TicketsUiState(isLoading = false), darkTheme = true,
+    TicketsUiState(isLoading = false),
+    darkTheme = true,
 )
 
 @Preview(name = "QR light", showBackground = true)
@@ -1282,13 +1279,16 @@ private fun TicketQrDarkPreview() = TicketQrStatePreview(PreviewTicket, 60, dark
 @Preview(name = "QR checked-in light", showBackground = true)
 @Composable
 private fun TicketQrCheckedInPreview() = TicketQrStatePreview(
-    PreviewTicket.copy(status = TicketStatus.CHECKED_IN), 60,
+    PreviewTicket.copy(status = TicketStatus.CHECKED_IN),
+    60,
 )
 
 @Preview(name = "QR checked-in dark", showBackground = true)
 @Composable
 private fun TicketQrCheckedInDarkPreview() = TicketQrStatePreview(
-    PreviewTicket.copy(status = TicketStatus.CHECKED_IN), 60, darkTheme = true,
+    PreviewTicket.copy(status = TicketStatus.CHECKED_IN),
+    60,
+    darkTheme = true,
 )
 
 @Preview(name = "QR expired light", showBackground = true)
@@ -1302,7 +1302,7 @@ private fun TicketQrExpiredDarkPreview() = TicketQrStatePreview(PreviewTicket, 0
 @Preview(name = "QR font scale 1.3", showBackground = true, fontScale = 1.3f)
 @Composable
 private fun TicketQrFontScalePreview() = UthPreview {
-    TicketQrScreen(PreviewTicket, PreviewStudentName, 60, onBack = {}, onCopy = {})
+    TicketQrScreen(PreviewTicket, PREVIEW_STUDENT_NAME, 60, onBack = {}, onCopy = {})
 }
 
 @Preview(name = "QR missing light", showBackground = true)
@@ -1314,8 +1314,7 @@ private fun TicketQrMissingPreview() = TicketQrStatePreview(null, 0)
 private fun TicketQrMissingDarkPreview() = TicketQrStatePreview(null, 0, darkTheme = true)
 
 @Composable
-private fun TicketsStatePreview(state: TicketsUiState, darkTheme: Boolean = false) =
-    UthPreview(darkTheme = darkTheme) { TicketsScreen(state, onAction = {}) }
+private fun TicketsStatePreview(state: TicketsUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) { TicketsScreen(state, onAction = {}) }
 
 @Composable
 private fun TicketQrStatePreview(
@@ -1325,7 +1324,7 @@ private fun TicketQrStatePreview(
 ) = UthPreview(darkTheme = darkTheme) {
     TicketQrScreen(
         ticket = ticket,
-        studentName = PreviewStudentName,
+        studentName = PREVIEW_STUDENT_NAME,
         secondsRemaining = seconds,
         onBack = {},
         onCopy = {},

@@ -23,7 +23,9 @@ data class AttendanceUiState(
 ) {
     val visibleEntries: List<AttendanceEntry> get() = roster?.entries.orEmpty().filter { entry ->
         (filter == AttendanceFilter.ALL || entry.checkedIn == (filter == AttendanceFilter.PRESENT)) &&
-            (query.isBlank() || entry.displayName.contains(query.trim(), ignoreCase = true) ||
-                entry.studentId.contains(query.trim(), ignoreCase = true))
+            (
+                query.isBlank() || entry.displayName.contains(query.trim(), ignoreCase = true) ||
+                    entry.studentId.contains(query.trim(), ignoreCase = true)
+                )
     }
 }

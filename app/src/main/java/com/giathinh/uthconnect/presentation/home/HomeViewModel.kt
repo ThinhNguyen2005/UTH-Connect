@@ -45,7 +45,9 @@ class HomeViewModel @Inject constructor(
             // lưu trữ) chưa có graph con. Giữ action để khi branch của module Sự kiện thêm
             // `HomeNavigation.kt` chỉ phải thay phần thân.
             HomeAction.OpenNotifications -> Unit
+
             HomeAction.OpenFilter -> Unit
+
             HomeAction.OpenArchive -> Unit
 
             // Chi tiết thông báo đã có graph riêng: `HomeRoute` chặn action này để điều hướng,

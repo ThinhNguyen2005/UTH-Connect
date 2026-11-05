@@ -4,16 +4,25 @@ import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 
+// Mã ngôn ngữ hiển thị trên pill VI/EN ở đầu màn đăng nhập. Đây là nhãn ngắn cho
+// người dùng, KHÁC với BCP-47 tag đã lưu (`LANGUAGE_TAG_VIETNAMESE`/`_ENGLISH`);
+// AuthViewModel là chỗ dịch qua lại giữa hai dạng.
+const val LANGUAGE_CODE_VIETNAMESE = "VI"
+const val LANGUAGE_CODE_ENGLISH = "EN"
 
 enum class AuthScreenStep {
     /** Step 1: Identifier-first entry with Google SSO, reduced cognitive load. */
     Identifier,
+
     /** Step 2: Activated student account enters password (the exact "Hello Again!" screen). */
     Password,
+
     /** Step 3: First-time student completes profile setup. */
     FirstTimeSetup,
+
     /** Step 4: Password reset via deep link. */
     ResetPassword,
+
     /** Step 5: Email verification waiting screen. */
     VerifyEmail,
 }
@@ -43,8 +52,8 @@ data class AuthUiState(
     val isSubmittingVerification: Boolean = false,
     val verificationStatus: VerificationStatus? = null,
     val verificationNotice: String? = null,
-    /** Selected display language ("VI" or "EN"). */
-    val selectedLanguage: String = "VI",
+    /** Selected display language ([LANGUAGE_CODE_VIETNAMESE] or [LANGUAGE_CODE_ENGLISH]). */
+    val selectedLanguage: String = LANGUAGE_CODE_VIETNAMESE,
     /** Active step in the identifier-first auth flow. */
     val screenStep: AuthScreenStep = AuthScreenStep.Password,
     /** First-time setup student name. */
@@ -70,14 +79,22 @@ data class AuthUiState(
 sealed interface AuthEvent {
     data object InvalidCredentials : AuthEvent
     data class GeneralMessage(val message: String) : AuthEvent
+
+    /**
+     * Người dùng vừa chọn ngôn ngữ khác trên pill VI/EN. Không có thông điệp snackbar:
+     * Locale áp ở `MainActivity.attachBaseContext` nên Route phải `recreate()`.
+     */
+    data object LanguageChanged : AuthEvent
 }
 
 enum class AuthFailure {
     InvalidCredentials,
     Unexpected,
     SessionRestore,
+
     /** Credential Manager has no Google account on this device. */
     GoogleUnavailable,
+
     /** Supabase rejected the ID token, or the exchange failed. */
     GoogleRejected,
     RateLimited,

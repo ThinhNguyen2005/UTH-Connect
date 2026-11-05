@@ -16,14 +16,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-/**
- * Theme UTH Connect.
- *
- * `dynamicColor` mặc định **false**: nếu bật, Material You (Android 12+ = mọi
- * thiết bị app hỗ trợ vì minSdk 31) sẽ ghi đè Navy/Gold bằng màu hình nền của
- * máy, khiến nhận diện trường và các cặp tương phản đã đo bị vô hiệu.
- * Chi tiết: `docs/Design-system.md` mục 1.5.
- */
+// Theme UTH Connect.
+//
+// `dynamicColor` mặc định **false**: nếu bật, Material You (Android 12+ = mọi
+// thiết bị app hỗ trợ vì minSdk 31) sẽ ghi đè Navy/Gold bằng màu hình nền của
+// máy, khiến nhận diện trường và các cặp tương phản đã đo bị vô hiệu.
+// Chi tiết: `docs/Design-system.md` mục 1.5.
 
 /**
  * Màu mở rộng chưa có chỗ trong [androidx.compose.material3.ColorScheme]:
@@ -49,6 +47,16 @@ data class UthExtendedColors(
     /** Nền/huyền cho badge "SV đã xác thực" và "Gợi ý bởi AI". */
     val accentContainer: Color,
     val onAccentContainer: Color,
+    /**
+     * Header gradient của tab Thời khóa biểu. Không lấy `colorScheme.primary`/`tertiary`
+     * làm nền gradient: ở dark scheme `primary` là xanh **sáng** (#7FB2E5) nên ghép
+     * `onPrimary` tối vào sẽ cho chữ tối trên nền tối. Cặp dưới đây đã đo:
+     * light White/UthNavy 12.6:1 và White/UthNavyLight 8.5:1 (AAA);
+     * dark `headerOnGradient`/`headerGradientStart` 8.9:1 (AAA).
+     */
+    val headerGradientStart: Color,
+    val headerGradientEnd: Color,
+    val headerOnGradient: Color,
     val isLight: Boolean,
 )
 
@@ -70,6 +78,9 @@ private val LightExtended = UthExtendedColors(
     onInfoContainer = InfoOnContainerLight,
     accentContainer = UthGoldContainer,
     onAccentContainer = UthGoldText,
+    headerGradientStart = UthNavy,
+    headerGradientEnd = UthNavyLight,
+    headerOnGradient = White,
     isLight = true,
 )
 
@@ -91,6 +102,9 @@ private val DarkExtended = UthExtendedColors(
     onInfoContainer = InfoOnContainerDark,
     accentContainer = UthNavyContainerDark,
     onAccentContainer = UthOnNavyContainerDark,
+    headerGradientStart = UthNavyContainerDark,
+    headerGradientEnd = UthOnNavyDark,
+    headerOnGradient = UthOnNavyContainerDark,
     isLight = false,
 )
 
@@ -177,6 +191,7 @@ fun UTHConnectTheme(
         }
 
         darkTheme -> UthDarkScheme
+
         else -> UthLightScheme
     }
 

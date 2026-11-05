@@ -41,7 +41,7 @@ data class AnnouncementDetail(
      * không được ghi "4 phút đọc". Tính **một lần** lúc dựng object — đây là `val`,
      * không phải `get()`.
      */
-    val readMinutes: Int = max(1, ceil(wordCount().toDouble() / WordsPerMinute).toInt())
+    val readMinutes: Int = max(1, ceil(wordCount().toDouble() / WORDS_PER_MINUTE).toInt())
 
     private fun wordCount(): Int {
         val text = buildString {
@@ -49,11 +49,15 @@ data class AnnouncementDetail(
             blocks.forEach { block ->
                 when (block) {
                     is AnnouncementBlock.Heading -> append(' ').append(block.text)
+
                     is AnnouncementBlock.Paragraph -> append(' ').append(block.text)
+
                     is AnnouncementBlock.Bullets -> block.items.forEach { append(' ').append(it) }
+
                     is AnnouncementBlock.Milestones -> block.items.forEach { milestone ->
                         append(' ').append(milestone.title).append(' ').append(milestone.body)
                     }
+
                     is AnnouncementBlock.Contact -> append(' ').append(block.label).append(' ').append(block.body)
                 }
             }
@@ -122,6 +126,6 @@ enum class AttachmentKind {
 }
 
 /** Tốc độ đọc tham chiếu của người lớn (từ/phút) khi ước lượng thời lượng đọc. */
-private const val WordsPerMinute = 200
+private const val WORDS_PER_MINUTE = 200
 
 private val WordSeparator = Regex("\\s+")

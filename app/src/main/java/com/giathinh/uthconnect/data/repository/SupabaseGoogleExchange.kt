@@ -8,12 +8,12 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.createSupabaseClient
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
 
 /** Log tag for the Google ID-token exchange; visible with `adb logcat -s SupabaseGoogleExchange`. */
-internal const val GoogleExchangeLogTag = "SupabaseGoogleExchange"
+internal const val GOOGLE_EXCHANGE_LOG_TAG = "SupabaseGoogleExchange"
 
 /**
  * Native Google sign-in (ID token flow) through the official supabase-kt Auth module.
@@ -59,7 +59,7 @@ class SupabaseGoogleExchange @Inject constructor(
         } catch (error: Exception) {
             // The UI only shows a generic "not authenticated" message, so GoTrue's actual reason
             // (bad audience, provider disabled, nonce mismatch, ...) is otherwise unrecoverable.
-            Log.w(GoogleExchangeLogTag, "Google ID-token exchange rejected", error)
+            Log.w(GOOGLE_EXCHANGE_LOG_TAG, "Google ID-token exchange rejected", error)
             throw error
         }
         client.attachSession(
