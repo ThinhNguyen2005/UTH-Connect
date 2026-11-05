@@ -39,7 +39,22 @@ class LostFoundViewModel @Inject constructor(
             is LostFoundAction.SelectCategory -> {
                 _uiState.update { it.copy(selectedCategory = action.category) }
             }
-
+            is LostFoundAction.UpdateSearchQuery -> {
+                _uiState.update { it.copy(searchQuery = action.query) }
+            }
+            is LostFoundAction.ToggleResolveListing -> {
+                _uiState.update { current ->
+                    current.copy(
+                        listings = current.listings.map { item ->
+                            if (item.id == action.id) {
+                                item.copy(isResolved = !item.isResolved)
+                            } else {
+                                item
+                            }
+                        }
+                    )
+                }
+            }
             LostFoundAction.OpenReportDialog -> {
                 _uiState.update {
                     it.copy(
@@ -175,6 +190,7 @@ class LostFoundViewModel @Inject constructor(
                             listings = listOf(created) + state.listings,
                             selectedKind = created.kind,
                             selectedCategory = ItemCategory.ALL,
+                            searchQuery = "",
                             isReportDialogOpen = false,
                             reportForm = ReportFormState(),
                             userMessage = UserMessage.PostSuccess,

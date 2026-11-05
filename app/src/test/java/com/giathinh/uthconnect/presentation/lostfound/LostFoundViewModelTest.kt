@@ -69,6 +69,51 @@ class LostFoundViewModelTest {
     }
 
     @Test
+    fun `updateSearchQuery_filtersListingsCorrectly`() {
+        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
+
+        // Mặc định tab LOST (có 4 bài)
+        assertEquals(4, viewModel.uiState.value.filteredListings.size)
+
+        // Tìm từ khóa "MacBook"
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("MacBook"))
+        assertEquals("MacBook", viewModel.uiState.value.searchQuery)
+        assertEquals(1, viewModel.uiState.value.filteredListings.size)
+        assertTrue(viewModel.uiState.value.filteredListings.first().title.contains("MacBook"))
+
+        // Tìm theo địa điểm "Võ Oanh"
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("Võ Oanh"))
+        assertEquals(1, viewModel.uiState.value.filteredListings.size)
+        assertTrue(viewModel.uiState.value.filteredListings.first().location.contains("Võ Oanh"))
+
+        // Tìm từ khóa không tồn tại
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("xe dap the thao 999"))
+        assertEquals(0, viewModel.uiState.value.filteredListings.size)
+
+        // Xóa tìm kiếm -> quay về đủ 4 bài
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery(""))
+        assertEquals(4, viewModel.uiState.value.filteredListings.size)
+    }
+
+    @Test
+    fun `toggleResolveListing_switchesResolvedStatus`() {
+        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
+        val firstItem = viewModel.uiState.value.listings.first()
+        val firstId = firstItem.id
+        assertFalse("Ban đầu chưa được resolve", firstItem.isResolved)
+
+        // Bấm đánh dấu đã nhận lại
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+        val resolvedItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertTrue("Sau khi toggle, isResolved phải là true", resolvedItem.isResolved)
+
+        // Bấm toggle lại để hủy đánh dấu
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+        val revertedItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Toggle lần 2 quay lại false", revertedItem.isResolved)
+    }
+
+    @Test
     fun `submitReport_withEmptyTitle_setsTitleErrorAndDoesNotSubmit`() {
         val viewModel = createViewModel()
         viewModel.onAction(LostFoundAction.OpenReportDialog)
