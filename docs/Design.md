@@ -263,11 +263,13 @@ Nguyên tắc:
 ### 8.1. Khung 4 tab đã dựng (`presentation/navigation/`)
 
 ```
-Trang chủ      → HomeDestination     → nội dung module Sự kiện (MVP)
-Thời khóa biểu → ScheduleDestination → placeholder Phase 2
-Tiện ích       → UtilitiesDestination → lưới 2 khu vực: dịch vụ mở được + dịch vụ theo lộ trình
-Cá nhân        → ProfileDestination  → đăng nhập/xác thực + vé + cài đặt
+Trang chủ      → HomeDestination      → nội dung module Sự kiện (MVP)
+Thời khóa biểu → ScheduleDestination  → màn Thời khóa biểu thật (tiết học từ TimetableUseCase) + danh sách sự kiện sample
+Tiện ích       → UtilitiesDestination → lưới 2 khu vực + graph con: Học phí · Điểm RLL · Cơ sở · Cài đặt
+Cá nhân        → ProfileDestination   → đăng nhập/xác thực + vé + scanner điểm danh (Organizer)
 ```
+
+Màn **Cài đặt** (thông báo, ngôn ngữ EN/VI, giao diện Hệ thống/Sáng/Tối) hiện nằm **dưới tab Tiện ích** (`UtilitiesDestination.Settings`), không phải tab Cá nhân như bản vẽ cũ của mục 8.2.
 
 Con số **4 là chuẩn, không phải tuỳ hứng**: tài liệu Android của Google xếp navigation bar cho
 "three to five destinations of equal importance"; app từng phình lên 6 tab (thêm Vé của tôi và
@@ -284,26 +286,29 @@ Sự kiện) nên vượt khuyến nghị và ba tab cùng dùng một icon `Dat
 
 Route là **type-safe**: 4 destination là `@Serializable object` (không tham số), không còn chuỗi phẳng. NavHost đăng ký bằng `composable<T>`, chọn tab dùng `popUpTo(start) + saveState/restoreState + launchSingleTop` để mỗi tab giữ trạng thái riêng và không xếp chồng bản sao. Tab đang chọn suy ra bằng `NavDestination.hasRoute(T::class)` từ `currentBackStackEntry`, không so chuỗi và không nhân bản sang biến state riêng.
 
-Trạng thái theo từng tab so với sườn MVVM mục 5.1.1:
+Trạng thái theo từng tab so với sườn MVVM mục 5.1.1 (đối chiếu code ngày 05/11/2026):
 
 | Tab | Đã có | Còn thiếu |
 |---|---|---|
-| Tiện ích | đủ 5 file MVVM + 4 test (`UtilitiesViewModelTest`) | graph con bên trong module; nối Firebase thật |
-| Trang chủ | Screen stateless + placeholder sự kiện | `HomeViewModel` + `HomeUiState` khi module Sự kiện vào code |
-| Thời khóa biểu | Screen placeholder Phase 2 | cả 5 file, do `feature/timetable-<tên>` dựng |
-| Cá nhân | Screen placeholder đăng nhập | `ProfileViewModel` + luồng auth (M0) |
+| Tiện ích | đủ 5 file MVVM, **graph con đã dựng** (`UtilitiesNavigation.kt`: Học phí · Điểm RLL · Cơ sở · Cài đặt), 11 unit test, lưới two-tone | nguồn dữ liệu vẫn là repository tĩnh trong `data/` (`StaticUtilityModuleRepository`, học phí/ĐRL sample) — chưa nối Firebase/Supabase |
+| Trang chủ | đủ 5 file (`HomeAction/Route/Screen/UiState/ViewModel`) | nội dung sự kiện vẫn là placeholder khi build không bật Supabase |
+| Thời khóa biểu | đủ 5 file; **màu/shape/typography đã token-hoá toàn bộ** (05/11); tiết học đến từ `TimetableUseCase` + `InMemoryTimetableRepository` | danh sách sự kiện trong màn vẫn là `sampleEvents()`; `Timetable.deadlines` **chưa có UI**; bộ lọc nhóm sự kiện đặt sai tầng (filter trong Screen); chưa có nhánh Error |
+| Cá nhân | đủ 5 file + luồng auth thật (đăng nhập, Google SSO, quên mật khẩu, xác minh MSSV, sinh trắc học, đổi vai trò) | — |
 
 ### 8.2. Màn hình nghiệp vụ khi module vào code
 
 ```
-Auth (chưa dựng):        Welcome → Login / Register → Verify Email
+Auth (đã dựng 05/11):   Identifier-first → Login / Register / Verify Email / Quên mật khẩu / Google SSO
 Trong tab Trang chủ:    EventList → EventDetail → Register
-Trong tab Cá nhân:      MyTickets → TicketQr (QR động)
+Trong tab Cá nhân:      MyTickets → TicketQr (QR động) · ProfileNavRow → Vé
 Trong tab Cá nhân*:     OrganizerEvents → EventEditor → AttendanceScanner → EventStats
-Trong tab Cá nhân:      Profile → Settings (ngôn ngữ EN/VI, giao diện)
+Trong tab Tiện ích:    Cài đặt (thông báo · ngôn ngữ EN/VI · giao diện) — đã dựng và có hiệu lực thật
+Trong tab Tiện ích:    Học phí · Điểm RLL · Cơ sở (màn con của graph tiện ích)
 Trong tab Tiện ích:    Events · LostFound (ô lưới đã bật) — Books · Housing · RideShare (ô lộ trình)
 (*) chỉ hiện với Organizer
 ```
+
+**Màn còn thiếu so với spec** (báo cáo khoảng trống 05/11/2026, chi tiết ở `docs/sessions/2026-11-05_schedule_colors_and_settings_locale.md` mục 4): Deadline tracker (domain có `Deadline` + `DeadlinePriority`, UI chưa nối), OCR nhập lịch, **Admin Dashboard** (README xếp MVP-bắt buộc), EventStats cho Organizer, màn chi tiết Đồ thất lạc, và ô `UtilityModuleId.TIMETABLE` vẫn `enabled = false` trong khi tab Thời khóa biểu đã tồn tại.
 
 Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `docs/Design-system.md`; Figma là nguồn tham chiếu cho bố cục, **không** được override các token tương phản đã đo.
 
