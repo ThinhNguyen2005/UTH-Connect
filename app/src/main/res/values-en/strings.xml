@@ -5,11 +5,12 @@
 
     <string name="common_retry">Retry</string>
     <string name="common_meta_separator">•</string>
-    <string name="utilities_not_available">Not yet available</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+
+    <!-- Vào từ hàng "My tickets" trong tab Profile, không phải tab đáy. -->
     <string name="tab_tickets">My tickets</string>
 
     <string name="tickets_title">My tickets</string>
@@ -111,6 +112,7 @@
     <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
     <string name="utilities_grid_settings">Settings</string>
     <string name="utilities_grid_settings_desc">Notifications &amp; version</string>
+    <string name="utilities_section_mine">My utilities</string>
     <string name="utilities_section_upcoming">Upcoming services</string>
     <string name="utilities_loading">Loading modules.</string>
     <string name="utilities_error_title">Could not load the list</string>

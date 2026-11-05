@@ -104,6 +104,17 @@ object UthDimens {
         /** Nền icon trong ô Tiện ích; vùng chạm do UthCard của Material 3 cung cấp. */
         val UtilityIconContainer: Dp = 44.dp
 
+        /**
+         * Ô Tiện ích hạng nhất (2 cột, có mô tả): nền icon 56.dp và glyph duotone 32.dp.
+         * Nhỏ hơn [UtilityIconContainer] sẽ biến tile thành nút icon, lớn hơn sẽ đẩy mô tả
+         * xuống quá màn hình đầu tiên.
+         */
+        val UtilityFeatureIconContainer: Dp = 56.dp
+        val UtilityFeatureIcon: Dp = 32.dp
+
+        /** Ô dịch vụ mật độ cao (3 cột, không mô tả): nền 44.dp, glyph [Icon] 24.dp. */
+        val UtilityServiceIconContainer: Dp = 44.dp
+
         /** Kích thước monogram logo UTH trên header thương hiệu. */
         val BrandLogoMonogram: Dp = 48.dp
 
