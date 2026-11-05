@@ -187,7 +187,7 @@ Get-ChildItem -Recurse -Filter *.kt | Where-Object Name -notin 'Dimens.kt','Colo
   Select-String -Pattern '[0-9]+\.dp|Color\(0x|[0-9.]+\.sp'
 ```
 
-Icon: `material-icons-core 1.7.8` đã đóng băng, chỉ dùng cho khung nav/badge. Icon thiết kế riêng vào `res/drawable` và gọi qua `painterResource`, không thêm dependency icon mới.
+Icon: `material-icons-core 1.7.8` đã đóng băng, chỉ dùng cho khung nav/badge. Icon nghiệp vụ lấy vector **two-tone** gốc từ `google/material-design-icons` (Apache-2.0), copy vào `res/drawable/ic_<chuc_nang>.xml`, bỏ `android:tint="?attr/colorControlNormal"` và thay `@android:color/white` bằng `#FF000000` để màu do `Icon(tint = …)` cấp theo token; gọi qua `painterResource`. Không thêm dependency icon, không tự viết path data. Spec mật độ lưới ở `docs/Design-system.md` mục 4.12.
 
 Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBadge`, không `Size14`), có comment nói dùng ở đâu, và cập nhật bảng tương ứng trong `docs/Design-system.md` mục 3.
 
