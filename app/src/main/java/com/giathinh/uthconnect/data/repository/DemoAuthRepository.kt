@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.AuthRepository
+import com.giathinh.uthconnect.domain.repository.SignUpResult
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -128,6 +129,19 @@ class DemoAuthRepository @Inject constructor(
             )) { "Contact storage failed" }
             profile(base)
         }
+    }
+
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+        faculty: String,
+    ): Result<SignUpResult> = runCatching {
+        SignUpResult(needsEmailConfirmation = true, email = email)
+    }
+
+    override suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
+        // Mo phong gui email dat lai mat khau thanh cong
     }
 
     companion object {

@@ -749,7 +749,7 @@ private fun ModernPasswordContent(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = enabled) {
-                        onAction(AuthAction.SelectStep(AuthScreenStep.Identifier))
+                        onAction(AuthAction.SelectStep(AuthScreenStep.FirstTimeSetup))
                     }
                     .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Xxs),
             )
@@ -957,6 +957,22 @@ private fun ModernFirstTimeSetupContent(
             color = extended.textSecondary,
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
+
+        OutlinedTextField(
+            value = uiState.identifier,
+            onValueChange = { onAction(AuthAction.IdentifierChanged(it)) },
+            modifier = Modifier.fillMaxWidth().testTag("auth_setup_identifier"),
+            enabled = enabled,
+            singleLine = true,
+            shape = textFieldShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = extended.surfaceSubtle,
+                unfocusedContainerColor = extended.surfaceSubtle,
+            ),
+            label = { Text(stringResource(R.string.auth_identifier_label)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
 
         OutlinedTextField(
             value = uiState.newStudentName,
