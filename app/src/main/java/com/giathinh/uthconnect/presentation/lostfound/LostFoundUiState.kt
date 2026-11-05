@@ -50,6 +50,7 @@ data class LostFoundUiState(
     val isError: Boolean = false,
     val selectedKind: ListingKind = ListingKind.LOST,
     val selectedCategory: ItemCategory = ItemCategory.ALL,
+    val searchQuery: String = "",
     val listings: List<LostFoundListing> = emptyList(),
     val isReportDialogOpen: Boolean = false,
     val reportForm: ReportFormState = ReportFormState(),
@@ -59,7 +60,11 @@ data class LostFoundUiState(
         get() = listings.filter { item ->
             val matchKind = item.kind == selectedKind
             val matchCategory = selectedCategory == ItemCategory.ALL || item.category == selectedCategory
-            matchKind && matchCategory
+            val matchQuery = searchQuery.isBlank() ||
+                item.title.contains(searchQuery, ignoreCase = true) ||
+                item.description.contains(searchQuery, ignoreCase = true) ||
+                item.location.contains(searchQuery, ignoreCase = true)
+            matchKind && matchCategory && matchQuery
         }
 
     val lostCount: Int get() = listings.count { it.kind == ListingKind.LOST }

@@ -6,6 +6,8 @@ import com.giathinh.uthconnect.domain.model.ListingKind
 sealed interface LostFoundAction {
     data class SelectKind(val kind: ListingKind) : LostFoundAction
     data class SelectCategory(val category: ItemCategory) : LostFoundAction
+    data class UpdateSearchQuery(val query: String) : LostFoundAction
+    data class ToggleResolveListing(val id: String) : LostFoundAction
     data object OpenReportDialog : LostFoundAction
     data object CloseReportDialog : LostFoundAction
     data class UpdateReportTitle(val title: String) : LostFoundAction

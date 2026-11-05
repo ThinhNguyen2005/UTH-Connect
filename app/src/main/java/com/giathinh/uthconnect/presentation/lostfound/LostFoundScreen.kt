@@ -1,5 +1,8 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -41,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -57,11 +64,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -70,6 +79,16 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
+
+private fun dialPhoneNumber(context: Context, phoneNumber: String) {
+    val cleanNumber = phoneNumber.replace(" ", "").trim()
+    if (cleanNumber.isNotBlank()) {
+        val intent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:$cleanNumber")
+        }
+        context.startActivity(intent)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +99,7 @@ fun LostFoundScreen(
     modifier: Modifier = Modifier,
     onCallContact: (String) -> Unit = {},
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var itemToDelete by remember { mutableStateOf<LostFoundListing?>(null) }
 
@@ -132,6 +152,47 @@ fun LostFoundScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            // Thanh tìm kiếm thời gian thực chuẩn Google Pill
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = { onAction(LostFoundAction.UpdateSearchQuery(it)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Xs),
+                placeholder = {
+                    Text(
+                        text = if (uiState.selectedKind == ListingKind.LOST) "Tìm đồ thất lạc (ví, thẻ sinh viên...)" else "Tìm đồ nhặt được...",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Tìm kiếm",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingIcon = {
+                    if (uiState.searchQuery.isNotBlank()) {
+                        IconButton(onClick = { onAction(LostFoundAction.UpdateSearchQuery("")) }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Xóa tìm kiếm",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Transparent,
+                ),
+            )
+
             // Tabs: Lost vs Found
             PrimaryTabRow(
                 selectedTabIndex = if (uiState.selectedKind == ListingKind.LOST) 0 else 1,
@@ -189,16 +250,28 @@ fun LostFoundScreen(
                     )
                 }
                 uiState.filteredListings.isEmpty() -> {
-                    UthEmptyState(
-                        title = stringResource(R.string.lostfound_empty_list),
-                        body = stringResource(R.string.lostfound_empty_desc),
-                        icon = Icons.Default.Search,
-                    )
+                    if (uiState.searchQuery.isNotBlank()) {
+                        UthEmptyState(
+                            title = "Không tìm thấy kết quả",
+                            body = "Không có tin đăng nào phù hợp với từ khóa \"${uiState.searchQuery}\". Hãy thử từ khóa khác.",
+                            icon = Icons.Default.Search,
+                        )
+                    } else {
+                        UthEmptyState(
+                            title = stringResource(R.string.lostfound_empty_list),
+                            body = stringResource(R.string.lostfound_empty_desc),
+                            icon = Icons.Default.Search,
+                        )
+                    }
                 }
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(UthDimens.Spacing.Lg),
+                        contentPadding = PaddingValues(
+                            start = UthDimens.Spacing.Lg,
+                            end = UthDimens.Spacing.Lg,
+                            bottom = 80.dp,
+                        ),
                         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
                     ) {
                         items(
@@ -207,7 +280,13 @@ fun LostFoundScreen(
                         ) { listing ->
                             LostFoundItemCard(
                                 listing = listing,
-                                onCallClick = onCallContact,
+                                onCallClick = { phone ->
+                                    onCallContact(phone)
+                                    dialPhoneNumber(context, phone)
+                                },
+                                onToggleResolve = {
+                                    onAction(LostFoundAction.ToggleResolveListing(listing.id))
+                                },
                                 onDeleteClick = { itemToDelete = listing },
                             )
                         }
@@ -288,11 +367,12 @@ private fun CategoryFilterRow(
 private fun LostFoundItemCard(
     listing: LostFoundListing,
     onCallClick: (String) -> Unit,
+    onToggleResolve: () -> Unit = {},
     onDeleteClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     UthCard(modifier = modifier.fillMaxWidth()) {
-        // Tag Kind & Date
+        // Tag Kind, Trạng thái giải quyết (Resolved) & Date
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -312,20 +392,53 @@ private fun LostFoundItemCard(
                 )
             }
 
-            Surface(
-                color = badgeBg,
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Text(
-                    text = stringResource(badgeTextRes),
-                    modifier = Modifier.padding(
-                        horizontal = UthDimens.Spacing.Sm,
-                        vertical = UthDimens.Spacing.Xs,
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = badgeTextColor,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = badgeBg,
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Text(
+                        text = stringResource(badgeTextRes),
+                        modifier = Modifier.padding(
+                            horizontal = UthDimens.Spacing.Sm,
+                            vertical = UthDimens.Spacing.Xs,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = badgeTextColor,
+                    )
+                }
+
+                // Huy hiệu trạng thái đã nhận lại / đã trao trả
+                if (listing.isResolved) {
+                    Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                    Surface(
+                        color = UthTheme.extendedColors.successContainer,
+                        shape = MaterialTheme.shapes.small,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = UthDimens.Spacing.Sm,
+                                vertical = UthDimens.Spacing.Xs,
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = UthTheme.extendedColors.onSuccessContainer,
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = if (listing.kind == ListingKind.LOST) "Đã nhận lại" else "Đã trao trả",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = UthTheme.extendedColors.onSuccessContainer,
+                            )
+                        }
+                    }
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -387,53 +500,85 @@ private fun LostFoundItemCard(
             }
         }
 
-        // Contact Row with Call button (only show if contactName or contactPhone is present)
-        if (listing.contactName.isNotBlank() || listing.contactPhone.isNotBlank()) {
-            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (listing.contactName.isNotBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(UthDimens.Size.IconInline),
-                            tint = MaterialTheme.colorScheme.outline,
-                        )
-                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
-                        Text(
-                            text = listing.contactName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
-                }
+        // Contact Name
+        if (listing.contactName.isNotBlank()) {
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconInline),
+                    tint = MaterialTheme.colorScheme.outline,
+                )
+                Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
+                Text(
+                    text = "Người liên hệ: ${listing.contactName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
-                if (listing.contactPhone.isNotBlank()) {
-                    OutlinedButton(
-                        onClick = { onCallClick(listing.contactPhone) },
-                        shape = MaterialTheme.shapes.small,
-                        contentPadding = PaddingValues(
-                            horizontal = UthDimens.Spacing.Md,
-                            vertical = UthDimens.Spacing.Xs,
-                        ),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Call,
-                            contentDescription = null,
-                            modifier = Modifier.size(UthDimens.Size.IconBadge),
-                        )
-                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                        Text(
-                            text = stringResource(R.string.lostfound_call_contact),
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
+        // Action Buttons Row: Đánh dấu đã nhận lại & Gọi điện
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Nút đánh dấu đã nhận lại / đã trao trả
+            OutlinedButton(
+                onClick = onToggleResolve,
+                shape = MaterialTheme.shapes.small,
+                contentPadding = PaddingValues(
+                    horizontal = UthDimens.Spacing.Sm,
+                    vertical = UthDimens.Spacing.Xs,
+                ),
+                colors = if (listing.isResolved) {
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = UthTheme.extendedColors.onSuccessContainer,
+                        containerColor = UthTheme.extendedColors.successContainer.copy(alpha = 0.3f),
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                },
+            ) {
+                Icon(
+                    imageVector = if (listing.isResolved) Icons.Default.CheckCircle else Icons.Default.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (listing.isResolved) {
+                        if (listing.kind == ListingKind.LOST) "Đã nhận lại" else "Đã trao trả"
+                    } else {
+                        if (listing.kind == ListingKind.LOST) "Đánh dấu đã tìm thấy" else "Đánh dấu đã trả đồ"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+
+            // Nút gọi điện
+            if (listing.contactPhone.isNotBlank()) {
+                OutlinedButton(
+                    onClick = { onCallClick(listing.contactPhone) },
+                    shape = MaterialTheme.shapes.small,
+                    contentPadding = PaddingValues(
+                        horizontal = UthDimens.Spacing.Md,
+                        vertical = UthDimens.Spacing.Xs,
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        modifier = Modifier.size(UthDimens.Size.IconBadge),
+                    )
+                    Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                    Text(
+                        text = stringResource(R.string.lostfound_call_contact),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }
