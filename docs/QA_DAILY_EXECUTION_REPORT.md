@@ -2,7 +2,7 @@
 
 **Ngày thực hiện:** 04/11/2026  
 **Dự án:** UTH Connect (Android Application)  
-**Nhánh Git:** `feature/auth-phu` | **Commit:** `f537c8c` (`refactor(auth): clean up unused import in AuthViewModel`)  
+**Nhánh Git:** `feature/auth-phu` | **Commit:** `9012625` (`docs(qa): add comprehensive daily execution report...`)  
 **Người thực hiện:** Anh Phú (P0 - Highest Priority)
 
 ---
@@ -58,20 +58,113 @@ Test Coverage:  LoginValidator, Auth3Validator, SignInUseCase, ResetPasswordUseC
 
 ---
 
-## 4. Hình ảnh Giao diện & Bằng chứng Chứng minh (Visual Evidence)
+## 4. Trực quan hóa Sơ đồ & Bằng chứng Giao diện (Visual Evidence & Flowcharts)
 
-### 📸 Màn hình 1: Đăng nhập / Đăng ký (`AuthScreen.kt`)
-- **Mô tả:** Màn hình chính hỗ trợ Tab "Welcome back" (Đăng nhập) & "Sign up" (Đăng ký), nhập email `@ut.edu.vn`, mật khẩu có toggle Ẩn/Hiện, nút Ghi nhớ đăng nhập, Quên mật khẩu, nút Submit và nút Đăng nhập bằng Google (Credential Manager).
+### 📊 Sơ đồ Luồng Xác thực End-to-End (Auth & Claims Architecture Flowchart)
+
+```mermaid
+flowchart TD
+    A["Sinh viên mở UTH Connect"] --> B{"Đã đăng nhập Firebase?"}
+    B -- Chưa --> C["AuthScreen: Đăng nhập / Đăng ký @ut.edu.vn hoặc Google"]
+    C --> D["Gửi Credential đến Firebase Auth"]
+    D --> E{"Email đã Verified?"}
+    E -- Chưa --> F["VerifyEmailScreen (Chờ xác thực email)"]
+    F --> G["Sinh viên bấm link kích hoạt trong Email"]
+    G --> H["Bấm 'Tôi đã xác thực' (gọi verifyUthAccount Callable)"]
+    H --> I["Cloud Function kiểm tra Admin Record & Atomic Lock"]
+    I --> J["Set Custom Claim uthVerified = true, role = STUDENT"]
+    E -- Rồi --> K{"Có Claim uthVerified = true?"}
+    J --> K
+    K -- Đã có --> L["Main App Feed (Profile Badge Verified)"]
+    K -- Chưa --> F
+    B -- Rồi --> K
+```
 
 ---
 
-### 📸 Màn hình 2: Xác thực Email Sinh viên (`VerifyEmailScreen.kt`)
-- **Mô tả:** Màn hình hiển thị email cần xác thực, nút "I HAVE VERIFIED - CHECK AGAIN" để kiểm tra claim server, nút "Resend verification email" có đếm ngược cooldown 60s, và nút Sign out.
+### 📸 Minh họa Giao diện & Bố cục Các Màn hình (UI Component Layouts)
+
+#### 1. Màn hình Đăng nhập / Đăng ký (`AuthScreen.kt`)
+
+```text
++-------------------------------------------------------------+
+|  UTH Connect                                                |
+|  Sign in to your student account                            |
+|                                                             |
+|  [ Welcome back (Tab 1) ]        [ Sign up (Tab 2) ]       |
+|  ---------------------------------------------------------  |
+|  UTH account                                                |
+|  +-------------------------------------------------------+  |
+|  | Email @ut.edu.vn: [ student@ut.edu.vn                 ] |  |
+|  +-------------------------------------------------------+  |
+|  +-------------------------------------------------------+  |
+|  | Password: [ ••••••••••••                        ] Show|  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  [x] Remember me                      [ Forgot password? ]  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |                     [ SIGN IN ]                       |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |                Sign in with Google                    |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  Sign in with your provisioned and verified account.        |
++-------------------------------------------------------------+
+```
 
 ---
 
-### 📸 Màn hình 3: Quên Mật khẩu (`ForgotPasswordScreen.kt`)
-- **Mô tả:** Màn hình nhập email sinh viên để gửi liên kết reset. Tuân thủ Email Enumeration Protection (luôn thông báo trung lập).
+#### 2. Màn hình Xác thực Email (`VerifyEmailScreen.kt`)
+
+```text
++-------------------------------------------------------------+
+|  Verify university email                                    |
+|                                                             |
+|  student@ut.edu.vn                                          |
+|                                                             |
+|  Check your inbox and spam folder, open the verification    |
+|  link, then return here. Access requires server verification |
+|  of your email and claims.                                  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |          I HAVE VERIFIED – CHECK AGAIN                |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |            Resend verification email (60s)             |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |                      Sign out                         |  |
+|  +-------------------------------------------------------+  |
++-------------------------------------------------------------+
+```
+
+---
+
+#### 3. Màn hình Quên Mật khẩu (`ForgotPasswordScreen.kt`)
+
+```text
++-------------------------------------------------------------+
+|  Forgot password                                            |
+|                                                             |
+|  Enter your university email to receive a password reset    |
+|  link.                                                      |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  | Email @ut.edu.vn: [ student@ut.edu.vn                 ] |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  |                  SEND RESET LINK                      |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
+|  < Back                                                     |
++-------------------------------------------------------------+
+```
 
 ---
 
