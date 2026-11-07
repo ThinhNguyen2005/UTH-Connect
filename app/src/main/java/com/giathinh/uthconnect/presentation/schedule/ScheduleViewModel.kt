@@ -117,7 +117,7 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.OpenEventDetails -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
-                if (event.id !in registeredEventIds || LocalDateTime.now(clock) >= event.endAt) return
+                if (event.id !in registeredEventIds || !event.canOpenTicketAt(LocalDateTime.now(clock))) return
                 ticketQrJob?.cancel()
                 state.update {
                     it.copy(selectedEvent = event, ticketQrToken = null, ticketQrFailed = false)
@@ -206,6 +206,7 @@ class ScheduleViewModel @Inject constructor(
             endAt = endAt,
             registration = if (event.id in registeredEventIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
             accent = if (event.id in registeredEventIds) EventAccent.PRIMARY else EventAccent.WARNING,
+            status = event.status,
             session = when (startAt.hour) {
                 in 0..11 -> "Morning"
                 in 12..17 -> "Afternoon"

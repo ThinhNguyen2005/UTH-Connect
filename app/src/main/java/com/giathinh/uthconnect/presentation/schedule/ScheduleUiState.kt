@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.schedule
 
 import com.giathinh.uthconnect.domain.model.Course
+import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDate
@@ -50,9 +51,17 @@ data class ScheduleEvent(
     val endAt: LocalDateTime,
     val registration: EventRegistration,
     val accent: EventAccent,
+    val status: EventStatus = EventStatus.PUBLISHED,
     val trainingPoints: String = "",
     val session: String = "",
 )
+
+fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean =
+    registration != EventRegistration.NOT_REGISTERED &&
+        (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
+        !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
+
+private const val TICKET_CHECK_IN_GRACE_MINUTES = 30L
 
 enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
 enum class EventAccent { SUCCESS, PRIMARY, WARNING }

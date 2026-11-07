@@ -548,6 +548,7 @@ private fun CampusEventCard(
     val ext = UthTheme.extendedColors
 
     val isEnded = now >= event.endAt
+    val canOpenTicket = event.canOpenTicketAt(now)
     val isOngoing = now >= event.startAt && now < event.endAt
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
@@ -716,11 +717,14 @@ private fun CampusEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
-                        isEnded -> RegistrationHint(
-                            icon = Icons.Filled.DateRange,
-                            label = stringResource(R.string.event_ended),
-                            tint = colors.onSurfaceVariant,
-                        )
+                        isEnded -> {
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_ended),
+                                tint = colors.onSurfaceVariant,
+                            )
+                            if (canOpenTicket) EventDetailsButton(onClick = { onViewDetails(event) })
+                        }
 
                         isCheckedIn -> {
                             RegistrationHint(
