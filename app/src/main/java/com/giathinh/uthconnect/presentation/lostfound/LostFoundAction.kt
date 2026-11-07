@@ -22,6 +22,9 @@ sealed interface LostFoundAction {
         val mimeType: String?,
         val previewUri: String?,
     ) : LostFoundAction {
+        /**
+         * Compares equality including content equality of the underlying [bytes] array.
+         */
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is UpdateReportImage) return false
@@ -30,6 +33,9 @@ sealed interface LostFoundAction {
                 previewUri == other.previewUri
         }
 
+        /**
+         * Calculates hashcode taking the [bytes] array contents into account.
+         */
         override fun hashCode(): Int {
             var result = bytes?.contentHashCode() ?: 0
             result = 31 * result + (mimeType?.hashCode() ?: 0)

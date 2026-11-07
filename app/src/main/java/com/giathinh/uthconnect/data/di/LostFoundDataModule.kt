@@ -15,6 +15,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object LostFoundDataModule {
 
+    /**
+     * Provides the active [LostFoundRepository] implementation based on [BuildConfig.USE_SUPABASE].
+     */
     @Provides
     @Singleton
     fun provideLostFoundRepository(

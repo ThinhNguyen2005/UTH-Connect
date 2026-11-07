@@ -292,12 +292,22 @@ class LostFoundViewModel @Inject constructor(
 }
 
 /**
+ * Traverses the throwable cause hierarchy to find an underlying [SupabaseHttpException] if present.
+ */
+private tailrec fun Throwable.findSupabaseHttpException(): SupabaseHttpException? = when (this) {
+    is SupabaseHttpException -> this
+    else -> cause?.findSupabaseHttpException()
+}
+
+/**
  * Checks if the throwable corresponds to an unauthenticated session (HTTP 401).
  */
-private fun Throwable.isAuthenticationError(): Boolean = when (this) {
-    is SupabaseHttpException -> status == java.net.HttpURLConnection.HTTP_UNAUTHORIZED
-
-    else -> message?.contains("sign-in required", ignoreCase = true) == true ||
+private fun Throwable.isAuthenticationError(): Boolean {
+    val httpException = findSupabaseHttpException()
+    if (httpException != null) {
+        return httpException.status == java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+    }
+    return message?.contains("sign-in required", ignoreCase = true) == true ||
         message?.contains("session expired", ignoreCase = true) == true ||
         message?.contains("AuthRequired", ignoreCase = true) == true
 }
@@ -305,7 +315,7 @@ private fun Throwable.isAuthenticationError(): Boolean = when (this) {
 /**
  * Checks if the throwable corresponds to insufficient access permission (HTTP 403 Forbidden).
  */
-private fun Throwable.isForbiddenError(): Boolean = when (this) {
-    is SupabaseHttpException -> status == java.net.HttpURLConnection.HTTP_FORBIDDEN
-    else -> false
+private fun Throwable.isForbiddenError(): Boolean {
+    val httpException = findSupabaseHttpException()
+    return httpException?.status == java.net.HttpURLConnection.HTTP_FORBIDDEN
 }

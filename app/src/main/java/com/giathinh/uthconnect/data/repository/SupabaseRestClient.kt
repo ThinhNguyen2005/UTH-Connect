@@ -33,6 +33,9 @@ class SupabaseRestClient @Inject constructor() {
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
     val userIdOrNull: String? get() = credentials?.userId
 
+    /**
+     * Authenticates a user with email and password, establishing an active session.
+     */
     suspend fun signIn(email: String, password: String, replaceExisting: Boolean = true) {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
@@ -49,6 +52,9 @@ class SupabaseRestClient @Inject constructor() {
         credentials = parseCredentials(data)
     }
 
+    /**
+     * Registers a new user account with student credentials and metadata.
+     */
     suspend fun signUp(
         email: String,
         password: String,
@@ -75,12 +81,18 @@ class SupabaseRestClient @Inject constructor() {
         return response
     }
 
+    /**
+     * Initiates a password recovery workflow by dispatching a reset email.
+     */
     suspend fun recoverPassword(email: String, redirectTo: String = "uthconnect://auth/reset-password") {
         val encodedRedirect = urlEncode(redirectTo)
         val payload = buildJsonObject { put("email", email) }
         send("/auth/v1/recover?redirect_to=$encodedRedirect", "POST", payload, bearer = null)
     }
 
+    /**
+     * Clears local credentials and invalidates the remote session token.
+     */
     suspend fun signOut() {
         val old = credentials
         credentials = null
@@ -157,8 +169,21 @@ class SupabaseRestClient @Inject constructor() {
         preferRepresentation = true,
     )
 
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+    /**
+     * Invokes a Postgres Remote Procedure Call (RPC) function via PostgREST.
+     */
+    suspend fun rpc(
+        function: String,
+        params: JsonObject,
+    ): JsonElement = authorized(
+        path = "/rest/v1/rpc/$function",
+        method = "POST",
+        body = params,
+    )
 
+    /**
+     * Updates the password of the authenticated user or token holder.
+     */
     suspend fun updatePassword(password: String): JsonElement {
         val token = recoveryToken ?: freshToken()
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)

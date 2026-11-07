@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
@@ -439,10 +440,10 @@ private fun ReportImagePicker(
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
-                val mimeType = withContext(Dispatchers.IO) {
+                val rawMime = withContext(Dispatchers.IO) {
                     context.contentResolver.getType(uri) ?: "image/jpeg"
                 }
-                val bytes = withContext(Dispatchers.IO) {
+                val processed = withContext(Dispatchers.IO) {
                     runCatching {
                         context.contentResolver.openInputStream(uri)?.use { stream ->
                             val maxBytes = 5 * 1024 * 1024
@@ -455,12 +456,32 @@ private fun ReportImagePicker(
                                 buffer.write(chunk, 0, read)
                                 read = stream.read(chunk)
                             }
-                            if (read == -1) buffer.toByteArray() else null
+                            if (read == -1) {
+                                val rawBytes = buffer.toByteArray()
+                                val isSupported = rawMime.equals("image/jpeg", ignoreCase = true) ||
+                                    rawMime.equals("image/jpg", ignoreCase = true) ||
+                                    rawMime.equals("image/png", ignoreCase = true) ||
+                                    rawMime.equals("image/webp", ignoreCase = true)
+                                if (isSupported) {
+                                    Pair(rawBytes, rawMime)
+                                } else {
+                                    val bitmap = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size)
+                                    if (bitmap != null) {
+                                        val outStream = java.io.ByteArrayOutputStream()
+                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outStream)
+                                        Pair(outStream.toByteArray(), "image/jpeg")
+                                    } else {
+                                        Pair(rawBytes, "image/jpeg")
+                                    }
+                                }
+                            } else {
+                                null
+                            }
                         }
                     }.getOrNull()
                 }
-                if (bytes != null) {
-                    onAction(LostFoundAction.UpdateReportImage(bytes, mimeType, uri.toString()))
+                if (processed != null) {
+                    onAction(LostFoundAction.UpdateReportImage(processed.first, processed.second, uri.toString()))
                 } else {
                     Toast.makeText(
                         context,

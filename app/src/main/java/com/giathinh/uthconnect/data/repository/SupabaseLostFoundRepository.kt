@@ -46,14 +46,18 @@ class SupabaseLostFoundRepository @Inject constructor(
     ): Result<LostFoundListing> = runCatching {
         var uploadedImageUrl: String? = item.imageUrl
         if (imageBytes != null && imageBytes.isNotEmpty()) {
-            val extension = if (imageMimeType?.contains("png", ignoreCase = true) == true) "png" else "jpg"
+            val (extension, resolvedMime) = when {
+                imageMimeType?.contains("png", ignoreCase = true) == true -> "png" to "image/png"
+                imageMimeType?.contains("webp", ignoreCase = true) == true -> "webp" to "image/webp"
+                else -> "jpg" to "image/jpeg"
+            }
             val filename = "${UUID.randomUUID()}.$extension"
             val bucketPath = "items/$filename"
             uploadedImageUrl = client.uploadStorage(
                 bucket = "lost-found",
                 path = bucketPath,
                 bytes = imageBytes,
-                mimeType = imageMimeType ?: "image/jpeg",
+                mimeType = resolvedMime,
             )
         }
 

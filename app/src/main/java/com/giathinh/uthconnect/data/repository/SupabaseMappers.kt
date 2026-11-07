@@ -29,14 +29,29 @@ private val TICKET_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm")
         .withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
 
+/**
+ * Validates and normalizes a string as a standard UUID representation.
+ */
 internal fun uuid(id: String): String = UUID.fromString(id).toString()
 
+/**
+ * URL-encodes a string using UTF-8 encoding.
+ */
 internal fun urlEncode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 
+/**
+ * Retrieves an optional string property from a [JsonObject].
+ */
 internal fun JsonObject.string(name: String): String? = (get(name) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
+/**
+ * Retrieves an integer property from a [JsonObject], defaulting to 0 when absent.
+ */
 internal fun JsonObject.int(name: String): Int = (get(name) as? JsonPrimitive)?.intOrNull ?: 0
 
+/**
+ * Retrieves a boolean property from a [JsonObject], defaulting to false when absent.
+ */
 internal fun JsonObject.bool(name: String): Boolean = (get(name) as? JsonPrimitive)?.booleanOrNull ?: false
 
 /**
