@@ -132,6 +132,96 @@ class LostFoundViewModelTest {
     }
 
     /**
+     * Verifies `toggleResolveListing_unauthorized_revertsOptimisticUpdateAndSetsAuthRequired` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_unauthorized_revertsOptimisticUpdateAndSetsAuthRequired`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(
+                com.giathinh.uthconnect.data.repository.SupabaseHttpException(
+                    java.net.HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "Unauthorized",
+                ),
+            )
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on 401 error", currentItem.isResolved)
+        assertEquals(UserMessage.AuthRequired, viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `toggleResolveListing_forbidden_revertsOptimisticUpdateAndSetsForbidden` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_forbidden_revertsOptimisticUpdateAndSetsForbidden`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(
+                com.giathinh.uthconnect.data.repository.SupabaseHttpException(
+                    java.net.HttpURLConnection.HTTP_FORBIDDEN,
+                    "Forbidden",
+                ),
+            )
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on 403 error", currentItem.isResolved)
+        assertEquals(UserMessage.Forbidden, viewModel.uiState.value.userMessage)
+    }
+
+    /**
      * Verifies `updateAndRemoveReportImage_modifiesFormStateCorrectly` behavior and invariants.
      */
     @Test
