@@ -39,6 +39,9 @@ internal fun JsonObject.int(name: String): Int = (get(name) as? JsonPrimitive)?.
 
 internal fun JsonObject.bool(name: String): Boolean = (get(name) as? JsonPrimitive)?.booleanOrNull ?: false
 
+/**
+ * Maps a PostgREST JSON object representing an event row to domain [Event].
+ */
 internal fun JsonObject.toDomainEvent(): Event = Event(
     id = requireNotNull(string("id")) { "Missing event ID" },
     title = string("title").orEmpty(),
@@ -55,6 +58,9 @@ internal fun JsonObject.toDomainEvent(): Event = Event(
     coverUrl = string("banner_url"),
 )
 
+/**
+ * Maps a PostgREST JSON object representing a student profile to domain [StudentProfile].
+ */
 internal fun JsonObject.toDomainProfile(): StudentProfile {
     val studentId = string("student_id")
     require(!studentId.isNullOrBlank() && bool("student_id_verified")) {
@@ -80,6 +86,9 @@ internal fun JsonObject.toDomainProfile(): StudentProfile {
     )
 }
 
+/**
+ * Maps a PostgREST JSON object to domain [Ticket].
+ */
 internal fun JsonObject.toDomainTicket(
     studentId: String,
     userId: String,

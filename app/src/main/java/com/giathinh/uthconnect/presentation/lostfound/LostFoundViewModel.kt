@@ -80,10 +80,14 @@ class LostFoundViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         toggleResolveListingUseCase(action.id, newStatus).onFailure { error ->
-                            val isAuthErr = error.isAuthenticationError()
                             _uiState.update { current ->
+                                val userMsg = when {
+                                    error.isAuthenticationError() -> UserMessage.AuthRequired
+                                    error.isForbiddenError() -> UserMessage.Forbidden
+                                    else -> current.userMessage
+                                }
                                 current.copy(
-                                    userMessage = if (isAuthErr) UserMessage.AuthRequired else current.userMessage,
+                                    userMessage = userMsg,
                                     listings = current.listings.map { item ->
                                         if (item.id == action.id) {
                                             item.copy(isResolved = !newStatus)
@@ -270,11 +274,15 @@ class LostFoundViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    val isAuthErr = error.isAuthenticationError()
+                    val userMsg = when {
+                        error.isAuthenticationError() -> UserMessage.AuthRequired
+                        error.isForbiddenError() -> UserMessage.Forbidden
+                        else -> UserMessage.PostFailed
+                    }
                     _uiState.update {
                         it.copy(
                             reportForm = it.reportForm.copy(isSubmitting = false),
-                            userMessage = if (isAuthErr) UserMessage.AuthRequired else UserMessage.PostFailed,
+                            userMessage = userMsg,
                         )
                     }
                 },
@@ -283,13 +291,21 @@ class LostFoundViewModel @Inject constructor(
     }
 }
 
+/**
+ * Checks if the throwable corresponds to an unauthenticated session (HTTP 401).
+ */
 private fun Throwable.isAuthenticationError(): Boolean = when (this) {
-    is SupabaseHttpException -> status in listOf(
-        java.net.HttpURLConnection.HTTP_UNAUTHORIZED,
-        java.net.HttpURLConnection.HTTP_FORBIDDEN,
-    )
+    is SupabaseHttpException -> status == java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 
     else -> message?.contains("sign-in required", ignoreCase = true) == true ||
         message?.contains("session expired", ignoreCase = true) == true ||
         message?.contains("AuthRequired", ignoreCase = true) == true
+}
+
+/**
+ * Checks if the throwable corresponds to insufficient access permission (HTTP 403 Forbidden).
+ */
+private fun Throwable.isForbiddenError(): Boolean = when (this) {
+    is SupabaseHttpException -> status == java.net.HttpURLConnection.HTTP_FORBIDDEN
+    else -> false
 }

@@ -213,6 +213,9 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /**
+     * Executes an authorized HTTP request adding Bearer and API key headers.
+     */
     private suspend fun authorized(
         path: String,
         method: String,
@@ -228,6 +231,9 @@ class SupabaseRestClient @Inject constructor() {
         return send(path, method, body, accessToken, preferRepresentation)
     }
 
+    /**
+     * Retrieves an active access token, refreshing if expiring soon.
+     */
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
@@ -252,6 +258,9 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /**
+     * Parses authentication tokens and expiration timestamp from GoTrue JSON response.
+     */
     private fun parseCredentials(payload: JsonObject): Credentials {
         val id = payload["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content
             ?: error("Auth response missing user ID")
@@ -263,6 +272,9 @@ class SupabaseRestClient @Inject constructor() {
         return Credentials(id, access, refresh, System.currentTimeMillis() + expiresIn * 1000L)
     }
 
+    /**
+     * Performs a raw HTTP request to Supabase endpoints.
+     */
     private suspend fun send(
         path: String,
         method: String,

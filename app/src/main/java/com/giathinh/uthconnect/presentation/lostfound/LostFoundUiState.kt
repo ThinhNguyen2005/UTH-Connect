@@ -52,6 +52,10 @@ sealed interface UserMessage {
     data object AuthRequired : UserMessage {
         override val messageRes: Int = R.string.common_error_auth_required
     }
+
+    data object Forbidden : UserMessage {
+        override val messageRes: Int = R.string.common_error_forbidden
+    }
 }
 
 /**
