@@ -443,7 +443,7 @@ private fun ReportImagePicker(
                 val rawMime = withContext(Dispatchers.IO) {
                     context.contentResolver.getType(uri) ?: "image/jpeg"
                 }
-                val processed = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     runCatching {
                         context.contentResolver.openInputStream(uri)?.use { stream ->
                             val maxBytes = 5 * 1024 * 1024
@@ -456,38 +456,73 @@ private fun ReportImagePicker(
                                 buffer.write(chunk, 0, read)
                                 read = stream.read(chunk)
                             }
-                            if (read == -1) {
+                            if (read != -1) {
+                                ImageProcessResult.TooLarge
+                            } else {
                                 val rawBytes = buffer.toByteArray()
                                 val isSupported = rawMime.equals("image/jpeg", ignoreCase = true) ||
                                     rawMime.equals("image/jpg", ignoreCase = true) ||
                                     rawMime.equals("image/png", ignoreCase = true) ||
                                     rawMime.equals("image/webp", ignoreCase = true)
                                 if (isSupported) {
-                                    Pair(rawBytes, rawMime)
+                                    ImageProcessResult.Success(rawBytes, rawMime)
                                 } else {
-                                    val bitmap = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size)
+                                    val boundsOptions = BitmapFactory.Options().apply {
+                                        inJustDecodeBounds = true
+                                    }
+                                    BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, boundsOptions)
+                                    var sampleSize = 1
+                                    val maxDim = 1920
+                                    while (boundsOptions.outWidth / sampleSize > maxDim ||
+                                        boundsOptions.outHeight / sampleSize > maxDim
+                                    ) {
+                                        sampleSize *= 2
+                                    }
+                                    val decodeOptions = BitmapFactory.Options().apply {
+                                        inSampleSize = sampleSize
+                                    }
+                                    val bitmap = BitmapFactory.decodeByteArray(
+                                        rawBytes,
+                                        0,
+                                        rawBytes.size,
+                                        decodeOptions,
+                                    )
                                     if (bitmap != null) {
-                                        val outStream = java.io.ByteArrayOutputStream()
-                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outStream)
-                                        Pair(outStream.toByteArray(), "image/jpeg")
+                                        try {
+                                            val outStream = java.io.ByteArrayOutputStream()
+                                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outStream)
+                                            ImageProcessResult.Success(outStream.toByteArray(), "image/jpeg")
+                                        } finally {
+                                            bitmap.recycle()
+                                        }
                                     } else {
-                                        Pair(rawBytes, "image/jpeg")
+                                        ImageProcessResult.ReadFailed
                                     }
                                 }
-                            } else {
-                                null
                             }
-                        }
-                    }.getOrNull()
+                        } ?: ImageProcessResult.ReadFailed
+                    }.getOrElse { ImageProcessResult.ReadFailed }
                 }
-                if (processed != null) {
-                    onAction(LostFoundAction.UpdateReportImage(processed.first, processed.second, uri.toString()))
-                } else {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.lostfound_image_too_large),
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                when (result) {
+                    is ImageProcessResult.Success -> {
+                        onAction(LostFoundAction.UpdateReportImage(result.bytes, result.mimeType, uri.toString()))
+                    }
+
+                    ImageProcessResult.TooLarge -> {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.lostfound_image_too_large),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+
+                    ImageProcessResult.ReadFailed -> {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.lostfound_image_read_error),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 }
             }
         }
@@ -606,4 +641,13 @@ private fun ReportImagePicker(
             }
         }
     }
+}
+
+/**
+ * Result representing outcome of user image selection and decoding.
+ */
+private sealed interface ImageProcessResult {
+    data class Success(val bytes: ByteArray, val mimeType: String) : ImageProcessResult
+    data object TooLarge : ImageProcessResult
+    data object ReadFailed : ImageProcessResult
 }

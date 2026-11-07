@@ -222,6 +222,46 @@ class LostFoundViewModelTest {
     }
 
     /**
+     * Verifies `toggleResolveListing_genericError_revertsOptimisticUpdateAndSetsUpdateStatusFailed` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_genericError_revertsOptimisticUpdateAndSetsUpdateStatusFailed`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(java.io.IOException("Network unavailable"))
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on network failure", currentItem.isResolved)
+        assertEquals(UserMessage.UpdateStatusFailed, viewModel.uiState.value.userMessage)
+    }
+
+    /**
      * Verifies `updateAndRemoveReportImage_modifiesFormStateCorrectly` behavior and invariants.
      */
     @Test

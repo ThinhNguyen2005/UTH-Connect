@@ -84,7 +84,7 @@ class LostFoundViewModel @Inject constructor(
                                 val userMsg = when {
                                     error.isAuthenticationError() -> UserMessage.AuthRequired
                                     error.isForbiddenError() -> UserMessage.Forbidden
-                                    else -> current.userMessage
+                                    else -> UserMessage.UpdateStatusFailed
                                 }
                                 current.copy(
                                     userMessage = userMsg,

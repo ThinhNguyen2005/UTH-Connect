@@ -239,6 +239,38 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /**
+     * Deletes an object from a Supabase Storage bucket.
+     *
+     * @param bucket Target bucket name.
+     * @param path Path within the bucket.
+     */
+    suspend fun deleteStorage(
+        bucket: String,
+        path: String,
+    ): Unit = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val token = freshToken()
+        val cleanPath = path.trimStart('/')
+        val url = URL("${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$cleanPath")
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "DELETE"
+            connectTimeout = STORAGE_TIMEOUT_MILLIS
+            readTimeout = STORAGE_TIMEOUT_MILLIS
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            setRequestProperty("Authorization", "Bearer $token")
+        }
+        try {
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, errorBody)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
      * Executes an authorized HTTP request adding Bearer and API key headers.
      */
     private suspend fun authorized(

@@ -43,33 +43,41 @@ class SupabaseLostFoundRepository @Inject constructor(
         item: LostFoundListing,
         imageBytes: ByteArray?,
         imageMimeType: String?,
-    ): Result<LostFoundListing> = runCatching {
-        var uploadedImageUrl: String? = item.imageUrl
-        if (imageBytes != null && imageBytes.isNotEmpty()) {
-            val (extension, resolvedMime) = when {
-                imageMimeType?.contains("png", ignoreCase = true) == true -> "png" to "image/png"
-                imageMimeType?.contains("webp", ignoreCase = true) == true -> "webp" to "image/webp"
-                else -> "jpg" to "image/jpeg"
+    ): Result<LostFoundListing> {
+        var uploadedBucketPath: String? = null
+        return runCatching {
+            var uploadedImageUrl: String? = item.imageUrl
+            if (imageBytes != null && imageBytes.isNotEmpty()) {
+                val (extension, resolvedMime) = when {
+                    imageMimeType?.contains("png", ignoreCase = true) == true -> "png" to "image/png"
+                    imageMimeType?.contains("webp", ignoreCase = true) == true -> "webp" to "image/webp"
+                    else -> "jpg" to "image/jpeg"
+                }
+                val filename = "${UUID.randomUUID()}.$extension"
+                val bucketPath = "items/$filename"
+                uploadedImageUrl = client.uploadStorage(
+                    bucket = "lost-found",
+                    path = bucketPath,
+                    bytes = imageBytes,
+                    mimeType = resolvedMime,
+                )
+                uploadedBucketPath = bucketPath
             }
-            val filename = "${UUID.randomUUID()}.$extension"
-            val bucketPath = "items/$filename"
-            uploadedImageUrl = client.uploadStorage(
-                bucket = "lost-found",
-                path = bucketPath,
-                bytes = imageBytes,
-                mimeType = resolvedMime,
-            )
-        }
 
-        val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
-        val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
-        val response = client.insertTable("lost_found_items", payload)
-        val createdRow = when (response) {
-            is JsonArray -> response.firstOrNull()?.jsonObject
-            is JsonObject -> response
-            else -> null
-        } ?: error("Failed to insert lost & found item: empty response")
-        createdRow.toDomainLostFoundListing()
+            val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
+            val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
+            val response = client.insertTable("lost_found_items", payload)
+            val createdRow = when (response) {
+                is JsonArray -> response.firstOrNull()?.jsonObject
+                is JsonObject -> response
+                else -> null
+            } ?: error("Failed to insert lost & found item: empty response")
+            createdRow.toDomainLostFoundListing()
+        }.onFailure {
+            if (uploadedBucketPath != null) {
+                runCatching { client.deleteStorage("lost-found", uploadedBucketPath) }
+            }
+        }
     }
 
     /**
