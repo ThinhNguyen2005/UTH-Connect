@@ -291,19 +291,12 @@ fun LostFoundScreen(
                             LostFoundItemCard(
                                 listing = listing,
                                 onCallClick = { phone ->
-<<<<<<< HEAD
                                     val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
                                     context.startActivity(dialIntent)
                                 },
-=======
-                                    onCallContact(phone)
-                                    dialPhoneNumber(context, phone)
-                                },
                                 onToggleResolve = {
                                     onAction(LostFoundAction.ToggleResolveListing(listing.id))
-                                },
-                                onDeleteClick = { itemToDelete = listing },
->>>>>>> 9079ef3 (feat(lostfound): add real-time search bar and item resolved status management for KAN-80)
+                                }
                             )
                         }
                     }
@@ -360,11 +353,7 @@ private fun CategoryFilterRow(
 private fun LostFoundItemCard(
     listing: LostFoundListing,
     onCallClick: (String) -> Unit,
-<<<<<<< HEAD
-=======
     onToggleResolve: () -> Unit = {},
-    onDeleteClick: (String) -> Unit = {},
->>>>>>> 9079ef3 (feat(lostfound): add real-time search bar and item resolved status management for KAN-80)
     modifier: Modifier = Modifier,
 ) {
     UthCard(modifier = modifier.fillMaxWidth()) {
@@ -503,6 +492,7 @@ private fun LostFoundItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
 
         // Contact Name
         if (listing.contactName.isNotBlank()) {

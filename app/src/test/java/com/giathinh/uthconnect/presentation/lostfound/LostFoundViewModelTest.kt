@@ -70,7 +70,7 @@ class LostFoundViewModelTest {
 
     @Test
     fun `updateSearchQuery_filtersListingsCorrectly`() {
-        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
+        val viewModel = createViewModel(InMemoryLostFoundRepository())
 
         // Mặc định tab LOST (có 4 bài)
         assertEquals(4, viewModel.uiState.value.filteredListings.size)
@@ -97,7 +97,7 @@ class LostFoundViewModelTest {
 
     @Test
     fun `toggleResolveListing_switchesResolvedStatus`() {
-        val viewModel = createViewModel(InMemoryLostFoundRepository(InMemoryLostFoundRepository.sampleListings))
+        val viewModel = createViewModel(InMemoryLostFoundRepository())
         val firstItem = viewModel.uiState.value.listings.first()
         val firstId = firstItem.id
         assertFalse("Ban đầu chưa được resolve", firstItem.isResolved)
