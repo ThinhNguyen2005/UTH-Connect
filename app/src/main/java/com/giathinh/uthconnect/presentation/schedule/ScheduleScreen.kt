@@ -761,7 +761,7 @@ private fun CampusEventCard(
                                 label = stringResource(R.string.event_checked_in),
                                 tint = ext.onSuccessContainer,
                             )
-                            EventDetailsButton(onClick = { onViewDetails(event) })
+                            if (canOpenTicket) EventDetailsButton(onClick = { onViewDetails(event) })
                         }
 
                         isRegistered -> {
@@ -770,7 +770,7 @@ private fun CampusEventCard(
                                 label = stringResource(R.string.event_registered),
                                 tint = ext.onInfoContainer,
                             )
-                            EventDetailsButton(onClick = { onViewDetails(event) })
+                            if (canOpenTicket) EventDetailsButton(onClick = { onViewDetails(event) })
                         }
 
                         else -> {
