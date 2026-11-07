@@ -9,7 +9,11 @@ plugins {
 }
 
 val useMockData = providers.gradleProperty("useMockData").orElse((!file("google-services.json").isFile).toString()).get().toBooleanStrict()
-if (!useMockData) {
+val useFirebaseEmulator = providers.gradleProperty("useFirebaseEmulator").orElse("false").get().toBooleanStrict()
+val firebaseEmulatorHost = providers.gradleProperty("firebaseEmulatorHost").orElse("10.0.2.2").get()
+require(!(useMockData && useFirebaseEmulator)) { "Firebase Emulator requires -PuseMockData=false" }
+if (!useMockData && !useFirebaseEmulator) {
+    require(file("google-services.json").isFile) { "Firebase builds require app/google-services.json" }
     apply(plugin = "com.google.gms.google-services")
 }
 
@@ -24,6 +28,10 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("boolean", "USE_MOCK_DATA", useMockData.toString())
+        buildConfigField("boolean", "USE_FIREBASE_EMULATOR", useFirebaseEmulator.toString())
+        buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"$firebaseEmulatorHost\"")
+        buildConfigField("String", "FIREBASE_EMULATOR_PROJECT_ID", "\"demo-uthconnect\"")
+        manifestPlaceholders["allowCleartextForFirebaseEmulator"] = useFirebaseEmulator.toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

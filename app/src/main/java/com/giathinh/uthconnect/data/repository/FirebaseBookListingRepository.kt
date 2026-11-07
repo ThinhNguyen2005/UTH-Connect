@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.data.repository
 
+import android.content.Context
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
@@ -11,6 +13,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -22,6 +26,7 @@ import java.util.UUID
 
 @Singleton
 class FirebaseBookListingRepository @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage,
@@ -52,8 +57,16 @@ class FirebaseBookListingRepository @Inject constructor(
             throw SecurityException("Only the listing owner can edit it")
         }
         val uploadedPhoto = listing.photoUri?.let { uri ->
+            val photoUri = Uri.parse(uri)
+            val contentType = context.contentResolver.getType(photoUri)
+                ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                    MimeTypeMap.getFileExtensionFromUrl(photoUri.toString()),
+                )
+                ?: error("Could not determine the selected image type")
+            require(contentType.startsWith("image/", ignoreCase = true)) { "Only image files can be uploaded" }
             val reference = storage.reference.child("book_listings/$uid/${listing.id}/${UUID.randomUUID()}")
-            reference.putFile(Uri.parse(uri)).await()
+            val metadata = StorageMetadata.Builder().setContentType(contentType).build()
+            reference.putFile(photoUri, metadata).await()
             reference.downloadUrl.await().toString()
         }
         val saved = listing.copy(ownerUid = uid, photoUrl = uploadedPhoto ?: listing.photoUrl, photoUri = null)
