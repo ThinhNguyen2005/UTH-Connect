@@ -113,7 +113,7 @@ fun ScheduleScreen(
             )
 
             Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
-                if (uiState.isLoading) {
+                if (uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -135,8 +135,14 @@ fun ScheduleScreen(
                         Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         UthCard {
                             UthEmptyState(
-                                title = stringResource(R.string.no_events_for_date),
-                                body = stringResource(R.string.timetable_memory),
+                                title = stringResource(
+                                    if (uiState.eventsLoadFailed) R.string.schedule_events_load_failed
+                                    else R.string.no_events_for_date,
+                                ),
+                                body = stringResource(
+                                    if (uiState.eventsLoadFailed) R.string.schedule_events_load_failed_body
+                                    else R.string.timetable_memory,
+                                ),
                                 icon = Icons.Filled.DateRange,
                             )
                         }
@@ -153,7 +159,10 @@ fun ScheduleScreen(
                                         now = uiState.now,
                                         onAction = onAction,
                                         onViewQr = { selectedTicket = it.toTicket() },
-                                        onViewDetails = { selectedTicket = it.toTicket() },
+                                        onViewDetails = {
+                                            selectedTicket = it.toTicket()
+                                            onAction(ScheduleAction.OpenEventDetails(it.id))
+                                        },
                                     )
                                 }
                             }
@@ -177,7 +186,12 @@ fun ScheduleScreen(
                 ticket = ticket,
                 studentName = "Nguyễn Minh Anh",
                 secondsRemaining = 60,
-                onBack = { selectedTicket = null },
+                qrToken = uiState.ticketQrToken,
+                qrError = if (uiState.ticketQrFailed) stringResource(R.string.tickets_qr_issue_failed) else null,
+                onBack = {
+                    selectedTicket = null
+                    onAction(ScheduleAction.CloseEventDetails)
+                },
                 onCopy = {},
             )
         }
@@ -542,6 +556,7 @@ private fun CampusEventCard(
     val colors = MaterialTheme.colorScheme
     val ext = UthTheme.extendedColors
 
+    val isEnded = now >= event.endAt
     val isOngoing = now >= event.startAt && now < event.endAt
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
@@ -550,6 +565,7 @@ private fun CampusEventCard(
     val isNeutral = !isOngoing && !isPrimaryAccent && !isWarningAccent
 
     val borderColor = when {
+        isEnded -> colors.outlineVariant
         isOngoing -> ext.success
         isPrimaryAccent -> colors.primary
         isWarningAccent -> ext.warning
@@ -557,6 +573,7 @@ private fun CampusEventCard(
     }
     // Dải màu: Gold chỉ làm NỀN (chữ Navy trên Gold 6.2:1); trạng thái trung tính giữ Navy.
     val stripeColor = when {
+        isEnded -> colors.outlineVariant
         isOngoing -> ext.success
         isWarningAccent -> colors.secondary
         else -> colors.primary
@@ -565,7 +582,7 @@ private fun CampusEventCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = colors.surface,
+        color = if (isEnded) colors.surfaceVariant else colors.surface,
         border = BorderStroke(
             width = if (isNeutral) UthDimens.Size.Stroke else UthDimens.Size.StrokeFocused,
             color = borderColor,
@@ -599,8 +616,16 @@ private fun CampusEventCard(
                     // Nền vàng Gold luôn đi chữ Navy (`onSecondary`); chữ trắng trên Gold chỉ 2.0:1.
                     val timeOnGold = isWarningAccent && !isOngoing && !isRegistered
                     Surface(
-                        color = if (timeOnGold) colors.secondary else colors.primary,
-                        contentColor = if (timeOnGold) colors.onSecondary else colors.onPrimary,
+                        color = when {
+                            isEnded -> colors.surface
+                            timeOnGold -> colors.secondary
+                            else -> colors.primary
+                        },
+                        contentColor = when {
+                            isEnded -> colors.onSurfaceVariant
+                            timeOnGold -> colors.onSecondary
+                            else -> colors.onPrimary
+                        },
                         shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
@@ -619,6 +644,11 @@ private fun CampusEventCard(
                     }
 
                     when {
+                        isEnded -> UthStatusBadge(
+                            text = stringResource(R.string.event_ended),
+                            tone = BadgeTone.Neutral,
+                        )
+
                         isOngoing -> UthStatusBadge(
                             text = stringResource(R.string.event_ongoing),
                             tone = BadgeTone.Success,
@@ -642,12 +672,12 @@ private fun CampusEventCard(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = colors.onSurface,
+                        color = if (isEnded) colors.onSurfaceVariant else colors.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.event_organizer, event.organizer),
                         style = MaterialTheme.typography.bodySmall,
-                        color = ext.textSecondary,
+                        color = if (isEnded) colors.onSurfaceVariant else ext.textSecondary,
                     )
                 }
 
@@ -666,7 +696,7 @@ private fun CampusEventCard(
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = colors.primary,
+                            tint = if (isEnded) colors.onSurfaceVariant else colors.primary,
                             modifier = Modifier.size(UthDimens.Size.IconCompact),
                         )
                         Spacer(Modifier.width(UthDimens.Spacing.Xs))
@@ -678,12 +708,11 @@ private fun CampusEventCard(
                         )
                     }
 
-                    val pointsBonus = stringResource(R.string.schedule_points_bonus)
-                    val displayPoints = event.trainingPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
+                    val displayPoints = event.trainingPoints
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
-                            tone = if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            tone = if (isEnded) BadgeTone.Neutral else if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
                             icon = null,
                         )
                     }
@@ -696,6 +725,12 @@ private fun CampusEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
+                        isEnded -> RegistrationHint(
+                            icon = Icons.Filled.DateRange,
+                            label = stringResource(R.string.event_ended),
+                            tint = colors.onSurfaceVariant,
+                        )
+
                         isCheckedIn -> {
                             RegistrationHint(
                                 icon = Icons.Filled.Check,

@@ -2,8 +2,13 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.data.repository.InMemoryTimetableRepository
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.cancel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,7 +27,7 @@ class ScheduleViewModelTest {
 
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
-        val vm = ScheduleViewModel(TimetableUseCase(repository), clock)
+        val vm = ScheduleViewModel(TimetableUseCase(repository), EmptyEventRepository, EmptyTicketRepository, clock)
         try {
             vm.onAction(ScheduleAction.OpenForm)
             vm.onAction(ScheduleAction.Date("2026-02-30"))
@@ -51,4 +56,17 @@ class ScheduleViewModelTest {
             vm.viewModelScope.cancel()
         }
     }
+}
+
+private object EmptyEventRepository : EventRepository {
+    override fun getEvents(campus: String?): Flow<List<Event>> = flowOf(emptyList())
+    override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(null)
+    override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> = Result.success(Unit)
+    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = Result.success(Unit)
+    override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = flowOf(false)
+    override fun currentUserRegistrations(): Flow<Set<String>> = flowOf(emptySet())
+}
+
+private object EmptyTicketRepository : TicketRepository {
+    override suspend fun getTickets(studentId: String) = Result.success(emptyList<com.giathinh.uthconnect.domain.model.Ticket>())
 }

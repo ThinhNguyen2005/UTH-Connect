@@ -2,26 +2,40 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Named
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
+    private val eventRepository: EventRepository,
+    private val ticketRepository: TicketRepository,
     @param:Named("timetable") private val clock: Clock,
 ) : ViewModel() {
-    private val registeredEventIds = mutableSetOf("event-career")
+    private var loadedEvents: List<Event> = emptyList()
+    private var registeredEventIds: Set<String> = emptySet()
+    private var ticketQrJob: Job? = null
 
     private val initialNow = LocalDateTime.now(clock)
     private val initialDate = initialNow.toLocalDate()
@@ -30,7 +44,6 @@ class ScheduleViewModel @Inject constructor(
         ScheduleUiState(
             now = initialNow,
             selectedDate = initialDate,
-            events = sampleEvents(initialDate, initialNow),
         ),
     )
     val uiState = state.asStateFlow()
@@ -42,15 +55,35 @@ class ScheduleViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            eventRepository.getEvents().retryWhen { cause, _ ->
+                if (cause is CancellationException) throw cause
+                state.update { it.copy(isEventsLoading = false, eventsLoadFailed = true) }
+                delay(60_000)
+                true
+            }.collect { events ->
+                loadedEvents = events
+                state.update {
+                    it.copy(
+                        events = events.mapNotNull(::toScheduleEvent),
+                        isEventsLoading = false,
+                        eventsLoadFailed = false,
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            eventRepository.currentUserRegistrations().catch { /* Events remain usable if registrations are unavailable. */ }
+                .collect { ids ->
+                    registeredEventIds = ids
+                    state.update { current -> current.copy(events = loadedEvents.mapNotNull(::toScheduleEvent)) }
+                }
+        }
+        viewModelScope.launch {
             while (true) {
                 delay(60_000)
                 val currentNow = LocalDateTime.now(clock)
-                state.update {
-                    it.copy(
-                        now = currentNow,
-                        events = sampleEvents(it.selectedDate, currentNow),
-                    )
-                }
+                state.update { it.copy(now = currentNow) }
+                eventRepository.refresh()
             }
         }
     }
@@ -58,19 +91,13 @@ class ScheduleViewModel @Inject constructor(
     fun onAction(action: ScheduleAction) {
         when (action) {
             is ScheduleAction.SelectDate -> state.update {
-                it.copy(
-                    selectedDate = action.value,
-                    events = sampleEvents(action.value, it.now),
-                )
+                it.copy(selectedDate = action.value)
             }
 
             ScheduleAction.JumpToToday -> {
                 val today = state.value.now.toLocalDate()
                 state.update {
-                    it.copy(
-                        selectedDate = today,
-                        events = sampleEvents(today, it.now),
-                    )
+                    it.copy(selectedDate = today)
                 }
             }
 
@@ -79,10 +106,33 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
 
             is ScheduleAction.RegisterEvent -> {
-                registeredEventIds.add(action.id)
-                state.update { current ->
-                    current.copy(events = sampleEvents(current.selectedDate, current.now))
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                if (LocalDateTime.now(clock) >= event.endAt) return
+                viewModelScope.launch {
+                    eventRepository.registerCurrentUser(action.id).onSuccess {
+                        eventRepository.refresh()
+                    }
                 }
+            }
+
+            is ScheduleAction.OpenEventDetails -> {
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                if (event.id !in registeredEventIds || LocalDateTime.now(clock) >= event.endAt) return
+                ticketQrJob?.cancel()
+                state.update { it.copy(ticketQrToken = null, ticketQrFailed = false) }
+                if (BuildConfig.USE_SUPABASE) {
+                    ticketQrJob = viewModelScope.launch {
+                        ticketRepository.issueCheckInToken(action.id).fold(
+                            onSuccess = { token -> state.update { it.copy(ticketQrToken = token, ticketQrFailed = false) } },
+                            onFailure = { state.update { it.copy(ticketQrToken = null, ticketQrFailed = true) } },
+                        )
+                    }
+                }
+            }
+
+            ScheduleAction.CloseEventDetails -> {
+                ticketQrJob?.cancel()
+                state.update { it.copy(ticketQrToken = null, ticketQrFailed = false) }
             }
 
             ScheduleAction.OpenForm -> state.update {
@@ -124,70 +174,23 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
-    private fun sampleEvents(date: LocalDate, now: LocalDateTime): List<ScheduleEvent> {
-        val isToday = date == now.toLocalDate()
-
-        // Sự kiện 1: Đảm bảo nằm trong khung giờ hiện tại khi mở ngày hôm nay
-        val aiStart: LocalDateTime
-        val aiEnd: LocalDateTime
-        if (isToday) {
-            if (now.hour in 8..10) {
-                aiStart = date.atTime(8, 0)
-                aiEnd = date.atTime(11, 30)
-            } else {
-                aiStart = now.minusMinutes(45).withSecond(0).withNano(0)
-                aiEnd = now.plusMinutes(75).withSecond(0).withNano(0)
-            }
-        } else {
-            aiStart = date.atTime(8, 0)
-            aiEnd = date.atTime(11, 30)
-        }
-
-        val event1Reg = if (registeredEventIds.contains("event-ai")) EventRegistration.REGISTERED else EventRegistration.CHECKED_IN
-        val event2Reg = if (registeredEventIds.contains("event-career")) EventRegistration.REGISTERED else EventRegistration.REGISTERED
-        val event3Reg = if (registeredEventIds.contains("event-sports")) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED
-        val event3Accent = if (event3Reg == EventRegistration.REGISTERED) EventAccent.PRIMARY else EventAccent.WARNING
-
-        val careerStart = if (isToday && aiEnd >= date.atTime(14, 0)) aiEnd.plusMinutes(30) else date.atTime(14, 0)
-        val careerEnd = if (isToday && aiEnd >= date.atTime(14, 0)) careerStart.plusHours(3) else date.atTime(17, 0)
-
-        return listOf(
-            ScheduleEvent(
-                id = "event-ai",
-                title = "Workshop: AI & Tương lai ngành Giao thông thông minh",
-                organizer = "Đoàn Thanh niên & Khoa CNTT",
-                location = "Hội trường: A.101 (Cơ sở chính)",
-                startAt = aiStart,
-                endAt = aiEnd,
-                registration = event1Reg,
-                accent = EventAccent.SUCCESS,
-                trainingPoints = "+5 ĐRL",
-                session = "Morning",
-            ),
-            ScheduleEvent(
-                id = "event-career",
-                title = "Ngày hội Việc làm & Kết nối Doanh nghiệp Logistics 2026",
-                organizer = "Trung tâm Hướng nghiệp & Tuyển dụng UTH",
-                location = "Địa điểm: Sân trung tâm & Hội trường B",
-                startAt = careerStart,
-                endAt = careerEnd,
-                registration = event2Reg,
-                accent = EventAccent.PRIMARY,
-                trainingPoints = "+10 ĐRL",
-                session = "Afternoon",
-            ),
-            ScheduleEvent(
-                id = "event-sports",
-                title = "Hội thao Sinh viên UTH 2026",
-                organizer = "CLB Thể Thao UTH",
-                location = "Địa điểm: Sân vận động Cơ sở 2",
-                startAt = date.atTime(18, 30),
-                endAt = date.atTime(21, 0),
-                registration = event3Reg,
-                accent = event3Accent,
-                trainingPoints = "+5 ĐRL",
-                session = "Evening",
-            ),
+    private fun toScheduleEvent(event: Event): ScheduleEvent? = runCatching {
+        val startAt = Instant.ofEpochMilli(event.startAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()
+        val endAt = Instant.ofEpochMilli(event.endAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()
+        ScheduleEvent(
+            id = event.id,
+            title = event.title,
+            organizer = event.orgName.ifBlank { event.orgId },
+            location = event.location,
+            startAt = startAt,
+            endAt = endAt,
+            registration = if (event.id in registeredEventIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
+            accent = if (event.id in registeredEventIds) EventAccent.PRIMARY else EventAccent.WARNING,
+            session = when (startAt.hour) {
+                in 0..11 -> "Morning"
+                in 12..17 -> "Afternoon"
+                else -> "Evening"
+            },
         )
-    }
+    }.getOrNull()
 }
