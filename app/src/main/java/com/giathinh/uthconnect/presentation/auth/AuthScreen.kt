@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
@@ -122,8 +123,10 @@ fun AuthScreen(
             )
         }
         Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(stringResource(R.string.auth_demo_notice), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (BuildConfig.USE_MOCK_DATA) {
+            Text(stringResource(R.string.auth_demo_notice), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
     if (uiState.forgotDialogOpen) {
         AlertDialog(
