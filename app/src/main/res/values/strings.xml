@@ -497,6 +497,11 @@
     <string name="lostfound_err_phone_invalid">Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.</string>
     <string name="lostfound_phone_public_notice">Số điện thoại sẽ hiển thị công khai trên bài đăng để người khác liên hệ.</string>
     <string name="lostfound_contact_unnamed">Chưa cung cấp tên liên hệ</string>
+    <string name="lostfound_field_image">Hình ảnh minh chứng</string>
+    <string name="lostfound_btn_pick_image">Chọn ảnh từ thư viện</string>
+    <string name="lostfound_btn_change_image">Đổi ảnh khác</string>
+    <string name="lostfound_btn_remove_image">Xóa ảnh</string>
+    <string name="lostfound_image_desc">Ảnh chụp đồ vật thất lạc hoặc nhặt được (không bắt buộc)</string>
     <string name="auth_profile_retry">Tải lại hồ sơ</string>
     <string name="timetable_title_required">Vui lòng nhập tên công việc.</string>
     <string name="timetable_date_invalid">Ngày không hợp lệ. Hãy chọn lại ngày.</string>

@@ -2,6 +2,9 @@ package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ItemCategory
+import com.giathinh.uthconnect.domain.model.ListingKind
+import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
@@ -10,9 +13,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -103,4 +108,35 @@ internal fun JsonObject.toDomainTicket(
         fallbackCode = eventId.replace("-", "").take(8).uppercase(),
         organizerName = event.string("organizer_name"),
     )
+}
+
+internal fun JsonObject.toDomainLostFoundListing(): LostFoundListing = LostFoundListing(
+    id = string("id").orEmpty(),
+    title = string("title").orEmpty(),
+    description = string("description").orEmpty(),
+    kind = runCatching { ListingKind.valueOf(string("kind").orEmpty()) }.getOrDefault(ListingKind.LOST),
+    category = runCatching { ItemCategory.valueOf(string("category").orEmpty()) }.getOrDefault(ItemCategory.OTHER),
+    location = string("location").orEmpty(),
+    date = string("date").orEmpty(),
+    contactName = string("contact_name").orEmpty(),
+    contactPhone = string("contact_phone").orEmpty(),
+    imageUrl = string("image_url"),
+    isResolved = bool("is_resolved"),
+)
+
+internal fun LostFoundListing.toJsonObject(userId: String? = null): JsonObject = buildJsonObject {
+    if (id.isNotBlank() && runCatching { UUID.fromString(id) }.isSuccess) {
+        put("id", id)
+    }
+    put("title", title)
+    put("description", description)
+    put("kind", kind.name)
+    put("category", category.name)
+    put("location", location)
+    put("date", date)
+    put("contact_name", contactName)
+    put("contact_phone", contactPhone)
+    imageUrl?.let { put("image_url", it) }
+    put("is_resolved", isResolved)
+    userId?.let { put("user_id", it) }
 }

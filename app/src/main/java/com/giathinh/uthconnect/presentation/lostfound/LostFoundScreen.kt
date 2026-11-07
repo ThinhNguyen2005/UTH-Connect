@@ -2,8 +2,14 @@ package com.giathinh.uthconnect.presentation.lostfound
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +42,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -66,11 +73,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -88,6 +101,10 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 private fun dialPhoneNumber(context: Context, phoneNumber: String) {
     val cleanNumber = phoneNumber.replace(" ", "").trim()
@@ -168,7 +185,11 @@ fun LostFoundScreen(
                     .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Xs),
                 placeholder = {
                     Text(
-                        text = if (uiState.selectedKind == ListingKind.LOST) "Tìm đồ thất lạc (ví, thẻ sinh viên...)" else "Tìm đồ nhặt được...",
+                        text = if (uiState.selectedKind == ListingKind.LOST) {
+                            "Tìm đồ thất lạc (ví, thẻ sinh viên...)"
+                        } else {
+                            "Tìm đồ nhặt được..."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 },
@@ -262,7 +283,8 @@ fun LostFoundScreen(
                     if (uiState.searchQuery.isNotBlank()) {
                         UthEmptyState(
                             title = "Không tìm thấy kết quả",
-                            body = "Không có tin đăng nào phù hợp với từ khóa \"${uiState.searchQuery}\". Hãy thử từ khóa khác.",
+                            body = "Không có tin đăng nào phù hợp với từ khóa " +
+                                "\"${uiState.searchQuery}\". Hãy thử từ khóa khác.",
                             icon = Icons.Default.Search,
                         )
                     } else {
@@ -291,12 +313,11 @@ fun LostFoundScreen(
                             LostFoundItemCard(
                                 listing = listing,
                                 onCallClick = { phone ->
-                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                                    context.startActivity(dialIntent)
+                                    dialPhoneNumber(context, phone)
                                 },
                                 onToggleResolve = {
                                     onAction(LostFoundAction.ToggleResolveListing(listing.id))
-                                }
+                                },
                             )
                         }
                     }
@@ -344,6 +365,59 @@ private fun CategoryFilterRow(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AsyncListingImage(
+    imageUrl: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    var bitmap by remember(imageUrl) { mutableStateOf<ImageBitmap?>(null) }
+    var isLoading by remember(imageUrl) { mutableStateOf(true) }
+
+    LaunchedEffect(imageUrl) {
+        isLoading = true
+        bitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                }
+                connection.inputStream.use { stream ->
+                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            }.getOrNull()
+        }
+        isLoading = false
+    }
+
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else if (bitmap != null) {
+            Image(
+                bitmap = bitmap!!,
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(32.dp),
             )
         }
     }
@@ -435,6 +509,19 @@ private fun LostFoundItemCard(
 
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
 
+        // Image if present
+        if (!listing.imageUrl.isNullOrBlank()) {
+            AsyncListingImage(
+                imageUrl = listing.imageUrl,
+                contentDescription = listing.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        }
+
         // Title
         Text(
             text = listing.title,
@@ -468,30 +555,6 @@ private fun LostFoundItemCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-        }
-
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-
-        // Contact Row with Call button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(UthDimens.Size.IconInline),
-                    tint = MaterialTheme.colorScheme.outline,
-                )
-                Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
-                Text(
-                    text = listing.contactName.ifBlank { stringResource(R.string.lostfound_contact_unnamed) },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
 
         // Contact Name
@@ -586,6 +649,17 @@ private fun ReportItemDialog(
     onAction: (LostFoundAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            onAction(LostFoundAction.UpdateReportImage(bytes, mimeType, uri.toString()))
+        }
+    }
+
     AlertDialog(
         onDismissRequest = { if (!form.isSubmitting) onDismiss() },
         title = {
@@ -732,6 +806,104 @@ private fun ReportItemDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+
+                // Image attachment (PickVisualMedia)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                ) {
+                    Text(
+                        text = stringResource(R.string.lostfound_field_image),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    val imageBytes = form.imageBytes
+                    if (imageBytes != null && imageBytes.isNotEmpty()) {
+                        val previewBitmap = remember(imageBytes) {
+                            runCatching {
+                                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+                            }.getOrNull()
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                        ) {
+                            if (previewBitmap != null) {
+                                Image(
+                                    bitmap = previewBitmap,
+                                    contentDescription = "Ảnh đính kèm",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            }
+                            IconButton(
+                                onClick = { onAction(LostFoundAction.RemoveReportImage) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(UthDimens.Spacing.Xs)
+                                    .background(Color.Black.copy(alpha = 0.6f), shape = RoundedCornerShape(50)),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.lostfound_btn_remove_image),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(stringResource(R.string.lostfound_btn_change_image))
+                            }
+                            OutlinedButton(
+                                onClick = { onAction(LostFoundAction.RemoveReportImage) },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                            ) {
+                                Text(stringResource(R.string.lostfound_btn_remove_image))
+                            }
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(UthDimens.Spacing.Sm))
+                            Text(stringResource(R.string.lostfound_btn_pick_image))
+                        }
+                        Text(
+                            text = stringResource(R.string.lostfound_image_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 // Description
                 OutlinedTextField(

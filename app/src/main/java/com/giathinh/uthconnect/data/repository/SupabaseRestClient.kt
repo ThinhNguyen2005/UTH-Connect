@@ -18,6 +18,8 @@ import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val STORAGE_TIMEOUT_MILLIS = 30_000
+
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 @Singleton
 class SupabaseRestClient @Inject constructor() {
@@ -29,6 +31,7 @@ class SupabaseRestClient @Inject constructor() {
     @Volatile var recoveryToken: String? = null
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
+    val userIdOrNull: String? get() = credentials?.userId
 
     suspend fun signIn(email: String, password: String, replaceExisting: Boolean = true) {
         // A failed login must not accidentally leave the previous user's tokens active.
@@ -109,6 +112,16 @@ class SupabaseRestClient @Inject constructor() {
 
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    suspend fun insertTable(
+        path: String,
+        body: JsonObject,
+    ): JsonElement = authorized(
+        path = "/rest/v1/$path",
+        method = "POST",
+        body = body,
+        preferRepresentation = true,
+    )
+
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
@@ -118,9 +131,52 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-    private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
-        val accessToken = freshToken()
-        return send(path, method, body, accessToken)
+    suspend fun uploadStorage(
+        bucket: String,
+        path: String,
+        bytes: ByteArray,
+        mimeType: String = "image/jpeg",
+    ): String = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val token = runCatching { freshToken() }.getOrNull() ?: BuildConfig.SUPABASE_PUBLISHABLE_KEY
+        val cleanPath = path.trimStart('/')
+        val url = URL("${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$cleanPath")
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = STORAGE_TIMEOUT_MILLIS
+            readTimeout = STORAGE_TIMEOUT_MILLIS
+            doOutput = true
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Content-Type", mimeType)
+            setRequestProperty("x-upsert", "true")
+        }
+        try {
+            connection.outputStream.use { it.write(bytes) }
+            val status = connection.responseCode
+            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching {
+                    val error = json.parseToJsonElement(response).jsonObject
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase Storage HTTP $status"
+                throw SupabaseHttpException(status, message)
+            }
+            "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$cleanPath"
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private suspend fun authorized(
+        path: String,
+        method: String,
+        body: JsonObject? = null,
+        preferRepresentation: Boolean = false,
+    ): JsonElement {
+        val accessToken = runCatching { freshToken() }.getOrNull()
+        return send(path, method, body, accessToken ?: BuildConfig.SUPABASE_PUBLISHABLE_KEY, preferRepresentation)
     }
 
     private suspend fun freshToken(): String {
@@ -163,6 +219,7 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         bearer: String?,
+        preferRepresentation: Boolean = false,
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
@@ -173,6 +230,9 @@ class SupabaseRestClient @Inject constructor() {
                 connection.setRequestProperty("Prefer", "return=representation")
             } else {
                 connection.requestMethod = method
+                if (preferRepresentation) {
+                    connection.setRequestProperty("Prefer", "return=representation")
+                }
             }
             connection.connectTimeout = 15_000
             connection.readTimeout = 15_000

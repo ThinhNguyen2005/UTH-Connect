@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
+import com.giathinh.uthconnect.domain.usecase.ToggleResolveListingUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class LostFoundViewModel @Inject constructor(
     private val getListingsUseCase: GetLostFoundListingsUseCase,
     private val reportItemUseCase: ReportLostFoundItemUseCase,
+    private val toggleResolveListingUseCase: ToggleResolveListingUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LostFoundUiState())
@@ -39,22 +41,30 @@ class LostFoundViewModel @Inject constructor(
             is LostFoundAction.SelectCategory -> {
                 _uiState.update { it.copy(selectedCategory = action.category) }
             }
+
             is LostFoundAction.UpdateSearchQuery -> {
                 _uiState.update { it.copy(searchQuery = action.query) }
             }
+
             is LostFoundAction.ToggleResolveListing -> {
+                val currentItem = _uiState.value.listings.find { it.id == action.id } ?: return
+                val newStatus = !currentItem.isResolved
                 _uiState.update { current ->
                     current.copy(
                         listings = current.listings.map { item ->
                             if (item.id == action.id) {
-                                item.copy(isResolved = !item.isResolved)
+                                item.copy(isResolved = newStatus)
                             } else {
                                 item
                             }
-                        }
+                        },
                     )
                 }
+                viewModelScope.launch {
+                    toggleResolveListingUseCase(action.id, newStatus)
+                }
             }
+
             LostFoundAction.OpenReportDialog -> {
                 _uiState.update {
                     it.copy(
@@ -107,6 +117,30 @@ class LostFoundViewModel @Inject constructor(
             is LostFoundAction.UpdateReportContactPhone -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(contactPhone = action.contactPhone, phoneError = null))
+                }
+            }
+
+            is LostFoundAction.UpdateReportImage -> {
+                _uiState.update {
+                    it.copy(
+                        reportForm = it.reportForm.copy(
+                            imageBytes = action.bytes,
+                            imageMimeType = action.mimeType,
+                            imagePreviewUri = action.previewUri,
+                        ),
+                    )
+                }
+            }
+
+            LostFoundAction.RemoveReportImage -> {
+                _uiState.update {
+                    it.copy(
+                        reportForm = it.reportForm.copy(
+                            imageBytes = null,
+                            imageMimeType = null,
+                            imagePreviewUri = null,
+                        ),
+                    )
                 }
             }
 
@@ -183,7 +217,11 @@ class LostFoundViewModel @Inject constructor(
                 contactPhone = phone,
             )
 
-            reportItemUseCase(newListing).fold(
+            reportItemUseCase(
+                item = newListing,
+                imageBytes = form.imageBytes,
+                imageMimeType = form.imageMimeType,
+            ).fold(
                 onSuccess = { created ->
                     _uiState.update { state ->
                         state.copy(

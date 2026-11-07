@@ -7,6 +7,7 @@ import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.repository.LostFoundRepository
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
+import com.giathinh.uthconnect.domain.usecase.ToggleResolveListingUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +30,7 @@ class LostFoundViewModelTest {
     ): LostFoundViewModel = LostFoundViewModel(
         getListingsUseCase = GetLostFoundListingsUseCase(repository),
         reportItemUseCase = ReportLostFoundItemUseCase(repository),
+        toggleResolveListingUseCase = ToggleResolveListingUseCase(repository),
     )
 
     @Test
@@ -111,6 +113,30 @@ class LostFoundViewModelTest {
         viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
         val revertedItem = viewModel.uiState.value.listings.first { it.id == firstId }
         assertFalse("Toggle lần 2 quay lại false", revertedItem.isResolved)
+    }
+
+    @Test
+    fun `updateAndRemoveReportImage_modifiesFormStateCorrectly`() {
+        val viewModel = createViewModel()
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+
+        val sampleBytes = byteArrayOf(1, 2, 3, 4)
+        val sampleMime = "image/png"
+        val sampleUri = "content://media/external/images/123"
+
+        viewModel.onAction(LostFoundAction.UpdateReportImage(sampleBytes, sampleMime, sampleUri))
+        val state = viewModel.uiState.value.reportForm
+        assertEquals(sampleMime, state.imageMimeType)
+        assertEquals(sampleUri, state.imagePreviewUri)
+        assertNotNull(state.imageBytes)
+        assertTrue(sampleBytes.contentEquals(state.imageBytes))
+
+        // Xóa ảnh
+        viewModel.onAction(LostFoundAction.RemoveReportImage)
+        val clearedState = viewModel.uiState.value.reportForm
+        assertNull(clearedState.imageBytes)
+        assertNull(clearedState.imageMimeType)
+        assertNull(clearedState.imagePreviewUri)
     }
 
     @Test
@@ -244,11 +270,20 @@ class LostFoundViewModelTest {
         val repository = object : LostFoundRepository {
             private val delegate = InMemoryLostFoundRepository()
             override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
-            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> {
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> {
                 submissions++
                 release.await()
-                return delegate.reportItem(item)
+                return delegate.reportItem(item, imageBytes, imageMimeType)
             }
+
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = delegate.toggleResolved(id, isResolved)
         }
         val viewModel = createViewModel(repository)
         viewModel.onAction(LostFoundAction.OpenReportDialog)
@@ -280,7 +315,16 @@ class LostFoundViewModelTest {
                 delegate.getListings()
             }
 
-            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = delegate.reportItem(item)
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = delegate.toggleResolved(id, isResolved)
         }
 
         val viewModel = createViewModel(mockRepo)

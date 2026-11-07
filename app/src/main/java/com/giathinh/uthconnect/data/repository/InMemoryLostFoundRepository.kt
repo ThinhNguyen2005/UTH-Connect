@@ -111,11 +111,23 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         Result.success(listings.toList())
     }
 
-    override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = mutex.withLock {
+    override suspend fun reportItem(
+        item: LostFoundListing,
+        imageBytes: ByteArray?,
+        imageMimeType: String?,
+    ): Result<LostFoundListing> = mutex.withLock {
         val newItem = item.copy(
             id = if (item.id.isBlank()) "LF-${UUID.randomUUID().toString().take(6).uppercase()}" else item.id,
         )
         listings.add(0, newItem)
         Result.success(newItem)
+    }
+
+    override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = mutex.withLock {
+        val index = listings.indexOfFirst { it.id == id }
+        if (index != -1) {
+            listings[index] = listings[index].copy(isResolved = isResolved)
+        }
+        Result.success(Unit)
     }
 }
