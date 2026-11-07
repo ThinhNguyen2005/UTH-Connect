@@ -12,6 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -20,15 +21,38 @@ class ScheduleViewModelTest {
 
     private val clock = Clock.fixed(Instant.parse("2026-10-31T17:30:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"))
 
+    @Test fun `initial events list is empty without sample data`() {
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock)
+        try {
+            assertTrue(vm.uiState.value.events.isEmpty())
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
     @Test fun `cannot register for an event that has already started`() {
         val eventClock = Clock.fixed(Instant.parse("2026-10-31T11:31:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"))
         val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(eventClock)), eventClock)
         try {
-            val ongoing = vm.uiState.value.events.first { it.id == "event-sports" }
-            assertTrue(vm.uiState.value.now >= ongoing.startAt)
-            assertTrue(vm.uiState.value.now < ongoing.endAt)
-            vm.onAction(ScheduleAction.RegisterEvent(ongoing.id))
-            assertEquals(EventRegistration.NOT_REGISTERED, vm.uiState.value.events.first { it.id == ongoing.id }.registration)
+            val pastDate = LocalDate.of(2026, 10, 30)
+            vm.onAction(
+                ScheduleAction.CreateWorkshopEvent(
+                    title = "Past Workshop",
+                    category = "Hội thảo",
+                    coOrganizers = listOf("Đoàn Hội"),
+                    summary = "Tóm tắt",
+                    date = pastDate,
+                    startTime = "08:00",
+                    endTime = "10:00",
+                    venue = "A.101",
+                    trainingPoints = "+5 ĐRL",
+                    managers = listOf("GV"),
+                ),
+            )
+            val pastEvent = vm.uiState.value.events.first { it.title == "Past Workshop" }
+            assertTrue(vm.uiState.value.now >= pastEvent.startAt)
+            vm.onAction(ScheduleAction.RegisterEvent(pastEvent.id))
+            assertEquals(EventRegistration.NOT_REGISTERED, vm.uiState.value.events.first { it.id == pastEvent.id }.registration)
         } finally {
             vm.viewModelScope.cancel()
         }
@@ -37,7 +61,22 @@ class ScheduleViewModelTest {
     @Test fun `can register for an event that has not started`() {
         val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock)
         try {
-            val upcoming = vm.uiState.value.events.first { it.id == "event-sports" }
+            val futureDate = LocalDate.of(2026, 11, 20)
+            vm.onAction(
+                ScheduleAction.CreateWorkshopEvent(
+                    title = "Upcoming Workshop",
+                    category = "Hội thảo",
+                    coOrganizers = listOf("Đoàn Hội"),
+                    summary = "Tóm tắt",
+                    date = futureDate,
+                    startTime = "08:00",
+                    endTime = "10:00",
+                    venue = "A.101",
+                    trainingPoints = "+5 ĐRL",
+                    managers = listOf("GV"),
+                ),
+            )
+            val upcoming = vm.uiState.value.events.first { it.title == "Upcoming Workshop" }
             assertTrue(vm.uiState.value.now < upcoming.startAt)
             vm.onAction(ScheduleAction.RegisterEvent(upcoming.id))
             assertEquals(EventRegistration.REGISTERED, vm.uiState.value.events.first { it.id == upcoming.id }.registration)
@@ -102,7 +141,7 @@ class ScheduleViewModelTest {
             vm.onAction(ScheduleAction.OpenCreateEvent)
             assertTrue(vm.uiState.value.showCreateEvent)
 
-            val eventDate = java.time.LocalDate.of(2026, 11, 15)
+            val eventDate = LocalDate.of(2026, 11, 15)
             vm.onAction(
                 ScheduleAction.CreateWorkshopEvent(
                     title = "Workshop: AI & IoT",
