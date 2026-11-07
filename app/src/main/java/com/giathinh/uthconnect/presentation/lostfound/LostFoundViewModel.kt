@@ -78,9 +78,13 @@ class LostFoundViewModel @Inject constructor(
                 }
                 viewModelScope.launch {
                     try {
-                        toggleResolveListingUseCase(action.id, newStatus).onFailure {
+                        toggleResolveListingUseCase(action.id, newStatus).onFailure { error ->
+                            val isAuthErr = error.message?.contains("sign-in required", ignoreCase = true) == true ||
+                                error.message?.contains("session expired", ignoreCase = true) == true ||
+                                error.message?.contains("AuthRequired", ignoreCase = true) == true
                             _uiState.update { current ->
                                 current.copy(
+                                    userMessage = if (isAuthErr) UserMessage.AuthRequired else current.userMessage,
                                     listings = current.listings.map { item ->
                                         if (item.id == action.id) {
                                             item.copy(isResolved = !newStatus)
@@ -266,11 +270,14 @@ class LostFoundViewModel @Inject constructor(
                         )
                     }
                 },
-                onFailure = {
+                onFailure = { error ->
+                    val isAuthErr = error.message?.contains("sign-in required", ignoreCase = true) == true ||
+                        error.message?.contains("session expired", ignoreCase = true) == true ||
+                        error.message?.contains("AuthRequired", ignoreCase = true) == true
                     _uiState.update {
                         it.copy(
                             reportForm = it.reportForm.copy(isSubmitting = false),
-                            userMessage = UserMessage.PostFailed,
+                            userMessage = if (isAuthErr) UserMessage.AuthRequired else UserMessage.PostFailed,
                         )
                     }
                 },

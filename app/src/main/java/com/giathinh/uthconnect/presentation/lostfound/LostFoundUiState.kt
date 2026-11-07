@@ -6,6 +6,9 @@ import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 
+/**
+ * Validation errors associated with reporting a lost or found item.
+ */
 sealed interface FormValidationError {
     @get:StringRes
     val messageRes: Int
@@ -31,6 +34,9 @@ sealed interface FormValidationError {
     }
 }
 
+/**
+ * One-off notification messages surfaced via snackbars.
+ */
 sealed interface UserMessage {
     @get:StringRes
     val messageRes: Int
@@ -42,8 +48,15 @@ sealed interface UserMessage {
     data object PostFailed : UserMessage {
         override val messageRes: Int = R.string.lostfound_msg_post_failed
     }
+
+    data object AuthRequired : UserMessage {
+        override val messageRes: Int = R.string.common_error_auth_required
+    }
 }
 
+/**
+ * State representing fields and validation of the report item form.
+ */
 data class ReportFormState(
     val title: String = "",
     val description: String = "",
@@ -102,6 +115,9 @@ data class ReportFormState(
     }
 }
 
+/**
+ * UI state for the Lost & Found screen.
+ */
 data class LostFoundUiState(
     val isLoading: Boolean = false,
     val isError: Boolean = false,

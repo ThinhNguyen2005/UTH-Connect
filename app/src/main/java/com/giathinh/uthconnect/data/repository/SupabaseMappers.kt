@@ -110,6 +110,11 @@ internal fun JsonObject.toDomainTicket(
     )
 }
 
+/**
+ * Maps a PostgREST JSON object representing a row from `lost_found_items` to a domain [LostFoundListing].
+ *
+ * @return Mapped [LostFoundListing] model.
+ */
 internal fun JsonObject.toDomainLostFoundListing(): LostFoundListing = LostFoundListing(
     id = string("id").orEmpty(),
     title = string("title").orEmpty(),
@@ -124,6 +129,12 @@ internal fun JsonObject.toDomainLostFoundListing(): LostFoundListing = LostFound
     isResolved = bool("is_resolved"),
 )
 
+/**
+ * Serializes a domain [LostFoundListing] into a PostgREST JSON object payload.
+ *
+ * @param userId Optional user UUID to associate with the listing.
+ * @return JSON object ready for insert or update queries.
+ */
 internal fun LostFoundListing.toJsonObject(userId: String? = null): JsonObject = buildJsonObject {
     if (id.isNotBlank() && runCatching { UUID.fromString(id) }.isSuccess) {
         put("id", id)
