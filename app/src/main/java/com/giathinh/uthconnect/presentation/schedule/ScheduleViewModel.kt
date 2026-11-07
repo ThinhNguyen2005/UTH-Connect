@@ -100,13 +100,15 @@ class ScheduleViewModel @Inject constructor(
                     title = draft.title,
                     description = draft.description,
                     orgId = "DEMO_ORGANIZER",
-                    orgName = "UTH Organizer",
+                    orgName = draft.organizerName,
                     location = draft.location,
                     campus = draft.campus,
                     startAt = draft.startAt,
                     endAt = draft.endAt,
                     capacity = draft.capacity,
-                    points = 5,
+                    points = draft.points,
+                    category = draft.category,
+                    managers = draft.managers,
                 )
                 list.value = list.value + newEvent
                 eventRevision.value++
@@ -272,8 +274,15 @@ class ScheduleViewModel @Inject constructor(
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
                 if (!LocalDateTime.now(clock).isBefore(event.startAt)) return
                 registeredEventIds.add(action.id)
+                state.update { it.copy(eventRegistrationFailed = false) }
                 viewModelScope.launch {
-                    eventRepository.registerCurrentUser(action.id)
+                    eventRepository.registerCurrentUser(action.id).onFailure { error ->
+                        if (error is CancellationException) throw error
+                        registeredEventIds.remove(action.id)
+                        eventRepository.refresh()
+                        reloadEvents()
+                        state.update { it.copy(eventRegistrationFailed = true) }
+                    }
                 }
                 reloadEvents()
             }
@@ -312,34 +321,42 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.Complete -> useCase.complete(action.id)
 
             ScheduleAction.OpenCreateEvent -> if (hasTeacherAccess()) {
-                state.update { it.copy(showCreateEvent = true, eventSaveFailed = false) }
+                state.update { it.copy(showCreateEvent = true, eventSaveFailed = false, eventTitleError = false) }
             }
 
             ScheduleAction.CloseCreateEvent -> state.update { it.copy(showCreateEvent = false) }
 
             is ScheduleAction.CreateWorkshopEvent -> {
                 if (!hasTeacherAccess()) return
-                val startDateTime = action.date.atTime(
-                    runCatching { LocalTime.parse(action.startTime) }.getOrElse { LocalTime.of(8, 30) },
-                )
-                val endDateTime = action.date.atTime(
-                    runCatching { LocalTime.parse(action.endTime) }.getOrElse { LocalTime.of(11, 30) },
-                )
-                val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val startTime = runCatching { LocalTime.parse(action.startTime) }.getOrNull()
+                val endTime = runCatching { LocalTime.parse(action.endTime) }.getOrNull()
+                if (action.title.isBlank() || action.venue.isBlank() || startTime == null || endTime == null || !endTime.isAfter(startTime)) {
+                    state.update { it.copy(eventTitleError = action.title.isBlank()) }
+                    return
+                }
+                val startDateTime = action.date.atTime(startTime)
+                val endDateTime = action.date.atTime(endTime)
+                val eventZone = ZoneId.of("Asia/Ho_Chi_Minh")
+                val startMillis = startDateTime.atZone(eventZone).toInstant().toEpochMilli()
+                val endMillis = endDateTime.atZone(eventZone).toInstant().toEpochMilli()
                 val optimisticEventId = UUID.randomUUID().toString()
-                val title = action.title.ifBlank { "Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026" }
-                val organizer = action.coOrganizers.joinToString(" & ").ifBlank { "Đoàn - Hội CNTT & CLB Sáng tạo Trẻ" }
-                val venue = action.venue.ifBlank { "Hội trường: A.101 (Cơ sở 1)" }
+                val title = action.title.trim()
+                val organizer = action.coOrganizers.joinToString(" & ")
+                val venue = action.venue.trim()
+                val points = action.trainingPoints.filter(Char::isDigit).toIntOrNull() ?: 0
 
                 val draft = EventDraft(
                     title = title,
-                    description = action.summary.ifBlank { "Workshop do giảng viên UTH tổ chức" },
+                    description = action.summary.trim(),
                     location = venue,
                     campus = "Cơ sở 1",
                     startAt = startMillis,
                     endAt = endMillis,
                     capacity = 100,
+                    points = points,
+                    organizerName = organizer,
+                    category = action.category,
+                    managers = action.managers,
                 )
 
                 val newDomainEvent = Event(
@@ -354,8 +371,10 @@ class ScheduleViewModel @Inject constructor(
                     endAt = endMillis,
                     capacity = 100,
                     registeredCount = 0,
-                    points = action.trainingPoints.filter(Char::isDigit).toIntOrNull() ?: 0,
+                    points = points,
                     status = EventStatus.PUBLISHED,
+                    category = action.category,
+                    managers = action.managers,
                 )
 
                 pendingEvents[optimisticEventId] = newDomainEvent
@@ -376,7 +395,7 @@ class ScheduleViewModel @Inject constructor(
                             reloadEvents()
                             state.update { current -> current.copy(eventSaveFailed = true) }
                         },
-                    }
+                    )
                 }
 
                 state.update { current ->
@@ -384,6 +403,7 @@ class ScheduleViewModel @Inject constructor(
                         showCreateEvent = false,
                         selectedDate = action.date,
                         eventSaveFailed = false,
+                        eventTitleError = false,
                     )
                 }
                 reloadEvents()

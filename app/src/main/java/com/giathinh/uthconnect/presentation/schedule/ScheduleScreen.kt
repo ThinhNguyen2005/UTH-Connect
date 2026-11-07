@@ -95,6 +95,7 @@ fun ScheduleScreen(
         CreateEventWorkshopScreen(
             onBack = { onAction(ScheduleAction.CloseCreateEvent) },
             onAction = onAction,
+            titleError = uiState.eventTitleError,
             modifier = modifier,
         )
         return
@@ -127,6 +128,14 @@ fun ScheduleScreen(
                 if (uiState.eventSaveFailed) {
                     Text(
                         text = stringResource(R.string.schedule_event_save_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(UthDimens.Spacing.Sm))
+                }
+                if (uiState.eventRegistrationFailed) {
+                    Text(
+                        text = stringResource(R.string.schedule_event_registration_failed),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
                     )

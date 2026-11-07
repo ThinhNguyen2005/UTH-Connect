@@ -77,6 +77,13 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 
+private val retryableAuthFailures = setOf(
+    AuthFailure.InvalidCredentials,
+    AuthFailure.ProfileUnavailable,
+    AuthFailure.Unexpected,
+    AuthFailure.NetworkError,
+)
+
 /**
  * Màn hình đăng nhập thiết kế theo chuẩn Modern Minimalist & UTH Design System.
  *
@@ -613,13 +620,7 @@ private fun ModernPasswordContent(
                 modifier = Modifier.testTag("auth_error"),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
-            if (failure in setOf(
-                    AuthFailure.InvalidCredentials,
-                    AuthFailure.ProfileUnavailable,
-                    AuthFailure.Unexpected,
-                    AuthFailure.NetworkError,
-                )
-            ) {
+            if (failure in retryableAuthFailures) {
                 OutlinedButton(
                     onClick = { onAction(AuthAction.Retry) },
                     enabled = enabled,

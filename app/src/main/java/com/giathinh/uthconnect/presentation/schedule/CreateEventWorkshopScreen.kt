@@ -43,9 +43,12 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,12 +58,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -73,11 +79,10 @@ import java.time.format.DateTimeFormatter
 fun CreateEventWorkshopScreen(
     onBack: () -> Unit,
     onAction: (ScheduleAction) -> Unit,
+    titleError: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    var eventTitle by remember {
-        mutableStateOf("Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026")
-    }
+    var eventTitle by remember { mutableStateOf("") }
 
     val categories = remember {
         listOf(
@@ -90,19 +95,80 @@ fun CreateEventWorkshopScreen(
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
 
     val coOrganizers = remember {
-        mutableStateListOf("Đoàn - Hội CNTT", "CLB Sáng tạo Trẻ")
+        mutableStateListOf<String>()
     }
     var showAddOrganizerDialog by remember { mutableStateOf(false) }
     var newOrganizerName by remember { mutableStateOf("") }
 
-    var summaryDescription by remember {
-        mutableStateOf("Cung cấp kiến thức chuyên sâu về tích hợp mạng cảm biến thông minh và thị giác máy tính trong hệ thống điều phối xe buýt đô thị và luồng cảng biển thông minh tại TP.HCM. Cơ hội giao lưu trực tiếp cùng chuyên gia hàng đầu từ Sở GTVT.")
-    }
+    var summaryDescription by remember { mutableStateOf("") }
 
-    var selectedDate by remember { mutableStateOf(LocalDate.of(2026, 11, 15)) }
+    var selectedDate by remember { mutableStateOf(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(1)) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     var selectedTimeSlot by remember { mutableStateOf("08:30 - 11:30") }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var editingStartTime by remember { mutableStateOf(true) }
+    var timeRangeError by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        key(editingStartTime) {
+            val times = selectedTimeSlot.split("-").map { it.trim() }
+            val start = runCatching { LocalTime.parse(times.getOrNull(0)) }.getOrDefault(LocalTime.of(8, 30))
+            val end = runCatching { LocalTime.parse(times.getOrNull(1)) }.getOrDefault(LocalTime.of(11, 30))
+            val current = if (editingStartTime) start else end
+            val timePickerState = rememberTimePickerState(
+                initialHour = current.hour,
+                initialMinute = current.minute,
+                is24Hour = true,
+            )
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                title = { Text(stringResource(R.string.schedule_time_range)) },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                            TextButton(onClick = { editingStartTime = true }) {
+                                Text(stringResource(R.string.schedule_start_time))
+                            }
+                            TextButton(onClick = { editingStartTime = false }) {
+                                Text(stringResource(R.string.schedule_end_time))
+                            }
+                        }
+                        TimePicker(state = timePickerState)
+                        if (timeRangeError) {
+                            Text(
+                                text = stringResource(R.string.schedule_time_range_error),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val chosen = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                        val newStart = if (editingStartTime) chosen else start
+                        val newEnd = if (editingStartTime) end else chosen
+                        if (newEnd.isAfter(newStart)) {
+                            val formatter = DateTimeFormatter.ofPattern("HH:mm")
+                            selectedTimeSlot = "${newStart.format(formatter)} - ${newEnd.format(formatter)}"
+                            timeRangeError = false
+                            showTimePicker = false
+                        } else {
+                            timeRangeError = true
+                        }
+                    }) {
+                        Text(stringResource(R.string.common_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                },
+            )
+        }
+    }
 
     val venues = remember {
         listOf(
@@ -126,10 +192,7 @@ fun CreateEventWorkshopScreen(
     var selectedVenueIndex by remember { mutableIntStateOf(0) }
 
     val managers = remember {
-        mutableStateListOf(
-            ManagerOption("ThS. Trần Thu Trang", "TT", true),
-            ManagerOption("SV. Lê Tuấn Anh (K21)", "TA", false),
-        )
+        mutableStateListOf<ManagerOption>()
     }
     var showAddManagerDialog by remember { mutableStateOf(false) }
     var newManagerName by remember { mutableStateOf("") }
@@ -317,7 +380,7 @@ fun CreateEventWorkshopScreen(
                                     text = "*",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = colors.error,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                             OutlinedTextField(
@@ -342,6 +405,13 @@ fun CreateEventWorkshopScreen(
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                            if (titleError && eventTitle.isBlank()) {
+                                Text(
+                                    text = stringResource(R.string.schedule_event_title_required),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
 
                         // Phân loại học thuật & phong trào
@@ -613,11 +683,16 @@ fun CreateEventWorkshopScreen(
                                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xxs),
                             ) {
                                 Text(
-                                    text = "Khung giờ",
+                                    text = stringResource(R.string.schedule_time_range),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = ext.textSecondary,
                                 )
                                 Surface(
+                                    onClick = {
+                                        editingStartTime = true
+                                        timeRangeError = false
+                                        showTimePicker = true
+                                    },
                                     shape = MaterialTheme.shapes.medium,
                                     color = ext.surfaceSubtle,
                                     modifier = Modifier.fillMaxWidth(),
@@ -642,6 +717,14 @@ fun CreateEventWorkshopScreen(
                                     }
                                 }
                             }
+                        }
+
+                        if (timeRangeError) {
+                            Text(
+                                text = stringResource(R.string.schedule_time_range_error),
+                                color = colors.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
 
                         // Lựa chọn hội trường đăng ký
@@ -846,9 +929,13 @@ fun CreateEventWorkshopScreen(
                 Button(
                     onClick = {
                         val times = selectedTimeSlot.split("-").map { it.trim() }
-                        val startTime = times.getOrNull(0) ?: "08:30"
-                        val endTime = times.getOrNull(1) ?: "11:30"
-                        val selectedVenue = venues.getOrNull(selectedVenueIndex)?.name ?: "Hội trường A.101"
+                        val startTime = runCatching { LocalTime.parse(times.getOrNull(0)) }.getOrNull()
+                        val endTime = runCatching { LocalTime.parse(times.getOrNull(1)) }.getOrNull()
+                        if (startTime == null || endTime == null || !endTime.isAfter(startTime)) {
+                            timeRangeError = true
+                            return@Button
+                        }
+                        val selectedVenue = venues.getOrNull(selectedVenueIndex)?.name.orEmpty()
 
                         onAction(
                             ScheduleAction.CreateWorkshopEvent(
@@ -857,8 +944,8 @@ fun CreateEventWorkshopScreen(
                                 coOrganizers = coOrganizers.toList(),
                                 summary = summaryDescription,
                                 date = selectedDate,
-                                startTime = startTime,
-                                endTime = endTime,
+                                startTime = startTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                                endTime = endTime.format(DateTimeFormatter.ofPattern("HH:mm")),
                                 venue = selectedVenue,
                                 trainingPoints = "+5 ĐRL",
                                 managers = managers.map { it.name },

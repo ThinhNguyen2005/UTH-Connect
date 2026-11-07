@@ -26,6 +26,7 @@ existing Firebase production data.
    - `migrations/20261103050000_identity_uniqueness.sql`
    - `migrations/20261103060000_preserve_attendance_history.sql`
    - `migrations/20261104000000_stable_ticket_qr.sql`
+   - `migrations/20261107010000_event_metadata.sql`
 
    The `05000` migration adds an enum value that must be committed before it is
    used. The `07500` migration removes the original capacity CHECK **before**
@@ -41,7 +42,8 @@ existing Firebase production data.
    Data retention and privacy erasure still require a reviewed administrative
    policy and backup procedure. The `040000` migration adds a stable signed
    ticket QR; the scanner still enforces the event check-in window and rejects
-   duplicate attendance.
+   duplicate attendance. The `20261107010000` migration adds event category
+   and manager fields and versioned RPCs that save all organizer form fields.
 
    **Existing projects:** Check the recorded migration history and SQL schema
    before running anything. Never modify or re-run an already-applied migration

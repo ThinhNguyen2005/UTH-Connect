@@ -88,10 +88,6 @@ class DemoAuthRepository @Inject constructor(
             if (MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), initial.toByteArray(Charsets.UTF_8))) {
                 return true
             }
-            // Allow STUDENT_DEMO_PASSWORD for teacher account as convenience
-            if (base.studentId == teacher.studentId && MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), STUDENT_DEMO_PASSWORD.toByteArray(Charsets.UTF_8))) {
-                return true
-            }
             return false
         }
         val salt = Base64.getDecoder().decode(encodedSalt)

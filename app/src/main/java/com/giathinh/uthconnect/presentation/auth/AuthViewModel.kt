@@ -26,6 +26,7 @@ import com.giathinh.uthconnect.domain.usecase.SubmitVerificationOutcome
 import com.giathinh.uthconnect.domain.usecase.SubmitVerificationRequestUseCase
 import com.giathinh.uthconnect.domain.usecase.UpdateSettingsUseCase
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
+import com.giathinh.uthconnect.domain.validation.LoginValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -55,6 +56,7 @@ class AuthViewModel @Inject constructor(
     private val getSettings: GetSettingsUseCase,
     private val updateSettings: UpdateSettingsUseCase,
 ) : ViewModel() {
+    private val loginValidator = LoginValidator()
 
     constructor(
         signIn: SignInUseCase,
@@ -235,6 +237,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    /** Validates the shared identifier format before routing to password or setup. */
     private fun continueIdentifier() {
         val snapshot = _uiState.value
         val id = snapshot.identifier.trim()
@@ -242,15 +245,15 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(identifierError = LoginFieldError.Required) }
             return
         }
-        val isTeacherId = id.startsWith("GV", ignoreCase = true) && id.length in 8..12
-        val isNumericId = id.all { it.isDigit() } && id.length in 8..12
-        val isUtEmail = (id.endsWith("@ut.edu.vn", ignoreCase = true) || id.endsWith("@uth.edu.vn", ignoreCase = true)) && id.indexOf('@') > 0
-        if (!isNumericId && !isUtEmail && !isTeacherId) {
-            _uiState.update { it.copy(identifierError = LoginFieldError.InvalidIdentifier) }
+        val identifierError = loginValidator.identifierError(id)
+        if (identifierError != null) {
+            _uiState.update { it.copy(identifierError = identifierError) }
             return
         }
+        val isTeacherId = loginValidator.isTeacherId(id)
+        val isUtEmail = loginValidator.isUniversityEmail(id)
         _uiState.update { it.copy(identifierError = null, failure = null, forgotEmail = id) }
-        val isEnrolled = id == "2023040123" || id.startsWith("2023") || id.startsWith("215") || isUtEmail || isTeacherId
+        val isEnrolled = id.startsWith("2023") || id.startsWith("215") || isUtEmail || isTeacherId
         if (isEnrolled) {
             _uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
         } else {

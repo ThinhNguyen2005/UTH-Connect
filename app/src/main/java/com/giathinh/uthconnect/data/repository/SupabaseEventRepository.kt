@@ -53,6 +53,10 @@ class SupabaseEventRepository @Inject constructor(
                 val statusStr = obj["status"]?.jsonPrimitive?.content
                 val status = EventStatus.fromString(statusStr)
                 val coverUrl = obj["coverUrl"]?.jsonPrimitive?.content
+                val category = obj["category"]?.jsonPrimitive?.content.orEmpty()
+                val managers = (obj["managers"] as? kotlinx.serialization.json.JsonArray)
+                    ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { value -> value.isString }?.content }
+                    .orEmpty()
                 Event(
                     id = id,
                     title = title,
@@ -68,6 +72,8 @@ class SupabaseEventRepository @Inject constructor(
                     points = points,
                     status = status,
                     coverUrl = coverUrl,
+                    category = category,
+                    managers = managers,
                 )
             }
         }.getOrDefault(emptyList())
@@ -92,6 +98,8 @@ class SupabaseEventRepository @Inject constructor(
                         put("points", e.points)
                         put("status", e.status.name)
                         e.coverUrl?.let { put("coverUrl", it) }
+                        put("category", e.category)
+                        put("managers", buildJsonArray { e.managers.forEach { manager -> add(manager) } })
                     },
                 )
             }
@@ -125,7 +133,8 @@ class SupabaseEventRepository @Inject constructor(
         fun List<Event>.forCampus() = filter {
             campus.isNullOrBlank() || campus == "Tất cả" || it.campus == campus
         }
-        if (localEvents.isNotEmpty()) emit(localEvents.forCampus())
+        emit(localEvents.forCampus())
+        if (!BuildConfig.USE_SUPABASE || currentUserIdOrBlank().isBlank()) return@transform
 
         val rows = client.table("events?select=*&order=start_at.asc").jsonArray
         val remoteEvents = rows.map { row -> row.jsonObject.toDomainEvent() }
@@ -141,11 +150,13 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
-        loadPersistedEvents().firstOrNull { it.id == eventId }
-            ?: runCatching {
-                client.table("events?select=*&id=eq.${urlEncode(uuid(eventId))}").jsonArray
-                    .singleOrNull()?.jsonObject?.toDomainEvent()
-            }.getOrNull()
+        val local = loadPersistedEvents().firstOrNull { it.id == eventId }
+        if (!BuildConfig.USE_SUPABASE || currentUserIdOrBlank().isBlank()) {
+            local
+        } else {
+            client.table("events?select=*&id=eq.${urlEncode(uuid(eventId))}").jsonArray
+                .singleOrNull()?.jsonObject?.toDomainEvent() ?: local
+        }
     }
 
     override suspend fun registerEvent(
@@ -239,11 +250,10 @@ class SupabaseEventRepository @Inject constructor(
 
     override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<String> = runCatching {
         // RPC parameters are UUID columns in Supabase; a prefixed local ID made creation fail remotely.
-        val id = eventId ?: UUID.randomUUID().toString()
         val userId = currentUserIdOrBlank()
         requireUserOrOffline(userId)
         val inputs = buildJsonObject {
-            put("p_event_id", uuid(id))
+            eventId?.let { put("p_event_id", uuid(it)) }
             put("p_title", draft.title)
             put("p_description", draft.description)
             put("p_location", draft.location)
@@ -251,33 +261,43 @@ class SupabaseEventRepository @Inject constructor(
             put("p_start_at", Instant.ofEpochMilli(draft.startAt).toString())
             put("p_end_at", Instant.ofEpochMilli(draft.endAt).toString())
             put("p_max_participants", draft.capacity)
+            put("p_points", draft.points)
+            put("p_organizer_name", draft.organizerName)
+            put("p_category", draft.category)
+            put("p_managers", buildJsonArray { draft.managers.forEach { manager -> add(manager) } })
         }
-        if (userId.isNotBlank()) {
-            client.rpc(if (eventId == null) "create_event" else "edit_event", inputs)
-        }
-        val currentEvents = loadPersistedEvents().toMutableList()
-        val index = currentEvents.indexOfFirst { it.id == id }
-        val newEvent = Event(
-            id = id,
-            title = draft.title,
-            description = draft.description,
-            orgId = userId.ifBlank { "DEMO_ORGANIZER" },
-            orgName = "UTH Organizer",
-            location = draft.location,
-            campus = draft.campus,
-            startAt = draft.startAt,
-            endAt = draft.endAt,
-            capacity = draft.capacity,
-            registeredCount = 0,
-            points = 5,
-            status = EventStatus.PUBLISHED,
-        )
-        if (index >= 0) {
-            currentEvents[index] = newEvent
+        val id = if (userId.isNotBlank()) {
+            if (eventId == null) {
+                client.rpc("create_event_v2", inputs).jsonPrimitive.content
+            } else {
+                client.rpc("edit_event_v2", inputs)
+                eventId
+            }
         } else {
-            currentEvents.add(newEvent)
+            val localId = eventId ?: UUID.randomUUID().toString()
+            val currentEvents = loadPersistedEvents().toMutableList()
+            val index = currentEvents.indexOfFirst { it.id == localId }
+            val newEvent = Event(
+                id = localId,
+                title = draft.title,
+                description = draft.description,
+                orgId = "DEMO_ORGANIZER",
+                orgName = draft.organizerName,
+                location = draft.location,
+                campus = draft.campus,
+                startAt = draft.startAt,
+                endAt = draft.endAt,
+                capacity = draft.capacity,
+                registeredCount = 0,
+                points = draft.points,
+                status = EventStatus.PUBLISHED,
+                category = draft.category,
+                managers = draft.managers,
+            )
+            if (index >= 0) currentEvents[index] = newEvent else currentEvents.add(newEvent)
+            savePersistedEvents(currentEvents)
+            localId
         }
-        savePersistedEvents(currentEvents)
         refresh()
         id
     }

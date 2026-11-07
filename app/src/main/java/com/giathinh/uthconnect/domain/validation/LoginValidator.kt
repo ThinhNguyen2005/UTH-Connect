@@ -16,6 +16,9 @@ class LoginValidator {
 
     fun isUniversityEmail(email: String): Boolean = universityEmailPattern.matches(email.trim())
 
+    /** Identifies a syntactically valid teacher ID after shared validation. */
+    fun isTeacherId(identifier: String): Boolean = identifier.trim().matches(Regex("^GV[0-9]{6,10}$", RegexOption.IGNORE_CASE))
+
     fun passwordError(password: String): LoginFieldError? = if (password.isBlank()) LoginFieldError.Required else null
 }
 

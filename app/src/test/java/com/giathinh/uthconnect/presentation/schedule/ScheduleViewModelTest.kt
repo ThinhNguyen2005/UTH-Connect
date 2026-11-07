@@ -201,6 +201,32 @@ class ScheduleViewModelTest {
         }
     }
 
+    @Test fun `blank event title is rejected before saving`() {
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock, teacherProfile())
+        try {
+            vm.onAction(ScheduleAction.OpenCreateEvent)
+            vm.onAction(
+                ScheduleAction.CreateWorkshopEvent(
+                    title = " ",
+                    category = "Hội thảo",
+                    coOrganizers = emptyList(),
+                    summary = "",
+                    date = LocalDate.of(2026, 11, 15),
+                    startTime = "08:30",
+                    endTime = "11:30",
+                    venue = "A.101",
+                    trainingPoints = "+5 ĐRL",
+                    managers = emptyList(),
+                ),
+            )
+            assertTrue(vm.uiState.value.showCreateEvent)
+            assertTrue(vm.uiState.value.eventTitleError)
+            assertTrue(vm.uiState.value.events.isEmpty())
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
     @Test fun `create workshop event adds event and closes creation screen`() {
         val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock, teacherProfile())
         try {

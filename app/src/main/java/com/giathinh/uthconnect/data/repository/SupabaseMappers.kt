@@ -34,6 +34,10 @@ internal fun JsonObject.int(name: String): Int = (get(name) as? JsonPrimitive)?.
 
 internal fun JsonObject.bool(name: String): Boolean = (get(name) as? JsonPrimitive)?.booleanOrNull ?: false
 
+/** Maps a nullable JSON array of strings to the domain representation. */
+internal fun JsonObject.stringList(name: String): List<String> =
+    (get(name) as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { value -> value.isString }?.content }.orEmpty()
+
 internal fun JsonObject.toDomainEvent(): Event = Event(
     id = requireNotNull(string("id")) { "Missing event ID" },
     title = string("title").orEmpty(),
@@ -49,6 +53,8 @@ internal fun JsonObject.toDomainEvent(): Event = Event(
     points = int("points"),
     status = EventStatus.fromString(string("status")),
     coverUrl = string("banner_url"),
+    category = string("category").orEmpty(),
+    managers = stringList("managers"),
 )
 
 internal fun JsonObject.toDomainProfile(): StudentProfile {

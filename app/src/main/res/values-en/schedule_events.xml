@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="schedule_event_save_failed">Could not save the event. Please try again.</string>
+    <string name="schedule_event_registration_failed">Could not register for the event. Please try again.</string>
+    <string name="schedule_event_title_required">Enter an event title.</string>
 </resources>

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="schedule_event_save_failed">Không thể lưu sự kiện. Vui lòng thử lại.</string>
+    <string name="schedule_event_registration_failed">Không thể đăng ký sự kiện. Vui lòng thử lại.</string>
+    <string name="schedule_event_title_required">Vui lòng nhập tên sự kiện.</string>
 </resources>

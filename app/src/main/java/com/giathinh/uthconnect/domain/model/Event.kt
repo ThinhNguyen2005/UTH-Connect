@@ -18,6 +18,8 @@ data class Event(
     val points: Int = 0,
     val status: EventStatus = EventStatus.PUBLISHED,
     val coverUrl: String? = null,
+    val category: String = "",
+    val managers: List<String> = emptyList(),
 )
 
 /** Data an organizer can edit. Ownership and status are decided by the server. */
@@ -29,6 +31,10 @@ data class EventDraft(
     val startAt: Long,
     val endAt: Long,
     val capacity: Int,
+    val points: Int = 0,
+    val organizerName: String = "",
+    val category: String = "",
+    val managers: List<String> = emptyList(),
 )
 
 enum class EventStatus {

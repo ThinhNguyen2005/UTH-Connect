@@ -19,6 +19,8 @@ data class ScheduleUiState(
     val isEventsLoading: Boolean = true,
     val eventsLoadFailed: Boolean = false,
     val eventSaveFailed: Boolean = false,
+    val eventRegistrationFailed: Boolean = false,
+    val eventTitleError: Boolean = false,
     val selectedTicket: Ticket? = null,
     val ticketQrToken: String? = null,
     val ticketQrError: String? = null,

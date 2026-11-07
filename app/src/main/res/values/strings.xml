@@ -260,7 +260,7 @@
     <string name="auth_required">Vui lòng không để trống trường này.</string>
     <string name="auth_invalid_identifier">MSSV phải có 8–12 chữ số hoặc email @ut.edu.vn / @uth.edu.vn hợp lệ.</string>
     <string name="auth_invalid_credentials">Sai MSSV/email hoặc mật khẩu.</string>
-    <string name="auth_profile_unavailable">Đăng nhập thành công nhưng không đọc được hồ sơ. Hãy kiểm tra quyền truy cập bảng profiles trong Supabase.</string>
+    <string name="auth_profile_unavailable">Không thể tải hồ sơ lúc này. Vui lòng thử lại sau.</string>
     <string name="auth_unexpected">Không thể đăng nhập. Vui lòng thử lại.</string>
     <string name="auth_restore_failed">Không đọc được phiên đăng nhập cũ. Vui lòng đăng nhập lại.</string>
     <string name="auth_forgot_title">Khôi phục mật khẩu</string>
@@ -593,4 +593,10 @@
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
     <string name="schedule_create_event">Tạo sự kiện</string>
+    <string name="schedule_time_range">Khung giờ</string>
+    <string name="schedule_start_time">Giờ bắt đầu</string>
+    <string name="schedule_end_time">Giờ kết thúc</string>
+    <string name="schedule_time_range_error">Giờ kết thúc phải sau giờ bắt đầu.</string>
+    <string name="common_confirm">Xác nhận</string>
+    <string name="common_cancel">Hủy</string>
 </resources>
