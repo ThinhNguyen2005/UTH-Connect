@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,6 +57,13 @@ private fun dialPhoneNumber(context: Context, phoneNumber: String) {
 private fun sendEmail(context: Context, emailAddress: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:$emailAddress")
+    }
+    context.startActivity(intent)
+}
+
+private fun openDirections(context: Context, address: String) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
     }
     context.startActivity(intent)
 }
@@ -170,6 +178,20 @@ fun CampusesScreen(
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
                             Text(campus.email, style = MaterialTheme.typography.bodySmall)
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = { openDirections(context, campus.address) },
+                        modifier = Modifier.fillMaxWidth().testTag("campus_directions_button"),
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                    ) {
+                        Icon(
+                            Icons.Filled.Place,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconCompact),
+                        )
+                        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                        Text(stringResource(R.string.campuses_directions_action))
                     }
                 }
             }
