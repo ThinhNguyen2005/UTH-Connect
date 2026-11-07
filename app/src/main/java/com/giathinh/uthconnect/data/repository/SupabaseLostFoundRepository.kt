@@ -11,6 +11,9 @@ import kotlinx.serialization.json.put
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /**
  * Supabase-backed implementation of [LostFoundRepository].
@@ -28,7 +31,7 @@ class SupabaseLostFoundRepository @Inject constructor(
     override suspend fun getListings(): Result<List<LostFoundListing>> = runCatching {
         val rows = client.table("lost_found_items?select=*&order=created_at.desc", allowAnonymous = true).jsonArray
         rows.map { it.jsonObject.toDomainLostFoundListing() }
-    }
+    }.onFailure { if (it is CancellationException) throw it }
 
     /**
      * Reports a new lost or found listing with optional proof photo upload.
@@ -55,13 +58,13 @@ class SupabaseLostFoundRepository @Inject constructor(
                 }
                 val filename = "${UUID.randomUUID()}.$extension"
                 val bucketPath = "items/$filename"
+                uploadedBucketPath = bucketPath
                 uploadedImageUrl = client.uploadStorage(
                     bucket = "lost-found",
                     path = bucketPath,
                     bytes = imageBytes,
                     mimeType = resolvedMime,
                 )
-                uploadedBucketPath = bucketPath
             }
 
             val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
@@ -73,10 +76,14 @@ class SupabaseLostFoundRepository @Inject constructor(
                 else -> null
             } ?: error("Failed to insert lost & found item: empty response")
             createdRow.toDomainLostFoundListing()
-        }.onFailure {
-            if (uploadedBucketPath != null) {
-                runCatching { client.deleteStorage("lost-found", uploadedBucketPath) }
+        }.onFailure { error ->
+            val path = uploadedBucketPath
+            if (path != null) {
+                withContext(NonCancellable) {
+                    runCatching { client.deleteStorage("lost-found", path) }
+                }
             }
+            if (error is CancellationException) throw error
         }
     }
 
@@ -104,5 +111,5 @@ class SupabaseLostFoundRepository @Inject constructor(
                 message = "No permission to update this listing",
             )
         }
-    }
+    }.onFailure { if (it is CancellationException) throw it }
 }
