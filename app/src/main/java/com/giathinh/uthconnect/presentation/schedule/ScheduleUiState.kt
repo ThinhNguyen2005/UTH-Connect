@@ -2,6 +2,7 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import com.giathinh.uthconnect.domain.model.Course
 import com.giathinh.uthconnect.domain.model.Timetable
+import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -14,6 +15,13 @@ data class ScheduleUiState(
     val period: SchedulePeriod = SchedulePeriod.ALL,
     val tab: ScheduleTab = ScheduleTab.EVENTS,
     val events: List<ScheduleEvent> = emptyList(),
+    val isEventsLoading: Boolean = true,
+    val eventsLoadFailed: Boolean = false,
+    val selectedTicket: Ticket? = null,
+    val ticketQrToken: String? = null,
+    val ticketQrError: String? = null,
+    val ticketQrLoading: Boolean = false,
+    val studentName: String? = null,
     val showForm: Boolean = false,
     val isTeacher: Boolean = false,
     val showCreateEvent: Boolean = false,
@@ -47,7 +55,7 @@ data class ScheduleEvent(
     val endAt: LocalDateTime,
     val registration: EventRegistration,
     val accent: EventAccent,
-    val trainingPoints: String = "",
+    val trainingPoints: Int = 0,
     val session: String = "",
 )
 

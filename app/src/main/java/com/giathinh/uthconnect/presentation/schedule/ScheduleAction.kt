@@ -16,7 +16,11 @@ sealed interface ScheduleAction {
     data class SelectCourse(val value: Course) : ScheduleAction
     data class Complete(val id: String) : ScheduleAction
     data class RegisterEvent(val id: String) : ScheduleAction
+    data class OpenEventTicket(val eventId: String) : ScheduleAction
+    data object CloseEventTicket : ScheduleAction
     data object JumpToToday : ScheduleAction
+    data object RefreshEvents : ScheduleAction
+    data object PollEvents : ScheduleAction
     data object OpenCreateEvent : ScheduleAction
     data object CloseCreateEvent : ScheduleAction
     data object ToggleTeacherMode : ScheduleAction

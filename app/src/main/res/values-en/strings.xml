@@ -255,6 +255,7 @@
     <string name="auth_required">This field is required.</string>
     <string name="auth_invalid_identifier">Use an 8–12 digit ID or a valid @ut.edu.vn / @uth.edu.vn email.</string>
     <string name="auth_invalid_credentials">Incorrect ID/email or password.</string>
+    <string name="auth_profile_unavailable">Signed in, but the profile could not be loaded. Check Supabase access to the profiles table.</string>
     <string name="auth_unexpected">Could not sign in. Please try again.</string>
     <string name="auth_restore_failed">Could not restore the old session. Sign in again.</string>
     <string name="auth_forgot_title">Password Recovery</string>
@@ -331,6 +332,7 @@
     <string name="schedule_avatar_initials">ST</string>
     <string name="schedule_notifications">Notifications</string>
     <string name="schedule_points_bonus">+5 pts</string>
+    <string name="schedule_points_value">+%1$d points</string>
     <string name="schedule_category_all">All events (%1$d)</string>
     <string name="schedule_category_workshops">Workshops &amp; seminars</string>
     <string name="schedule_category_culture">Culture &amp; sports</string>
@@ -344,6 +346,8 @@
     <string name="schedule_day_sun">Sun</string>
     <string name="events_on_date">Events · %1$s</string>
     <string name="no_events_for_date">No events on this day</string>
+    <string name="schedule_events_load_failed">Could not load events</string>
+    <string name="schedule_events_load_failed_body">Check your network connection and try loading the server data again.</string>
     <string name="event_organizer">Organizer: %1$s</string>
     <string name="event_checked_in">Ticket checked in</string>
     <string name="event_registered">Registered</string>

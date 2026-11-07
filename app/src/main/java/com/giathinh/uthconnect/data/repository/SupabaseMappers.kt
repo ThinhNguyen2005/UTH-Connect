@@ -46,6 +46,7 @@ internal fun JsonObject.toDomainEvent(): Event = Event(
     endAt = Instant.parse(requireNotNull(string("end_at"))).toEpochMilli(),
     capacity = int("max_participants"),
     registeredCount = int("current_registered"),
+    points = int("points"),
     status = EventStatus.fromString(string("status")),
     coverUrl = string("banner_url"),
 )

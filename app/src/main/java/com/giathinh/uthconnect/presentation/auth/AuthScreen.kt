@@ -613,7 +613,13 @@ private fun ModernPasswordContent(
                 modifier = Modifier.testTag("auth_error"),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
-            if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected) {
+            if (failure in setOf(
+                    AuthFailure.InvalidCredentials,
+                    AuthFailure.ProfileUnavailable,
+                    AuthFailure.Unexpected,
+                    AuthFailure.NetworkError,
+                )
+            ) {
                 OutlinedButton(
                     onClick = { onAction(AuthAction.Retry) },
                     enabled = enabled,
@@ -1389,6 +1395,7 @@ private fun identifierErrorRes(error: LoginFieldError) = when (error) {
 
 private fun failureRes(failure: AuthFailure) = when (failure) {
     AuthFailure.InvalidCredentials -> R.string.auth_invalid_credentials
+    AuthFailure.ProfileUnavailable -> R.string.auth_profile_unavailable
     AuthFailure.Unexpected -> R.string.auth_unexpected
     AuthFailure.SessionRestore -> R.string.auth_restore_failed
     AuthFailure.GoogleUnavailable -> R.string.auth_google_unavailable

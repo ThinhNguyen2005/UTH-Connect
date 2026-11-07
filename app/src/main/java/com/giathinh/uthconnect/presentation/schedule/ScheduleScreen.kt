@@ -44,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,8 +64,6 @@ import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
-import com.giathinh.uthconnect.domain.model.Ticket
-import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.presentation.tickets.TicketQrScreen
 import java.time.DayOfWeek
@@ -103,8 +100,6 @@ fun ScheduleScreen(
     }
 
     var selectedCategory by remember { mutableIntStateOf(0) }
-    var selectedTicket by remember { mutableStateOf<Ticket?>(null) }
-
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -178,8 +173,7 @@ fun ScheduleScreen(
                                         event = event,
                                         now = uiState.now,
                                         onAction = onAction,
-                                        onViewQr = { selectedTicket = it.toTicket() },
-                                        onViewDetails = { selectedTicket = it.toTicket() },
+                                        onViewDetails = { onAction(ScheduleAction.OpenEventTicket(it.id)) },
                                     )
                                 }
                             }
@@ -193,21 +187,37 @@ fun ScheduleScreen(
 
     }
 
-    selectedTicket?.let { ticket ->
+    if (uiState.selectedTicket != null || uiState.ticketQrLoading || uiState.ticketQrError != null) {
         Dialog(
-            onDismissRequest = { selectedTicket = null },
+            onDismissRequest = { onAction(ScheduleAction.CloseEventTicket) },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false,
             ),
         ) {
-            TicketQrScreen(
-                ticket = ticket,
-                studentName = "Nguyễn Minh Anh",
-                secondsRemaining = 60,
-                onBack = { selectedTicket = null },
-                onCopy = {},
-            )
+            if (uiState.ticketQrLoading && uiState.selectedTicket == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(UthDimens.Spacing.Md))
+                    Text(stringResource(R.string.tickets_qr_issuing))
+                }
+            } else {
+                TicketQrScreen(
+                    ticket = uiState.selectedTicket,
+                    studentName = uiState.studentName,
+                    secondsRemaining = 60,
+                    qrToken = uiState.ticketQrToken,
+                    qrError = uiState.ticketQrError,
+                    onBack = { onAction(ScheduleAction.CloseEventTicket) },
+                    onCopy = {},
+                )
+            }
         }
     }
 }
@@ -568,7 +578,6 @@ private fun CampusEventCard(
     event: ScheduleEvent,
     now: LocalDateTime,
     onAction: (ScheduleAction) -> Unit,
-    onViewQr: (ScheduleEvent) -> Unit,
     onViewDetails: (ScheduleEvent) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -939,34 +948,5 @@ private fun previewState(): ScheduleUiState {
             ),
         ),
         timetable = Timetable(),
-    )
-}
-
-private fun ScheduleEvent.toTicket(): Ticket {
-    val isSports = id.contains("sports") || title.contains("Hội thao")
-    val isAi = id.contains("ai") || title.contains("AI")
-    return Ticket(
-        id = if (isSports) {
-            "ticket-sports"
-        } else if (isAi) {
-            "ticket-ai"
-        } else {
-            "ticket-$id"
-        },
-        studentId = "2023040123",
-        eventId = id,
-        eventTitle = title,
-        eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
-        eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
-        status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
-        fallbackCode = if (isSports) {
-            "482 917"
-        } else if (isAi) {
-            "998 102"
-        } else {
-            "356 891"
-        },
-        organizerName = organizer,
-        seatLabel = if (isSports) "Ghế A-14" else "Khu vực tự do",
     )
 }

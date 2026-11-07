@@ -203,7 +203,8 @@ class SupabaseEventRepository @Inject constructor(
     override fun currentUserId(): String = client.userId
 
     override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = runCatching {
-        val id = eventId ?: "event-${UUID.randomUUID()}"
+        // RPC parameters are UUID columns in Supabase; a prefixed local ID made creation fail remotely.
+        val id = eventId ?: UUID.randomUUID().toString()
         val inputs = buildJsonObject {
             put("p_event_id", uuid(id))
             put("p_title", draft.title)

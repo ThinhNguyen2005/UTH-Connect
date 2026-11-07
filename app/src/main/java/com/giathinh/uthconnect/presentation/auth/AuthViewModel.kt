@@ -575,6 +575,14 @@ class AuthViewModel @Inject constructor(
                         eventChannel.send(AuthEvent.InvalidCredentials)
                     }
 
+                    is SignInResult.ProfileUnavailable -> _uiState.update {
+                        it.copy(isSigningIn = false, failure = AuthFailure.ProfileUnavailable)
+                    }
+
+                    SignInResult.NetworkFailure -> _uiState.update {
+                        it.copy(isSigningIn = false, failure = AuthFailure.NetworkError)
+                    }
+
                     SignInResult.Failure -> _uiState.update {
                         it.copy(isSigningIn = false, failure = AuthFailure.Unexpected)
                     }

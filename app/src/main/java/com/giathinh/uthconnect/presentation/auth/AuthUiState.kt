@@ -89,6 +89,7 @@ sealed interface AuthEvent {
 
 enum class AuthFailure {
     InvalidCredentials,
+    ProfileUnavailable,
     Unexpected,
     SessionRestore,
 

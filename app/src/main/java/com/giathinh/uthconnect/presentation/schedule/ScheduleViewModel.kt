@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
@@ -22,6 +23,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.TicketStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import java.time.Clock
@@ -30,6 +33,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -39,6 +43,7 @@ class ScheduleViewModel @Inject constructor(
     @param:Named("timetable") private val clock: Clock,
     private val getProfile: GetProfileUseCase,
     private val eventRepository: EventRepository,
+    private val ticketRepository: TicketRepository,
 ) : ViewModel() {
 
     constructor(
@@ -102,6 +107,9 @@ class ScheduleViewModel @Inject constructor(
                 return Result.success(Unit)
             }
         },
+        ticketRepository = object : TicketRepository {
+            override suspend fun getTickets(studentId: String) = Result.success(emptyList<com.giathinh.uthconnect.domain.model.Ticket>())
+        },
     )
 
     private val initialNow = LocalDateTime.now(clock)
@@ -109,7 +117,10 @@ class ScheduleViewModel @Inject constructor(
 
     private val registeredEventIds = mutableSetOf<String>()
     private var allStoredEvents = listOf<Event>()
+    private val pendingEvents = linkedMapOf<String, Event>()
     private var eventsJob: Job? = null
+    private var ticketJob: Job? = null
+    private var currentProfile: StudentProfile? = null
 
     private val state = MutableStateFlow(
         ScheduleUiState(
@@ -123,11 +134,12 @@ class ScheduleViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             getProfile.observe().collect { profile ->
+                currentProfile = profile
                 val isTeacher = profile?.role?.isTeacherOrOrganizer == true ||
                     profile?.role?.name in listOf("TEACHER", "ORGANIZER", "ADMIN") ||
                     profile?.studentId?.startsWith("GV", ignoreCase = true) == true ||
                     profile?.email?.contains("teacher", ignoreCase = true) == true
-                state.update { it.copy(isTeacher = isTeacher) }
+                state.update { it.copy(isTeacher = isTeacher, studentName = profile?.displayName) }
             }
         }
         viewModelScope.launch {
@@ -153,15 +165,16 @@ class ScheduleViewModel @Inject constructor(
     }
 
     private fun reloadEvents() {
-        val mapped = allStoredEvents
+        val mapped = (allStoredEvents + pendingEvents.values)
+            .distinctBy { it.id }
             .filter { it.status != EventStatus.DRAFT && it.status != EventStatus.CANCELLED }
             .map { it.toScheduleEvent(registeredEventIds) }
         state.update { it.copy(events = mapped) }
     }
 
-    private fun loadEvents() {
+    private fun loadEvents(showLoading: Boolean = true) {
         eventsJob?.cancel()
-        state.update { it.copy(isEventsLoading = true, eventsLoadFailed = false) }
+        state.update { it.copy(isEventsLoading = showLoading, eventsLoadFailed = false) }
         eventsJob = viewModelScope.launch {
             eventRepository.getEvents()
                 .catch { error ->
@@ -170,6 +183,7 @@ class ScheduleViewModel @Inject constructor(
                 }
                 .collect { events ->
                     allStoredEvents = events
+                    events.forEach { pendingEvents.remove(it.id) }
                     reloadEvents()
                     state.update { it.copy(isEventsLoading = false, eventsLoadFailed = false) }
                 }
@@ -215,6 +229,14 @@ class ScheduleViewModel @Inject constructor(
                 loadEvents()
             }
 
+            ScheduleAction.PollEvents -> {
+                if (eventsJob?.isActive == true) {
+                    eventRepository.refresh()
+                } else {
+                    loadEvents(showLoading = false)
+                }
+            }
+
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
 
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
@@ -227,6 +249,15 @@ class ScheduleViewModel @Inject constructor(
                     eventRepository.registerCurrentUser(action.id)
                 }
                 reloadEvents()
+            }
+
+            is ScheduleAction.OpenEventTicket -> openEventTicket(action.eventId)
+
+            ScheduleAction.CloseEventTicket -> {
+                ticketJob?.cancel()
+                state.update {
+                    it.copy(selectedTicket = null, ticketQrToken = null, ticketQrError = null, ticketQrLoading = false)
+                }
             }
 
             ScheduleAction.OpenForm -> state.update {
@@ -268,7 +299,7 @@ class ScheduleViewModel @Inject constructor(
                 )
                 val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val eventId = "event-workshop-${System.currentTimeMillis()}"
+                val eventId = UUID.randomUUID().toString()
                 val title = action.title.ifBlank { "Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026" }
                 val organizer = action.coOrganizers.joinToString(" & ").ifBlank { "Đoàn - Hội CNTT & CLB Sáng tạo Trẻ" }
                 val venue = action.venue.ifBlank { "Hội trường: A.101 (Cơ sở 1)" }
@@ -299,10 +330,13 @@ class ScheduleViewModel @Inject constructor(
                     status = EventStatus.PUBLISHED,
                 )
 
-                allStoredEvents = allStoredEvents + newDomainEvent
+                pendingEvents[eventId] = newDomainEvent
+                reloadEvents()
 
                 viewModelScope.launch {
-                    eventRepository.saveEvent(eventId, draft)
+                    eventRepository.saveEvent(eventId, draft).onSuccess {
+                        eventRepository.refresh()
+                    }
                 }
 
                 state.update { current ->
@@ -326,6 +360,35 @@ class ScheduleViewModel @Inject constructor(
                 val valid = useCase.add(value.course, value.title, value.date, value.time)
                 state.update { it.copy(showForm = !valid, dateError = !valid, timeError = !valid, title = if (valid) "" else it.title) }
             }
+        }
+    }
+
+    private fun openEventTicket(eventId: String) {
+        val studentId = currentProfile?.studentId ?: return
+        ticketJob?.cancel()
+        ticketJob = viewModelScope.launch {
+            state.update { it.copy(ticketQrLoading = true, ticketQrError = null, selectedTicket = null) }
+            ticketRepository.getTickets(studentId).fold(
+                onSuccess = { tickets ->
+                    val ticket = tickets.firstOrNull { it.eventId == eventId }
+                    if (ticket == null) {
+                        state.update { it.copy(ticketQrLoading = false, ticketQrError = "Vé của sự kiện này chưa có trong tài khoản.") }
+                    } else if (BuildConfig.USE_SUPABASE && ticket.status != TicketStatus.VALID) {
+                        state.update { it.copy(ticketQrLoading = false, selectedTicket = ticket, ticketQrError = "Vé này không còn hiệu lực để tạo mã QR.") }
+                    } else if (BuildConfig.USE_SUPABASE) {
+                        state.update { it.copy(selectedTicket = ticket) }
+                        ticketRepository.issueCheckInToken(ticket.eventId).fold(
+                            onSuccess = { token -> state.update { it.copy(ticketQrLoading = false, ticketQrToken = token) } },
+                            onFailure = { error -> state.update { it.copy(ticketQrLoading = false, ticketQrError = error.message ?: "Không thể tạo mã QR.") } },
+                        )
+                    } else {
+                        state.update { it.copy(ticketQrLoading = false, selectedTicket = ticket) }
+                    }
+                },
+                onFailure = { error ->
+                    state.update { it.copy(ticketQrLoading = false, ticketQrError = error.message ?: "Không thể tải vé.") }
+                },
+            )
         }
     }
 }

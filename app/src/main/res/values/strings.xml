@@ -260,6 +260,7 @@
     <string name="auth_required">Vui lòng không để trống trường này.</string>
     <string name="auth_invalid_identifier">MSSV phải có 8–12 chữ số hoặc email @ut.edu.vn / @uth.edu.vn hợp lệ.</string>
     <string name="auth_invalid_credentials">Sai MSSV/email hoặc mật khẩu.</string>
+    <string name="auth_profile_unavailable">Đăng nhập thành công nhưng không đọc được hồ sơ. Hãy kiểm tra quyền truy cập bảng profiles trong Supabase.</string>
     <string name="auth_unexpected">Không thể đăng nhập. Vui lòng thử lại.</string>
     <string name="auth_restore_failed">Không đọc được phiên đăng nhập cũ. Vui lòng đăng nhập lại.</string>
     <string name="auth_forgot_title">Khôi phục mật khẩu</string>
@@ -336,6 +337,7 @@
     <string name="schedule_avatar_initials">SV</string>
     <string name="schedule_notifications">Thông báo</string>
     <string name="schedule_points_bonus">+5 ĐRL</string>
+    <string name="schedule_points_value">+%1$d ĐRL</string>
     <string name="schedule_category_all">Tất cả sự kiện (%1$d)</string>
     <string name="schedule_category_workshops">Workshop &amp; hội thảo</string>
     <string name="schedule_category_culture">Văn hóa &amp; thể thao</string>
@@ -349,6 +351,8 @@
     <string name="schedule_day_sun">CN</string>
     <string name="events_on_date">Sự kiện · %1$s</string>
     <string name="no_events_for_date">Không có sự kiện trong ngày này</string>
+    <string name="schedule_events_load_failed">Không tải được sự kiện</string>
+    <string name="schedule_events_load_failed_body">Kiểm tra kết nối mạng và thử tải lại dữ liệu từ máy chủ.</string>
     <string name="event_organizer">Đơn vị tổ chức: %1$s</string>
     <string name="event_checked_in">Đã điểm danh</string>
     <string name="event_registered">Đã đăng ký</string>

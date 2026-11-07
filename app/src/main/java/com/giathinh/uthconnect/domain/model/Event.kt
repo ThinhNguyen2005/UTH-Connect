@@ -15,6 +15,7 @@ data class Event(
     val endAt: Long,
     val capacity: Int,
     val registeredCount: Int = 0,
+    val points: Int = 0,
     val status: EventStatus = EventStatus.PUBLISHED,
     val coverUrl: String? = null,
 )
