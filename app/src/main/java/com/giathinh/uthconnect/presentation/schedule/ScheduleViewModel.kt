@@ -10,6 +10,7 @@ import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.retryWhen
@@ -127,7 +128,9 @@ class ScheduleViewModel @Inject constructor(
                 }
                 if (BuildConfig.USE_SUPABASE) {
                     ticketQrJob = viewModelScope.launch {
-                        ticketRepository.issueCheckInToken(action.id).fold(
+                        val result = ticketRepository.issueCheckInToken(action.id)
+                        coroutineContext.ensureActive()
+                        result.fold(
                             onSuccess = { token ->
                                 state.update { current ->
                                     if (current.selectedEvent?.id == action.id) {
