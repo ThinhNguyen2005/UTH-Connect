@@ -20,10 +20,11 @@ import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPoin
 import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionScreen
 
 /**
- * Tầng nối (route) của tab Tiện ích: Quản lý ViewModel và Navigation con
- * giữa Hub Tiện ích với các màn hình con tương ứng.
+ * Tầng nối (route) của tab Tiện ích: Quản lý ViewModel và Navigation con giữa Hub Tiện ích với các
+ * màn hình con tương ứng.
  */
 @Composable
+@Suppress("FunctionNaming")
 fun UtilitiesRoute(
     modifier: Modifier = Modifier,
     onOpenModule: (UtilityModuleId) -> Unit = {},
@@ -56,7 +57,9 @@ fun UtilitiesRoute(
                     }
                 },
                 onNavigateToTuition = { navController.navigate(UtilitiesDestination.Tuition) },
-                onNavigateToTrainingPoint = { navController.navigate(UtilitiesDestination.TrainingPoint) },
+                onNavigateToTrainingPoint = {
+                    navController.navigate(UtilitiesDestination.TrainingPoint)
+                },
                 onNavigateToCampuses = { navController.navigate(UtilitiesDestination.Campuses) },
                 onNavigateToSettings = { navController.navigate(UtilitiesDestination.Settings) },
                 onBack = onBack,
@@ -64,10 +67,7 @@ fun UtilitiesRoute(
         }
 
         composable<UtilitiesDestination.Tuition> {
-            TuitionScreen(
-                uiState = tuitionState,
-                onBack = { navController.popBackStack() },
-            )
+            TuitionScreen(uiState = tuitionState, onBack = { navController.popBackStack() })
         }
 
         composable<UtilitiesDestination.TrainingPoint> {
@@ -78,9 +78,7 @@ fun UtilitiesRoute(
         }
 
         composable<UtilitiesDestination.Campuses> {
-            CampusesScreen(
-                onBack = { navController.popBackStack() },
-            )
+            CampusesScreen(onBack = { navController.popBackStack() })
         }
 
         composable<UtilitiesDestination.Settings> {

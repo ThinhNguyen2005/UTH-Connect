@@ -5,7 +5,17 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.google.services) apply false
+}
+
+detekt {
+    source.setFrom(
+        files(
+            "src/main/java/com/giathinh/uthconnect/presentation/utilities/UtilitiesRoute.kt",
+            "src/main/java/com/giathinh/uthconnect/presentation/utilities/campuses",
+        ),
+    )
 }
 
 val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()

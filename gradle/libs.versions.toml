@@ -30,6 +30,8 @@ androidxHilt = "1.4.0"
 kotlinxSerialization = "1.9.0"
 googleServices = "4.4.2"
 firebaseBom = "33.10.0"
+detekt = "2.0.0-alpha.0"
+spotless = "8.10.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -82,4 +84,6 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 

@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming")
+
 package com.giathinh.uthconnect.presentation.utilities.campuses
 
 import android.content.Context
@@ -46,21 +48,110 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
 private fun dialPhoneNumber(context: Context, phoneNumber: String) {
     val cleanNumber = phoneNumber.replace(" ", "")
-    val intent = Intent(Intent.ACTION_DIAL).apply {
-        data = Uri.parse("tel:$cleanNumber")
-    }
+    val intent = Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:$cleanNumber") }
     context.startActivity(intent)
 }
 
 private fun openDirections(context: Context, address: String) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        data = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
-    }
+    val intent =
+        Intent(Intent.ACTION_VIEW).apply { data = Uri.parse("geo:0,0?q=${Uri.encode(address)}") }
     context.startActivity(intent)
+}
+
+@Composable
+private fun CampusCard(campus: CampusInfo, onCall: () -> Unit, onDirections: () -> Unit) {
+    UthCard(modifier = Modifier.fillMaxWidth().padding(bottom = UthDimens.Spacing.Md)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Place,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(UthDimens.Size.Icon),
+            )
+            Spacer(Modifier.width(UthDimens.Spacing.Sm))
+            Text(
+                campus.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Text(campus.address, style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(UthDimens.Spacing.Xs))
+        Text(
+            campus.note,
+            style = MaterialTheme.typography.bodySmall,
+            color = UthTheme.extendedColors.textSecondary,
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        ) {
+            FilledTonalButton(
+                onClick = onCall,
+                modifier = Modifier.weight(1f),
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+            ) {
+                Icon(
+                    Icons.Filled.Phone,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconCompact),
+                )
+                Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                Text(stringResource(R.string.campuses_call_action))
+            }
+            OutlinedButton(
+                onClick = onDirections,
+                modifier = Modifier.weight(1f),
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+            ) {
+                Icon(
+                    Icons.Filled.Place,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconCompact),
+                )
+                Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                Text(stringResource(R.string.campuses_directions_action))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DepartmentCard(department: DepartmentInfo, onCall: () -> Unit) {
+    UthCard(modifier = Modifier.fillMaxWidth().padding(bottom = UthDimens.Spacing.Sm)) {
+        Text(
+            department.name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Xs))
+        Text(
+            text = "Vị trí: ${department.location}",
+            style = MaterialTheme.typography.bodySmall,
+            color = UthTheme.extendedColors.textSecondary,
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Hotline: ${department.hotline}",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            OutlinedButton(onClick = onCall) { Text(stringResource(R.string.campuses_call_action)) }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("FunctionNaming", "LongMethod")
 fun CampusesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -86,20 +177,21 @@ fun CampusesScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
         },
         modifier = modifier.fillMaxSize(),
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = UthDimens.Spacing.Xl),
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = UthDimens.Spacing.Xl)
         ) {
             Spacer(Modifier.height(UthDimens.Spacing.Md))
             Text(
@@ -112,106 +204,21 @@ fun CampusesScreen(
             UthSectionHeader(title = stringResource(R.string.campuses_list_header))
 
             uiState.campuses.forEach { campus ->
-                UthCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = UthDimens.Spacing.Md),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Place,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(UthDimens.Size.Icon),
-                        )
-                        Spacer(Modifier.width(UthDimens.Spacing.Sm))
-                        Text(
-                            text = campus.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-
-                    Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                    Text(
-                        text = campus.address,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-
-                    Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                    Text(
-                        text = campus.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = UthTheme.extendedColors.textSecondary,
-                    )
-
-                    Spacer(Modifier.height(UthDimens.Spacing.Md))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
-                    ) {
-                        FilledTonalButton(
-                            onClick = { dialPhoneNumber(context, campus.hotline) },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                        ) {
-                            Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
-                            Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                            Text(stringResource(R.string.campuses_call_action))
-                        }
-
-                        OutlinedButton(
-                            onClick = { openDirections(context, campus.address) },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                        ) {
-                            Icon(Icons.Filled.Place, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
-                            Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                            Text(stringResource(R.string.campuses_directions_action))
-                        }
-                    }
-                }
+                CampusCard(
+                    campus = campus,
+                    onCall = { dialPhoneNumber(context, campus.hotline) },
+                    onDirections = { openDirections(context, campus.address) },
+                )
             }
 
             // Danh bạ phòng ban
             UthSectionHeader(title = stringResource(R.string.campuses_departments_header))
 
-            uiState.departments.forEach { dept ->
-                UthCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = UthDimens.Spacing.Sm),
-                ) {
-                    Text(
-                        text = dept.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(UthDimens.Spacing.Xs))
-                    Text(
-                        text = "Vị trí: ${dept.location}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = UthTheme.extendedColors.textSecondary,
-                    )
-                    Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Hotline: ${dept.hotline}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        OutlinedButton(
-                            onClick = { dialPhoneNumber(context, dept.hotline) },
-                        ) {
-                            Text(stringResource(R.string.campuses_call_action))
-                        }
-                    }
-                }
+            uiState.departments.forEach { department ->
+                DepartmentCard(
+                    department = department,
+                    onCall = { dialPhoneNumber(context, department.hotline) },
+                )
             }
 
             Spacer(Modifier.height(UthDimens.Spacing.Xl))
@@ -222,15 +229,11 @@ fun CampusesScreen(
 @Preview(name = "CampusesScreen Light", showBackground = true)
 @Composable
 private fun CampusesScreenPreview() {
-    UthPreview {
-        CampusesScreen(onBack = {})
-    }
+    UthPreview { CampusesScreen(onBack = {}) }
 }
 
 @Preview(name = "CampusesScreen Dark", showBackground = true)
 @Composable
 private fun CampusesScreenDarkPreview() {
-    UthPreview(darkTheme = true) {
-        CampusesScreen(onBack = {})
-    }
+    UthPreview(darkTheme = true) { CampusesScreen(onBack = {}) }
 }

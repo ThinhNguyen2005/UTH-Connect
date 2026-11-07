@@ -5,8 +5,25 @@ plugins {
     // KSP phải khai ở gốc (apply false) rồi mới alias vào module cần chạy processor.
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
-    // Serialization plugin (khớp Kotlin) cho route type-safe của Navigation — route là @Serializable.
+    // Serialization plugin (khớp Kotlin) cho route type-safe của Navigation — route là
+    // @Serializable.
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target(
+            "app/src/main/java/com/giathinh/uthconnect/presentation/utilities/UtilitiesRoute.kt",
+            "app/src/main/java/com/giathinh/uthconnect/presentation/utilities/campuses/**/*.kt",
+        )
+        ktfmt("0.56").kotlinlangStyle()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktfmt("0.56").kotlinlangStyle()
+    }
 }
