@@ -10,6 +10,9 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * In-memory fallback implementation of [LostFoundRepository] for testing and offline preview.
+ */
 @Singleton
 class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
 
@@ -107,10 +110,16 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         ),
     )
 
+    /**
+     * Returns an in-memory snapshot of all current listings.
+     */
     override suspend fun getListings(): Result<List<LostFoundListing>> = mutex.withLock {
         Result.success(listings.toList())
     }
 
+    /**
+     * Prepends a new listing to the in-memory store.
+     */
     override suspend fun reportItem(
         item: LostFoundListing,
         imageBytes: ByteArray?,
@@ -123,6 +132,9 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         Result.success(newItem)
     }
 
+    /**
+     * Updates the resolved flag of the targeted in-memory listing.
+     */
     override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = mutex.withLock {
         val index = listings.indexOfFirst { it.id == id }
         if (index != -1) {

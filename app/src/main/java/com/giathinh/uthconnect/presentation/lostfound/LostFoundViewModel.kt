@@ -2,6 +2,7 @@ package com.giathinh.uthconnect.presentation.lostfound
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.data.repository.SupabaseHttpException
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
@@ -79,9 +80,7 @@ class LostFoundViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         toggleResolveListingUseCase(action.id, newStatus).onFailure { error ->
-                            val isAuthErr = error.message?.contains("sign-in required", ignoreCase = true) == true ||
-                                error.message?.contains("session expired", ignoreCase = true) == true ||
-                                error.message?.contains("AuthRequired", ignoreCase = true) == true
+                            val isAuthErr = error.isAuthenticationError()
                             _uiState.update { current ->
                                 current.copy(
                                     userMessage = if (isAuthErr) UserMessage.AuthRequired else current.userMessage,
@@ -271,9 +270,7 @@ class LostFoundViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    val isAuthErr = error.message?.contains("sign-in required", ignoreCase = true) == true ||
-                        error.message?.contains("session expired", ignoreCase = true) == true ||
-                        error.message?.contains("AuthRequired", ignoreCase = true) == true
+                    val isAuthErr = error.isAuthenticationError()
                     _uiState.update {
                         it.copy(
                             reportForm = it.reportForm.copy(isSubmitting = false),
@@ -284,4 +281,15 @@ class LostFoundViewModel @Inject constructor(
             )
         }
     }
+}
+
+private fun Throwable.isAuthenticationError(): Boolean = when (this) {
+    is SupabaseHttpException -> status in listOf(
+        java.net.HttpURLConnection.HTTP_UNAUTHORIZED,
+        java.net.HttpURLConnection.HTTP_FORBIDDEN,
+    )
+
+    else -> message?.contains("sign-in required", ignoreCase = true) == true ||
+        message?.contains("session expired", ignoreCase = true) == true ||
+        message?.contains("AuthRequired", ignoreCase = true) == true
 }

@@ -77,9 +77,20 @@ class SupabaseLostFoundRepository @Inject constructor(
      */
     override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = runCatching {
         val rowId = runCatching { uuid(id) }.getOrNull() ?: id
-        client.patchTable(
+        val response = client.patchTable(
             "lost_found_items?id=eq.${urlEncode(rowId)}",
             buildJsonObject { put("is_resolved", isResolved) },
         )
-    }.map { }
+        val updatedRows = when (response) {
+            is JsonArray -> response.size
+            is JsonObject -> 1
+            else -> 0
+        }
+        if (updatedRows == 0) {
+            throw SupabaseHttpException(
+                status = java.net.HttpURLConnection.HTTP_FORBIDDEN,
+                message = "No permission to update this listing",
+            )
+        }
+    }
 }

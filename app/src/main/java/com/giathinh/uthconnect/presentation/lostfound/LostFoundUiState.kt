@@ -74,6 +74,9 @@ data class ReportFormState(
     val phoneError: FormValidationError? = null,
     val isSubmitting: Boolean = false,
 ) {
+    /**
+     * Checks value equality across all form fields including image bytes.
+     */
     @Suppress("CyclomaticComplexMethod")
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -95,6 +98,9 @@ data class ReportFormState(
             isSubmitting == other.isSubmitting
     }
 
+    /**
+     * Returns consistent hash code incorporating image byte contents.
+     */
     override fun hashCode(): Int {
         var result = title.hashCode()
         result = 31 * result + description.hashCode()
@@ -129,6 +135,9 @@ data class LostFoundUiState(
     val reportForm: ReportFormState = ReportFormState(),
     val userMessage: UserMessage? = null,
 ) {
+    /**
+     * Returns the listing items matching active tab kind, selected category, and search query.
+     */
     val filteredListings: List<LostFoundListing>
         get() = listings.filter { item ->
             val matchKind = item.kind == selectedKind
