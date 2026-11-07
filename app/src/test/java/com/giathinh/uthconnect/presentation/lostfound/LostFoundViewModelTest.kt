@@ -156,22 +156,23 @@ class LostFoundViewModelTest {
     }
 
     @Test
-    fun `submitReport_withShortDescription_setsDescriptionErrorAndDoesNotSubmit`() {
+    fun `submitReport_withEmptyDescription_succeedsBecauseDescriptionIsOptional`() {
         val viewModel = createViewModel()
         viewModel.onAction(LostFoundAction.OpenReportDialog)
 
-        val shortDesc = "Mô tả ngắn"
         viewModel.onAction(LostFoundAction.UpdateReportTitle("Rơi ví tiền cá nhân"))
-        viewModel.onAction(LostFoundAction.UpdateReportDescription(shortDesc))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription(""))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Căn tin CS1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
         viewModel.onAction(LostFoundAction.SubmitReport)
 
         val state = viewModel.uiState.value
         assertNull("titleError không được có lỗi", state.reportForm.titleError)
-        assertTrue("descriptionError phải là DescriptionTooShort", state.reportForm.descriptionError is FormValidationError.DescriptionTooShort)
-        val err = state.reportForm.descriptionError as FormValidationError.DescriptionTooShort
-        assertEquals(shortDesc.length, err.currentLength)
-        assertEquals("Số lượng tin không được thay đổi", 8, state.listings.size)
-        assertTrue("Dialog vẫn phải mở", state.isReportDialogOpen)
+        assertNull("descriptionError không được có lỗi vì mô tả là tùy chọn", state.reportForm.descriptionError)
+        assertEquals("Số lượng tin phải tăng lên 9", 9, state.listings.size)
+        assertEquals("Rơi ví tiền cá nhân", state.listings.first().title)
+        assertEquals("", state.listings.first().description)
+        assertFalse("Dialog phải đóng sau khi submit thành công", state.isReportDialogOpen)
     }
 
     @Test

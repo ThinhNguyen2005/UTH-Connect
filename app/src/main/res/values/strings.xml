@@ -476,9 +476,9 @@
     <string name="lostfound_kind_found_btn">Tôi nhặt được đồ</string>
     <string name="lostfound_field_title">Tiêu đề tin đăng *</string>
     <string name="lostfound_field_title_hint">Ví dụ: Rơi ví da màu đen tại CS1</string>
-    <string name="lostfound_field_desc">Mô tả chi tiết (tối thiểu 20 ký tự) *</string>
-    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, thời gian, hoàn cảnh thất lạc...</string>
-    <string name="lostfound_desc_counter">%1$d/20 ký tự tối thiểu</string>
+    <string name="lostfound_field_desc">Mô tả chi tiết (không bắt buộc)</string>
+    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, màu sắc, thời gian thất lạc...</string>
+    <string name="lostfound_desc_counter">%1$d ký tự</string>
     <string name="lostfound_field_kind">Loại tin</string>
     <string name="lostfound_field_category">Danh mục</string>
     <string name="lostfound_field_location">Địa điểm (Cơ sở / Phòng)</string>

@@ -173,13 +173,6 @@ class LostFoundViewModel @Inject constructor(
         if (form.isSubmitting) return
 
         val titleError = if (form.title.isBlank()) FormValidationError.TitleRequired else null
-        val currentDescLength = form.description.trim().length
-        val descriptionError = if (currentDescLength < 20) {
-            FormValidationError.DescriptionTooShort(currentDescLength)
-        } else {
-            null
-        }
-
         val locationError = if (form.location.isBlank()) FormValidationError.LocationRequired else null
         val phone = form.contactPhone.trim().replace(" ", "").replace("-", "")
         val phoneError = when {
@@ -188,12 +181,12 @@ class LostFoundViewModel @Inject constructor(
             else -> null
         }
 
-        if (titleError != null || descriptionError != null || locationError != null || phoneError != null) {
+        if (titleError != null || locationError != null || phoneError != null) {
             _uiState.update {
                 it.copy(
                     reportForm = it.reportForm.copy(
                         titleError = titleError,
-                        descriptionError = descriptionError,
+                        descriptionError = null,
                         locationError = locationError,
                         phoneError = phoneError,
                     ),

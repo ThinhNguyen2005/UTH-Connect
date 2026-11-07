@@ -12,7 +12,7 @@
 create table if not exists public.lost_found_items (
     id              uuid primary key default gen_random_uuid(),
     title           text not null check (char_length(trim(title)) >= 3),
-    description     text not null check (char_length(trim(description)) >= 20),
+    description     text not null default '',
     kind            text not null check (kind in ('LOST', 'FOUND')),
     category        text not null check (category in ('ALL', 'STUDENT_CARD', 'ELECTRONICS', 'WALLET_PAPERS', 'PERSONAL_ITEMS', 'OTHER')),
     location        text not null check (char_length(trim(location)) > 0),
