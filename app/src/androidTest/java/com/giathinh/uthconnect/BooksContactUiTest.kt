@@ -1,6 +1,9 @@
 package com.giathinh.uthconnect
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.test.hasScrollAction
@@ -9,11 +12,15 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.presentation.books.BooksScreen
+import com.giathinh.uthconnect.presentation.books.BooksAction
+import com.giathinh.uthconnect.presentation.books.BooksFailure
 import com.giathinh.uthconnect.presentation.books.BooksUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -40,5 +47,30 @@ class BooksContactUiTest {
         compose.onNodeWithText(context.getString(R.string.books_contact_seller)).performClick()
         compose.onNodeWithText(context.getString(R.string.books_contact_failed_title)).assertExists()
         compose.runOnIdle { assertEquals("mailto:qa%40example.com", opened) }
+    }
+
+    @Test fun failedSaveKeepsFormAndShowsError() {
+        var state by mutableStateOf(BooksUiState(isLoading = false, currentUserUid = "owner"))
+        compose.setContent {
+            BooksScreen(state, { action ->
+                if (action is BooksAction.Save) state = state.copy(failure = BooksFailure.SAVE_FAILED)
+            }, {})
+        }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        fun label(id: Int) = context.getString(id)
+        compose.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText(label(R.string.books_create), ignoreCase = true))
+        compose.onNodeWithText(label(R.string.books_create), ignoreCase = true).performClick()
+        listOf(
+            R.string.books_book_title to "Offline book",
+            R.string.books_subject to "QA",
+            R.string.books_price to "1000",
+            R.string.books_seller to "Seller",
+            R.string.books_contact to "qa@example.com",
+        ).forEach { (id, value) ->
+            compose.onNodeWithText(label(id)).performScrollTo().performTextInput(value)
+        }
+        compose.onNodeWithText(label(R.string.books_save)).performClick()
+        compose.onNodeWithText(label(R.string.books_save_error)).assertExists()
+        compose.onNodeWithText("Offline book").assertExists()
     }
 }
