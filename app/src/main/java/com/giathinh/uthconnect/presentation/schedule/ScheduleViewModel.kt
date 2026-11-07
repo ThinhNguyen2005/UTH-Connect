@@ -79,6 +79,8 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
 
             is ScheduleAction.RegisterEvent -> {
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                if (!state.value.now.isBefore(event.startAt)) return
                 registeredEventIds.add(action.id)
                 state.update { current ->
                     current.copy(events = sampleEvents(current.selectedDate, current.now))

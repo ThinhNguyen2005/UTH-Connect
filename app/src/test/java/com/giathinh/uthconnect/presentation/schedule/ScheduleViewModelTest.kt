@@ -20,6 +20,32 @@ class ScheduleViewModelTest {
 
     private val clock = Clock.fixed(Instant.parse("2026-10-31T17:30:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"))
 
+    @Test fun `cannot register for an event that has already started`() {
+        val eventClock = Clock.fixed(Instant.parse("2026-10-31T11:31:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"))
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(eventClock)), eventClock)
+        try {
+            val ongoing = vm.uiState.value.events.first { it.id == "event-sports" }
+            assertTrue(vm.uiState.value.now >= ongoing.startAt)
+            assertTrue(vm.uiState.value.now < ongoing.endAt)
+            vm.onAction(ScheduleAction.RegisterEvent(ongoing.id))
+            assertEquals(EventRegistration.NOT_REGISTERED, vm.uiState.value.events.first { it.id == ongoing.id }.registration)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
+    @Test fun `can register for an event that has not started`() {
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock)
+        try {
+            val upcoming = vm.uiState.value.events.first { it.id == "event-sports" }
+            assertTrue(vm.uiState.value.now < upcoming.startAt)
+            vm.onAction(ScheduleAction.RegisterEvent(upcoming.id))
+            assertEquals(EventRegistration.REGISTERED, vm.uiState.value.events.first { it.id == upcoming.id }.registration)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
         val vm = ScheduleViewModel(TimetableUseCase(repository), clock)

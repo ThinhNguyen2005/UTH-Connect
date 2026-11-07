@@ -714,6 +714,14 @@ private fun CampusEventCard(
                             EventDetailsButton(onClick = { onViewDetails(event) })
                         }
 
+                        isOngoing -> {
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_registration_closed),
+                                tint = ext.textSecondary,
+                            )
+                        }
+
                         else -> {
                             RegistrationHint(
                                 icon = Icons.Filled.DateRange,
