@@ -1,0 +1,12 @@
+﻿11-07 11:13:01.158  4798  7687 E StorageException: java.io.IOException: The server has terminated the upload session
+11-07 11:13:01.158  4798  7687 E StorageException: Caused by: java.io.IOException: {"error":{"code":403,"message":"Permission denied. No WRITE permission."}}
+11-07 11:13:01.158  4798  7687 E StorageException: User does not have permission to access this object.
+11-07 11:13:01.158  4798  7687 E StorageException:  Code: -13021 HttpResult: 403
+11-07 11:13:01.158  4798  7687 E StorageException: The server has terminated the upload session
+11-07 11:13:01.158  4798  7687 E StorageException: java.io.IOException: The server has terminated the upload session
+11-07 11:13:01.158  4798  7687 E StorageException: Caused by: java.io.IOException: {"error":{"code":403,"message":"Permission denied. No WRITE permission."}}
+11-07 11:13:01.158  4798  7687 E StorageException: User does not have permission to access this object.
+11-07 11:13:01.158  4798  7687 E StorageException:  Code: -13021 HttpResult: 403
+11-07 11:13:01.159  4798  7687 E StorageException: The server has terminated the upload session
+11-07 11:13:01.159  4798  7687 E StorageException: java.io.IOException: The server has terminated the upload session
+11-07 11:13:01.159  4798  7687 E StorageException: Caused by: java.io.IOException: {"error":{"code":403,"message":"Permission denied. No WRITE permission."}}
