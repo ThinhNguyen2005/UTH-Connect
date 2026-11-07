@@ -63,6 +63,7 @@ import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
+import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.Timetable
@@ -562,9 +563,11 @@ private fun CampusEventCard(
     val colors = MaterialTheme.colorScheme
     val ext = UthTheme.extendedColors
 
+    val isCancelled = event.status == EventStatus.CANCELLED
     val isEnded = now >= event.endAt
+    val isInactive = isCancelled || isEnded
     val canOpenTicket = event.canOpenTicketAt(now)
-    val isOngoing = now >= event.startAt && now < event.endAt
+    val isOngoing = !isCancelled && now >= event.startAt && now < event.endAt
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
     val isPrimaryAccent = isRegistered || event.accent == EventAccent.PRIMARY
@@ -572,7 +575,7 @@ private fun CampusEventCard(
     val isNeutral = !isOngoing && !isPrimaryAccent && !isWarningAccent
 
     val borderColor = when {
-        isEnded -> colors.outlineVariant
+        isInactive -> colors.outlineVariant
         isOngoing -> ext.success
         isPrimaryAccent -> colors.primary
         isWarningAccent -> ext.warning
@@ -580,7 +583,7 @@ private fun CampusEventCard(
     }
     // Dải màu: Gold chỉ làm NỀN (chữ Navy trên Gold 6.2:1); trạng thái trung tính giữ Navy.
     val stripeColor = when {
-        isEnded -> colors.outlineVariant
+        isInactive -> colors.outlineVariant
         isOngoing -> ext.success
         isWarningAccent -> colors.secondary
         else -> colors.primary
@@ -589,7 +592,7 @@ private fun CampusEventCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = if (isEnded) colors.surfaceVariant else colors.surface,
+        color = if (isInactive) colors.surfaceVariant else colors.surface,
         border = BorderStroke(
             width = if (isNeutral) UthDimens.Size.Stroke else UthDimens.Size.StrokeFocused,
             color = borderColor,
@@ -624,12 +627,12 @@ private fun CampusEventCard(
                     val timeOnGold = isWarningAccent && !isOngoing && !isRegistered
                     Surface(
                         color = when {
-                            isEnded -> colors.surface
+                            isInactive -> colors.surface
                             timeOnGold -> colors.secondary
                             else -> colors.primary
                         },
                         contentColor = when {
-                            isEnded -> colors.onSurfaceVariant
+                            isInactive -> colors.onSurfaceVariant
                             timeOnGold -> colors.onSecondary
                             else -> colors.onPrimary
                         },
@@ -651,6 +654,11 @@ private fun CampusEventCard(
                     }
 
                     when {
+                        isCancelled -> UthStatusBadge(
+                            text = stringResource(R.string.tickets_status_cancelled),
+                            tone = BadgeTone.Neutral,
+                        )
+
                         isEnded -> UthStatusBadge(
                             text = stringResource(R.string.event_ended),
                             tone = BadgeTone.Neutral,
@@ -679,12 +687,12 @@ private fun CampusEventCard(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (isEnded) colors.onSurfaceVariant else colors.onSurface,
+                        color = if (isInactive) colors.onSurfaceVariant else colors.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.event_organizer, event.organizer),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isEnded) colors.onSurfaceVariant else ext.textSecondary,
+                        color = if (isInactive) colors.onSurfaceVariant else ext.textSecondary,
                     )
                 }
 
@@ -703,7 +711,7 @@ private fun CampusEventCard(
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = if (isEnded) colors.onSurfaceVariant else colors.primary,
+                            tint = if (isInactive) colors.onSurfaceVariant else colors.primary,
                             modifier = Modifier.size(UthDimens.Size.IconCompact),
                         )
                         Spacer(Modifier.width(UthDimens.Spacing.Xs))
@@ -719,7 +727,7 @@ private fun CampusEventCard(
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
-                            tone = if (isEnded) BadgeTone.Neutral else if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            tone = if (isInactive) BadgeTone.Neutral else if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
                             icon = null,
                         )
                     }
@@ -732,6 +740,12 @@ private fun CampusEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
+                        isCancelled -> RegistrationHint(
+                            icon = Icons.Filled.DateRange,
+                            label = stringResource(R.string.tickets_status_cancelled),
+                            tint = colors.onSurfaceVariant,
+                        )
+
                         isEnded -> {
                             RegistrationHint(
                                 icon = Icons.Filled.DateRange,
