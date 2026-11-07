@@ -29,10 +29,13 @@ class SubmitVerificationRequestUseCase @Inject constructor(
                 when {
                     msg.contains("STUDENT_ALREADY_VERIFIED", ignoreCase = true) ->
                         SubmitVerificationOutcome.AlreadyVerified
+
                     msg.contains("STUDENT_ID_ALREADY_TAKEN", ignoreCase = true) || msg.contains("23505") ->
                         SubmitVerificationOutcome.AlreadyTaken
+
                     msg.contains("INVALID_STUDENT_ID", ignoreCase = true) ->
                         SubmitVerificationOutcome.InvalidStudentId("Mã số sinh viên không hợp lệ")
+
                     else ->
                         SubmitVerificationOutcome.Failure(msg.ifEmpty { "Gửi yêu cầu thất bại" })
                 }
@@ -40,4 +43,3 @@ class SubmitVerificationRequestUseCase @Inject constructor(
         )
     }
 }
-

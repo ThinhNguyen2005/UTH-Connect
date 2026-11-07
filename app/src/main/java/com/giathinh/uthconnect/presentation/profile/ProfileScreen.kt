@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.profile
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,27 +10,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,6 +56,7 @@ fun ProfileScreen(
     uiState: ProfileUiState,
     onAction: (ProfileAction) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenTickets: () -> Unit = {},
 ) {
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -57,7 +65,9 @@ fun ProfileScreen(
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
         when (uiState.page) {
             ProfilePage.ChangePassword -> PasswordChangeContent(uiState, onAction)
+
             ProfilePage.EditContact -> ContactEditContent(uiState, onAction)
+
             ProfilePage.Overview -> {
                 Text(stringResource(R.string.auth_profile_title), style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(UthDimens.Spacing.Lg))
@@ -65,17 +75,20 @@ fun ProfileScreen(
                     uiState.isLoading -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
+
                     uiState.failure == ProfileFailure.LoadFailed -> UthEmptyState(
                         stringResource(R.string.auth_profile_error),
                         stringResource(R.string.auth_profile_try_again),
                         actionLabel = stringResource(R.string.auth_profile_retry),
                         onAction = { onAction(ProfileAction.RetryLoad) },
                     )
+
                     uiState.student == null -> UthEmptyState(
                         stringResource(R.string.auth_profile_empty),
                         stringResource(R.string.auth_profile_empty_body),
                     )
-                    else -> ProfileOverview(uiState, onAction)
+
+                    else -> ProfileOverview(uiState, onAction, onOpenTickets)
                 }
             }
         }
@@ -90,20 +103,37 @@ fun ProfileScreen(
                     Text(stringResource(R.string.auth_logout_confirm_body))
                     if (uiState.failure == ProfileFailure.LogoutFailed) {
                         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                        Text(stringResource(R.string.auth_logout_failed), color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.testTag("logout_retry_error"))
+                        Text(
+                            stringResource(R.string.auth_logout_failed),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.testTag("logout_retry_error"),
+                        )
                     }
                 }
             },
             confirmButton = {
                 TextButton(
-                    onClick = { onAction(if (uiState.failure == ProfileFailure.LogoutFailed)
-                        ProfileAction.RetryLogout else ProfileAction.ConfirmLogout) },
+                    onClick = {
+                        onAction(
+                            if (uiState.failure == ProfileFailure.LogoutFailed) {
+                                ProfileAction.RetryLogout
+                            } else {
+                                ProfileAction.ConfirmLogout
+                            },
+                        )
+                    },
                     enabled = !uiState.isLoggingOut,
                     modifier = Modifier.testTag("logout_retry_or_confirm"),
                 ) {
-                    Text(stringResource(if (uiState.failure == ProfileFailure.LogoutFailed)
-                        R.string.auth_logout_retry else R.string.auth_logout))
+                    Text(
+                        stringResource(
+                            if (uiState.failure == ProfileFailure.LogoutFailed) {
+                                R.string.auth_logout_retry
+                            } else {
+                                R.string.auth_logout
+                            },
+                        ),
+                    )
                 }
             },
             dismissButton = {
@@ -116,13 +146,17 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit) {
+private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit, onOpenTickets: () -> Unit) {
     val student = state.student ?: return
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StudentAvatar(student)
         Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(student.displayName, style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center, modifier = Modifier.testTag("profile_name"))
+        Text(
+            student.displayName,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag("profile_name"),
+        )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
         Text(stringResource(R.string.auth_demo_profile), style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
@@ -184,6 +218,15 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
         )
     }
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
+    // Vé rời thanh tab đáy để khung app giữ 4 điểm đến (docs/Design.md mục 8.1–8.2),
+    // nhưng vẫn là tác vụ lặp lại hằng ngày của sinh viên nên đặt ngay dưới hồ sơ.
+    ProfileNavRow(
+        iconRes = R.drawable.ic_profile_tickets,
+        label = stringResource(R.string.tab_tickets),
+        onClick = onOpenTickets,
+        modifier = Modifier.testTag("profile_open_tickets"),
+    )
+    Spacer(Modifier.height(UthDimens.Spacing.Lg))
     OutlinedButton(
         onClick = { onAction(ProfileAction.OpenContact) },
         modifier = Modifier.fillMaxWidth().testTag("profile_edit_contact"),
@@ -200,12 +243,18 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
         modifier = Modifier.fillMaxWidth().testTag("profile_biometric_toggle"),
     ) { Text(stringResource(if (state.biometricEnabled) R.string.auth_biometric_disable else R.string.auth_biometric_enable)) }
     Spacer(Modifier.height(UthDimens.Spacing.Xs))
-    Text(stringResource(R.string.auth_biometric_note), style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(
+        stringResource(R.string.auth_biometric_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     DisplayFeedback(state)
-    OutlinedButton(onClick = { onAction(ProfileAction.RequestLogout) }, enabled = !state.isLoggingOut,
-        modifier = Modifier.fillMaxWidth().height(UthDimens.Size.ButtonHeight).testTag("logout_button")) {
+    OutlinedButton(
+        onClick = { onAction(ProfileAction.RequestLogout) },
+        enabled = !state.isLoggingOut,
+        modifier = Modifier.fillMaxWidth().height(UthDimens.Size.ButtonHeight).testTag("logout_button"),
+    ) {
         Text(stringResource(R.string.auth_logout))
     }
 }
@@ -220,8 +269,11 @@ private fun DisplayFeedback(state: ProfileUiState) {
         null -> null
     }
     noticeRes?.let {
-        Text(stringResource(it), color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.testTag("profile_notice"))
+        Text(
+            stringResource(it),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag("profile_notice"),
+        )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
     }
     val errorRes = when (state.failure) {
@@ -232,8 +284,11 @@ private fun DisplayFeedback(state: ProfileUiState) {
         null -> null
     }
     errorRes?.let {
-        Text(stringResource(it), color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.testTag("profile_error"))
+        Text(
+            stringResource(it),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.testTag("profile_error"),
+        )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
     }
 }
@@ -256,8 +311,11 @@ private fun PasswordChangeContent(state: ProfileUiState, onAction: (ProfileActio
             visualTransformation = PasswordVisualTransformation(),
             isError = form.errors.oldError != null || form.incorrectCurrent,
             supportingText = {
-                if (form.incorrectCurrent) Text(stringResource(R.string.auth_password_wrong_current))
-                else form.errors.oldError?.let { Text(stringResource(passwordErrorRes(it))) }
+                if (form.incorrectCurrent) {
+                    Text(stringResource(R.string.auth_password_wrong_current))
+                } else {
+                    form.errors.oldError?.let { Text(stringResource(passwordErrorRes(it))) }
+                }
             },
         )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
@@ -295,8 +353,11 @@ private fun PasswordChangeContent(state: ProfileUiState, onAction: (ProfileActio
         modifier = Modifier.fillMaxWidth().testTag("password_save"),
     )
     Spacer(Modifier.height(UthDimens.Spacing.Sm))
-    OutlinedButton(onClick = { onAction(ProfileAction.Back) },
-        enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(
+        onClick = { onAction(ProfileAction.Back) },
+        enabled = !state.isSaving,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Text(stringResource(R.string.auth_back))
     }
 }
@@ -360,8 +421,11 @@ private fun ContactEditContent(state: ProfileUiState, onAction: (ProfileAction) 
         modifier = Modifier.fillMaxWidth().testTag("contact_save"),
     )
     Spacer(Modifier.height(UthDimens.Spacing.Sm))
-    OutlinedButton(onClick = { onAction(ProfileAction.Back) },
-        enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(
+        onClick = { onAction(ProfileAction.Back) },
+        enabled = !state.isSaving,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Text(stringResource(R.string.auth_back))
     }
 }
@@ -381,44 +445,116 @@ private fun StudentAvatar(student: StudentProfile) {
             .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials.ifEmpty { "SV" }, color = MaterialTheme.colorScheme.onPrimaryContainer,
-            style = MaterialTheme.typography.titleLarge)
+        Text(
+            initials.ifEmpty { "SV" },
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = MaterialTheme.typography.titleLarge,
+        )
+    }
+}
+
+/**
+ * Hàng điều hướng trong tab Cá nhân: icon duotone + nhãn + mũi tên.
+ *
+ * Card chiếm nguyên hàng nên vùng chạm vượt chuẩn tối thiểu `Size.MinTouchTarget`;
+ * mũi tên chỉ là gợi ý, không phải control riêng
+ * (tránh hai vùng chạm chồng lấn — `docs/UI-UX.mc` mục 4).
+ */
+@Composable
+private fun ProfileNavRow(
+    @DrawableRes iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(
+        modifier = modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget),
+        onClick = onClick,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(UthDimens.Size.UtilityIconContainer)
+                    .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null, // Nhãn chữ ngay bên cạnh đã mô tả hàng này.
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(UthDimens.Size.Icon),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
+            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
 private fun ProfileRow(label: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = UthDimens.Spacing.Sm),
-        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
-        Text(label, style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = UthDimens.Spacing.Sm),
+        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }
 
-private val DemoStudent = StudentProfile("2023040123", "demo@ut.edu.vn", "Nguyễn Minh Anh",
-    "CN23A", "Công nghệ thông tin", "Khoa Công nghệ thông tin")
+private val DemoStudent = StudentProfile(
+    "2023040123",
+    "demo@ut.edu.vn",
+    "Nguyễn Minh Anh",
+    "CN23A",
+    "Công nghệ thông tin",
+    "Khoa Công nghệ thông tin",
+)
 
 @Composable
-private fun PreviewProfile(state: ProfileUiState, dark: Boolean = false) =
-    UthPreview(darkTheme = dark) { ProfileScreen(state, onAction = {}) }
+private fun PreviewProfile(state: ProfileUiState, dark: Boolean = false) = UthPreview(darkTheme = dark) { ProfileScreen(state, onAction = {}) }
 
 @Preview(name = "Profile content light", showBackground = true)
-@Composable private fun ProfileContentLight() = PreviewProfile(ProfileUiState(false, DemoStudent))
+@Composable
+private fun ProfileContentLight() = PreviewProfile(ProfileUiState(false, DemoStudent))
+
 @Preview(name = "Profile content dark", showBackground = true)
-@Composable private fun ProfileContentDark() = PreviewProfile(ProfileUiState(false, DemoStudent), true)
+@Composable
+private fun ProfileContentDark() = PreviewProfile(ProfileUiState(false, DemoStudent), true)
+
 @Preview(name = "Profile organizer light", showBackground = true)
-@Composable private fun ProfileOrganizerLight() = PreviewProfile(
-    ProfileUiState(false, DemoStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)))
+@Composable
+private fun ProfileOrganizerLight() = PreviewProfile(ProfileUiState(false, DemoStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)))
+
 @Preview(name = "Profile password light", showBackground = true)
-@Composable private fun ProfilePasswordLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword))
+@Composable
+private fun ProfilePasswordLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword))
+
 @Preview(name = "Profile password dark", showBackground = true)
-@Composable private fun ProfilePasswordDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword), true)
+@Composable
+private fun ProfilePasswordDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword), true)
+
 @Preview(name = "Profile contact light", showBackground = true)
-@Composable private fun ProfileContactLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact))
+@Composable
+private fun ProfileContactLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact))
+
 @Preview(name = "Profile contact dark", showBackground = true)
-@Composable private fun ProfileContactDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact), true)
+@Composable
+private fun ProfileContactDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact), true)
+
 @Preview(name = "Profile empty light", showBackground = true)
-@Composable private fun ProfileEmptyLight() = PreviewProfile(ProfileUiState(false))
+@Composable
+private fun ProfileEmptyLight() = PreviewProfile(ProfileUiState(false))
+
 @Preview(name = "Profile logout confirmation", showBackground = true)
-@Composable private fun ProfileLogoutDialog() = PreviewProfile(ProfileUiState(false, DemoStudent, confirmLogout = true))
+@Composable
+private fun ProfileLogoutDialog() = PreviewProfile(ProfileUiState(false, DemoStudent, confirmLogout = true))

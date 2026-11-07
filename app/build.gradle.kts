@@ -2,12 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.spotless)
 }
 
 kotlin {
@@ -95,7 +96,6 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.zxing.core)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.core)
 
     // Supabase Auth SDK + Google Credential Manager.
     // Declared unconditionally: the source set is shared, so SupabaseGoogleExchange must
@@ -128,11 +128,31 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    detektPlugins(libs.detekt.compose)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+}
+
+spotless {
+    kotlin {
+        target("**/*.kt")
+        targetExclude("**/build/**/*.kt")
+        ktlint().editorConfigOverride(
+            mapOf("ktlint_function_naming_ignore_when_annotated_with" to "Composable")
+        )
+    }
 }
 
 configurations.all {

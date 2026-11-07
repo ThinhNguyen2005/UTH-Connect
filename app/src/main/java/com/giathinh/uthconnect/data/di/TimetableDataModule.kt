@@ -14,8 +14,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object TimetableDataModule {
-    @Provides @Singleton @Named("timetable")
+    @Provides @Singleton
+    @Named("timetable")
     fun clock(): Clock = Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"))
+
     @Provides @Singleton
     fun repository(@Named("timetable") clock: Clock): TimetableRepository = InMemoryTimetableRepository(clock)
 }

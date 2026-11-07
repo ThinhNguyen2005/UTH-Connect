@@ -10,6 +10,9 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * In-memory fallback implementation of [LostFoundRepository] for testing and offline preview.
+ */
 @Singleton
 class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
 
@@ -107,15 +110,36 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         ),
     )
 
+    /**
+     * Returns an in-memory snapshot of all current listings.
+     */
     override suspend fun getListings(): Result<List<LostFoundListing>> = mutex.withLock {
         Result.success(listings.toList())
     }
 
-    override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = mutex.withLock {
+    /**
+     * Prepends a new listing to the in-memory store.
+     */
+    override suspend fun reportItem(
+        item: LostFoundListing,
+        imageBytes: ByteArray?,
+        imageMimeType: String?,
+    ): Result<LostFoundListing> = mutex.withLock {
         val newItem = item.copy(
-            id = if (item.id.isBlank()) "LF-${UUID.randomUUID().toString().take(6).uppercase()}" else item.id
+            id = if (item.id.isBlank()) "LF-${UUID.randomUUID().toString().take(6).uppercase()}" else item.id,
         )
         listings.add(0, newItem)
         Result.success(newItem)
+    }
+
+    /**
+     * Updates the resolved flag of the targeted in-memory listing.
+     */
+    override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = mutex.withLock {
+        val index = listings.indexOfFirst { it.id == id }
+        if (index != -1) {
+            listings[index] = listings[index].copy(isResolved = isResolved)
+        }
+        Result.success(Unit)
     }
 }

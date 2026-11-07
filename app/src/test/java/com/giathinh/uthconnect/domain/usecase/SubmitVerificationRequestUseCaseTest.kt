@@ -63,4 +63,3 @@ class SubmitVerificationRequestUseCaseTest {
         assertEquals(SubmitVerificationOutcome.AlreadyTaken, result)
     }
 }
-

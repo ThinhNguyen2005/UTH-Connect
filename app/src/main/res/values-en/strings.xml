@@ -5,11 +5,12 @@
 
     <string name="common_retry">Retry</string>
     <string name="common_meta_separator">•</string>
-    <string name="utilities_not_available">Not yet available</string>
     <string name="tab_home">Home</string>
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+
+    <!-- Vào từ hàng "My tickets" trong tab Profile, không phải tab đáy. -->
     <string name="tab_tickets">My tickets</string>
 
     <string name="tickets_title">My tickets</string>
@@ -110,7 +111,8 @@
     <string name="utilities_grid_campuses">Campuses &amp; Directory</string>
     <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
     <string name="utilities_grid_settings">Settings</string>
-    <string name="utilities_grid_settings_desc">Notifications &amp; version</string>
+    <string name="utilities_grid_settings_desc">Notifications, language &amp; appearance</string>
+    <string name="utilities_section_mine">My utilities</string>
     <string name="utilities_section_upcoming">Upcoming services</string>
     <string name="utilities_loading">Loading modules.</string>
     <string name="utilities_error_title">Could not load the list</string>
@@ -161,6 +163,16 @@
     <string name="settings_notif_tuition_desc">Receive notifications near payment deadline</string>
     <string name="settings_notif_training">Training points update</string>
     <string name="settings_notif_training_desc">Receive notification when new score is published</string>
+    <string name="settings_appearance_header">Language &amp; Appearance</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_desc">Applies across the app immediately, no restart needed</string>
+    <string name="settings_language_vi">Tiếng Việt</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_theme_title">Appearance</string>
+    <string name="settings_theme_desc">Pick Light or Dark, or choose System to follow the device setting</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
     <string name="settings_app_info_header">Application Information</string>
     <string name="settings_version_label">Version</string>
     <string name="settings_version_value">1.0.0 (Build 2026.1)</string>
@@ -251,6 +263,9 @@
     <string name="auth_forgot_submit">Send Link</string>
     <string name="auth_forgot_success">If the account exists, instructions have been sent to your student email.</string>
     <string name="auth_forgot_rate_limit">Too many requests. Please wait a few minutes and try again.</string>
+    <string name="auth_verify_email">Email has not been verified. Please check your student inbox.</string>
+    <string name="auth_verify_email_prompt">Email not verified?</string>
+    <string name="auth_verify_email_action">Verify now</string>
     <string name="auth_network_error">Network connection error. Please check your network.</string>
     <string name="auth_verification_submit">Submit Verification</string>
     <string name="auth_verification_input_label">Enter your Student ID</string>
@@ -312,6 +327,21 @@
     <string name="timetable_all_periods">All</string>
     <string name="schedule_events_tab">Events</string>
     <string name="schedule_deadlines_tab">Deadlines</string>
+    <string name="schedule_session_default">Events</string>
+    <string name="schedule_avatar_initials">ST</string>
+    <string name="schedule_notifications">Notifications</string>
+    <string name="schedule_points_bonus">+5 pts</string>
+    <string name="schedule_category_all">All events (%1$d)</string>
+    <string name="schedule_category_workshops">Workshops &amp; seminars</string>
+    <string name="schedule_category_culture">Culture &amp; sports</string>
+    <string name="schedule_category_career">Career &amp; networking</string>
+    <string name="schedule_day_mon">Mon</string>
+    <string name="schedule_day_tue">Tue</string>
+    <string name="schedule_day_wed">Wed</string>
+    <string name="schedule_day_thu">Thu</string>
+    <string name="schedule_day_fri">Fri</string>
+    <string name="schedule_day_sat">Sat</string>
+    <string name="schedule_day_sun">Sun</string>
     <string name="events_on_date">Events · %1$s</string>
     <string name="no_events_for_date">No events on this day</string>
     <string name="event_organizer">Organizer: %1$s</string>
@@ -406,6 +436,24 @@
     <string name="auth_login_retry">Retry sign-in</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Lost &amp; Found</string>
+    <string name="lostfound_search_hint_lost">Search lost items (wallet, student card...)</string>
+    <string name="lostfound_search_hint_found">Search found items...</string>
+    <string name="lostfound_search_desc">Search</string>
+    <string name="lostfound_clear_search">Clear search</string>
+    <string name="lostfound_no_results_title">No results found</string>
+    <string name="lostfound_no_results_desc">No listings matching "%1$s". Try another keyword.</string>
+    <string name="lostfound_status_resolved_lost">Reclaimed</string>
+    <string name="lostfound_status_resolved_found">Returned</string>
+    <string name="lostfound_action_mark_lost">Mark as reclaimed</string>
+    <string name="lostfound_action_mark_found">Mark as returned</string>
+    <string name="lostfound_bottomsheet_subtitle">Fill in details for the UTH community to help find</string>
+    <string name="lostfound_btn_close">Close</string>
+    <string name="lostfound_image_attached_desc">Attached photo</string>
+    <string name="lostfound_poster_prefix">Posted by: %1$s</string>
+    <string name="lostfound_image_too_large">Image size exceeds 5MB limit</string>
+    <string name="lostfound_image_read_error">Failed to read or process this image file</string>
+    <string name="lostfound_msg_update_status_failed">Failed to update listing status</string>
+
     <string name="lostfound_tab_lost">Lost Items (%1$d)</string>
     <string name="lostfound_tab_found">Found Items (%1$d)</string>
     <string name="lostfound_badge_lost">LOST</string>
@@ -426,9 +474,9 @@
     <string name="lostfound_kind_found_btn">I found an item</string>
     <string name="lostfound_field_title">Listing Title *</string>
     <string name="lostfound_field_title_hint">e.g. Lost black leather wallet at CS1</string>
-    <string name="lostfound_field_desc">Detailed description (min 20 chars) *</string>
+    <string name="lostfound_field_desc">Detailed description (optional)</string>
     <string name="lostfound_field_desc_hint">Identifying features, time, circumstances...</string>
-    <string name="lostfound_desc_counter">%1$d/20 characters minimum</string>
+    <string name="lostfound_desc_counter">%1$d characters</string>
     <string name="lostfound_field_kind">Type</string>
     <string name="lostfound_field_category">Category</string>
     <string name="lostfound_field_location">Location (Campus / Room)</string>
@@ -528,9 +576,7 @@
     <string name="tickets_qr_issuing">Issuing a secure QR code…</string>
     <string name="scanner_open">Open check-in</string>
     <string name="scanner_back">Back</string>
-    <string name="scanner_title">Scan and check in</string>
     <string name="scanner_forbidden">Only organizers can check in tickets.</string>
-    <string name="scanner_count">Checked in: %1$d</string>
     <string name="scanner_code">Ticket code or QR content</string>
     <string name="scanner_submit">Check</string>
     <string name="scanner_success">Check-in successful</string>
@@ -540,8 +586,6 @@
     <string name="scanner_error">Could not check this ticket. Please retry.</string>
     <string name="scanner_camera_permission">Allow camera access to scan QR codes</string>
     <string name="scanner_camera_denied">Camera permission is off. You can still enter the code manually.</string>
-    <string name="scanner_camera_error">Could not open the camera. Retry or enter the code manually.</string>
-    <string name="scanner_camera_retry">Retry camera</string>
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>

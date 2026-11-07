@@ -4,16 +4,16 @@ import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.data.repository.InMemoryTimetableRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 import kotlinx.coroutines.cancel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class ScheduleViewModelTest {
     @get:Rule val dispatcherRule = MainDispatcherRule()

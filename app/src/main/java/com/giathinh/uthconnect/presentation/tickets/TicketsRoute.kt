@@ -9,13 +9,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.presentation.common.messageText
+import com.giathinh.uthconnect.presentation.scanner.ScannerDestination
 
 /** Nối state holder với màn danh sách và điều hướng đến vé đã chọn. */
 @Composable

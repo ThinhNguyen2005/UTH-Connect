@@ -24,5 +24,6 @@ data class LostFoundListing(
     val date: String,
     val contactName: String,
     val contactPhone: String,
+    val imageUrl: String? = null,
     val isResolved: Boolean = false,
 )

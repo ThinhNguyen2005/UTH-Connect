@@ -1,9 +1,7 @@
 package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,25 +14,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,38 +48,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
+import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
-import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
+import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.presentation.tickets.TicketQrScreen
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
+/**
+ * Tab "Thời khoá biểu": header thương hiệu gradient + lịch tuần vuốt ngang + danh sách
+ * sự kiện trong ngày, nhóm theo ca.
+ *
+ * Toàn bộ màu/kích thước/bo góc lấy từ design token (`Color.kt`, `Dimens.kt`, `Theme.kt`),
+ * trạng thái diễn đạt bằng [UthStatusBadge] nên màu không phải tín hiệu duy nhất
+ * (`docs/UI-UX.mc`). Gradient header dùng `headerGradientStart → headerGradientEnd` với
+ * chữ `headerOnGradient` — cặp đã đo AAA ở cả hai scheme, xem [UthTheme.extendedColors].
+ */
 @Composable
 fun ScheduleScreen(
     uiState: ScheduleUiState,
@@ -95,7 +91,11 @@ fun ScheduleScreen(
     var selectedCategory by remember { mutableIntStateOf(0) }
     var selectedTicket by remember { mutableStateOf<Ticket?>(null) }
 
-    Box(modifier = modifier.fillMaxSize().background(Color(0xFFF8FAFD))) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -112,12 +112,12 @@ fun ScheduleScreen(
                 eventsCount = uiState.events.count { it.startAt.toLocalDate() == uiState.selectedDate },
             )
 
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
                 if (uiState.isLoading) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = UthDimens.Spacing.Xxl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(UthDimens.Size.Icon))
@@ -132,7 +132,7 @@ fun ScheduleScreen(
                     }
 
                     if (filteredEvents.isEmpty()) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         UthCard {
                             UthEmptyState(
                                 title = stringResource(R.string.no_events_for_date),
@@ -141,11 +141,12 @@ fun ScheduleScreen(
                             )
                         }
                     } else {
-                        // Nhóm sự kiện theo ca (Sáng, Chiều, Tối)
-                        val grouped = filteredEvents.groupBy { it.session.ifBlank { "Event" } }
+                        // Nhóm sự kiện theo ca (Sáng, Chiều, Tối).
+                        val fallbackSession = stringResource(R.string.schedule_session_default)
+                        val grouped = filteredEvents.groupBy { it.session.ifBlank { fallbackSession } }
                         grouped.forEach { (sessionName, sessionEvents) ->
                             SessionHeader(sessionName)
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md)) {
                                 sessionEvents.forEach { event ->
                                     CampusEventCard(
                                         event = event,
@@ -156,7 +157,7 @@ fun ScheduleScreen(
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(UthDimens.Spacing.Sm))
                         }
                     }
                 }
@@ -177,28 +178,37 @@ fun ScheduleScreen(
                 studentName = "Nguyễn Minh Anh",
                 secondsRemaining = 60,
                 onBack = { selectedTicket = null },
+                onCopy = {},
             )
         }
     }
 }
 
+/**
+ * Header thương hiệu: gradient Navy hai điểm dừng (token `headerGradient*`), monogram "SV",
+ * nhãn eyebrow và hai nút hành động mờ như kính — cùng công thức nền/viền với header
+ * trang Chủ (`HomeScreen`), chỉ khác nền ở đây là gradient.
+ */
 @Composable
 private fun ScheduleHeader(
     onAction: (ScheduleAction) -> Unit,
 ) {
+    val ext = UthTheme.extendedColors
+    val colors = MaterialTheme.colorScheme
+    val onHeader = ext.headerOnGradient
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF002D54),
-                        Color(0xFF094074),
-                        Color(0xFF0B4F8A),
+                        ext.headerGradientStart,
+                        ext.headerGradientEnd,
                     ),
                 ),
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Md),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -208,19 +218,23 @@ private fun ScheduleHeader(
             Row(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White.copy(alpha = 0.15f),
-                    border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.3f)),
+                    modifier = Modifier.size(UthDimens.Size.Avatar),
+                    shape = MaterialTheme.shapes.small,
+                    color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                    border = BorderStroke(
+                        UthDimens.Size.Stroke,
+                        onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                    ),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "SV",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
+                            text = stringResource(R.string.schedule_avatar_initials),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = onHeader,
                         )
                     }
                 }
@@ -228,74 +242,78 @@ private fun ScheduleHeader(
                 Column {
                     Text(
                         text = stringResource(R.string.timetable_memory),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.5.sp,
-                        ),
-                        color = Color(0xFFBFDBFE),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onHeader.copy(alpha = UthDimens.Opacity.HeaderMetadata),
                     )
                     Text(
                         text = stringResource(R.string.timetable_title),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = onHeader,
                     )
                 }
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
-                // Nút HIỆN TẠI để nhảy về ngày hôm nay
+                // Nút HÔM NAY để nhảy về ngày hiện tại.
                 Surface(
                     onClick = { onAction(ScheduleAction.JumpToToday) },
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.White.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.height(UthDimens.Size.HeaderAction),
+                    shape = MaterialTheme.shapes.small,
+                    color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                    border = BorderStroke(
+                        UthDimens.Size.Stroke,
+                        onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                    ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp),
+                        modifier = Modifier.padding(horizontal = UthDimens.Spacing.Md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DateRange,
                             contentDescription = null,
-                            tint = Color(0xFFBFDBFE),
-                            modifier = Modifier.size(14.dp),
+                            tint = onHeader.copy(alpha = UthDimens.Opacity.HeaderMetadata),
+                            modifier = Modifier.size(UthDimens.Size.IconBadge),
                         )
                         Text(
                             text = stringResource(R.string.timetable_jump_today),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp,
-                            ),
-                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = onHeader,
                         )
                     }
                 }
 
-                // Notification Bell
+                // Chuông thông báo: chấm vàng chỉ là nền, tình trạng đọc được qua
+                // contentDescription (`docs/UI-UX.mc` — không truyền trạng thái chỉ bằng màu).
                 Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.White.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier.size(UthDimens.Size.HeaderAction),
+                    shape = MaterialTheme.shapes.small,
+                    color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                    border = BorderStroke(
+                        UthDimens.Size.Stroke,
+                        onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                    ),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Filled.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp),
+                            contentDescription = stringResource(R.string.schedule_notifications),
+                            tint = onHeader,
+                            modifier = Modifier.size(UthDimens.Size.IconInline),
                         )
                         Box(
                             modifier = Modifier
-                                .size(7.dp)
                                 .align(Alignment.TopEnd)
-                                .padding(1.dp)
-                                .background(Color(0xFFF59E0B), CircleShape),
+                                .padding(UthDimens.Spacing.Xxs)
+                                .size(UthDimens.Size.IndicatorDot)
+                                .background(colors.secondary, CircleShape),
                         )
                     }
                 }
@@ -304,8 +322,18 @@ private fun ScheduleHeader(
     }
 }
 
+/**
+ * Lịch tuần: ô đang chọn = `primary`/`onPrimary`, ô thường = `surfaceSubtle` + viền
+ * `outlineVariant`; mỗi ô cao tối thiểu [UthDimens.Size.MinTouchTarget] vì vuốt/tap lịch
+ * là thao tác chính của màn này.
+ */
 @Composable
-private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Unit) {
+private fun WeekPicker(
+    state: ScheduleUiState,
+    onAction: (ScheduleAction) -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val ext = UthTheme.extendedColors
     val baseMonday = remember(state.now) { state.now.toLocalDate().with(DayOfWeek.MONDAY) }
     val basePage = 1000
     val pageCount = 2000
@@ -330,7 +358,7 @@ private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Uni
         }
     }
 
-    // Khi state.selectedDate thay đổi (ví dụ bấm HIỆN TẠI), cuộn pager đến đúng tuần
+    // Khi state.selectedDate thay đổi (ví dụ bấm HÔM NAY), cuộn pager đến đúng tuần
     LaunchedEffect(state.selectedDate) {
         val curMonday = state.selectedDate.with(DayOfWeek.MONDAY)
         val expectedOffset = ChronoUnit.WEEKS.between(baseMonday, curMonday).toInt()
@@ -341,8 +369,8 @@ private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Uni
     }
 
     Surface(
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFDBE5F1)),
+        color = colors.surface,
+        border = BorderStroke(UthDimens.Size.Stroke, colors.outlineVariant),
     ) {
         HorizontalPager(
             state = pagerState,
@@ -352,8 +380,8 @@ private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Uni
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Md),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
             ) {
                 repeat(7) { offset ->
                     val day = weekMonday.plusDays(offset.toLong())
@@ -363,46 +391,51 @@ private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Uni
 
                     Surface(
                         onClick = { onAction(ScheduleAction.SelectDate(day)) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (selected) Color(0xFF003866) else Color(0xFFF9FAFB),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = UthDimens.Size.MinTouchTarget),
+                        shape = MaterialTheme.shapes.small,
+                        color = if (selected) colors.primary else ext.surfaceSubtle,
                         border = if (selected) {
-                            BorderStroke(1.5.dp, Color(0xFF0B4F8A))
+                            BorderStroke(UthDimens.Size.StrokeFocused, colors.primary)
                         } else {
-                            BorderStroke(1.dp, Color(0xFFE5E7EB))
+                            BorderStroke(UthDimens.Size.Stroke, colors.outlineVariant)
                         },
-                        shadowElevation = if (selected) 2.dp else 0.dp,
+                        shadowElevation = if (selected) UthDimens.Elevation.Card else UthDimens.Elevation.None,
                     ) {
                         Column(
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = UthDimens.Spacing.Sm),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xxs),
                         ) {
                             Text(
-                                text = formatDayOfWeek(day.dayOfWeek),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                                color = if (selected) Color(0xFFBFDBFE) else Color(0xFF6B7280),
+                                text = dayOfWeekLabel(day.dayOfWeek),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (selected) {
+                                    colors.onPrimary.copy(alpha = UthDimens.Opacity.HeaderMetadata)
+                                } else {
+                                    ext.textSecondary
+                                },
                                 maxLines = 1,
                             )
                             Text(
                                 text = day.format(DateTimeFormatter.ofPattern("dd/MM")),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                                color = if (selected) Color.White else Color(0xFF1F2937),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) colors.onPrimary else colors.onSurface,
                                 maxLines = 1,
                             )
+                            // Chấm "ngày này có lịch": chỉ là gợi ý, ngày đã là nhãn đọc được.
                             Box(
                                 modifier = Modifier
-                                    .size(5.dp)
+                                    .size(UthDimens.Size.IndicatorDot)
                                     .background(
                                         when {
-                                            selected -> Color.White
-                                            hasClassOrEvent -> Color(0xFF0B4F8A)
+                                            selected -> colors.onPrimary
+                                            hasClassOrEvent -> colors.primary
                                             else -> Color.Transparent
                                         },
                                         CircleShape,
@@ -416,73 +449,88 @@ private fun WeekPicker(state: ScheduleUiState, onAction: (ScheduleAction) -> Uni
     }
 }
 
+/** Chips lọc nhóm sự kiện: chip đang chọn = `primary`/`onPrimary`, chip thường = `surface` + viền `outlineVariant`. */
 @Composable
 private fun CategoryFilterRow(
     selectedCategory: Int,
     onSelectCategory: (Int) -> Unit,
     eventsCount: Int,
 ) {
+    val colors = MaterialTheme.colorScheme
     val categories = listOf(
-        "All Events ($eventsCount)",
-        "Workshops & Seminars",
-        "Culture & Sports",
-        "Career & Networking",
+        stringResource(R.string.schedule_category_all, eventsCount),
+        stringResource(R.string.schedule_category_workshops),
+        stringResource(R.string.schedule_category_culture),
+        stringResource(R.string.schedule_category_career),
     )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Md),
+        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
     ) {
-        categories.forEachIndexed { index, cat ->
+        categories.forEachIndexed { index, category ->
             val isSelected = index == selectedCategory
             Surface(
                 onClick = { onSelectCategory(index) },
-                shape = RoundedCornerShape(9999.dp),
-                color = if (isSelected) Color(0xFF003366) else Color.White,
-                border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE5E7EB)),
-                shadowElevation = if (isSelected) 1.dp else 0.dp,
+                shape = UthDimens.Radius.PillShape,
+                color = if (isSelected) colors.primary else colors.surface,
+                border = if (isSelected) null else BorderStroke(UthDimens.Size.Stroke, colors.outlineVariant),
+                shadowElevation = if (isSelected) UthDimens.Elevation.Card else UthDimens.Elevation.None,
             ) {
                 Text(
-                    text = cat,
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
-                    color = if (isSelected) Color.White else Color(0xFF374151),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    text = category,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) colors.onPrimary else colors.onSurfaceVariant,
+                    modifier = Modifier.padding(
+                        horizontal = UthDimens.Spacing.Md,
+                        vertical = UthDimens.Spacing.Xs,
+                    ),
                 )
             }
         }
     }
 }
 
+/** Nhãn ca (Sáng/Chiều/Tối): chữ `onPrimary` trên nền `primary` + kẻ ngang `outlineVariant`. */
 @Composable
 private fun SessionHeader(name: String) {
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 4.dp),
+            .padding(top = UthDimens.Spacing.Md, bottom = UthDimens.Spacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
     ) {
         Surface(
-            color = Color(0xFF003366),
-            shape = RoundedCornerShape(4.dp),
+            color = colors.primary,
+            contentColor = colors.onPrimary,
+            shape = MaterialTheme.shapes.extraSmall,
         ) {
             Text(
                 text = name.uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xxs),
             )
         }
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = Color(0xFFE2E8F0),
-            thickness = 1.dp,
+            color = colors.outlineVariant,
+            thickness = UthDimens.Size.Stroke,
         )
     }
 }
 
+/**
+ * Thẻ sự kiện: dải màu trái + khối nội dung cân bằng chiều cao hàng qua
+ * [IntrinsicSize.Min] nên hai nhãn dài không làm thẻ lệch đáy (idiom giống thẻ vé ở
+ * `TicketsScreen`). Trạng thái dùng [UthStatusBadge] — nền/chữ đã đo tương phản theo tone,
+ * không tự phối tay.
+ */
 @Composable
 private fun CampusEventCard(
     event: ScheduleEvent,
@@ -491,37 +539,47 @@ private fun CampusEventCard(
     onViewQr: (ScheduleEvent) -> Unit,
     onViewDetails: (ScheduleEvent) -> Unit,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val ext = UthTheme.extendedColors
+
     val isOngoing = now >= event.startAt && now < event.endAt
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
+    val isPrimaryAccent = isRegistered || event.accent == EventAccent.PRIMARY
+    val isWarningAccent = event.accent == EventAccent.WARNING
+    val isNeutral = !isOngoing && !isPrimaryAccent && !isWarningAccent
 
-    // Viền xanh lá khi đang diễn ra, viền xanh dương khi đã đăng ký thành công
-    val cardBorder = when {
-        isOngoing -> BorderStroke(1.5.dp, Color(0xFF10B981))
-        isRegistered || event.accent == EventAccent.PRIMARY -> BorderStroke(1.5.dp, Color(0xFF0B4F8A))
-        event.accent == EventAccent.WARNING -> BorderStroke(1.dp, Color(0xFFFDE68A))
-        else -> BorderStroke(1.dp, Color(0xFFE2E8F0))
+    val borderColor = when {
+        isOngoing -> ext.success
+        isPrimaryAccent -> colors.primary
+        isWarningAccent -> ext.warning
+        else -> colors.outlineVariant
     }
-
+    // Dải màu: Gold chỉ làm NỀN (chữ Navy trên Gold 6.2:1); trạng thái trung tính giữ Navy.
     val stripeColor = when {
-        isOngoing -> Color(0xFF10B981)
-        isRegistered || event.accent == EventAccent.PRIMARY -> Color(0xFF0B4F8A)
-        event.accent == EventAccent.WARNING -> Color(0xFFF5A623)
-        else -> MaterialTheme.colorScheme.primary
+        isOngoing -> ext.success
+        isWarningAccent -> colors.secondary
+        else -> colors.primary
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color.White,
-        border = cardBorder,
-        shadowElevation = 2.dp,
+        shape = MaterialTheme.shapes.medium,
+        color = colors.surface,
+        border = BorderStroke(
+            width = if (isNeutral) UthDimens.Size.Stroke else UthDimens.Size.StrokeFocused,
+            color = borderColor,
+        ),
+        shadowElevation = UthDimens.Elevation.Card,
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // Thanh màu bên trái
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+        ) {
             Box(
                 Modifier
-                    .width(6.dp)
+                    .width(UthDimens.Size.AccentStripe)
                     .fillMaxHeight()
                     .background(stripeColor),
             )
@@ -529,117 +587,73 @@ private fun CampusEventCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(UthDimens.Spacing.Lg),
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
-                // Top Row: Khung giờ + Nhãn trạng thái
+                // Hàng trên: khung giờ + nhãn trạng thái
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    val timeBg = when {
-                        isOngoing -> Color(0xFF003366)
-                        isRegistered || event.accent == EventAccent.PRIMARY -> Color(0xFF0B4F8A)
-                        event.accent == EventAccent.WARNING -> Color(0xFFF5A623)
-                        else -> Color(0xFF003366)
-                    }
-                    val timeTextColor = if (event.accent == EventAccent.WARNING && !isOngoing && !isRegistered) Color(0xFF1A1C1F) else Color.White
-
+                    // Nền vàng Gold luôn đi chữ Navy (`onSecondary`); chữ trắng trên Gold chỉ 2.0:1.
+                    val timeOnGold = isWarningAccent && !isOngoing && !isRegistered
                     Surface(
-                        color = timeBg,
-                        shape = RoundedCornerShape(4.dp),
+                        color = if (timeOnGold) colors.secondary else colors.primary,
+                        contentColor = if (timeOnGold) colors.onSecondary else colors.onPrimary,
+                        shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
-                            text = "${event.startAt.format(timeFormatter())} - ${event.endAt.format(timeFormatter())}",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                            color = timeTextColor,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            text = stringResource(
+                                R.string.timetable_time_range,
+                                event.startAt.format(timeFormatter()),
+                                event.endAt.format(timeFormatter()),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(
+                                horizontal = UthDimens.Spacing.Sm,
+                                vertical = UthDimens.Spacing.Xxs,
+                            ),
                         )
                     }
 
-                    // Nhãn Đang diễn ra viền xanh lá hoặc Sắp diễn ra
-                    if (isOngoing) {
-                        Surface(
-                            color = Color(0xFFECFDF5),
-                            shape = RoundedCornerShape(9999.dp),
-                            border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(Color(0xFF10B981), CircleShape),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.event_ongoing),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                    color = Color(0xFF047857),
-                                )
-                            }
-                        }
-                    } else if (isRegistered || event.accent == EventAccent.PRIMARY) {
-                        Surface(
-                            color = Color(0xFFEFF6FF),
-                            shape = RoundedCornerShape(9999.dp),
-                            border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.event_upcoming),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                                color = Color(0xFF1D4ED8),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
-                    } else {
-                        Surface(
-                            color = Color(0xFFFFFBEB),
-                            shape = RoundedCornerShape(9999.dp),
-                            border = BorderStroke(1.dp, Color(0xFFFDE68A)),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.event_upcoming),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                                color = Color(0xFFB45309),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
+                    when {
+                        isOngoing -> UthStatusBadge(
+                            text = stringResource(R.string.event_ongoing),
+                            tone = BadgeTone.Success,
+                        )
+
+                        isPrimaryAccent -> UthStatusBadge(
+                            text = stringResource(R.string.event_upcoming),
+                            tone = BadgeTone.Info,
+                        )
+
+                        else -> UthStatusBadge(
+                            text = stringResource(R.string.event_upcoming),
+                            tone = BadgeTone.Warning,
+                        )
                     }
                 }
 
-                // Tiêu đề & Đơn vị tổ chức
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Tiêu đề & đơn vị tổ chức
+                Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
                     Text(
                         text = event.title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 22.sp,
-                        ),
-                        color = Color(0xFF111827),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.event_organizer, event.organizer),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280),
+                        color = ext.textSecondary,
                     )
                 }
 
-                HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+                HorizontalDivider(color = colors.outlineVariant, thickness = UthDimens.Size.Stroke)
 
-                // Địa điểm & Điểm rèn luyện (+5 ĐRL)
+                // Địa điểm & điểm rèn luyện
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -652,41 +666,30 @@ private fun CampusEventCard(
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = Color(0xFF003366),
-                            modifier = Modifier.size(16.dp),
+                            tint = colors.primary,
+                            modifier = Modifier.size(UthDimens.Size.IconCompact),
                         )
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(UthDimens.Spacing.Xs))
                         Text(
                             text = event.location,
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = Color(0xFF374151),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.onSurfaceVariant,
                         )
                     }
 
-                    val displayPoints = event.trainingPoints.ifBlank { if (!isRegistered) "+5 ĐRL" else "" }
+                    val pointsBonus = stringResource(R.string.schedule_points_bonus)
+                    val displayPoints = event.trainingPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
                     if (displayPoints.isNotBlank()) {
-                        val (pointBg, pointBorder, pointText) = when {
-                            isOngoing -> Triple(Color(0xFFEFF6FF), Color(0xFFBFDBFE), Color(0xFF003366))
-                            isRegistered || event.accent == EventAccent.PRIMARY -> Triple(Color(0xFFEFF6FF), Color(0xFFBFDBFE), Color(0xFF003366))
-                            event.accent == EventAccent.WARNING -> Triple(Color(0xFFFFFBEB), Color(0xFFFDE68A), Color(0xFFB45309))
-                            else -> Triple(Color(0xFFEFF6FF), Color(0xFFBFDBFE), Color(0xFF003366))
-                        }
-                        Surface(
-                            color = pointBg,
-                            shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, pointBorder),
-                        ) {
-                            Text(
-                                text = displayPoints,
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = pointText,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
+                        UthStatusBadge(
+                            text = displayPoints,
+                            tone = if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            icon = null,
+                        )
                     }
                 }
 
-                // Dòng hành động phía dưới
+                // Hàng trạng thái đăng ký + hành động
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -694,106 +697,45 @@ private fun CampusEventCard(
                 ) {
                     when {
                         isCheckedIn -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = Color(0xFF047857),
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.event_checked_in),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF047857),
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = { onViewDetails(event) },
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.White,
-                                    contentColor = Color(0xFF003366),
-                                ),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.event_details),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Event details",
-                                    modifier = Modifier.size(12.dp),
-                                )
-                            }
+                            RegistrationHint(
+                                icon = Icons.Filled.Check,
+                                label = stringResource(R.string.event_checked_in),
+                                tint = ext.onSuccessContainer,
+                            )
+                            EventDetailsButton(onClick = { onViewDetails(event) })
                         }
+
                         isRegistered -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF1D4ED8),
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.event_registered),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF1D4ED8),
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = { onViewDetails(event) },
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.White,
-                                    contentColor = Color(0xFF003366),
-                                ),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.event_details),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                )
-                            }
+                            RegistrationHint(
+                                icon = Icons.Filled.CheckCircle,
+                                label = stringResource(R.string.event_registered),
+                                tint = ext.onInfoContainer,
+                            )
+                            EventDetailsButton(onClick = { onViewDetails(event) })
                         }
+
                         else -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.DateRange,
-                                    contentDescription = null,
-                                    tint = Color(0xFF6B7280),
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.event_not_registered),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                    color = Color(0xFF6B7280),
-                                )
-                            }
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_not_registered),
+                                tint = ext.textSecondary,
+                            )
                             Button(
                                 onClick = { onAction(ScheduleAction.RegisterEvent(event.id)) },
-                                shape = RoundedCornerShape(8.dp),
+                                shape = MaterialTheme.shapes.small,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFF5A623),
-                                    contentColor = Color(0xFF1A1C1F),
+                                    containerColor = colors.secondary,
+                                    contentColor = colors.onSecondary,
                                 ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(
+                                    horizontal = UthDimens.Spacing.Lg,
+                                    vertical = UthDimens.Spacing.Xs,
+                                ),
                             ) {
                                 Text(
                                     text = stringResource(R.string.event_register),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
                                 )
                             }
                         }
@@ -804,174 +746,68 @@ private fun CampusEventCard(
     }
 }
 
+/** Trạng thái đăng ký ở chân thẻ: icon và chữ cùng màu `onContainer` đã đo AA. */
 @Composable
-private fun SimpleQrPreview(seed: Int, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val count = 17
-        val cell = size.minDimension / count
-        var rnd = (seed.toLong() and 0x7FFFFFFFL) or 1L
-        drawRect(Color.White)
-        for (r in 0 until count) {
-            for (c in 0 until count) {
-                rnd = (rnd * 1103515245L + 12345L) and 0x7FFFFFFFL
-                val isFinder = (r < 5 && c < 5) || (r < 5 && c >= count - 5) || (r >= count - 5 && c < 5)
-                val filled = if (isFinder) {
-                    val inOuter = (r == 0 || r == 4 || c == 0 || c == 4 ||
-                        (r < 5 && (c == count - 1 || c == count - 5)) ||
-                        (r >= count - 5 && (c == 0 || c == 4)))
-                    val inCenter = (r in 1..3 && c in 1..3) ||
-                        (r in 1..3 && c in (count - 4)..(count - 2)) ||
-                        (r in (count - 4)..(count - 2) && c in 1..3)
-                    inOuter || inCenter
-                } else {
-                    ((rnd ushr 16) and 1L) == 1L
-                }
-                if (filled) {
-                    drawRect(
-                        color = Color(0xFF003866),
-                        topLeft = Offset(c * cell, r * cell),
-                        size = Size(cell, cell),
-                    )
-                }
-            }
-        }
+private fun RegistrationHint(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(UthDimens.Size.IconBadge),
+        )
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = tint,
+        )
     }
 }
 
+/** Nút "Chi tiết sự kiện": viền `outline`, chữ `primary`; icon trang trí vì nhãn đã đủ nghĩa. */
 @Composable
-private fun QrTicketDialog(
-    event: ScheduleEvent,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF003366),
-                    contentColor = Color.White,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.event_qr_close))
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Surface(
-                    color = Color(0xFFECFDF5),
-                    shape = RoundedCornerShape(9999.dp),
-                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(modifier = Modifier.size(6.dp).background(Color(0xFF10B981), CircleShape))
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "CHECKED IN SUCCESSFULLY",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF047857),
-                        )
-                    }
-                }
-
-                Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFF111827),
-                )
-
-                Text(
-                    text = "${event.location}\n${event.startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}",
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFF4B5563),
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.5.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.padding(vertical = 8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier.padding(16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        SimpleQrPreview(seed = event.id.hashCode(), modifier = Modifier.size(160.dp))
-                    }
-                }
-
-                Text(
-                    text = stringResource(R.string.event_qr_code, event.id.takeLast(4).uppercase()),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF003866),
-                )
-            }
-        },
-    )
+private fun EventDetailsButton(onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    OutlinedButton(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.small,
+        border = BorderStroke(UthDimens.Size.Stroke, colors.outline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+        contentPadding = PaddingValues(
+            horizontal = UthDimens.Spacing.Md,
+            vertical = UthDimens.Spacing.Xs,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.event_details),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            modifier = Modifier.size(UthDimens.Size.IconBadge),
+        )
+    }
 }
 
+/** Tên viết tắt thứ trong tuần — lấy từ `strings.xml` để dịch sang tiếng Anh được. */
 @Composable
-private fun EventDetailsDialog(
-    event: ScheduleEvent,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(
-                        R.string.event_details_body,
-                        event.organizer,
-                        event.location,
-                        "${event.startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))} - ${event.endAt.format(timeFormatter())}",
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                if (event.trainingPoints.isNotBlank()) {
-                    Text(
-                        text = "Training points: ${event.trainingPoints}",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFF003366),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.timetable_cancel))
-            }
-        },
-    )
-}
-
-private fun formatDayOfWeek(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> "Mon"
-    DayOfWeek.TUESDAY -> "Tue"
-    DayOfWeek.WEDNESDAY -> "Wed"
-    DayOfWeek.THURSDAY -> "Thu"
-    DayOfWeek.FRIDAY -> "Fri"
-    DayOfWeek.SATURDAY -> "Sat"
-    DayOfWeek.SUNDAY -> "Sun"
+private fun dayOfWeekLabel(day: DayOfWeek): String = when (day) {
+    DayOfWeek.MONDAY -> stringResource(R.string.schedule_day_mon)
+    DayOfWeek.TUESDAY -> stringResource(R.string.schedule_day_tue)
+    DayOfWeek.WEDNESDAY -> stringResource(R.string.schedule_day_wed)
+    DayOfWeek.THURSDAY -> stringResource(R.string.schedule_day_thu)
+    DayOfWeek.FRIDAY -> stringResource(R.string.schedule_day_fri)
+    DayOfWeek.SATURDAY -> stringResource(R.string.schedule_day_sat)
+    DayOfWeek.SUNDAY -> stringResource(R.string.schedule_day_sun)
 }
 
 private fun timeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -1037,14 +873,26 @@ private fun ScheduleEvent.toTicket(): Ticket {
     val isSports = id.contains("sports") || title.contains("Hội thao")
     val isAi = id.contains("ai") || title.contains("AI")
     return Ticket(
-        id = if (isSports) "ticket-sports" else if (isAi) "ticket-ai" else "ticket-$id",
+        id = if (isSports) {
+            "ticket-sports"
+        } else if (isAi) {
+            "ticket-ai"
+        } else {
+            "ticket-$id"
+        },
         studentId = "2023040123",
         eventId = id,
         eventTitle = title,
         eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
         eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
         status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
-        fallbackCode = if (isSports) "482 917" else if (isAi) "998 102" else "356 891",
+        fallbackCode = if (isSports) {
+            "482 917"
+        } else if (isAi) {
+            "998 102"
+        } else {
+            "356 891"
+        },
         organizerName = organizer,
         seatLabel = if (isSports) "Ghế A-14" else "Khu vực tự do",
     )

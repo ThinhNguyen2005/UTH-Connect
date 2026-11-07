@@ -1,9 +1,11 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ItemCategory
+import com.giathinh.uthconnect.domain.model.ListingKind
+import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.UserRole
-import java.time.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -12,11 +14,13 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class SupabaseMappersTest {
     @Test fun eventStatusAndTimestampMatchAndroidDomain() {
         for (status in EventStatus.entries) {
-            val event = objectFromJson("""
+            val event = objectFromJson(
+                """
                 {
                   "id":"33333333-3333-4333-8333-333333333333",
                   "title":"Ngày hội UTH",
@@ -27,7 +31,8 @@ class SupabaseMappersTest {
                   "current_registered":19,
                   "status":"${status.name}"
                 }
-            """).toDomainEvent()
+            """,
+            ).toDomainEvent()
             assertEquals(status, event.status)
             assertEquals(Instant.parse("2026-11-03T05:30:00Z").toEpochMilli(), event.startAt)
             assertEquals(Instant.parse("2026-11-03T08:30:00Z").toEpochMilli(), event.endAt)
@@ -43,7 +48,8 @@ class SupabaseMappersTest {
             "organizer" to UserRole.ORGANIZER,
             "admin" to UserRole.ADMIN,
         )) {
-            val profile = objectFromJson("""
+            val profile = objectFromJson(
+                """
                 {
                   "student_id":"23510001",
                   "student_id_verified":true,
@@ -52,7 +58,8 @@ class SupabaseMappersTest {
                   "class_name":"CN23A",
                   "role":"$remote"
                 }
-            """).toDomainProfile()
+            """,
+            ).toDomainProfile()
             assertEquals(expected, profile.role)
             assertEquals("23510001", profile.studentId)
             assertEquals("CN23A", profile.className)
@@ -126,6 +133,60 @@ class SupabaseMappersTest {
         assertNull(missingEvent)
     }
 
+    @Test fun toDomainLostFoundListingMapsAllFieldsCorrectly() {
+        val raw = """
+            {
+              "id": "33333333-3333-4333-8333-333333333333",
+              "title": "Rơi chìa khóa xe máy",
+              "description": "Chìa khóa smartkey Honda gắn móc gấu nâu tại bãi xe CS1",
+              "kind": "LOST",
+              "category": "PERSONAL_ITEMS",
+              "location": "Bãi xe CS1",
+              "date": "07/11/2026",
+              "contact_name": "Nguyễn Minh Thắng",
+              "contact_phone": "0901234567",
+              "image_url": "https://example.supabase.co/storage/v1/object/public/lost-found/items/key.jpg",
+              "is_resolved": true
+            }
+        """
+        val item = objectFromJson(raw).toDomainLostFoundListing()
+        assertEquals("33333333-3333-4333-8333-333333333333", item.id)
+        assertEquals("Rơi chìa khóa xe máy", item.title)
+        assertEquals("Chìa khóa smartkey Honda gắn móc gấu nâu tại bãi xe CS1", item.description)
+        assertEquals(ListingKind.LOST, item.kind)
+        assertEquals(ItemCategory.PERSONAL_ITEMS, item.category)
+        assertEquals("Bãi xe CS1", item.location)
+        assertEquals("07/11/2026", item.date)
+        assertEquals("Nguyễn Minh Thắng", item.contactName)
+        assertEquals("0901234567", item.contactPhone)
+        assertEquals("https://example.supabase.co/storage/v1/object/public/lost-found/items/key.jpg", item.imageUrl)
+        assertTrue(item.isResolved)
+    }
+
+    @Test fun lostFoundListingToJsonObjectSerializesCorrectly() {
+        val domain = LostFoundListing(
+            id = "33333333-3333-4333-8333-333333333333",
+            title = "Nhặt được tai nghe",
+            description = "Tai nghe Galaxy Buds trắng tại sảnh cơ sở 1",
+            kind = ListingKind.FOUND,
+            category = ItemCategory.ELECTRONICS,
+            location = "Sảnh toà B, CS1",
+            date = "07/11/2026",
+            contactName = "Lê Văn B",
+            contactPhone = "0987654321",
+            imageUrl = "https://example.com/bud.jpg",
+            isResolved = false,
+        )
+        val json = domain.toJsonObject(userId = "11111111-1111-4111-8111-111111111111")
+        assertEquals("33333333-3333-4333-8333-333333333333", json.string("id"))
+        assertEquals("Nhặt được tai nghe", json.string("title"))
+        assertEquals("FOUND", json.string("kind"))
+        assertEquals("ELECTRONICS", json.string("category"))
+        assertEquals("https://example.com/bud.jpg", json.string("image_url"))
+        assertEquals("11111111-1111-4111-8111-111111111111", json.string("user_id"))
+        assertEquals(false, json.bool("is_resolved"))
+    }
+
     @Test fun uuidAndUrlEncodingBehaveSafely() {
         val validId = "33333333-3333-4333-8333-333333333333"
         assertEquals(validId, uuid(validId))
@@ -137,5 +198,8 @@ class SupabaseMappersTest {
         assertEquals("33333333-3333-4333-8333-333333333333", urlEncode(validId))
     }
 
+    /**
+     * Parses a JSON string literal into a [JsonObject] instance.
+     */
     private fun objectFromJson(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
 }

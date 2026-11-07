@@ -19,15 +19,14 @@ data class PostNotification(
 
 enum class NotificationCategory {
     ALL,
-    ACADEMIC,     // Học vụ & Đào tạo
-    EXAMINATION,  // Lịch thi & Khảo thí
-    TUITION,      // Học phí & Học bổng
-    ACTIVITIES,   // Hoạt động & Phong trào
-    GENERAL;      // Thông báo chung
+    ACADEMIC, // Học vụ & Đào tạo
+    EXAMINATION, // Lịch thi & Khảo thí
+    TUITION, // Học phí & Học bổng
+    ACTIVITIES, // Hoạt động & Phong trào
+    GENERAL, // Thông báo chung
+    ;
 
     companion object {
-        fun fromString(value: String?): NotificationCategory {
-            return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: ALL
-        }
+        fun fromString(value: String?): NotificationCategory = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: ALL
     }
 }

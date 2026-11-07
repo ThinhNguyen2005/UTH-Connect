@@ -699,7 +699,13 @@ private fun CenteredState(modifier: Modifier = Modifier, content: @Composable ()
     }
 }
 
-/** Khoá item của `LazyColumn` — không rải chuỗi thô trong code. */
+/**
+ * Khoá item của `LazyColumn` — không rải chuỗi thô trong code.
+ *
+ * Tên const theo dạng `Header`/`Cover` (không phải SCREAMING_SNAKE) vì chúng là hằng nhóm
+ * trong một object private, đọc như tên field; ktlint `property-naming` chỉ nhắm biến toàn cục.
+ */
+@Suppress("ktlint:standard:property-naming")
 private object AnnouncementKey {
     const val Header = "announcement_header"
     const val Cover = "announcement_cover"
@@ -802,8 +808,7 @@ private fun AnnouncementStatePreview(
 
 @Preview(name = "content light", showBackground = true)
 @Composable
-private fun AnnouncementContentPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
@@ -815,8 +820,7 @@ private fun AnnouncementContentDarkPreview() = AnnouncementStatePreview(
 /** Bài ngắn: đúng dữ liệu thật của bảng tin (chỉ tóm tắt), không thêm mục rỗng. */
 @Preview(name = "short content", showBackground = true)
 @Composable
-private fun AnnouncementShortContentPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewShortDetail))
+private fun AnnouncementShortContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewShortDetail))
 
 @Preview(name = "loading light", showBackground = true)
 @Composable
@@ -824,8 +828,7 @@ private fun AnnouncementLoadingPreview() = AnnouncementStatePreview(Announcement
 
 @Preview(name = "loading dark", showBackground = true)
 @Composable
-private fun AnnouncementLoadingDarkPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(), darkTheme = true)
+private fun AnnouncementLoadingDarkPreview() = AnnouncementStatePreview(AnnouncementUiState(), darkTheme = true)
 
 @Preview(name = "error light", showBackground = true)
 @Composable
@@ -854,5 +857,4 @@ private fun AnnouncementMissingDarkPreview() = AnnouncementStatePreview(
 /** Font scale 130 % — kiểm tra tiêu đề dài và dòng meta không bị cắt (`Design-system` mục 8). */
 @Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f)
 @Composable
-private fun AnnouncementContentFontScalePreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentFontScalePreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))

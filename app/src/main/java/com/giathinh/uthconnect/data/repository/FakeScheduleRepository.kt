@@ -157,14 +157,11 @@ class FakeScheduleRepository @Inject constructor() : ScheduleRepository {
     // -----------------------------------------------------------------------
 
     /** Trả về lịch học trong ngày [date] (định dạng "YYYY-MM-DD"). */
-    override fun getScheduleByDate(date: String): Flow<List<CourseSchedule>> =
-        flowOf(sampleSchedule.filter { it.date == date })
+    override fun getScheduleByDate(date: String): Flow<List<CourseSchedule>> = flowOf(sampleSchedule.filter { it.date == date })
 
     /** Trả về tất cả môn học trong [dayOfWeek] (2=Thứ 2 … 8=Chủ nhật). */
-    override fun getScheduleByDayOfWeek(dayOfWeek: Int): Flow<List<CourseSchedule>> =
-        flowOf(sampleSchedule.filter { it.dayOfWeek == dayOfWeek })
+    override fun getScheduleByDayOfWeek(dayOfWeek: Int): Flow<List<CourseSchedule>> = flowOf(sampleSchedule.filter { it.dayOfWeek == dayOfWeek })
 
     /** Trả về toàn bộ thời khoá biểu học kỳ hiện tại. */
-    override fun getSemesterSchedule(): Flow<List<CourseSchedule>> =
-        flowOf(sampleSchedule)
+    override fun getSemesterSchedule(): Flow<List<CourseSchedule>> = flowOf(sampleSchedule)
 }

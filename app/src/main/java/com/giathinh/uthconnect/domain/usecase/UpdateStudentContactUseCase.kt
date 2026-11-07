@@ -1,7 +1,7 @@
 package com.giathinh.uthconnect.domain.usecase
 
-import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.validation.ContactValidation
 import com.giathinh.uthconnect.domain.validation.StudentContactValidator
 import javax.inject.Inject

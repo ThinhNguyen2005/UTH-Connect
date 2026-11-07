@@ -2,6 +2,9 @@ package com.giathinh.uthconnect.presentation.utilities
 
 import com.giathinh.uthconnect.domain.model.AppSettings
 import com.giathinh.uthconnect.domain.model.DeliveryPhase
+import com.giathinh.uthconnect.domain.model.LANGUAGE_TAG_ENGLISH
+import com.giathinh.uthconnect.domain.model.LANGUAGE_TAG_VIETNAMESE
+import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.model.TrainingCriteria
 import com.giathinh.uthconnect.domain.model.TrainingPointInfo
 import com.giathinh.uthconnect.domain.model.TuitionCourse
@@ -22,7 +25,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -46,15 +53,13 @@ class UtilitiesViewModelTest {
         tuitionRepo: TuitionRepository = FakeTuitionRepository(),
         trainingPointRepo: TrainingPointRepository = FakeTrainingPointRepository(),
         settingsRepo: SettingsRepository = FakeSettingsRepository(),
-    ): UtilitiesViewModel {
-        return UtilitiesViewModel(
-            getUtilityModules = GetUtilityModulesUseCase(utilityRepo),
-            getTuition = GetTuitionUseCase(tuitionRepo),
-            getTrainingPoint = GetTrainingPointUseCase(trainingPointRepo),
-            getSettings = GetSettingsUseCase(settingsRepo),
-            updateSettings = UpdateSettingsUseCase(settingsRepo),
-        )
-    }
+    ): UtilitiesViewModel = UtilitiesViewModel(
+        getUtilityModules = GetUtilityModulesUseCase(utilityRepo),
+        getTuition = GetTuitionUseCase(tuitionRepo),
+        getTrainingPoint = GetTrainingPointUseCase(trainingPointRepo),
+        getSettings = GetSettingsUseCase(settingsRepo),
+        updateSettings = UpdateSettingsUseCase(settingsRepo),
+    )
 
     @Test
     fun `mo tab - danh sach don tu repository va loading tat di`() {
@@ -99,23 +104,63 @@ class UtilitiesViewModelTest {
     }
 
     @Test
-    fun `onToggleTuitionReminder cap nhat settings thanh cong`() = runTest {
+    fun `TuitionReminderChanged cap nhat settings thanh cong`() = runTest {
         val settingsRepo = FakeSettingsRepository()
         val viewModel = createViewModel(settingsRepo = settingsRepo)
 
-        viewModel.onToggleTuitionReminder(false)
+        viewModel.onAction(UtilitiesAction.TuitionReminderChanged(false))
         assertFalse(settingsRepo.currentSettings.tuitionReminderEnabled)
 
-        viewModel.onToggleTuitionReminder(true)
+        viewModel.onAction(UtilitiesAction.TuitionReminderChanged(true))
         assertTrue(settingsRepo.currentSettings.tuitionReminderEnabled)
+    }
+
+    @Test
+    fun `LanguageSelected luu tag va phat event de Route dung lai activity`() = runTest {
+        val settingsRepo = FakeSettingsRepository()
+        val viewModel = createViewModel(settingsRepo = settingsRepo)
+
+        viewModel.onAction(UtilitiesAction.LanguageSelected(LANGUAGE_TAG_ENGLISH))
+
+        assertEquals(LANGUAGE_TAG_ENGLISH, settingsRepo.currentSettings.languageTag)
+        assertEquals(
+            "phai phat event de `UtilitiesRoute` goi recreate() sau khi store da ghi",
+            UtilitiesEvent.LanguageChanged,
+            viewModel.events.first(),
+        )
+    }
+
+    @Test
+    fun `chon lai dung ngon ngu dang bat - khong phat event vi recreate thua lam trang man hinh`() = runTest {
+        val settingsRepo = FakeSettingsRepository()
+        val viewModel = createViewModel(settingsRepo = settingsRepo)
+
+        viewModel.onAction(UtilitiesAction.LanguageSelected(LANGUAGE_TAG_VIETNAMESE))
+
+        assertNull("khong duoc phat event", withTimeoutOrNull(1_000) { viewModel.events.first() })
+    }
+
+    @Test
+    fun `ThemeModeSelected luu vao store va phoi ra qua settingsState`() = runTest {
+        val settingsRepo = FakeSettingsRepository()
+        val viewModel = createViewModel(settingsRepo = settingsRepo)
+        // settingsState dung stateIn(WhileSubscribed) nen phai co nguoi thu de upstream chay.
+        backgroundScope.launch { viewModel.settingsState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAction(UtilitiesAction.ThemeModeSelected(ThemeMode.DARK))
+        advanceUntilIdle()
+
+        assertEquals(ThemeMode.DARK, settingsRepo.currentSettings.themeMode)
+        val shown = viewModel.settingsState.value.themeMode
+        assertEquals("SettingsUiState phai phoi dung giao dien da chon", ThemeMode.DARK, shown)
     }
 
     private class FakeUtilityRepository(
         private val modules: List<UtilityModule>,
         var failed: Boolean = false,
     ) : UtilityModuleRepository {
-        override suspend fun modules(): Result<List<UtilityModule>> =
-            if (failed) Result.failure(IllegalStateException("mat mang")) else Result.success(modules)
+        override suspend fun modules(): Result<List<UtilityModule>> = if (failed) Result.failure(IllegalStateException("mat mang")) else Result.success(modules)
     }
 
     private class FakeTuitionRepository : TuitionRepository {
@@ -151,6 +196,8 @@ class UtilitiesViewModelTest {
 
         override fun getSettings(): Flow<AppSettings> = flow.asStateFlow()
 
+        override fun currentLanguageTag(): String = currentSettings.languageTag
+
         override suspend fun updateTuitionReminder(enabled: Boolean) {
             currentSettings = currentSettings.copy(tuitionReminderEnabled = enabled)
             flow.value = currentSettings
@@ -158,6 +205,16 @@ class UtilitiesViewModelTest {
 
         override suspend fun updateTrainingPointNotif(enabled: Boolean) {
             currentSettings = currentSettings.copy(trainingPointNotifEnabled = enabled)
+            flow.value = currentSettings
+        }
+
+        override suspend fun setLanguageTag(languageTag: String) {
+            currentSettings = currentSettings.copy(languageTag = languageTag)
+            flow.value = currentSettings
+        }
+
+        override suspend fun setThemeMode(themeMode: ThemeMode) {
+            currentSettings = currentSettings.copy(themeMode = themeMode)
             flow.value = currentSettings
         }
     }

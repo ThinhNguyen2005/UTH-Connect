@@ -1,5 +1,7 @@
 package com.giathinh.uthconnect.presentation.utilities
 
+import com.giathinh.uthconnect.domain.model.LANGUAGE_TAG_VIETNAMESE
+import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.presentation.utilities.campuses.CampusesUiState
 import com.giathinh.uthconnect.presentation.utilities.settings.SettingsUiState
 import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointUiState
@@ -49,5 +51,7 @@ class UtilitiesSubScreensTest {
         assertEquals("1.0.0", state.appVersion)
         assertTrue("Mặc định bật nhắc nhở học phí", state.tuitionReminderEnabled)
         assertTrue("Mặc định bật thông báo rèn luyện", state.trainingPointNotifEnabled)
+        assertEquals("Mặc định chạy tiếng Việt", LANGUAGE_TAG_VIETNAMESE, state.languageTag)
+        assertEquals("Mặc định giao diện theo hệ thống", ThemeMode.SYSTEM, state.themeMode)
     }
 }

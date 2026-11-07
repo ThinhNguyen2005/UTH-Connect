@@ -38,4 +38,4 @@ data class TicketsUiState(
 enum class TicketFilter { Upcoming, Past }
 
 /** Lỗi tải danh sách vé. */
-enum class TicketsFailure { LoadFailed }
+enum class TicketsFailure { LoadFailed, }

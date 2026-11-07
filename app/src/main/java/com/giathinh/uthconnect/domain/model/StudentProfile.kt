@@ -15,5 +15,7 @@ data class StudentProfile(
     val role: UserRole = UserRole.STUDENT,
     val uthVerified: Boolean = false,
 ) {
-    init { require(studentId.isNotBlank()) { "studentId is required" } }
+    init {
+        require(studentId.isNotBlank()) { "studentId is required" }
+    }
 }

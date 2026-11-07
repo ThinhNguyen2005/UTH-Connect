@@ -55,4 +55,3 @@ class CompletePasswordResetUseCaseTest {
         assertEquals(CompletePasswordResetOutcome.TokenExpired, result)
     }
 }
-

@@ -3,9 +3,12 @@ package com.giathinh.uthconnect.presentation.lostfound
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+/**
+ * Entry-point route for Lost & Found feature, managing state subscription and navigation callbacks.
+ */
 @Composable
 fun LostFoundRoute(
     onNavigateBack: () -> Unit,

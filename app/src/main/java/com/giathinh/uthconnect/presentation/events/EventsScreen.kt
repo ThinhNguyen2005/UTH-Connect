@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -77,7 +77,10 @@ fun EventsScreen(
             title = { Text("Hủy sự kiện?") },
             text = { Text("Người tham gia sẽ không thể đăng ký hoặc điểm danh sự kiện ${event.title}.") },
             confirmButton = {
-                Button(onClick = { onSetStatus(event.id, EventStatus.CANCELLED); cancelEvent = null }) {
+                Button(onClick = {
+                    onSetStatus(event.id, EventStatus.CANCELLED)
+                    cancelEvent = null
+                }) {
                     Text("Xác nhận hủy")
                 }
             },
@@ -120,8 +123,11 @@ fun EventsScreen(
                 onEdit = { editor = EventEditorTarget(event) },
                 onOpenAttendance = { onOpenAttendance(event.id) },
                 onSetStatus = { status ->
-                    if (status == EventStatus.CANCELLED) cancelEvent = event
-                    else onSetStatus(event.id, status)
+                    if (status == EventStatus.CANCELLED) {
+                        cancelEvent = event
+                    } else {
+                        onSetStatus(event.id, status)
+                    }
                 },
             )
         }
@@ -167,12 +173,15 @@ private fun EventCard(
                         EventStatus.DRAFT -> Button(onClick = { onSetStatus(EventStatus.PUBLISHED) }, enabled = !busy) {
                             Text("Xuất bản")
                         }
+
                         EventStatus.PUBLISHED -> Button(onClick = { onSetStatus(EventStatus.HAPPENING) }, enabled = !busy) {
                             Text("Bắt đầu")
                         }
+
                         EventStatus.HAPPENING -> Button(onClick = { onSetStatus(EventStatus.COMPLETED) }, enabled = !busy) {
                             Text("Kết thúc")
                         }
+
                         else -> Unit
                     }
                 }
@@ -215,11 +224,9 @@ internal fun defaultEventWindow(zone: ZoneId): Pair<LocalDateTime, LocalDateTime
     return start to start.plusMinutes(120)
 }
 
-internal fun parseEditableDateTime(text: String): LocalDateTime? =
-    runCatching { LocalDateTime.parse(text, editableDateFormatter) }.getOrNull()
+internal fun parseEditableDateTime(text: String): LocalDateTime? = runCatching { LocalDateTime.parse(text, editableDateFormatter) }.getOrNull()
 
-internal fun editableDateTime(millis: Long, zone: ZoneId): String =
-    Instant.ofEpochMilli(millis).atZone(zone).toLocalDateTime().format(editableDateFormatter)
+internal fun editableDateTime(millis: Long, zone: ZoneId): String = Instant.ofEpochMilli(millis).atZone(zone).toLocalDateTime().format(editableDateFormatter)
 
 @Composable
 private fun EventEditorDialog(
@@ -280,7 +287,9 @@ private fun EventEditorDialog(
                             R.string.events_editor_window_future,
                             stringResource(R.string.events_editor_left, minutesToOpen / 60, minutesToOpen % 60),
                         )
+
                         minutesFromClose > 0 -> stringResource(R.string.events_editor_window_past)
+
                         else -> stringResource(R.string.events_editor_window_open)
                     }
                     HorizontalDivider()
@@ -330,7 +339,10 @@ private fun EventEditorDialog(
                 if (validationError == null && start != null && end != null && count != null) {
                     onSave(
                         EventDraft(
-                            title.trim(), description.trim(), location.trim(), campus.trim(),
+                            title.trim(),
+                            description.trim(),
+                            location.trim(),
+                            campus.trim(),
                             start.atZone(localZone).toInstant().toEpochMilli(),
                             end.atZone(localZone).toInstant().toEpochMilli(),
                             count,

@@ -135,7 +135,9 @@ fun QrScannerDialog(
     val handle: (QrScannerAction) -> Unit = { action ->
         when (action) {
             QrScannerAction.Dismiss -> onDismiss()
+
             QrScannerAction.RequestPermission -> requestPermission.launch(Manifest.permission.CAMERA)
+
             QrScannerAction.OpenPermissionSettings -> {
                 val intent = Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -150,6 +152,7 @@ fun QrScannerDialog(
             }
 
             QrScannerAction.ToggleTorch -> torchOn = !torchOn
+
             QrScannerAction.ContinueScanning -> {
                 pendingToken = null
                 // Mã vừa bị từ chối thì cho phép gửi lại chính nó (BTC sửa hậu quả rồi quét

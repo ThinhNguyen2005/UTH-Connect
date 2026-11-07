@@ -102,6 +102,15 @@ Tất cả tỷ số dưới đây tính theo công thức WCAG trên nền tr�
 | Dark: `OnPrimary` #062038 trên #7FB2E5 | **7.4:1** | Đạt AAA |
 | Dark: `OnSecondary` #0B1622 trên #F5B740 | **10.0:1** | Đạt AAA |
 | `UthNavy` làm viền/icon (không phải chữ) | ≥ 3:1 | Đạt UI component |
+| Header gradient tab Thời khóa biểu (mục 4.14) light: `White` trên `headerGradientStart` `UthNavy` | **12.6:1** | Đạt AAA ở đầu đậm nhất của dải |
+| Header gradient light: `White` trên `headerGradientEnd` `UthNavyLight` | **8.5:1** | Đạt AAA ở đầu nhạt nhất của dải |
+| Header gradient light: chữ phụ `White` alpha `Opacity.HeaderMetadata` (0.78) trên `UthNavyLight` | **5.9:1** | Đạt AA — cặp xấu nhất của dải, vẫn trên ngưỡng 4.5 |
+| Header gradient dark: `UthOnNavyContainerDark` #BBD8F5 trên `headerGradientStart` #143252 | **8.9:1** | Đạt AAA |
+| Header gradient dark: `UthOnNavyContainerDark` trên `headerGradientEnd` #062038 | **11.2:1** | Đạt AAA |
+| Header gradient dark: chữ phụ alpha 0.78 trên #143252 | **6.0:1** | Đạt AA |
+| CTA chữ `UthNavy` (`onSecondary`) trên `UthGold` | **6.2:1** | Đạt AA — lặp lại quy tắc "cấm chữ trắng trên Gold" |
+
+> **Vì sao header dùng token riêng chứ không `Brush.verticalGradient(listOf(primary, tertiary, primary))`:** ở dark scheme `primary` là xanh **sáng** `#7FB2E5`. Lấy hai màu scheme làm nền rồi đặt chữ `onSurface` tối lên sẽ ra **2.0:1** (fail). `headerGradientStart/End/headerOnGradient` là bộ ba khoá chặt trong `UthExtendedColors`, đổi một màu là phải đo lại cả ba.
 
 > **Kết luận quan trọng:** `Success`/`Warning`/`Error`/`Gold` **chỉ là màu nền, icon, viền**. Chữ bắt buộc dùng biến `*OnContainer`. Trạng thái không được truyền tải chỉ bằng màu — phải kèm icon + chữ (colour-not-only-meaning).
 > `OutlineVariant` dành cho divider và trang trí; dùng `Outline` khi đường viền là tín hiệu cần để nhận diện ranh giới component.
@@ -291,6 +300,46 @@ Màn hình đăng nhập áp dụng triết lý Modern Minimalist ("Hello Again"
 - Màn hình Auth **không** chứa tab hoặc pill chuyển đổi giữa Mật khẩu và Sinh trắc học.
 - Đăng nhập chỉ gồm 2 phương thức: Mật khẩu (luồng thông minh Identifier -> Password) và Google SSO (@ut.edu.vn).
 
+### 4.12. Utility tile (lưới Tiện ích — `presentation/utilities/UtilitiesScreen.kt`)
+
+Trang Tiện ích là **lưới**, không phải danh sách dạng hàng. Hai mật độ, một template:
+
+| Khu vực | Mật độ | Nội dung một ô | Khung icon | Nền/không bấm được |
+|---|---|---|---|---|
+| "Tiện ích của tôi" (`utilities_section_mine`) | 2 cột | icon + `titleMedium` + `bodySmall` mô tả | `Size.UtilityFeatureIconContainer` (56.dp), glyph `Size.UtilityFeatureIcon` (32.dp) | `UthCard(onClick = …)`, nền `primaryContainer` / glyph `onPrimaryContainer` — **12.3:1 (AAA)** |
+| "Dịch vụ đang phát triển" (`utilities_section_upcoming`) | 3 cột | icon + `labelLarge` + lộ trình `labelSmall` | `Size.UtilityServiceIconContainer` (44.dp), glyph `Size.Icon` (24.dp) | `UthCard(onClick = null)` — không ripple, không phải control |
+
+- Ô 2 cột gộp **cả 4 tiện ích tra cứu tĩnh lẫn module đã bật** (`UtilityModule.enabled`) trong một hàng đợi: sau khi bottom nav rút còn 4 tab, đây là điểm vào duy nhất của *Sự kiện* và *Đồ thất lạc*.
+- Ô 3 cột dùng `contentPadding = false` và padding `Spacing.Sm`/`Spacing.Md` riêng: với lề `Spacing.Xl` của màn hình, mỗi ô chỉ còn hơn 80dp bề ngang, padding chuẩn `Lg` sẽ bóp nhãn thành 3 dòng.
+- **Chữ trong ô luôn có đường lui**: mọi `Text` của tile đặt `maxLines` (title 2, subtitle 2, nhãn 2, lộ trình 1) **kèm `overflow = TextOverflow.Ellipsis`**. Không có `overflow`, M3 cắt kiểu `Clip` — người dùng mất chữ mà không thấy dấu "…", chính xác là lỗi đã phá lưới hôm 05/11.
+- **Đáy card cùng hàng**: `Row` của mỗi hàng grid mang `height(IntrinsicSize.Min)`, mỗi ô `weight(1f).fillMaxHeight()` (khuôn của `TicketsScreen`). `Spacer(weight(1f))` chèn ở hàng lẻ chỉ để độn chỗ trống — ô thật không bị kéo giãn, khoảng trống bên phải là chủ đích.
+- **Lưới co theo font scale**: `Layout.ServiceGridColumns` = 3, hạ về `Layout.ServiceGridColumnsLargeText` = 2 khi `LocalDensity.current.fontScale >= Layout.LargeTextScale`; hàng 2 cột giữ nguyên `Layout.FeatureGridColumns`. Ôm cả hai con số trong token, không viết `chunked(3)` cứng.
+- `data class UtilityTile` là **`@Immutable` và không giữ lambda**: ý định bấm đi ra ngoài qua `onTileClick(target: UtilityTileTarget)`, nếu không mọi ô recompose mỗi lần state đổi.
+- **Không badge màu trong ô 3 cột**: trạng thái lộ trình diễn đạt bằng chữ `phase_*` màu `textSecondary` (**5.5:1 (AA)** trên Surface; `textTertiary` chỉ đạt ~2.9:1 nên bị loại cho chữ nhỏ) — đúng mục 6 "không truyền trạng thái chỉ bằng màu".
+- Grid tự cân hàng lẻ: mỗi ô `weight(1f)`, hàng thiếu ô chèn `Spacer(weight(1f))` để ô cuối không bị kéo giãn.
+- Glyph là **vector duotone chính chủ** (xem mục 7); `Icon(tint = …)` giữ `fillAlpha` từng lớp của file vector nên duotone không bị ép về flat.
+- `@Preview` đủ 4 trạng thái × light/dark, thêm một preview `fontScale = 1.5f` cho lưới.
+
+### 4.13. Choice row (hàng chọn phân đoạn — `presentation/utilities/settings/SettingsScreen.kt`)
+
+Dùng cho **Ngôn ngữ** (2 lựa chọn) và **Giao diện Hệ thống/Sáng/Tối** (3 lựa chọn) trong màn Cài đặt. Đây là control tự chứa trong package settings, **không** nâng lên `UthComponents.kt` (file nóng — mục 12 DoD) cho tới khi có màn thứ hai cần.
+
+- Một `UthCard` chứa các `SettingsChoiceRow`: `Column(weight(1f))` (title `titleMedium` + desc `bodySmall` `textSecondary`) rồi hàng nút; các row phân cách bằng `HorizontalDivider`.
+- Nút chọn là `Surface(onClick = …)` cao `Size.SegmentedControlHeight` (= `Size.MinTouchTarget` 48.dp), `widthIn(min = Size.MinTouchTarget)`, `shapes.small`, viền `Size.Stroke`: nền `primaryContainer`/`onPrimaryContainer` khi đang chọn, `surfaceSubtle`/`onSurfaceVariant` khi không.
+- **Trạng thái chọn không chỉ bằng màu**: nút đang chọn thêm `Icons.Filled.Check` (`Size.IconBadge`) và `Modifier.semantics { selected = … }` để TalkBack đọc "đã chọn".
+- Chọn lại đúng giá trị đang bật thì **không** phát hiệu ứng phụ: `UtilitiesViewModel.selectLanguage()` chặn `recreate()` thừa để tránh trắng màn hình.
+- Đổi ngôn ngữ là hành vi toàn app: chuỗi mới bắt buộc có mặt ở **cả** `values/` và `values-en/` trước khi merged, nếu không người dùng English gặp key trống.
+
+### 4.14. Tab Thời khóa biểu (`presentation/schedule/ScheduleScreen.kt`)
+
+Màn này từng là chỗ duy nhất trong `app/src/main` còn hex tự do (`F8FAFD`/`111827`/`6B7280`/`10B981` — bảng Tailwind, không thuộc nhận diện UTH). Sau 05/11 nó chạy hoàn toàn bằng token; đây là các quyết định cần giữ khi nối dữ liệu thật:
+
+- **Header**: `Brush.verticalGradient(listOf(ext.headerGradientStart, ext.headerGradientEnd))`, chữ `ext.headerOnGradient`; lớp phủ trên header lấy `headerOnGradient.copy(alpha = UthDimens.Opacity.Header*)` — cùng khuôn với `HomeScreen`. Không hardcode hex dải màu.
+- **Badge trạng thái**: mọi pill "Đã điểm danh / Sắp tới / Quá hạn" là `UthStatusBadge(tone = Success | Info | Warning)`, không tự vẽ `Surface` nền xanh/vàng — badge đã kèm icon nên trạng thái không chỉ bằng màu.
+- **Việc nhỏ mang token**: sọc accent trái card = `Size.AccentStripe` (6.dp), chấm chỉ ngày có lịch = `Size.IndicatorDot` (8.dp) và **luôn đi kèm chữ** trong `contentDescription`; bo góc dùng `MaterialTheme.shapes.*` (pill = `shapes.full`), viền = `Size.Stroke`, elevation = `Elevation.Card`.
+- **Typography**: không `.copy(fontSize = 10.sp/11.sp, letterSpacing = 0.5.sp)` — `labelSmall`/`labelMedium` đã mang letter-spacing của riêng nó.
+- Chuỗi hiển thị nằm trong `strings.xml` với prefix `schedule_` (cả vi lẫn en); bộ lọc nhóm sự kiện là `stringResource` chứ không so chuỗi tiếng Anh trong Screen.
+
 ---
 
 ## 5. Motion
@@ -335,7 +384,7 @@ Màn hình đăng nhập áp dụng triết lý Modern Minimalist ("Hello Again"
 | Badge trạng thái | `core/designsystem/component/UthStatusBadge.kt` — `enum BadgeTone` | ✅ 6 tone theo mục 1.3 |
 | Skeleton + shimmer (mục 4.2) | `presentation/home/HomeScreen.kt` | ✅ Home loading, vô hiệu hoá shimmer khi duration scale = 0; chưa trích thành component chung vì hiện chỉ một nơi dùng |
 | Bản mẫu một màn hình đạt checklist mục 8 | `presentation/utilities/` — `UtilitiesScreen` stateless nhận `UiState`, `UtilitiesRoute` nối `UtilitiesViewModel` | ✅ 8 `@Preview` (4 trạng thái × light/dark) + 4 unit test; `:app:assembleDebug`/`testDebugUnitTest` xanh. Màn hình mới copy cấu trúc này, không tự bày lại |
-| Icon | `androidx.compose.material:material-icons-core:1.7.8` | ⚠ thư viện đã đóng băng (không cập nhật nữa); chỉ dùng cho khung nav + badge, icon thiết kế riêng sẽ vào `res/drawable` |
+| Icon | `androidx.compose.material:material-icons-core:1.7.8` | ⚠ thư viện đã đóng băng (không cập nhật nữa); chỉ dùng cho khung nav + badge. Icon nghiệp vụ là **vector duotone gốc của Material Icons** (`materialiconstwotone`) copy vào `res/drawable/ic_*.xml`, gọi qua `painterResource` — không thêm dependency icon, không tự vẽ path |
 
 Toàn bộ màu phải đi qua `MaterialTheme.colorScheme.*`; token chưa có chỗ trong `ColorScheme` (VD `surfaceSubtle`, `textSecondary`, `successContainer`) lấy từ `UthTheme.extendedColors`. **Không rải hex, không tạo `Color(0x…)` trong Composable.**
 
@@ -396,7 +445,7 @@ Checklist dưới đây kiểm tra **kết quả thị giác**; cách viết cod
 
 1. Chốt font **Roboto** (mặc định, không nhúng — đang dùng) hay **Inter** (nhúng `res/font`)? Ảnh hưởng tới metric line-height.
 2. Navy `#003366` + Gold `#F5A623` đã lấy đúng bộ nhận diện chính thức của Trường/Đoàn–Hội chưa? Nếu có bản chuẩn khác, **chỉ đổi hex trong `Color.kt`**, không đổi cấu trúc token.
-3. `material-icons-core` đã đóng băng — chấp nhận cho khung app, hay thay hết bằng vector drawable ngay từ đầu?
+3. ~~`material-icons-core` đã đóng băng — chấp nhận cho khung app, hay thay hết bằng vector drawable ngay từ đầu?~~ **Đã chốt (2026-11-05):** giữ `material-icons-core` cho khung nav + badge (4 glyph `Home/DateRange/Build/Person`), mọi icon nghiệp vụ là vector duotone tải từ `google/material-design-icons` đặt trong `res/drawable` — 11 glyph `ic_*` của Tiện ích và Vé đang chạy theo đường này.
 4. Admin Dashboard (web) dùng lại token này qua CSS variables hay thiết kế riêng theo thư viện của nó?
 5. `#10B981`/`#F59E0B`/`#EF4444` là bảng Tailwind — có muốn đồng bộ sang Material 3 tonal palette (tone 40/80) để thống nhất với `ColorScheme` không?
-6. Tab Cá nhân đã đăng nhập thì bottom nav giữ 4 tab hay thêm tab "Quản lý" cho organizer (hiện: organizer vào qua màn hình Quản lý trong tab Cá nhân — xem `docs/Design.md` mục 8)?
+6. Tab Cá nhân đã đăng nhập thì bottom nav giữ 4 tab hay thêm tab "Quản lý" cho organizer? Trần của thanh nav đã chốt ở **4** (khuyến nghị 3–5 điểm đến ngang hàng của Google; app từng phình 6 tab và đã rút — `docs/Design.md` mục 8.1), nên organizer tiếp tục vào qua màn hình Quản lý trong tab Cá nhân. Mở lại chỉ khi có màn hình mà tần suất dùng ngang 4 tab hiện tại.

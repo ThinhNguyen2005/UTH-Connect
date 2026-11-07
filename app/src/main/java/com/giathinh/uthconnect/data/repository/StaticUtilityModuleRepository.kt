@@ -19,9 +19,12 @@ class StaticUtilityModuleRepository @Inject constructor() : UtilityModuleReposit
 
     override suspend fun modules(): Result<List<UtilityModule>> = Result.success(
         listOf(
-            UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = false),
+            // `enabled` = màn thật đã tồn tại trong repo, không phải đã "đạt" trên giấy.
+            // Sự kiện và Đồ thất lạc không còn là tab đáy nên lưới Tiện ích là điểm vào
+            // duy nhất — để disabled ở đây nghĩa là mất đường vào tính năng đã code xong.
+            UtilityModule(UtilityModuleId.EVENTS, DeliveryPhase.MVP, enabled = true),
             UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
-            UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = false),
+            UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = true),
             UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.BACKLOG, enabled = false),
             UtilityModule(UtilityModuleId.HOUSING, DeliveryPhase.BACKLOG, enabled = false),
             UtilityModule(UtilityModuleId.RIDE_SHARE, DeliveryPhase.BACKLOG, enabled = false),

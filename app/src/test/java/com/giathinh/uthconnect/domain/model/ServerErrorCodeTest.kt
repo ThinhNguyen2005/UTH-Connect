@@ -1,9 +1,9 @@
 package com.giathinh.uthconnect.domain.model
 
-import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Kiểm tra bộ ánh xạ chuỗi lỗi Postgres -> mã xử lý được ở giao diện.

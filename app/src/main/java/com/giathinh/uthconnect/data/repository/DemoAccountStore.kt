@@ -23,6 +23,5 @@ class SharedPreferencesDemoAccountStore(
 ) : DemoAccountStore {
     override fun getString(key: String): String? = prefs.getString(key, null)
 
-    override fun putAll(values: Map<String, String>): Boolean =
-        prefs.edit().apply { values.forEach { (k, v) -> putString(k, v) } }.commit()
+    override fun putAll(values: Map<String, String>): Boolean = prefs.edit().apply { values.forEach { (k, v) -> putString(k, v) } }.commit()
 }

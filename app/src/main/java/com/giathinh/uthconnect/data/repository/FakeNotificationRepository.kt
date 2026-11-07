@@ -186,14 +186,13 @@ class FakeNotificationRepository @Inject constructor() : NotificationRepository 
         }
         // Pinned items lên đầu, sau đó sắp xếp theo thời gian mới nhất
         val sorted = filtered.sortedWith(
-            compareByDescending<PostNotification> { it.isPinned }.thenByDescending { it.publishedAt }
+            compareByDescending<PostNotification> { it.isPinned }.thenByDescending { it.publishedAt },
         )
         return flowOf(sorted)
     }
 
     /** Trả về chi tiết một thông báo theo [notificationId]. */
-    override suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?> =
-        runCatching {
-            sampleNotifications.firstOrNull { it.id == notificationId }
-        }
+    override suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?> = runCatching {
+        sampleNotifications.firstOrNull { it.id == notificationId }
+    }
 }

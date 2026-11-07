@@ -168,13 +168,15 @@ class FakeStudentGradeRepository @Inject constructor() : StudentGradeRepository 
     // -----------------------------------------------------------------------
 
     override fun getGrades(semester: String?): Flow<List<StudentGrade>> {
-        val filtered = if (semester == null) sampleGrades
-        else sampleGrades.filter { it.semester == semester }
+        val filtered = if (semester == null) {
+            sampleGrades
+        } else {
+            sampleGrades.filter { it.semester == semester }
+        }
         return flowOf(filtered)
     }
 
-    override fun getSemesterGpaList(): Flow<List<SemesterGpa>> =
-        flowOf(semesterGpaList)
+    override fun getSemesterGpaList(): Flow<List<SemesterGpa>> = flowOf(semesterGpaList)
 
     override fun getCumulativeGpa(): Flow<Float> {
         // Tính GPA tích luỹ (weighted average theo số tín chỉ)

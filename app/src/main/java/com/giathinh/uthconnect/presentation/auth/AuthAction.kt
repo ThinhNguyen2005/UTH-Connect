@@ -6,12 +6,14 @@ sealed interface AuthAction {
     data class RememberChanged(val value: Boolean) : AuthAction
     data object TogglePassword : AuthAction
     data object Submit : AuthAction
+
     /** Repeats a failed sign-in attempt after the user corrects credentials. */
     data object Retry : AuthAction
     data object ForgotPassword : AuthAction
     data object DismissForgotPassword : AuthAction
     data class ForgotEmailChanged(val value: String) : AuthAction
     data object SubmitForgotPassword : AuthAction
+
     /** Route performs Credential Manager; the VM only receives its outcome. */
     data object RequestGoogleSignIn : AuthAction
     data class GoogleIdTokenReceived(val idToken: String, val rawNonce: String) : AuthAction
@@ -20,6 +22,7 @@ sealed interface AuthAction {
 
     /** Switch active interface language ("VI" or "EN"). */
     data class SelectLanguage(val lang: String) : AuthAction
+
     /** Clears active account credentials and error state. */
     data object SwitchAccount : AuthAction
 

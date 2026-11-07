@@ -4,26 +4,30 @@ import com.giathinh.uthconnect.domain.model.AttendanceEntry
 import com.giathinh.uthconnect.domain.model.AttendanceRoster
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.repository.AttendanceRosterRepository
-import com.giathinh.uthconnect.domain.usecase.GetAttendanceRosterUseCase
 import com.giathinh.uthconnect.domain.usecase.AttendanceCsvLabels
 import com.giathinh.uthconnect.domain.usecase.ExportAttendanceCsvUseCase
+import com.giathinh.uthconnect.domain.usecase.GetAttendanceRosterUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.time.Instant
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import kotlinx.coroutines.runBlocking
+import java.time.Instant
 
 class AttendanceViewModelTest {
     @get:Rule val dispatcher = MainDispatcherRule()
 
-    private val roster = AttendanceRoster("event", "Hội thao", listOf(
-        AttendanceEntry("1", "20230001", "Nguyễn An", "an@ut.edu.vn", "2026-11-03T08:00:00Z", "organizer"),
-        AttendanceEntry("2", "20230002", "Trần Bình", "binh@ut.edu.vn", null, null),
-    ))
+    private val roster = AttendanceRoster(
+        "event",
+        "Hội thao",
+        listOf(
+            AttendanceEntry("1", "20230001", "Nguyễn An", "an@ut.edu.vn", "2026-11-03T08:00:00Z", "organizer"),
+            AttendanceEntry("2", "20230002", "Trần Bình", "binh@ut.edu.vn", null, null),
+        ),
+    )
 
     @Test fun `load gives organizer summary from server roster`() {
         val vm = AttendanceViewModel(GetAttendanceRosterUseCase(FakeRepository(Result.success(roster))), ExportAttendanceCsvUseCase())
@@ -81,13 +85,18 @@ class AttendanceViewModelTest {
         val vm = AttendanceViewModel(GetAttendanceRosterUseCase(fake), ExportAttendanceCsvUseCase())
         vm.load("event")
         vm.onAction(AttendanceAction.Filter(AttendanceFilter.PRESENT))
-        val updated = roster.copy(entries = roster.entries.map {
-            it.copy(checkedInAt = "2026-11-03T09:00:00Z")
-        })
+        val updated = roster.copy(
+            entries = roster.entries.map {
+                it.copy(checkedInAt = "2026-11-03T09:00:00Z")
+            },
+        )
         fake.result = Result.success(updated)
-        val csv = vm.createExport(AttendanceCsvLabels(
-            "Event", "Exported", "ID", "Name", "Email", "Status", "Time", "Staff", "Present", "Missing",
-        ), Instant.EPOCH).getOrThrow()
+        val csv = vm.createExport(
+            AttendanceCsvLabels(
+                "Event", "Exported", "ID", "Name", "Email", "Status", "Time", "Staff", "Present", "Missing",
+            ),
+            Instant.EPOCH,
+        ).getOrThrow()
         assertTrue(csv.contains("20230002"))
         assertTrue(csv.contains("03/11/2026 16:00:00"))
         assertEquals(1, vm.uiState.value.visibleEntries.size)

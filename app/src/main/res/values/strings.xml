@@ -6,13 +6,16 @@
     <string name="common_meta_separator">•</string>
 
     <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
-    <string name="utilities_not_available">Chưa sẵn sàng</string>
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+
+    <!--
+      "Vé của tôi" không còn là tab đáy: nó là hàng điều hướng trong tab Cá nhân
+      (presentation/profile/ProfileScreen.kt).
+    -->
     <string name="tab_tickets">Vé của tôi</string>
-    <string name="tab_events">Sự kiện</string>
 
     <!-- Vé sự kiện / CHECKIN-1 -->
     <string name="tickets_title">Vé của tôi</string>
@@ -113,7 +116,8 @@
     <string name="utilities_grid_campuses">Cơ sở &amp; Danh bạ</string>
     <string name="utilities_grid_campuses_desc">CS1, CS2, CS3 &amp; Hotline</string>
     <string name="utilities_grid_settings">Cài đặt</string>
-    <string name="utilities_grid_settings_desc">Thông báo &amp; Phiên bản</string>
+    <string name="utilities_grid_settings_desc">Thông báo, Ngôn ngữ &amp; Giao diện</string>
+    <string name="utilities_section_mine">Tiện ích của tôi</string>
     <string name="utilities_section_upcoming">Dịch vụ đang phát triển</string>
     <string name="utilities_loading">Đang tải danh sách module…</string>
     <string name="utilities_error_title">Không tải được danh sách</string>
@@ -164,6 +168,16 @@
     <string name="settings_notif_tuition_desc">Nhận thông báo khi gần đến hạn đóng học phí</string>
     <string name="settings_notif_training">Thông báo điểm rèn luyện</string>
     <string name="settings_notif_training_desc">Nhận thông báo khi có kết quả rèn luyện mới</string>
+    <string name="settings_appearance_header">Ngôn ngữ &amp; Giao diện</string>
+    <string name="settings_language_title">Ngôn ngữ</string>
+    <string name="settings_language_desc">Áp dụng cho toàn bộ ứng dụng ngay, không cần khởi động lại</string>
+    <string name="settings_language_vi">Tiếng Việt</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_theme_title">Giao diện</string>
+    <string name="settings_theme_desc">Chọn Sáng/Tối, hoặc để Hệ thống để theo cài đặt của máy</string>
+    <string name="settings_theme_system">Hệ thống</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
     <string name="settings_app_info_header">Thông tin ứng dụng</string>
     <string name="settings_version_label">Phiên bản</string>
     <string name="settings_version_value">1.0.0 (Build 2026.1)</string>
@@ -254,6 +268,9 @@
     <string name="auth_forgot_submit">Gửi liên kết</string>
     <string name="auth_forgot_success">Nếu tài khoản tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư sinh viên của bạn.</string>
     <string name="auth_forgot_rate_limit">Bạn đã yêu cầu quá nhiều lần. Vui lòng chờ vài phút rồi thử lại.</string>
+    <string name="auth_verify_email">Email chưa được kích hoạt hoặc chưa xác thực. Vui lòng kiểm tra hộp thư sinh viên.</string>
+    <string name="auth_verify_email_prompt">Chưa kích hoạt email?</string>
+    <string name="auth_verify_email_action">Kích hoạt ngay</string>
     <string name="auth_network_error">Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.</string>
     <string name="auth_verification_submit">Gửi xác minh</string>
     <string name="auth_verification_input_label">Nhập MSSV của bạn</string>
@@ -303,7 +320,7 @@
     <string name="auth_demo_profile">Hồ sơ demo</string>
     <string name="auth_logout">Đăng xuất</string>
     <string name="auth_logout_failed">Đăng xuất thất bại. Vui lòng thử lại.</string>
-    <string name="timetable_memory">CAMPUS EVENTS &amp; ACTIVITIES</string>
+    <string name="timetable_memory">HOẠT ĐỘNG &amp; SỰ KIỆN CAMPUS</string>
     <string name="timetable_add">Thêm deadline</string>
     <string name="timetable_tomorrow">Lớp ngày mai</string>
     <string name="timetable_classes_on_date">Lịch học · %1$s</string>
@@ -311,20 +328,35 @@
     <string name="timetable_select_date">Chọn ngày</string>
     <string name="timetable_previous_week">Tuần trước</string>
     <string name="timetable_next_week">Tuần sau</string>
-    <string name="timetable_jump_today">TODAY</string>
+    <string name="timetable_jump_today">HÔM NAY</string>
     <string name="timetable_all_periods">Tất cả</string>
     <string name="schedule_events_tab">Sự kiện</string>
     <string name="schedule_deadlines_tab">Deadline</string>
+    <string name="schedule_session_default">Sự kiện</string>
+    <string name="schedule_avatar_initials">SV</string>
+    <string name="schedule_notifications">Thông báo</string>
+    <string name="schedule_points_bonus">+5 ĐRL</string>
+    <string name="schedule_category_all">Tất cả sự kiện (%1$d)</string>
+    <string name="schedule_category_workshops">Workshop &amp; hội thảo</string>
+    <string name="schedule_category_culture">Văn hóa &amp; thể thao</string>
+    <string name="schedule_category_career">Nghề nghiệp &amp; kết nối</string>
+    <string name="schedule_day_mon">T2</string>
+    <string name="schedule_day_tue">T3</string>
+    <string name="schedule_day_wed">T4</string>
+    <string name="schedule_day_thu">T5</string>
+    <string name="schedule_day_fri">T6</string>
+    <string name="schedule_day_sat">T7</string>
+    <string name="schedule_day_sun">CN</string>
     <string name="events_on_date">Sự kiện · %1$s</string>
-    <string name="no_events_for_date">No events for this date</string>
-    <string name="event_organizer">Organizer: %1$s</string>
-    <string name="event_checked_in">Checked in</string>
-    <string name="event_registered">Registered</string>
-    <string name="event_not_registered">Not registered</string>
-    <string name="event_ongoing">Happening now</string>
-    <string name="event_upcoming">Upcoming</string>
-    <string name="event_details">Event details</string>
-    <string name="event_register">Register</string>
+    <string name="no_events_for_date">Không có sự kiện trong ngày này</string>
+    <string name="event_organizer">Đơn vị tổ chức: %1$s</string>
+    <string name="event_checked_in">Đã điểm danh</string>
+    <string name="event_registered">Đã đăng ký</string>
+    <string name="event_not_registered">Chưa đăng ký</string>
+    <string name="event_ongoing">Đang diễn ra</string>
+    <string name="event_upcoming">Sắp diễn ra</string>
+    <string name="event_details">Chi tiết sự kiện</string>
+    <string name="event_register">Đăng ký</string>
     <string name="event_view_qr">View QR Ticket</string>
     <string name="event_session_morning">Morning</string>
     <string name="event_session_afternoon">Afternoon</string>
@@ -356,7 +388,7 @@
     <string name="timetable_android">Lập trình Android</string>
     <string name="timetable_database">Cơ sở dữ liệu</string>
     <string name="timetable_english">Tiếng Anh</string>
-    <string name="timetable_title">Event Schedule</string>
+    <string name="timetable_title">Lịch sự kiện</string>
     <string name="timetable_urgent_badge">Sắp đến hạn</string>
     <string name="timetable_warning_badge">Cần lưu ý</string>
     <string name="timetable_upcoming_badge">Còn hạn</string>
@@ -409,9 +441,7 @@
     <string name="auth_login_retry">Thử đăng nhập lại</string>
     <string name="scanner_open">Mở soát vé</string>
     <string name="scanner_back">Quay lại</string>
-    <string name="scanner_title">Quét và soát vé</string>
     <string name="scanner_forbidden">Chỉ ban tổ chức được soát vé.</string>
-    <string name="scanner_count">Đã check-in: %1$d</string>
     <string name="scanner_code">Mã vé hoặc nội dung QR</string>
     <string name="scanner_submit">Kiểm tra</string>
     <string name="scanner_success">Check-in thành công</string>
@@ -421,13 +451,29 @@
     <string name="scanner_error">Không thể kiểm tra vé. Hãy thử lại.</string>
     <string name="scanner_camera_permission">Cho phép camera để quét mã QR</string>
     <string name="scanner_camera_denied">Chưa cấp quyền camera. Bạn vẫn có thể nhập mã thủ công.</string>
-    <string name="scanner_camera_error">Không mở được camera. Hãy thử lại hoặc nhập mã thủ công.</string>
-    <string name="scanner_camera_retry">Thử mở camera lại</string>
     <string name="scanner_camera_scanning">Đưa mã QR vào khung hình</string>
     <string name="scanner_camera_received">Đã đọc mã. Chọn Quét mã khác để tiếp tục.</string>
     <string name="scanner_scan_again">Quét mã khác</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_search_hint_lost">Tìm đồ thất lạc (ví, thẻ sinh viên...)</string>
+    <string name="lostfound_search_hint_found">Tìm đồ nhặt được...</string>
+    <string name="lostfound_search_desc">Tìm kiếm</string>
+    <string name="lostfound_clear_search">Xóa tìm kiếm</string>
+    <string name="lostfound_no_results_title">Không tìm thấy kết quả</string>
+    <string name="lostfound_no_results_desc">Không có tin nào khớp với "%1$s". Hãy thử từ khóa khác.</string>
+    <string name="lostfound_status_resolved_lost">Đã nhận lại</string>
+    <string name="lostfound_status_resolved_found">Đã trao trả</string>
+    <string name="lostfound_action_mark_lost">Đánh dấu đã tìm thấy</string>
+    <string name="lostfound_action_mark_found">Đánh dấu đã trả đồ</string>
+    <string name="lostfound_bottomsheet_subtitle">Điền thông tin để cộng đồng UTH cùng hỗ trợ tìm kiếm</string>
+    <string name="lostfound_btn_close">Đóng</string>
+    <string name="lostfound_image_attached_desc">Ảnh đính kèm</string>
+    <string name="lostfound_poster_prefix">Người đăng: %1$s</string>
+    <string name="lostfound_image_too_large">Kích thước ảnh vượt quá giới hạn 5MB</string>
+    <string name="lostfound_image_read_error">Không thể đọc hoặc xử lý tệp ảnh này</string>
+    <string name="lostfound_msg_update_status_failed">Cập nhật trạng thái bài đăng thất bại</string>
+
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
     <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>
     <string name="lostfound_badge_lost">CẦN TÌM</string>
@@ -448,9 +494,9 @@
     <string name="lostfound_kind_found_btn">Tôi nhặt được đồ</string>
     <string name="lostfound_field_title">Tiêu đề tin đăng *</string>
     <string name="lostfound_field_title_hint">Ví dụ: Rơi ví da màu đen tại CS1</string>
-    <string name="lostfound_field_desc">Mô tả chi tiết (tối thiểu 20 ký tự) *</string>
-    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, thời gian, hoàn cảnh thất lạc...</string>
-    <string name="lostfound_desc_counter">%1$d/20 ký tự tối thiểu</string>
+    <string name="lostfound_field_desc">Mô tả chi tiết (không bắt buộc)</string>
+    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, màu sắc, thời gian thất lạc...</string>
+    <string name="lostfound_desc_counter">%1$d ký tự</string>
     <string name="lostfound_field_kind">Loại tin</string>
     <string name="lostfound_field_category">Danh mục</string>
     <string name="lostfound_field_location">Địa điểm (Cơ sở / Phòng)</string>
@@ -469,6 +515,11 @@
     <string name="lostfound_err_phone_invalid">Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.</string>
     <string name="lostfound_phone_public_notice">Số điện thoại sẽ hiển thị công khai trên bài đăng để người khác liên hệ.</string>
     <string name="lostfound_contact_unnamed">Chưa cung cấp tên liên hệ</string>
+    <string name="lostfound_field_image">Hình ảnh minh chứng</string>
+    <string name="lostfound_btn_pick_image">Chọn ảnh từ thư viện</string>
+    <string name="lostfound_btn_change_image">Đổi ảnh khác</string>
+    <string name="lostfound_btn_remove_image">Xóa ảnh</string>
+    <string name="lostfound_image_desc">Ảnh chụp đồ vật thất lạc hoặc nhặt được (không bắt buộc)</string>
     <string name="auth_profile_retry">Tải lại hồ sơ</string>
     <string name="timetable_title_required">Vui lòng nhập tên công việc.</string>
     <string name="timetable_date_invalid">Ngày không hợp lệ. Hãy chọn lại ngày.</string>

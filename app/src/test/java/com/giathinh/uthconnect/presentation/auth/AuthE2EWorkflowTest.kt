@@ -17,8 +17,6 @@ import com.giathinh.uthconnect.domain.usecase.SignInWithGoogleUseCase
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 import com.giathinh.uthconnect.domain.validation.LoginValidator
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.security.MessageDigest
-import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +30,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.security.MessageDigest
+import java.util.UUID
 
 /**
  * End-to-End Hermetic Workflow Test Suite for UTH Connect Authentication.
@@ -122,11 +122,9 @@ class AuthE2EWorkflowTest {
             return Result.success(student.takeIf { valid })
         }
 
-        override suspend fun findStudent(studentId: String): Result<StudentProfile?> =
-            Result.success(student.takeIf { it.studentId == studentId })
+        override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(student.takeIf { it.studentId == studentId })
 
-        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> =
-            Result.success(true)
+        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(true)
 
         override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> {
             if (!allowGoogleSignIn) {

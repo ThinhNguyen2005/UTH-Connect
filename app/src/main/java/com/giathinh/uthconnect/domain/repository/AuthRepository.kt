@@ -5,6 +5,7 @@ import com.giathinh.uthconnect.domain.model.StudentProfile
 interface AuthRepository {
     suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?>
     suspend fun findStudent(studentId: String): Result<StudentProfile?>
+
     /** False if old password does not match. Result.failure means storage failure. */
     suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean>
     suspend fun signOut() {}
@@ -22,26 +23,22 @@ interface AuthRepository {
     /**
      * Sends password recovery instructions to the student email.
      */
-    suspend fun sendPasswordReset(email: String): Result<Unit> =
-        Result.failure(UnsupportedOperationException("sendPasswordReset not implemented"))
+    suspend fun sendPasswordReset(email: String): Result<Unit> = Result.failure(UnsupportedOperationException("sendPasswordReset not implemented"))
 
     /**
      * Completes password reset with the new password.
      */
-    suspend fun completePasswordReset(newPassword: String): Result<Unit> =
-        Result.failure(UnsupportedOperationException("completePasswordReset not implemented"))
+    suspend fun completePasswordReset(newPassword: String): Result<Unit> = Result.failure(UnsupportedOperationException("completePasswordReset not implemented"))
 
     /**
      * Submits a student ID verification request.
      */
-    suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> =
-        Result.failure(UnsupportedOperationException("submitVerificationRequest not implemented"))
+    suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = Result.failure(UnsupportedOperationException("submitVerificationRequest not implemented"))
 
     /**
      * Checks the latest student ID verification request status.
      */
-    suspend fun checkVerificationStatus(): Result<VerificationStatus?> =
-        Result.failure(UnsupportedOperationException("checkVerificationStatus not implemented"))
+    suspend fun checkVerificationStatus(): Result<VerificationStatus?> = Result.failure(UnsupportedOperationException("checkVerificationStatus not implemented"))
 
     /**
      * Redeems a Google ID token from Credential Manager for a Supabase session and returns the
@@ -53,8 +50,7 @@ interface AuthRepository {
      * state instead of a generic error. Backends without Google support fail with
      * [GoogleSignInUnsupportedException].
      */
-    suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> =
-        Result.failure(GoogleSignInUnsupportedException())
+    suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = Result.failure(GoogleSignInUnsupportedException())
 }
 
 data class SignUpResult(val needsEmailConfirmation: Boolean, val email: String)

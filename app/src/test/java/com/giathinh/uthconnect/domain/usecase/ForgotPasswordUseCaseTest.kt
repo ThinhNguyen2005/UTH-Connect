@@ -2,11 +2,11 @@ package com.giathinh.uthconnect.domain.usecase
 
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
-import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 class ForgotPasswordUseCaseTest {
 
@@ -76,4 +76,3 @@ class ForgotPasswordUseCaseTest {
         assertEquals(ForgotPasswordOutcome.Success, result)
     }
 }
-
