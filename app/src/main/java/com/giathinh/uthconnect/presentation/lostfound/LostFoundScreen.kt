@@ -215,9 +215,9 @@ private fun LostFoundSearchBar(
         placeholder = {
             Text(
                 text = if (selectedKind == ListingKind.LOST) {
-                    "Tìm đồ thất lạc (ví, thẻ sinh viên...)"
+                    stringResource(R.string.lostfound_search_hint_lost)
                 } else {
-                    "Tìm đồ nhặt được..."
+                    stringResource(R.string.lostfound_search_hint_found)
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -225,7 +225,7 @@ private fun LostFoundSearchBar(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Tìm kiếm",
+                contentDescription = stringResource(R.string.lostfound_search_desc),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
@@ -234,7 +234,7 @@ private fun LostFoundSearchBar(
                 IconButton(onClick = { onQueryChange("") }) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Xóa tìm kiếm",
+                        contentDescription = stringResource(R.string.lostfound_clear_search),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -358,8 +358,8 @@ private fun LostFoundContentBody(
         uiState.filteredListings.isEmpty() -> {
             if (uiState.searchQuery.isNotBlank()) {
                 UthEmptyState(
-                    title = "Không tìm thấy kết quả",
-                    body = "Không có tin nào khớp với \"${uiState.searchQuery}\". Hãy thử từ khóa khác.",
+                    title = stringResource(R.string.lostfound_no_results_title),
+                    body = stringResource(R.string.lostfound_no_results_desc, uiState.searchQuery),
                     icon = Icons.Default.Search,
                     modifier = modifier,
                 )
@@ -450,6 +450,13 @@ private fun AsyncListingImage(
         isLoading = true
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
+                require(
+                    imageUrl.startsWith("https://") &&
+                        (
+                            imageUrl.contains("supabase.co/storage/v1/object/public/lost-found/") ||
+                                imageUrl.contains("images.unsplash.com")
+                            ),
+                ) { "Untrusted image host" }
                 val connection = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = TIMEOUT_MILLIS
                     readTimeout = TIMEOUT_MILLIS
@@ -570,7 +577,7 @@ private fun LostFoundItemCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Người đăng: ${listing.contactName}",
+                        text = stringResource(R.string.lostfound_poster_prefix, listing.contactName),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -644,7 +651,11 @@ private fun ItemCardHeader(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = if (listing.kind == ListingKind.LOST) "Đã nhận lại" else "Đã trao trả",
+                            text = if (listing.kind == ListingKind.LOST) {
+                                stringResource(R.string.lostfound_status_resolved_lost)
+                            } else {
+                                stringResource(R.string.lostfound_status_resolved_found)
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = UthTheme.extendedColors.onSuccessContainer,
@@ -695,9 +706,17 @@ private fun ItemCardActions(
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = if (listing.isResolved) {
-                    if (listing.kind == ListingKind.LOST) "Đã nhận lại" else "Đã trao trả"
+                    if (listing.kind == ListingKind.LOST) {
+                        stringResource(R.string.lostfound_status_resolved_lost)
+                    } else {
+                        stringResource(R.string.lostfound_status_resolved_found)
+                    }
                 } else {
-                    if (listing.kind == ListingKind.LOST) "Đánh dấu đã tìm thấy" else "Đánh dấu đã trả đồ"
+                    if (listing.kind == ListingKind.LOST) {
+                        stringResource(R.string.lostfound_action_mark_lost)
+                    } else {
+                        stringResource(R.string.lostfound_action_mark_found)
+                    }
                 },
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,

@@ -61,7 +61,19 @@ class LostFoundViewModel @Inject constructor(
                     )
                 }
                 viewModelScope.launch {
-                    toggleResolveListingUseCase(action.id, newStatus)
+                    toggleResolveListingUseCase(action.id, newStatus).onFailure {
+                        _uiState.update { current ->
+                            current.copy(
+                                listings = current.listings.map { item ->
+                                    if (item.id == action.id) {
+                                        item.copy(isResolved = !newStatus)
+                                    } else {
+                                        item
+                                    }
+                                },
+                            )
+                        }
+                    }
                 }
             }
 

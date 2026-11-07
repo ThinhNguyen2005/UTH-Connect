@@ -110,19 +110,37 @@ class SupabaseRestClient @Inject constructor() {
         )
     }
 
-    suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
+    suspend fun table(
+        path: String,
+        allowAnonymous: Boolean = false,
+    ): JsonElement = authorized(
+        path = "/rest/v1/$path",
+        method = "GET",
+        allowAnonymous = allowAnonymous,
+    )
 
     suspend fun insertTable(
         path: String,
         body: JsonObject,
+        allowAnonymous: Boolean = false,
     ): JsonElement = authorized(
         path = "/rest/v1/$path",
         method = "POST",
         body = body,
         preferRepresentation = true,
+        allowAnonymous = allowAnonymous,
     )
 
-    suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
+    suspend fun patchTable(
+        path: String,
+        body: JsonObject,
+        allowAnonymous: Boolean = false,
+    ): JsonElement = authorized(
+        path = "/rest/v1/$path",
+        method = "PATCH",
+        body = body,
+        allowAnonymous = allowAnonymous,
+    )
 
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
@@ -174,9 +192,14 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         preferRepresentation: Boolean = false,
+        allowAnonymous: Boolean = false,
     ): JsonElement {
-        val accessToken = runCatching { freshToken() }.getOrNull()
-        return send(path, method, body, accessToken ?: BuildConfig.SUPABASE_PUBLISHABLE_KEY, preferRepresentation)
+        val accessToken = if (allowAnonymous) {
+            runCatching { freshToken() }.getOrNull() ?: BuildConfig.SUPABASE_PUBLISHABLE_KEY
+        } else {
+            freshToken()
+        }
+        return send(path, method, body, accessToken, preferRepresentation)
     }
 
     private suspend fun freshToken(): String {

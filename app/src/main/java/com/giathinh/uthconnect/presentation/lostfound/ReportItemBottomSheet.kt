@@ -55,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +76,9 @@ import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,13 +119,16 @@ fun ReportItemBottomSheet(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Điền thông tin để cộng đồng UTH cùng hỗ trợ tìm kiếm",
+                        text = stringResource(R.string.lostfound_bottomsheet_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onDismiss, enabled = !form.isSubmitting) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Đóng")
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.lostfound_btn_close),
+                    )
                 }
             }
 
@@ -396,13 +403,26 @@ private fun ReportImagePicker(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? ->
         if (uri != null) {
-            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            onAction(LostFoundAction.UpdateReportImage(bytes, mimeType, uri.toString()))
+            scope.launch {
+                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val maxBytes = 5 * 1024 * 1024
+                            val buffer = stream.readBytes()
+                            if (buffer.size <= maxBytes) buffer else null
+                        }
+                    }.getOrNull()
+                }
+                if (bytes != null) {
+                    onAction(LostFoundAction.UpdateReportImage(bytes, mimeType, uri.toString()))
+                }
+            }
         }
     }
 
@@ -434,7 +454,7 @@ private fun ReportImagePicker(
                 if (previewBitmap != null) {
                     Image(
                         bitmap = previewBitmap,
-                        contentDescription = "Ảnh đính kèm",
+                        contentDescription = stringResource(R.string.lostfound_image_attached_desc),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )

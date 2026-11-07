@@ -61,9 +61,12 @@ create policy "lost_found_update_all"
 -- ---------------------------------------------------------------------------
 -- 3. Tạo Supabase Storage bucket 'lost-found'
 -- ---------------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('lost-found', 'lost-found', true)
-on conflict (id) do update set public = true;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('lost-found', 'lost-found', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+    public = true,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
 
 -- Policy đọc ảnh công khai từ bucket lost-found
 drop policy if exists "lost_found_storage_public_select" on storage.objects;

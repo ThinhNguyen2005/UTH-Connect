@@ -456,6 +456,21 @@
     <string name="scanner_scan_again">Quét mã khác</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_search_hint_lost">Tìm đồ thất lạc (ví, thẻ sinh viên...)</string>
+    <string name="lostfound_search_hint_found">Tìm đồ nhặt được...</string>
+    <string name="lostfound_search_desc">Tìm kiếm</string>
+    <string name="lostfound_clear_search">Xóa tìm kiếm</string>
+    <string name="lostfound_no_results_title">Không tìm thấy kết quả</string>
+    <string name="lostfound_no_results_desc">Không có tin nào khớp với "%1$s". Hãy thử từ khóa khác.</string>
+    <string name="lostfound_status_resolved_lost">Đã nhận lại</string>
+    <string name="lostfound_status_resolved_found">Đã trao trả</string>
+    <string name="lostfound_action_mark_lost">Đánh dấu đã tìm thấy</string>
+    <string name="lostfound_action_mark_found">Đánh dấu đã trả đồ</string>
+    <string name="lostfound_bottomsheet_subtitle">Điền thông tin để cộng đồng UTH cùng hỗ trợ tìm kiếm</string>
+    <string name="lostfound_btn_close">Đóng</string>
+    <string name="lostfound_image_attached_desc">Ảnh đính kèm</string>
+    <string name="lostfound_poster_prefix">Người đăng: %1$s</string>
+
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
     <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>
     <string name="lostfound_badge_lost">CẦN TÌM</string>

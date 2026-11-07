@@ -18,7 +18,7 @@ class SupabaseLostFoundRepository @Inject constructor(
 ) : LostFoundRepository {
 
     override suspend fun getListings(): Result<List<LostFoundListing>> = runCatching {
-        val rows = client.table("lost_found_items?select=*&order=created_at.desc").jsonArray
+        val rows = client.table("lost_found_items?select=*&order=created_at.desc", allowAnonymous = true).jsonArray
         rows.map { it.jsonObject.toDomainLostFoundListing() }
     }
 
@@ -42,7 +42,7 @@ class SupabaseLostFoundRepository @Inject constructor(
 
         val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
         val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
-        val response = client.insertTable("lost_found_items", payload)
+        val response = client.insertTable("lost_found_items", payload, allowAnonymous = true)
         val createdRow = when (response) {
             is JsonArray -> response.firstOrNull()?.jsonObject
             is JsonObject -> response
@@ -56,6 +56,7 @@ class SupabaseLostFoundRepository @Inject constructor(
         client.patchTable(
             "lost_found_items?id=eq.${urlEncode(rowId)}",
             buildJsonObject { put("is_resolved", isResolved) },
+            allowAnonymous = true,
         )
     }.map { }
 }
