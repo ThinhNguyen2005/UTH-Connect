@@ -3,11 +3,13 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.DomainRestrictionException
+import com.giathinh.uthconnect.domain.repository.ProfileAccessException
 import com.giathinh.uthconnect.domain.repository.SignUpResult
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
 import com.giathinh.uthconnect.domain.repository.VerificationRequestResult
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -21,6 +23,7 @@ import javax.inject.Singleton
 class SupabaseAuthRepository @Inject constructor(
     private val client: SupabaseRestClient,
     private val google: SupabaseGoogleExchange,
+    private val demoAuth: DemoAuthRepository,
 ) : AuthRepository,
     StudentContactRepository {
 
@@ -37,23 +40,35 @@ class SupabaseAuthRepository @Inject constructor(
         try {
             client.signIn(email, password)
         } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@runCatching null
+            if (e.status == 400 || e.status == 401) {
+                val demoResult = demoAuth.authenticate(trimmed, password).getOrNull()
+                if (demoResult != null) return@runCatching demoResult
+                return@runCatching null
+            }
+            throw e
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            val demoResult = demoAuth.authenticate(trimmed, password).getOrNull()
+            if (demoResult != null) return@runCatching demoResult
+            client.signOut()
             throw e
         }
 
-        val row = ownProfileRow()
+        val row = try {
+            ownProfileRow()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            client.signOut()
+            throw ProfileAccessException((error as? SupabaseHttpException)?.status)
+        }
         val isVerified = row?.bool("student_id_verified") == true && !row.string("student_id").isNullOrBlank()
         if (!isVerified) {
             val displayName = row?.string("display_name").orEmpty()
             throw StudentVerificationRequiredException(email = email, displayName = displayName)
         }
-
-        try {
-            row.toDomainProfile()
-        } catch (e: Exception) {
-            client.signOut()
-            throw e
-        }
+        row.toDomainProfile()
     }
 
     private suspend fun ownProfile(): StudentProfile = ownProfileRow()?.toDomainProfile()
@@ -135,30 +150,39 @@ class SupabaseAuthRepository @Inject constructor(
         personalEmail: String,
         currentAddress: String,
     ): Result<StudentProfile> = runCatching {
-        val payload = buildJsonObject {
-            put("phone_number", phone)
-            put("personal_email", personalEmail)
-            put("current_address", currentAddress)
+        if (client.userId.isNotBlank()) {
+            val payload = buildJsonObject {
+                put("phone_number", phone)
+                put("personal_email", personalEmail)
+                put("current_address", currentAddress)
+            }
+            client.patchTable("profiles?id=eq.${urlEncode(uuid(client.userId))}", payload)
+            ownProfile()
+        } else {
+            demoAuth.updateContact(studentId, phone, personalEmail, currentAddress).getOrThrow()
         }
-        client.patchTable("profiles?id=eq.${urlEncode(uuid(client.userId))}", payload)
-        ownProfile()
     }
 
     override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
-        ownProfile().takeIf { it.studentId == studentId }
+        val remote = runCatching { ownProfile().takeIf { it.studentId == studentId } }.getOrNull()
+        remote ?: demoAuth.findStudent(studentId).getOrNull()
     }
 
     override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = runCatching {
-        val profile = ownProfile()
-        check(profile.studentId == studentId) { "Not signed in as this student" }
-        try {
-            client.signIn(profile.email, oldPassword, replaceExisting = false)
-        } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@runCatching false
-            throw e
+        if (client.userId.isNotBlank()) {
+            val profile = ownProfile()
+            check(profile.studentId == studentId) { "Not signed in as this student" }
+            try {
+                client.signIn(profile.email, oldPassword, replaceExisting = false)
+            } catch (e: SupabaseHttpException) {
+                if (e.status == 400 || e.status == 401) return@runCatching false
+                throw e
+            }
+            client.updatePassword(newPassword)
+            true
+        } else {
+            demoAuth.changePassword(studentId, oldPassword, newPassword).getOrDefault(false)
         }
-        client.updatePassword(newPassword)
-        true
     }
 
     override suspend fun signOut() = client.signOut()

@@ -45,15 +45,30 @@ class DemoAuthRepository @Inject constructor(
         role = UserRole.ORGANIZER,
         uthVerified = true,
     )
+    private val teacher = StudentProfile(
+        studentId = "GV2023001",
+        email = "teacher@ut.edu.vn",
+        displayName = "ThS. Trần Thu Trang",
+        className = "Khoa CNTT",
+        major = "Công nghệ thông tin",
+        faculty = "Khoa Công nghệ thông tin",
+        role = UserRole.TEACHER,
+        uthVerified = true,
+    )
 
     private fun baseFor(id: String): StudentProfile? = when (id) {
         student.studentId -> student
         organizer.studentId -> organizer
+        teacher.studentId -> teacher
         else -> null
     }
 
     /** Keep original V2 student preference keys unchanged for backwards compatibility. */
-    private fun key(base: StudentProfile, field: String): String = if (base.studentId == student.studentId) field else "organizer_$field"
+    private fun key(base: StudentProfile, field: String): String = when (base.studentId) {
+        student.studentId -> field
+        organizer.studentId -> "organizer_$field"
+        else -> "teacher_$field"
+    }
 
     private fun profile(base: StudentProfile): StudentProfile = base.copy(
         phoneNumber = store.getString(key(base, "phone")).orEmpty(),
@@ -65,8 +80,19 @@ class DemoAuthRepository @Inject constructor(
         val encodedSalt = store.getString(key(base, "password_salt"))
         val encodedHash = store.getString(key(base, "password_hash"))
         if (encodedSalt == null || encodedHash == null) {
-            val initial = if (base.studentId == student.studentId) STUDENT_DEMO_PASSWORD else ORGANIZER_DEMO_PASSWORD
-            return MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), initial.toByteArray(Charsets.UTF_8))
+            val initial = when (base.studentId) {
+                organizer.studentId -> ORGANIZER_DEMO_PASSWORD
+                teacher.studentId -> TEACHER_DEMO_PASSWORD
+                else -> STUDENT_DEMO_PASSWORD
+            }
+            if (MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), initial.toByteArray(Charsets.UTF_8))) {
+                return true
+            }
+            // Allow STUDENT_DEMO_PASSWORD for teacher account as convenience
+            if (base.studentId == teacher.studentId && MessageDigest.isEqual(candidate.toByteArray(Charsets.UTF_8), STUDENT_DEMO_PASSWORD.toByteArray(Charsets.UTF_8))) {
+                return true
+            }
+            return false
         }
         val salt = Base64.getDecoder().decode(encodedSalt)
         val expected = Base64.getDecoder().decode(encodedHash)
@@ -85,7 +111,7 @@ class DemoAuthRepository @Inject constructor(
     override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = withContext(Dispatchers.Default) {
         runCatching {
             mutex.withLock {
-                val base = listOf(student, organizer).firstOrNull {
+                val base = listOf(student, organizer, teacher).firstOrNull {
                     identifier == it.studentId || identifier.equals(it.email, ignoreCase = true)
                 }
                 base?.takeIf { passwordMatches(it, password) }?.let(::profile)
@@ -158,6 +184,7 @@ class DemoAuthRepository @Inject constructor(
     companion object {
         const val STUDENT_DEMO_PASSWORD = "UTH@123456"
         const val ORGANIZER_DEMO_PASSWORD = "UTH@Org123456"
+        const val TEACHER_DEMO_PASSWORD = "UTH@123456"
 
         /** Backwards compatibility for V2 demos referencing the original constant. */
         const val DEMO_PASSWORD = STUDENT_DEMO_PASSWORD

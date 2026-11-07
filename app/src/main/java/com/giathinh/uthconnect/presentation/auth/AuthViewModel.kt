@@ -242,14 +242,15 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(identifierError = LoginFieldError.Required) }
             return
         }
+        val isTeacherId = id.startsWith("GV", ignoreCase = true) && id.length in 8..12
         val isNumericId = id.all { it.isDigit() } && id.length in 8..12
         val isUtEmail = (id.endsWith("@ut.edu.vn", ignoreCase = true) || id.endsWith("@uth.edu.vn", ignoreCase = true)) && id.indexOf('@') > 0
-        if (!isNumericId && !isUtEmail) {
+        if (!isNumericId && !isUtEmail && !isTeacherId) {
             _uiState.update { it.copy(identifierError = LoginFieldError.InvalidIdentifier) }
             return
         }
         _uiState.update { it.copy(identifierError = null, failure = null, forgotEmail = id) }
-        val isEnrolled = id == "2023040123" || id.startsWith("2023") || id.startsWith("215") || isUtEmail
+        val isEnrolled = id == "2023040123" || id.startsWith("2023") || id.startsWith("215") || isUtEmail || isTeacherId
         if (isEnrolled) {
             _uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
         } else {
@@ -572,6 +573,14 @@ class AuthViewModel @Inject constructor(
                     SignInResult.InvalidCredentials -> {
                         _uiState.update { it.copy(isSigningIn = false, failure = AuthFailure.InvalidCredentials) }
                         eventChannel.send(AuthEvent.InvalidCredentials)
+                    }
+
+                    is SignInResult.ProfileUnavailable -> _uiState.update {
+                        it.copy(isSigningIn = false, failure = AuthFailure.ProfileUnavailable)
+                    }
+
+                    SignInResult.NetworkFailure -> _uiState.update {
+                        it.copy(isSigningIn = false, failure = AuthFailure.NetworkError)
                     }
 
                     SignInResult.Failure -> _uiState.update {

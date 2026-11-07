@@ -40,7 +40,8 @@ interface EventRepository {
 
     fun currentUserId(): String? = null
 
-    suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
+    /** Saves a new or existing event and returns its persisted ID. */
+    suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<String> = Result.failure(UnsupportedOperationException("Event management unavailable"))
 
     suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
 }

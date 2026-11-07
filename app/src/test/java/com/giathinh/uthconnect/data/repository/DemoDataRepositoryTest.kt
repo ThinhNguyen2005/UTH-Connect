@@ -28,6 +28,16 @@ class DemoDataRepositoryTest {
         assertNull(auth.authenticate("unknown", DemoAuthRepository.DEMO_PASSWORD).getOrThrow())
     }
 
+    @Test fun organizerDemoAccountAcceptsEmailAndStudentId() = runTest {
+        val auth = DemoAuthRepository(InMemoryDemoAccountStore())
+        for (identifier in listOf("organizer@ut.edu.vn", "2023040678")) {
+            val profile = auth.authenticate(identifier, DemoAuthRepository.ORGANIZER_DEMO_PASSWORD).getOrThrow()!!
+            assertEquals("2023040678", profile.studentId)
+            assertEquals("organizer@ut.edu.vn", profile.email)
+        }
+        assertNull(auth.authenticate("organizer@ut.edu.vn", "wrong").getOrThrow())
+    }
+
     @Test fun mockBindingDoesNotInitializeFirebase() {
         org.junit.Assume.assumeTrue(BuildConfig.USE_MOCK_DATA)
         val demo = DemoAuthRepository(InMemoryDemoAccountStore())

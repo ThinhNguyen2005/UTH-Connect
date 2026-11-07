@@ -57,6 +57,9 @@ data class SignUpResult(val needsEmailConfirmation: Boolean, val email: String)
 enum class VerificationStatus { PENDING, APPROVED, REJECTED }
 data class VerificationRequestResult(val requestId: String, val status: VerificationStatus)
 
+/** Supabase accepted the credentials, but the app could not read the signed-in user's profile. */
+class ProfileAccessException(val httpStatus: Int?) : IllegalStateException("AUTH_PROFILE_ACCESS_FAILED")
+
 /** Thrown when a Google identity has no admin-verified MSSV yet. */
 class StudentVerificationRequiredException(
     val email: String,

@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.schedule
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -43,7 +45,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,8 +65,6 @@ import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
-import com.giathinh.uthconnect.domain.model.Ticket
-import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.presentation.tickets.TicketQrScreen
 import java.time.DayOfWeek
@@ -88,9 +87,20 @@ fun ScheduleScreen(
     onAction: (ScheduleAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedCategory by remember { mutableIntStateOf(0) }
-    var selectedTicket by remember { mutableStateOf<Ticket?>(null) }
+    BackHandler(enabled = uiState.showCreateEvent) {
+        onAction(ScheduleAction.CloseCreateEvent)
+    }
 
+    if (uiState.showCreateEvent) {
+        CreateEventWorkshopScreen(
+            onBack = { onAction(ScheduleAction.CloseCreateEvent) },
+            onAction = onAction,
+            modifier = modifier,
+        )
+        return
+    }
+
+    var selectedCategory by remember { mutableIntStateOf(0) }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -103,6 +113,7 @@ fun ScheduleScreen(
                 .padding(bottom = UthDimens.Spacing.Xxl),
         ) {
             ScheduleHeader(
+                isTeacher = uiState.isTeacher,
                 onAction = onAction,
             )
             WeekPicker(uiState, onAction)
@@ -113,7 +124,15 @@ fun ScheduleScreen(
             )
 
             Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
-                if (uiState.isLoading) {
+                if (uiState.eventSaveFailed) {
+                    Text(
+                        text = stringResource(R.string.schedule_event_save_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(UthDimens.Spacing.Sm))
+                }
+                if (uiState.isLoading || uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -131,7 +150,18 @@ fun ScheduleScreen(
                         else -> rawEvents
                     }
 
-                    if (filteredEvents.isEmpty()) {
+                    if (filteredEvents.isEmpty() && uiState.eventsLoadFailed) {
+                        Spacer(Modifier.height(UthDimens.Spacing.Lg))
+                        UthCard {
+                            UthEmptyState(
+                                title = stringResource(R.string.schedule_events_load_failed),
+                                body = stringResource(R.string.schedule_events_load_failed_body),
+                                icon = Icons.Filled.DateRange,
+                                actionLabel = stringResource(R.string.common_retry),
+                                onAction = { onAction(ScheduleAction.RefreshEvents) },
+                            )
+                        }
+                    } else if (filteredEvents.isEmpty()) {
                         Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         UthCard {
                             UthEmptyState(
@@ -152,8 +182,7 @@ fun ScheduleScreen(
                                         event = event,
                                         now = uiState.now,
                                         onAction = onAction,
-                                        onViewQr = { selectedTicket = it.toTicket() },
-                                        onViewDetails = { selectedTicket = it.toTicket() },
+                                        onViewDetails = { onAction(ScheduleAction.OpenEventTicket(it.id)) },
                                     )
                                 }
                             }
@@ -163,23 +192,41 @@ fun ScheduleScreen(
                 }
             }
         }
+
+
     }
 
-    selectedTicket?.let { ticket ->
+    if (uiState.selectedTicket != null || uiState.ticketQrLoading || uiState.ticketQrError != null) {
         Dialog(
-            onDismissRequest = { selectedTicket = null },
+            onDismissRequest = { onAction(ScheduleAction.CloseEventTicket) },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false,
             ),
         ) {
-            TicketQrScreen(
-                ticket = ticket,
-                studentName = "Nguyễn Minh Anh",
-                secondsRemaining = 60,
-                onBack = { selectedTicket = null },
-                onCopy = {},
-            )
+            if (uiState.ticketQrLoading && uiState.selectedTicket == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(UthDimens.Spacing.Md))
+                    Text(stringResource(R.string.tickets_qr_issuing))
+                }
+            } else {
+                TicketQrScreen(
+                    ticket = uiState.selectedTicket,
+                    studentName = uiState.studentName,
+                    secondsRemaining = 60,
+                    qrToken = uiState.ticketQrToken,
+                    qrError = uiState.ticketQrError,
+                    onBack = { onAction(ScheduleAction.CloseEventTicket) },
+                    onCopy = {},
+                )
+            }
         }
     }
 }
@@ -191,6 +238,7 @@ fun ScheduleScreen(
  */
 @Composable
 private fun ScheduleHeader(
+    isTeacher: Boolean,
     onAction: (ScheduleAction) -> Unit,
 ) {
     val ext = UthTheme.extendedColors
@@ -231,7 +279,7 @@ private fun ScheduleHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = stringResource(R.string.schedule_avatar_initials),
+                            text = if (isTeacher) "GV" else stringResource(R.string.schedule_avatar_initials),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = onHeader,
@@ -259,6 +307,30 @@ private fun ScheduleHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
+
+                if (isTeacher) {
+                    Surface(
+                        onClick = { onAction(ScheduleAction.OpenCreateEvent) },
+                        modifier = Modifier.size(UthDimens.Size.HeaderAction),
+                        shape = MaterialTheme.shapes.small,
+                        color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                        border = BorderStroke(
+                            UthDimens.Size.Stroke,
+                            onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                        ),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.schedule_create_event),
+                                tint = onHeader,
+                                modifier = Modifier.size(UthDimens.Size.IconInline),
+                            )
+                        }
+                    }
+                }
+
+
                 // Nút HÔM NAY để nhảy về ngày hiện tại.
                 Surface(
                     onClick = { onAction(ScheduleAction.JumpToToday) },
@@ -536,20 +608,21 @@ private fun CampusEventCard(
     event: ScheduleEvent,
     now: LocalDateTime,
     onAction: (ScheduleAction) -> Unit,
-    onViewQr: (ScheduleEvent) -> Unit,
     onViewDetails: (ScheduleEvent) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val ext = UthTheme.extendedColors
 
-    val isOngoing = now >= event.startAt && now < event.endAt
+    val isEnded = now >= event.endAt
+    val isOngoing = now >= event.startAt && !isEnded
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
-    val isPrimaryAccent = isRegistered || event.accent == EventAccent.PRIMARY
-    val isWarningAccent = event.accent == EventAccent.WARNING
-    val isNeutral = !isOngoing && !isPrimaryAccent && !isWarningAccent
+    val isPrimaryAccent = !isEnded && (isRegistered || event.accent == EventAccent.PRIMARY)
+    val isWarningAccent = !isEnded && event.accent == EventAccent.WARNING
+    val isNeutral = isEnded || (!isOngoing && !isPrimaryAccent && !isWarningAccent)
 
     val borderColor = when {
+        isEnded -> colors.outlineVariant
         isOngoing -> ext.success
         isPrimaryAccent -> colors.primary
         isWarningAccent -> ext.warning
@@ -557,6 +630,7 @@ private fun CampusEventCard(
     }
     // Dải màu: Gold chỉ làm NỀN (chữ Navy trên Gold 6.2:1); trạng thái trung tính giữ Navy.
     val stripeColor = when {
+        isEnded -> ext.textSecondary
         isOngoing -> ext.success
         isWarningAccent -> colors.secondary
         else -> colors.primary
@@ -565,7 +639,7 @@ private fun CampusEventCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = colors.surface,
+        color = if (isEnded) colors.surfaceVariant else colors.surface,
         border = BorderStroke(
             width = if (isNeutral) UthDimens.Size.Stroke else UthDimens.Size.StrokeFocused,
             color = borderColor,
@@ -597,10 +671,18 @@ private fun CampusEventCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     // Nền vàng Gold luôn đi chữ Navy (`onSecondary`); chữ trắng trên Gold chỉ 2.0:1.
-                    val timeOnGold = isWarningAccent && !isOngoing && !isRegistered
+                    val timeOnGold = !isEnded && isWarningAccent && !isOngoing && !isRegistered
                     Surface(
-                        color = if (timeOnGold) colors.secondary else colors.primary,
-                        contentColor = if (timeOnGold) colors.onSecondary else colors.onPrimary,
+                        color = when {
+                            isEnded -> colors.surface
+                            timeOnGold -> colors.secondary
+                            else -> colors.primary
+                        },
+                        contentColor = when {
+                            isEnded -> ext.textSecondary
+                            timeOnGold -> colors.onSecondary
+                            else -> colors.onPrimary
+                        },
                         shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
@@ -619,6 +701,11 @@ private fun CampusEventCard(
                     }
 
                     when {
+                        isEnded -> UthStatusBadge(
+                            text = stringResource(R.string.event_ended),
+                            tone = BadgeTone.Neutral,
+                        )
+
                         isOngoing -> UthStatusBadge(
                             text = stringResource(R.string.event_ongoing),
                             tone = BadgeTone.Success,
@@ -642,7 +729,7 @@ private fun CampusEventCard(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = colors.onSurface,
+                        color = if (isEnded) ext.textSecondary else colors.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.event_organizer, event.organizer),
@@ -666,7 +753,7 @@ private fun CampusEventCard(
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = colors.primary,
+                            tint = if (isEnded) ext.textSecondary else colors.primary,
                             modifier = Modifier.size(UthDimens.Size.IconCompact),
                         )
                         Spacer(Modifier.width(UthDimens.Spacing.Xs))
@@ -674,16 +761,27 @@ private fun CampusEventCard(
                             text = event.location,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = colors.onSurfaceVariant,
+                            color = ext.textSecondary,
                         )
                     }
 
                     val pointsBonus = stringResource(R.string.schedule_points_bonus)
-                    val displayPoints = event.trainingPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
+                    val eventPoints = if (event.trainingPoints > 0) {
+                        stringResource(R.string.schedule_points_value, event.trainingPoints)
+                    } else {
+                        ""
+                    }
+                    val displayPoints = eventPoints.ifBlank {
+                        if (!isRegistered && event.trainingPoints > 0) pointsBonus else ""
+                    }
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
-                            tone = if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            tone = when {
+                                isEnded -> BadgeTone.Neutral
+                                isWarningAccent && !isRegistered -> BadgeTone.Warning
+                                else -> BadgeTone.Info
+                            },
                             icon = null,
                         )
                     }
@@ -696,6 +794,14 @@ private fun CampusEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
+                        isEnded -> {
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_ended),
+                                tint = ext.textSecondary,
+                            )
+                        }
+
                         isCheckedIn -> {
                             RegistrationHint(
                                 icon = Icons.Filled.Check,
@@ -712,6 +818,14 @@ private fun CampusEventCard(
                                 tint = ext.onInfoContainer,
                             )
                             EventDetailsButton(onClick = { onViewDetails(event) })
+                        }
+
+                        isOngoing -> {
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_registration_closed),
+                                tint = ext.textSecondary,
+                            )
                         }
 
                         else -> {
@@ -837,7 +951,7 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(11, 30),
                 registration = EventRegistration.CHECKED_IN,
                 accent = EventAccent.SUCCESS,
-                trainingPoints = "+5 ĐRL",
+                trainingPoints = 5,
                 session = "Morning",
             ),
             ScheduleEvent(
@@ -849,7 +963,7 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(17, 0),
                 registration = EventRegistration.REGISTERED,
                 accent = EventAccent.PRIMARY,
-                trainingPoints = "+10 ĐRL",
+                trainingPoints = 10,
                 session = "Afternoon",
             ),
             ScheduleEvent(
@@ -861,39 +975,10 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(21, 0),
                 registration = EventRegistration.NOT_REGISTERED,
                 accent = EventAccent.WARNING,
-                trainingPoints = "+5 ĐRL",
+                trainingPoints = 5,
                 session = "Evening",
             ),
         ),
         timetable = Timetable(),
-    )
-}
-
-private fun ScheduleEvent.toTicket(): Ticket {
-    val isSports = id.contains("sports") || title.contains("Hội thao")
-    val isAi = id.contains("ai") || title.contains("AI")
-    return Ticket(
-        id = if (isSports) {
-            "ticket-sports"
-        } else if (isAi) {
-            "ticket-ai"
-        } else {
-            "ticket-$id"
-        },
-        studentId = "2023040123",
-        eventId = id,
-        eventTitle = title,
-        eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
-        eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
-        status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
-        fallbackCode = if (isSports) {
-            "482 917"
-        } else if (isAi) {
-            "998 102"
-        } else {
-            "356 891"
-        },
-        organizerName = organizer,
-        seatLabel = if (isSports) "Ghế A-14" else "Khu vực tự do",
     )
 }

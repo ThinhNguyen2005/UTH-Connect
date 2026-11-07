@@ -2,86 +2,288 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventDraft
+import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.StudentProfile
+import com.giathinh.uthconnect.domain.model.UserRole
+import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.TicketRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentSession
+import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.TicketStatus
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Named
 
+/** Coordinates timetable state, event updates, registrations, and ticket QR presentation. */
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
     @param:Named("timetable") private val clock: Clock,
+    private val getProfile: GetProfileUseCase,
+    private val eventRepository: EventRepository,
+    private val ticketRepository: TicketRepository,
 ) : ViewModel() {
-    private val registeredEventIds = mutableSetOf("event-career")
+
+    constructor(
+        useCase: TimetableUseCase,
+        clock: Clock,
+        profile: StudentProfile? = null,
+    ) : this(
+        useCase = useCase,
+        clock = clock,
+        getProfile = GetProfileUseCase(object : SessionRepository {
+            private val sessionState = MutableStateFlow(StudentSession(isRestoring = false, profile = profile))
+            override val session: StateFlow<StudentSession> = sessionState.asStateFlow()
+            override suspend fun restore() = Unit
+            override suspend fun start(profile: StudentProfile, remember: Boolean) {
+                sessionState.value = StudentSession(isRestoring = false, profile = profile)
+            }
+            override suspend fun updateProfile(profile: StudentProfile) {
+                sessionState.value = sessionState.value.copy(profile = profile)
+            }
+            override suspend fun enableBiometric(studentId: String) = Unit
+            override suspend fun disableBiometric() = Unit
+            override suspend fun signOut() = Unit
+        }),
+        eventRepository = object : EventRepository {
+            private val list = MutableStateFlow<List<Event>>(emptyList())
+            private val registered = MutableStateFlow<Set<String>>(emptySet())
+            private val eventRevision = MutableStateFlow(0L)
+            override fun getEvents(campus: String?): Flow<List<Event>> = eventRevision.map { list.value }
+            override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(list.value.firstOrNull { it.id == eventId })
+            override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> {
+                registered.value = registered.value + eventId
+                return Result.success(Unit)
+            }
+            override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> {
+                registered.value = registered.value - eventId
+                return Result.success(Unit)
+            }
+            override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = flowOf(registered.value.contains(eventId))
+            override suspend fun registerCurrentUser(eventId: String): Result<Unit> {
+                registered.value = registered.value + eventId
+                return Result.success(Unit)
+            }
+            override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> {
+                registered.value = registered.value - eventId
+                return Result.success(Unit)
+            }
+            override fun currentUserRegistrations(): Flow<Set<String>> = registered
+            override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<String> {
+                val savedId = eventId ?: UUID.randomUUID().toString()
+                val newEvent = Event(
+                    id = savedId,
+                    title = draft.title,
+                    description = draft.description,
+                    orgId = "DEMO_ORGANIZER",
+                    orgName = "UTH Organizer",
+                    location = draft.location,
+                    campus = draft.campus,
+                    startAt = draft.startAt,
+                    endAt = draft.endAt,
+                    capacity = draft.capacity,
+                    points = 5,
+                )
+                list.value = list.value + newEvent
+                eventRevision.value++
+                return Result.success(savedId)
+            }
+            override fun refresh() {
+                eventRevision.value++
+            }
+        },
+        ticketRepository = object : TicketRepository {
+            override suspend fun getTickets(studentId: String) = Result.success(emptyList<com.giathinh.uthconnect.domain.model.Ticket>())
+        },
+    )
 
     private val initialNow = LocalDateTime.now(clock)
     private val initialDate = initialNow.toLocalDate()
+
+    private val registeredEventIds = mutableSetOf<String>()
+    private var allStoredEvents = listOf<Event>()
+    private val pendingEvents = linkedMapOf<String, Event>()
+    private var eventsJob: Job? = null
+    private var ticketJob: Job? = null
+    private var currentProfile: StudentProfile? = null
 
     private val state = MutableStateFlow(
         ScheduleUiState(
             now = initialNow,
             selectedDate = initialDate,
-            events = sampleEvents(initialDate, initialNow),
+            events = emptyList(),
         ),
     )
+    /** Read-only state consumed by [ScheduleScreen]. */
     val uiState = state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            getProfile.observe().collect { profile ->
+                currentProfile = profile
+                val isTeacher = profile?.role?.isTeacherOrOrganizer == true ||
+                    profile?.studentId?.startsWith("GV", ignoreCase = true) == true
+                state.update { it.copy(isTeacher = isTeacher, studentName = profile?.displayName) }
+            }
+        }
         viewModelScope.launch {
             useCase.timetable.collect { value ->
                 state.update { it.copy(timetable = value, isLoading = false) }
             }
         }
         viewModelScope.launch {
+            eventRepository.currentUserRegistrations().collect { ids ->
+                registeredEventIds.clear()
+                registeredEventIds.addAll(ids)
+                reloadEvents()
+            }
+        }
+        loadEvents()
+        viewModelScope.launch {
             while (true) {
                 delay(60_000)
                 val currentNow = LocalDateTime.now(clock)
-                state.update {
-                    it.copy(
-                        now = currentNow,
-                        events = sampleEvents(it.selectedDate, currentNow),
-                    )
-                }
+                state.update { it.copy(now = currentNow) }
             }
         }
     }
 
+    /** Rebuilds the visible event list from repository and optimistic creation state. */
+    private fun reloadEvents() {
+        val retainedPending = pendingEvents.values.filterNot { pending ->
+            allStoredEvents.any { stored -> stored.sameCreatedEvent(pending) }
+        }
+        val mapped = (allStoredEvents + retainedPending)
+            .distinctBy { it.id }
+            .filter { it.status != EventStatus.DRAFT && it.status != EventStatus.CANCELLED }
+            .map { it.toScheduleEvent(registeredEventIds) }
+        state.update { it.copy(events = mapped) }
+    }
+
+    /** Collects repository events and refreshes the local list when the source changes. */
+    private fun loadEvents(showLoading: Boolean = true) {
+        eventsJob?.cancel()
+        state.update { it.copy(isEventsLoading = showLoading) }
+        eventsJob = viewModelScope.launch {
+            eventRepository.getEvents()
+                .catch { error ->
+                    if (error is CancellationException) throw error
+                    state.update { it.copy(isEventsLoading = false, eventsLoadFailed = true) }
+                }
+                .collect { events ->
+                    allStoredEvents = events
+                    pendingEvents.entries.removeAll { (_, pending) -> events.any { it.sameCreatedEvent(pending) } }
+                    reloadEvents()
+                    state.update { it.copy(isEventsLoading = false, eventsLoadFailed = false) }
+                }
+        }
+    }
+
+    /** Matches an optimistic event to its persisted copy when the repository assigns a new ID. */
+    private fun Event.sameCreatedEvent(other: Event): Boolean =
+        title == other.title && description == other.description && location == other.location &&
+            startAt == other.startAt && endAt == other.endAt
+
+    /** Grants event management only to teacher/organizer profiles or GV accounts. */
+    private fun hasTeacherAccess(): Boolean = currentProfile?.let { profile ->
+        profile.role.isTeacherOrOrganizer || profile.studentId.startsWith("GV", ignoreCase = true)
+    } == true
+
+    /** Refreshes an active subscription once, or restarts it after a failed load. */
+    private fun refreshEvents() {
+        if (eventsJob?.isActive == true && !state.value.eventsLoadFailed) {
+            eventRepository.refresh()
+        } else {
+            loadEvents(showLoading = false)
+        }
+    }
+
+    /** Converts a domain event to the schedule card model using the current registrations. */
+    private fun Event.toScheduleEvent(registeredIds: Set<String>): ScheduleEvent {
+        val startDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(startAt), ZoneId.systemDefault())
+        val endDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(endAt), ZoneId.systemDefault())
+        val isRegistered = registeredIds.contains(id)
+        val session = when {
+            startDateTime.hour < 12 -> "Morning"
+            startDateTime.hour < 18 -> "Afternoon"
+            else -> "Evening"
+        }
+        return ScheduleEvent(
+            id = id,
+            title = title,
+            organizer = orgName.ifBlank { "UTH" },
+            location = location,
+            startAt = startDateTime,
+            endAt = endDateTime,
+            registration = if (isRegistered) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
+            accent = if (isRegistered) EventAccent.PRIMARY else EventAccent.WARNING,
+            trainingPoints = points,
+            session = session,
+        )
+    }
+
+    /** Applies an action emitted by the stateless schedule screen. */
     fun onAction(action: ScheduleAction) {
         when (action) {
             is ScheduleAction.SelectDate -> state.update {
-                it.copy(
-                    selectedDate = action.value,
-                    events = sampleEvents(action.value, it.now),
-                )
+                it.copy(selectedDate = action.value)
             }
 
             ScheduleAction.JumpToToday -> {
                 val today = state.value.now.toLocalDate()
-                state.update {
-                    it.copy(
-                        selectedDate = today,
-                        events = sampleEvents(today, it.now),
-                    )
-                }
+                state.update { it.copy(selectedDate = today) }
             }
+
+            ScheduleAction.RefreshEvents -> {
+                refreshEvents()
+            }
+
+            ScheduleAction.PollEvents -> refreshEvents()
 
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
 
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
 
             is ScheduleAction.RegisterEvent -> {
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                if (!LocalDateTime.now(clock).isBefore(event.startAt)) return
                 registeredEventIds.add(action.id)
-                state.update { current ->
-                    current.copy(events = sampleEvents(current.selectedDate, current.now))
+                viewModelScope.launch {
+                    eventRepository.registerCurrentUser(action.id)
+                }
+                reloadEvents()
+            }
+
+            is ScheduleAction.OpenEventTicket -> openEventTicket(action.eventId)
+
+            ScheduleAction.CloseEventTicket -> {
+                ticketJob?.cancel()
+                state.update {
+                    it.copy(selectedTicket = null, ticketQrToken = null, ticketQrError = null, ticketQrLoading = false)
                 }
             }
 
@@ -109,6 +311,84 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.Complete -> useCase.complete(action.id)
 
+            ScheduleAction.OpenCreateEvent -> if (hasTeacherAccess()) {
+                state.update { it.copy(showCreateEvent = true, eventSaveFailed = false) }
+            }
+
+            ScheduleAction.CloseCreateEvent -> state.update { it.copy(showCreateEvent = false) }
+
+            is ScheduleAction.CreateWorkshopEvent -> {
+                if (!hasTeacherAccess()) return
+                val startDateTime = action.date.atTime(
+                    runCatching { LocalTime.parse(action.startTime) }.getOrElse { LocalTime.of(8, 30) },
+                )
+                val endDateTime = action.date.atTime(
+                    runCatching { LocalTime.parse(action.endTime) }.getOrElse { LocalTime.of(11, 30) },
+                )
+                val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val optimisticEventId = UUID.randomUUID().toString()
+                val title = action.title.ifBlank { "Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026" }
+                val organizer = action.coOrganizers.joinToString(" & ").ifBlank { "Đoàn - Hội CNTT & CLB Sáng tạo Trẻ" }
+                val venue = action.venue.ifBlank { "Hội trường: A.101 (Cơ sở 1)" }
+
+                val draft = EventDraft(
+                    title = title,
+                    description = action.summary.ifBlank { "Workshop do giảng viên UTH tổ chức" },
+                    location = venue,
+                    campus = "Cơ sở 1",
+                    startAt = startMillis,
+                    endAt = endMillis,
+                    capacity = 100,
+                )
+
+                val newDomainEvent = Event(
+                    id = optimisticEventId,
+                    title = title,
+                    description = draft.description,
+                    orgId = "DEMO_ORGANIZER",
+                    orgName = organizer,
+                    location = venue,
+                    campus = "Cơ sở 1",
+                    startAt = startMillis,
+                    endAt = endMillis,
+                    capacity = 100,
+                    registeredCount = 0,
+                    points = action.trainingPoints.filter(Char::isDigit).toIntOrNull() ?: 0,
+                    status = EventStatus.PUBLISHED,
+                )
+
+                pendingEvents[optimisticEventId] = newDomainEvent
+                reloadEvents()
+
+                viewModelScope.launch {
+                    eventRepository.saveEvent(null, draft).fold(
+                        onSuccess = { savedEventId ->
+                            val alreadyLoaded = allStoredEvents.any { it.id == savedEventId || it.sameCreatedEvent(newDomainEvent) }
+                            pendingEvents.remove(optimisticEventId)
+                            if (!alreadyLoaded) {
+                                pendingEvents[savedEventId] = newDomainEvent.copy(id = savedEventId)
+                            }
+                            reloadEvents()
+                        },
+                        onFailure = {
+                            pendingEvents.remove(optimisticEventId)
+                            reloadEvents()
+                            state.update { current -> current.copy(eventSaveFailed = true) }
+                        },
+                    }
+                }
+
+                state.update { current ->
+                    current.copy(
+                        showCreateEvent = false,
+                        selectedDate = action.date,
+                        eventSaveFailed = false,
+                    )
+                }
+                reloadEvents()
+            }
+
             ScheduleAction.Save -> {
                 val value = state.value
                 val titleError = value.title.isBlank()
@@ -124,70 +404,35 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
-    private fun sampleEvents(date: LocalDate, now: LocalDateTime): List<ScheduleEvent> {
-        val isToday = date == now.toLocalDate()
-
-        // Sự kiện 1: Đảm bảo nằm trong khung giờ hiện tại khi mở ngày hôm nay
-        val aiStart: LocalDateTime
-        val aiEnd: LocalDateTime
-        if (isToday) {
-            if (now.hour in 8..10) {
-                aiStart = date.atTime(8, 0)
-                aiEnd = date.atTime(11, 30)
-            } else {
-                aiStart = now.minusMinutes(45).withSecond(0).withNano(0)
-                aiEnd = now.plusMinutes(75).withSecond(0).withNano(0)
+    /** Loads the signed-in user's real ticket and requests its live QR token when needed. */
+    private fun openEventTicket(eventId: String) {
+        val studentId = currentProfile?.studentId ?: return
+        ticketJob?.cancel()
+        ticketJob = viewModelScope.launch {
+            state.update {
+                it.copy(ticketQrLoading = true, ticketQrToken = null, ticketQrError = null, selectedTicket = null)
             }
-        } else {
-            aiStart = date.atTime(8, 0)
-            aiEnd = date.atTime(11, 30)
+            ticketRepository.getTickets(studentId).fold(
+                onSuccess = { tickets ->
+                    val ticket = tickets.firstOrNull { it.eventId == eventId }
+                    if (ticket == null) {
+                        state.update { it.copy(ticketQrLoading = false, ticketQrError = "Vé của sự kiện này chưa có trong tài khoản.") }
+                    } else if (BuildConfig.USE_SUPABASE && ticket.status != TicketStatus.VALID) {
+                        state.update { it.copy(ticketQrLoading = false, selectedTicket = ticket, ticketQrError = "Vé này không còn hiệu lực để tạo mã QR.") }
+                    } else if (BuildConfig.USE_SUPABASE) {
+                        state.update { it.copy(selectedTicket = ticket) }
+                        ticketRepository.issueCheckInToken(ticket.eventId).fold(
+                            onSuccess = { token -> state.update { it.copy(ticketQrLoading = false, ticketQrToken = token) } },
+                            onFailure = { error -> state.update { it.copy(ticketQrLoading = false, ticketQrError = error.message ?: "Không thể tạo mã QR.") } },
+                        )
+                    } else {
+                        state.update { it.copy(ticketQrLoading = false, selectedTicket = ticket) }
+                    }
+                },
+                onFailure = { error ->
+                    state.update { it.copy(ticketQrLoading = false, ticketQrError = error.message ?: "Không thể tải vé.") }
+                },
+            )
         }
-
-        val event1Reg = if (registeredEventIds.contains("event-ai")) EventRegistration.REGISTERED else EventRegistration.CHECKED_IN
-        val event2Reg = if (registeredEventIds.contains("event-career")) EventRegistration.REGISTERED else EventRegistration.REGISTERED
-        val event3Reg = if (registeredEventIds.contains("event-sports")) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED
-        val event3Accent = if (event3Reg == EventRegistration.REGISTERED) EventAccent.PRIMARY else EventAccent.WARNING
-
-        val careerStart = if (isToday && aiEnd >= date.atTime(14, 0)) aiEnd.plusMinutes(30) else date.atTime(14, 0)
-        val careerEnd = if (isToday && aiEnd >= date.atTime(14, 0)) careerStart.plusHours(3) else date.atTime(17, 0)
-
-        return listOf(
-            ScheduleEvent(
-                id = "event-ai",
-                title = "Workshop: AI & Tương lai ngành Giao thông thông minh",
-                organizer = "Đoàn Thanh niên & Khoa CNTT",
-                location = "Hội trường: A.101 (Cơ sở chính)",
-                startAt = aiStart,
-                endAt = aiEnd,
-                registration = event1Reg,
-                accent = EventAccent.SUCCESS,
-                trainingPoints = "+5 ĐRL",
-                session = "Morning",
-            ),
-            ScheduleEvent(
-                id = "event-career",
-                title = "Ngày hội Việc làm & Kết nối Doanh nghiệp Logistics 2026",
-                organizer = "Trung tâm Hướng nghiệp & Tuyển dụng UTH",
-                location = "Địa điểm: Sân trung tâm & Hội trường B",
-                startAt = careerStart,
-                endAt = careerEnd,
-                registration = event2Reg,
-                accent = EventAccent.PRIMARY,
-                trainingPoints = "+10 ĐRL",
-                session = "Afternoon",
-            ),
-            ScheduleEvent(
-                id = "event-sports",
-                title = "Hội thao Sinh viên UTH 2026",
-                organizer = "CLB Thể Thao UTH",
-                location = "Địa điểm: Sân vận động Cơ sở 2",
-                startAt = date.atTime(18, 30),
-                endAt = date.atTime(21, 0),
-                registration = event3Reg,
-                accent = event3Accent,
-                trainingPoints = "+5 ĐRL",
-                session = "Evening",
-            ),
-        )
     }
 }
