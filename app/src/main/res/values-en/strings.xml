@@ -573,4 +573,5 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <string name="schedule_create_event">Create event</string>
 </resources>

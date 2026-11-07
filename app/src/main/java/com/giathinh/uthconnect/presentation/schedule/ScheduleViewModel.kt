@@ -2,6 +2,8 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.domain.model.UserRole
+import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -20,6 +22,7 @@ import javax.inject.Named
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
     @param:Named("timetable") private val clock: Clock,
+    getProfile: GetProfileUseCase? = null,
 ) : ViewModel() {
     private val registeredEventIds = mutableSetOf("event-career")
 
@@ -36,6 +39,17 @@ class ScheduleViewModel @Inject constructor(
     val uiState = state.asStateFlow()
 
     init {
+        if (getProfile != null) {
+            viewModelScope.launch {
+                getProfile.observe().collect { profile ->
+                    val isTeacher = profile?.role?.isTeacherOrOrganizer == true ||
+                        profile?.role?.name in listOf("TEACHER", "ORGANIZER", "ADMIN") ||
+                        profile?.studentId?.startsWith("GV", ignoreCase = true) == true ||
+                        profile?.email?.contains("teacher", ignoreCase = true) == true
+                    state.update { it.copy(isTeacher = isTeacher) }
+                }
+            }
+        }
         viewModelScope.launch {
             useCase.timetable.collect { value ->
                 state.update { it.copy(timetable = value, isLoading = false) }
@@ -110,6 +124,44 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.SelectCourse -> state.update { it.copy(course = action.value) }
 
             is ScheduleAction.Complete -> useCase.complete(action.id)
+
+            ScheduleAction.OpenCreateEvent -> state.update { it.copy(showCreateEvent = true) }
+
+            ScheduleAction.CloseCreateEvent -> state.update { it.copy(showCreateEvent = false) }
+
+            ScheduleAction.ToggleTeacherMode -> state.update { it.copy(isTeacher = !it.isTeacher) }
+
+            is ScheduleAction.CreateWorkshopEvent -> {
+                val startDateTime = action.date.atTime(
+                    runCatching { LocalTime.parse(action.startTime) }.getOrElse { LocalTime.of(8, 30) },
+                )
+                val endDateTime = action.date.atTime(
+                    runCatching { LocalTime.parse(action.endTime) }.getOrElse { LocalTime.of(11, 30) },
+                )
+                val newEvent = ScheduleEvent(
+                    id = "event-workshop-${System.currentTimeMillis()}",
+                    title = action.title.ifBlank { "Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026" },
+                    organizer = action.coOrganizers.joinToString(" & ").ifBlank { "Đoàn - Hội CNTT & CLB Sáng tạo Trẻ" },
+                    location = action.venue.ifBlank { "Hội trường: A.101 (Cơ sở 1)" },
+                    startAt = startDateTime,
+                    endAt = endDateTime,
+                    registration = EventRegistration.NOT_REGISTERED,
+                    accent = EventAccent.PRIMARY,
+                    trainingPoints = action.trainingPoints.ifBlank { "+5 ĐRL" },
+                    session = when {
+                        startDateTime.hour < 12 -> "Morning"
+                        startDateTime.hour < 18 -> "Afternoon"
+                        else -> "Evening"
+                    },
+                )
+                state.update { current ->
+                    current.copy(
+                        showCreateEvent = false,
+                        events = listOf(newEvent) + current.events,
+                        selectedDate = action.date,
+                    )
+                }
+            }
 
             ScheduleAction.Save -> {
                 val value = state.value

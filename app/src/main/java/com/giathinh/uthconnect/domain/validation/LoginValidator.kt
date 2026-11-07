@@ -2,7 +2,7 @@ package com.giathinh.uthconnect.domain.validation
 
 /** Phạm vi bài tập: MSSV 8–12 chữ số hoặc email @ut.edu.vn / @uth.edu.vn. */
 class LoginValidator {
-    private val studentIdPattern = Regex("^[0-9]{8,12}$")
+    private val studentIdPattern = Regex("^([0-9]{8,12}|GV[0-9]{6,10})$", RegexOption.IGNORE_CASE)
     private val universityEmailPattern = Regex("^[A-Za-z0-9._%+\\-]+@(ut|uth)\\.edu\\.vn$", RegexOption.IGNORE_CASE)
 
     fun identifierError(raw: String): LoginFieldError? {

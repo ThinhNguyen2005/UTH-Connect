@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.schedule
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -24,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -88,6 +91,19 @@ fun ScheduleScreen(
     onAction: (ScheduleAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    BackHandler(enabled = uiState.showCreateEvent) {
+        onAction(ScheduleAction.CloseCreateEvent)
+    }
+
+    if (uiState.showCreateEvent) {
+        CreateEventWorkshopScreen(
+            onBack = { onAction(ScheduleAction.CloseCreateEvent) },
+            onAction = onAction,
+            modifier = modifier,
+        )
+        return
+    }
+
     var selectedCategory by remember { mutableIntStateOf(0) }
     var selectedTicket by remember { mutableStateOf<Ticket?>(null) }
 
@@ -103,6 +119,7 @@ fun ScheduleScreen(
                 .padding(bottom = UthDimens.Spacing.Xxl),
         ) {
             ScheduleHeader(
+                isTeacher = uiState.isTeacher,
                 onAction = onAction,
             )
             WeekPicker(uiState, onAction)
@@ -163,6 +180,23 @@ fun ScheduleScreen(
                 }
             }
         }
+
+        if (uiState.isTeacher) {
+            FloatingActionButton(
+                onClick = { onAction(ScheduleAction.OpenCreateEvent) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(UthDimens.Spacing.Xl),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.schedule_create_event),
+                )
+            }
+        }
     }
 
     selectedTicket?.let { ticket ->
@@ -191,6 +225,7 @@ fun ScheduleScreen(
  */
 @Composable
 private fun ScheduleHeader(
+    isTeacher: Boolean,
     onAction: (ScheduleAction) -> Unit,
 ) {
     val ext = UthTheme.extendedColors
@@ -221,6 +256,7 @@ private fun ScheduleHeader(
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 Surface(
+                    onClick = { onAction(ScheduleAction.ToggleTeacherMode) },
                     modifier = Modifier.size(UthDimens.Size.Avatar),
                     shape = MaterialTheme.shapes.small,
                     color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
@@ -231,7 +267,7 @@ private fun ScheduleHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = stringResource(R.string.schedule_avatar_initials),
+                            text = if (isTeacher) "GV" else stringResource(R.string.schedule_avatar_initials),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = onHeader,
@@ -259,6 +295,28 @@ private fun ScheduleHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
+                if (isTeacher) {
+                    Surface(
+                        onClick = { onAction(ScheduleAction.OpenCreateEvent) },
+                        modifier = Modifier.size(UthDimens.Size.HeaderAction),
+                        shape = MaterialTheme.shapes.small,
+                        color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                        border = BorderStroke(
+                            UthDimens.Size.Stroke,
+                            onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                        ),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.schedule_create_event),
+                                tint = onHeader,
+                                modifier = Modifier.size(UthDimens.Size.IconInline),
+                            )
+                        }
+                    }
+                }
+
                 // Nút HÔM NAY để nhảy về ngày hiện tại.
                 Surface(
                     onClick = { onAction(ScheduleAction.JumpToToday) },

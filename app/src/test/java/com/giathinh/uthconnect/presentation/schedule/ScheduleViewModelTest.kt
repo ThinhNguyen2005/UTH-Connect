@@ -77,4 +77,55 @@ class ScheduleViewModelTest {
             vm.viewModelScope.cancel()
         }
     }
+
+    @Test fun `teacher can open, close and toggle teacher mode`() {
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock)
+        try {
+            assertFalse(vm.uiState.value.isTeacher)
+            vm.onAction(ScheduleAction.ToggleTeacherMode)
+            assertTrue(vm.uiState.value.isTeacher)
+
+            assertFalse(vm.uiState.value.showCreateEvent)
+            vm.onAction(ScheduleAction.OpenCreateEvent)
+            assertTrue(vm.uiState.value.showCreateEvent)
+
+            vm.onAction(ScheduleAction.CloseCreateEvent)
+            assertFalse(vm.uiState.value.showCreateEvent)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
+    @Test fun `create workshop event adds event and closes creation screen`() {
+        val vm = ScheduleViewModel(TimetableUseCase(InMemoryTimetableRepository(clock)), clock)
+        try {
+            vm.onAction(ScheduleAction.OpenCreateEvent)
+            assertTrue(vm.uiState.value.showCreateEvent)
+
+            val eventDate = java.time.LocalDate.of(2026, 11, 15)
+            vm.onAction(
+                ScheduleAction.CreateWorkshopEvent(
+                    title = "Workshop: AI & IoT",
+                    category = "Hội thảo / Workshop",
+                    coOrganizers = listOf("Đoàn - Hội CNTT", "CLB Sáng tạo Trẻ"),
+                    summary = "Tóm tắt sự kiện",
+                    date = eventDate,
+                    startTime = "08:30",
+                    endTime = "11:30",
+                    venue = "Hội trường A.101",
+                    trainingPoints = "+5 ĐRL",
+                    managers = listOf("ThS. Trần Thu Trang"),
+                ),
+            )
+
+            assertFalse(vm.uiState.value.showCreateEvent)
+            assertEquals(eventDate, vm.uiState.value.selectedDate)
+            val created = vm.uiState.value.events.first()
+            assertEquals("Workshop: AI & IoT", created.title)
+            assertEquals("Hội trường A.101", created.location)
+            assertEquals("+5 ĐRL", created.trainingPoints)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
 }

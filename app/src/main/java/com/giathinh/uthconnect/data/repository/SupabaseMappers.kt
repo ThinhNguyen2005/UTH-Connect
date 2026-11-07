@@ -69,6 +69,7 @@ internal fun JsonObject.toDomainProfile(): StudentProfile {
         role = when (string("role")) {
             "admin" -> UserRole.ADMIN
             "organizer" -> UserRole.ORGANIZER
+            "teacher" -> UserRole.TEACHER
             else -> UserRole.STUDENT
         },
         uthVerified = true,

@@ -588,4 +588,5 @@
     <string name="common_error_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
+    <string name="schedule_create_event">Tạo sự kiện</string>
 </resources>

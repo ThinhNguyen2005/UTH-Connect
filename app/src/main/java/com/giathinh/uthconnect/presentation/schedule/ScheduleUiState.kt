@@ -15,6 +15,8 @@ data class ScheduleUiState(
     val tab: ScheduleTab = ScheduleTab.EVENTS,
     val events: List<ScheduleEvent> = emptyList(),
     val showForm: Boolean = false,
+    val isTeacher: Boolean = false,
+    val showCreateEvent: Boolean = false,
     val course: Course = Course.ANDROID,
     val title: String = "",
     val date: String = "",
