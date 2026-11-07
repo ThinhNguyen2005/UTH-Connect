@@ -200,6 +200,7 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    /** Converts a repository event to its schedule UI model, omitting events with invalid timestamps. */
     private fun toScheduleEvent(event: Event): ScheduleEvent? = runCatching {
         val startAt = Instant.ofEpochMilli(event.startAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()
         val endAt = Instant.ofEpochMilli(event.endAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()

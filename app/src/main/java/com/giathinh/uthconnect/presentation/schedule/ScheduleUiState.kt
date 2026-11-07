@@ -56,6 +56,7 @@ data class ScheduleEvent(
     val session: SchedulePeriod = SchedulePeriod.MORNING,
 )
 
+/** Returns true while a registered ticket can be opened, including the 30-minute check-in grace period. */
 fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean =
     registration != EventRegistration.NOT_REGISTERED &&
         (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
