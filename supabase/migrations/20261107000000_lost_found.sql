@@ -78,3 +78,10 @@ create policy "lost_found_storage_insert"
     on storage.objects
     for insert
     with check (bucket_id = 'lost-found');
+
+-- Policy xóa ảnh từ bucket lost-found
+drop policy if exists "lost_found_storage_delete" on storage.objects;
+create policy "lost_found_storage_delete"
+    on storage.objects
+    for delete
+    using (bucket_id = 'lost-found');
