@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -72,7 +71,11 @@ class ScheduleViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            eventRepository.currentUserRegistrations().catch { /* Events remain usable if registrations are unavailable. */ }
+            eventRepository.currentUserRegistrations().retryWhen { cause, _ ->
+                if (cause is CancellationException) throw cause
+                delay(60_000)
+                true
+            }
                 .collect { ids ->
                     registeredEventIds = ids
                     state.update { current -> current.copy(events = loadedEvents.mapNotNull(::toScheduleEvent)) }
