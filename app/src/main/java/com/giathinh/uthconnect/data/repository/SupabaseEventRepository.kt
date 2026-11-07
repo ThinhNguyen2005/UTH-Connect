@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
@@ -9,7 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.transform
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -98,24 +99,36 @@ class SupabaseEventRepository @Inject constructor(
         prefs.edit().putString("events_list", jsonArray.toString()).apply()
     }
 
-    private fun loadPersistedRegistrations(): Set<String> {
-        return prefs.getStringSet("registered_event_ids", emptySet()) ?: emptySet()
+    /** Keeps cached registrations isolated by their owning Supabase user ID. */
+    private fun registrationStorageKey(userId: String): String = "registered_event_ids_$userId"
+
+    private fun loadPersistedRegistrations(userId: String): Set<String> {
+        if (userId.isBlank()) return emptySet()
+        return prefs.getStringSet(registrationStorageKey(userId), emptySet()) ?: emptySet()
     }
 
-    private fun savePersistedRegistrations(ids: Set<String>) {
-        prefs.edit().putStringSet("registered_event_ids", ids).apply()
+    private fun savePersistedRegistrations(userId: String, ids: Set<String>) {
+        require(userId.isNotBlank()) { "Registration user ID is required" }
+        prefs.edit().putStringSet(registrationStorageKey(userId), ids).apply()
     }
 
-    override fun getEvents(campus: String?): Flow<List<Event>> = revision.map {
+    /** Returns an empty ID when the client has no authenticated session. */
+    private fun currentUserIdOrBlank(): String = runCatching { client.userId }.getOrDefault("")
+
+    /** Rejects signed-out writes in Supabase builds while allowing explicit local demo mode. */
+    private fun requireUserOrOffline(userId: String) {
+        check(userId.isNotBlank() || !BuildConfig.USE_SUPABASE) { "Supabase sign-in required" }
+    }
+
+    override fun getEvents(campus: String?): Flow<List<Event>> = revision.transform {
         val localEvents = loadPersistedEvents()
-        val remoteEvents = try {
-            val rows = client.table("events?select=*&order=start_at.asc").jsonArray
-            rows.map { row -> row.jsonObject.toDomainEvent() }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            if (localEvents.isEmpty()) throw error else emptyList()
+        fun List<Event>.forCampus() = filter {
+            campus.isNullOrBlank() || campus == "Tất cả" || it.campus == campus
         }
+        if (localEvents.isNotEmpty()) emit(localEvents.forCampus())
+
+        val rows = client.table("events?select=*&order=start_at.asc").jsonArray
+        val remoteEvents = rows.map { row -> row.jsonObject.toDomainEvent() }
 
         val allEventsMap = LinkedHashMap<String, Event>()
         for (event in localEvents) {
@@ -124,8 +137,7 @@ class SupabaseEventRepository @Inject constructor(
         for (event in remoteEvents) {
             allEventsMap[event.id] = event
         }
-        allEventsMap.values.toList()
-            .filter { campus.isNullOrBlank() || campus == "Tất cả" || it.campus == campus }
+        emit(allEventsMap.values.toList().forCampus())
     }
 
     override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
@@ -142,69 +154,94 @@ class SupabaseEventRepository @Inject constructor(
         studentId: String,
         studentName: String,
     ): Result<Unit> = runCatching {
-        if (client.userId.isNotBlank() && uid == client.userId) {
-            runCatching {
-                client.rpc("register_for_event", buildJsonObject { put("p_event_id", uuid(eventId)) })
-            }
+        val signedInUserId = currentUserIdOrBlank()
+        requireUserOrOffline(signedInUserId)
+        val ownerId = if (signedInUserId.isNotBlank()) {
+            require(uid == signedInUserId) { "Registration user does not match signed-in user" }
+            signedInUserId
+        } else {
+            require(uid.isNotBlank()) { "Registration user ID is required" }
+            uid
         }
-        val current = loadPersistedRegistrations().toMutableSet()
+        if (signedInUserId.isNotBlank()) {
+            client.rpc("register_for_event", buildJsonObject { put("p_event_id", uuid(eventId)) })
+        }
+        val current = loadPersistedRegistrations(ownerId).toMutableSet()
         current.add(eventId)
-        savePersistedRegistrations(current)
+        savePersistedRegistrations(ownerId, current)
         refresh()
     }
 
     override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = runCatching {
-        if (client.userId.isNotBlank() && uid == client.userId) {
-            runCatching {
-                client.rpc("cancel_event_registration", buildJsonObject { put("p_event_id", uuid(eventId)) })
-            }
+        val signedInUserId = currentUserIdOrBlank()
+        requireUserOrOffline(signedInUserId)
+        val ownerId = if (signedInUserId.isNotBlank()) {
+            require(uid == signedInUserId) { "Registration user does not match signed-in user" }
+            signedInUserId
+        } else {
+            require(uid.isNotBlank()) { "Registration user ID is required" }
+            uid
         }
-        val current = loadPersistedRegistrations().toMutableSet()
+        if (signedInUserId.isNotBlank()) {
+            client.rpc("cancel_event_registration", buildJsonObject { put("p_event_id", uuid(eventId)) })
+        }
+        val current = loadPersistedRegistrations(ownerId).toMutableSet()
         current.remove(eventId)
-        savePersistedRegistrations(current)
+        savePersistedRegistrations(ownerId, current)
         refresh()
     }
 
     override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = revision.map {
-        val localRegistered = loadPersistedRegistrations().contains(eventId)
+        val signedInUserId = currentUserIdOrBlank()
+        val ownerId = when {
+            signedInUserId.isNotBlank() && signedInUserId == uid -> signedInUserId
+            signedInUserId.isNotBlank() -> return@map false
+            !BuildConfig.USE_SUPABASE && uid.isNotBlank() -> uid
+            else -> return@map false
+        }
+        val localRegistered = loadPersistedRegistrations(ownerId).contains(eventId)
         if (localRegistered) return@map true
-        if (uid.isBlank() || uid != client.userId) return@map false
+        if (signedInUserId.isBlank()) return@map false
         runCatching {
-            client.table("registrations?select=status&event_id=eq.${urlEncode(uuid(eventId))}&user_id=eq.${urlEncode(uuid(uid))}")
+            client.table("registrations?select=status&event_id=eq.${urlEncode(uuid(eventId))}&user_id=eq.${urlEncode(uuid(ownerId))}")
                 .jsonArray.any { row -> row.jsonObject.string("status") == "REGISTERED" }
         }.getOrDefault(false)
     }
 
     override suspend fun registerCurrentUser(eventId: String): Result<Unit> = registerEvent(
         eventId = eventId,
-        uid = client.userId,
+        uid = currentUserIdOrBlank(),
         studentId = "",
         studentName = "",
     )
 
-    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = cancelRegistration(eventId, client.userId)
+    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> =
+        cancelRegistration(eventId, currentUserIdOrBlank())
 
     override fun currentUserRegistrations(): Flow<Set<String>> = revision.map {
-        val remoteRegistrations = if (client.userId.isNotBlank()) {
+        val userId = currentUserIdOrBlank()
+        val remoteRegistrations = if (userId.isNotBlank()) {
             runCatching {
-                client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${urlEncode(uuid(client.userId))}")
+                client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${urlEncode(uuid(userId))}")
                     .jsonArray.mapNotNull { row -> row.jsonObject.string("event_id") }.toSet()
             }.getOrDefault(emptySet())
         } else {
             emptySet()
         }
-        loadPersistedRegistrations() + remoteRegistrations
+        loadPersistedRegistrations(userId) + remoteRegistrations
     }
 
     override fun refresh() {
         revision.value++
     }
 
-    override fun currentUserId(): String = client.userId
+    override fun currentUserId(): String = currentUserIdOrBlank()
 
-    override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = runCatching {
+    override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<String> = runCatching {
         // RPC parameters are UUID columns in Supabase; a prefixed local ID made creation fail remotely.
         val id = eventId ?: UUID.randomUUID().toString()
+        val userId = currentUserIdOrBlank()
+        requireUserOrOffline(userId)
         val inputs = buildJsonObject {
             put("p_event_id", uuid(id))
             put("p_title", draft.title)
@@ -215,10 +252,8 @@ class SupabaseEventRepository @Inject constructor(
             put("p_end_at", Instant.ofEpochMilli(draft.endAt).toString())
             put("p_max_participants", draft.capacity)
         }
-        if (client.userId.isNotBlank()) {
-            runCatching {
-                client.rpc(if (eventId == null) "create_event" else "edit_event", inputs)
-            }
+        if (userId.isNotBlank()) {
+            client.rpc(if (eventId == null) "create_event" else "edit_event", inputs)
         }
         val currentEvents = loadPersistedEvents().toMutableList()
         val index = currentEvents.indexOfFirst { it.id == id }
@@ -226,8 +261,8 @@ class SupabaseEventRepository @Inject constructor(
             id = id,
             title = draft.title,
             description = draft.description,
-            orgId = client.userId.ifBlank { "GV2023001" },
-            orgName = "ThS. Trần Thu Trang",
+            orgId = userId.ifBlank { "DEMO_ORGANIZER" },
+            orgName = "UTH Organizer",
             location = draft.location,
             campus = draft.campus,
             startAt = draft.startAt,
@@ -244,19 +279,20 @@ class SupabaseEventRepository @Inject constructor(
         }
         savePersistedEvents(currentEvents)
         refresh()
+        id
     }
 
     override suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = runCatching {
-        if (client.userId.isNotBlank()) {
-            runCatching {
-                client.rpc(
-                    "set_event_status",
-                    buildJsonObject {
-                        put("p_event_id", uuid(eventId))
-                        put("p_status", status.name)
-                    },
-                )
-            }
+        val userId = currentUserIdOrBlank()
+        requireUserOrOffline(userId)
+        if (userId.isNotBlank()) {
+            client.rpc(
+                "set_event_status",
+                buildJsonObject {
+                    put("p_event_id", uuid(eventId))
+                    put("p_status", status.name)
+                },
+            )
         }
         val currentEvents = loadPersistedEvents().toMutableList()
         val index = currentEvents.indexOfFirst { it.id == eventId }

@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.schedule
 import com.giathinh.uthconnect.domain.model.Course
 import java.time.LocalDate
 
+/** User intents handled by [ScheduleViewModel] for the schedule feature. */
 sealed interface ScheduleAction {
     data class SelectDate(val value: LocalDate) : ScheduleAction
     data class SelectPeriod(val value: SchedulePeriod) : ScheduleAction
@@ -23,7 +24,6 @@ sealed interface ScheduleAction {
     data object PollEvents : ScheduleAction
     data object OpenCreateEvent : ScheduleAction
     data object CloseCreateEvent : ScheduleAction
-    data object ToggleTeacherMode : ScheduleAction
     data class CreateWorkshopEvent(
         val title: String,
         val category: String,

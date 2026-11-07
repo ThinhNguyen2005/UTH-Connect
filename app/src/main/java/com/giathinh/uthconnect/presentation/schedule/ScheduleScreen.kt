@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -123,6 +124,14 @@ fun ScheduleScreen(
             )
 
             Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
+                if (uiState.eventSaveFailed) {
+                    Text(
+                        text = stringResource(R.string.schedule_event_save_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(UthDimens.Spacing.Sm))
+                }
                 if (uiState.isLoading || uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
@@ -141,7 +150,7 @@ fun ScheduleScreen(
                         else -> rawEvents
                     }
 
-                    if (uiState.eventsLoadFailed) {
+                    if (filteredEvents.isEmpty() && uiState.eventsLoadFailed) {
                         Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         UthCard {
                             UthEmptyState(
@@ -260,7 +269,6 @@ private fun ScheduleHeader(
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 Surface(
-                    onClick = { onAction(ScheduleAction.ToggleTeacherMode) },
                     modifier = Modifier.size(UthDimens.Size.Avatar),
                     shape = MaterialTheme.shapes.small,
                     color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
@@ -299,6 +307,28 @@ private fun ScheduleHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
+
+                if (isTeacher) {
+                    Surface(
+                        onClick = { onAction(ScheduleAction.OpenCreateEvent) },
+                        modifier = Modifier.size(UthDimens.Size.HeaderAction),
+                        shape = MaterialTheme.shapes.small,
+                        color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
+                        border = BorderStroke(
+                            UthDimens.Size.Stroke,
+                            onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
+                        ),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.schedule_create_event),
+                                tint = onHeader,
+                                modifier = Modifier.size(UthDimens.Size.IconInline),
+                            )
+                        }
+                    }
+                }
 
 
                 // Nút HÔM NAY để nhảy về ngày hiện tại.
@@ -741,7 +771,9 @@ private fun CampusEventCard(
                     } else {
                         ""
                     }
-                    val displayPoints = eventPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
+                    val displayPoints = eventPoints.ifBlank {
+                        if (!isRegistered && event.trainingPoints > 0) pointsBonus else ""
+                    }
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,

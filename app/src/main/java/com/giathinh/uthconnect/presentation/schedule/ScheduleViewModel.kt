@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.giathinh.uthconnect.BuildConfig
@@ -37,6 +38,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Named
 
+/** Coordinates timetable state, event updates, registrations, and ticket QR presentation. */
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
@@ -49,11 +51,12 @@ class ScheduleViewModel @Inject constructor(
     constructor(
         useCase: TimetableUseCase,
         clock: Clock,
+        profile: StudentProfile? = null,
     ) : this(
         useCase = useCase,
         clock = clock,
         getProfile = GetProfileUseCase(object : SessionRepository {
-            private val sessionState = MutableStateFlow(StudentSession(isRestoring = false))
+            private val sessionState = MutableStateFlow(StudentSession(isRestoring = false, profile = profile))
             override val session: StateFlow<StudentSession> = sessionState.asStateFlow()
             override suspend fun restore() = Unit
             override suspend fun start(profile: StudentProfile, remember: Boolean) {
@@ -69,7 +72,8 @@ class ScheduleViewModel @Inject constructor(
         eventRepository = object : EventRepository {
             private val list = MutableStateFlow<List<Event>>(emptyList())
             private val registered = MutableStateFlow<Set<String>>(emptySet())
-            override fun getEvents(campus: String?): Flow<List<Event>> = list
+            private val eventRevision = MutableStateFlow(0L)
+            override fun getEvents(campus: String?): Flow<List<Event>> = eventRevision.map { list.value }
             override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(list.value.firstOrNull { it.id == eventId })
             override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> {
                 registered.value = registered.value + eventId
@@ -89,13 +93,14 @@ class ScheduleViewModel @Inject constructor(
                 return Result.success(Unit)
             }
             override fun currentUserRegistrations(): Flow<Set<String>> = registered
-            override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> {
+            override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<String> {
+                val savedId = eventId ?: UUID.randomUUID().toString()
                 val newEvent = Event(
-                    id = eventId ?: "event-${System.currentTimeMillis()}",
+                    id = savedId,
                     title = draft.title,
                     description = draft.description,
-                    orgId = "GV2023001",
-                    orgName = "ThS. Trần Thu Trang",
+                    orgId = "DEMO_ORGANIZER",
+                    orgName = "UTH Organizer",
                     location = draft.location,
                     campus = draft.campus,
                     startAt = draft.startAt,
@@ -104,7 +109,11 @@ class ScheduleViewModel @Inject constructor(
                     points = 5,
                 )
                 list.value = list.value + newEvent
-                return Result.success(Unit)
+                eventRevision.value++
+                return Result.success(savedId)
+            }
+            override fun refresh() {
+                eventRevision.value++
             }
         },
         ticketRepository = object : TicketRepository {
@@ -129,6 +138,7 @@ class ScheduleViewModel @Inject constructor(
             events = emptyList(),
         ),
     )
+    /** Read-only state consumed by [ScheduleScreen]. */
     val uiState = state.asStateFlow()
 
     init {
@@ -136,9 +146,7 @@ class ScheduleViewModel @Inject constructor(
             getProfile.observe().collect { profile ->
                 currentProfile = profile
                 val isTeacher = profile?.role?.isTeacherOrOrganizer == true ||
-                    profile?.role?.name in listOf("TEACHER", "ORGANIZER", "ADMIN") ||
-                    profile?.studentId?.startsWith("GV", ignoreCase = true) == true ||
-                    profile?.email?.contains("teacher", ignoreCase = true) == true
+                    profile?.studentId?.startsWith("GV", ignoreCase = true) == true
                 state.update { it.copy(isTeacher = isTeacher, studentName = profile?.displayName) }
             }
         }
@@ -164,17 +172,22 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    /** Rebuilds the visible event list from repository and optimistic creation state. */
     private fun reloadEvents() {
-        val mapped = (allStoredEvents + pendingEvents.values)
+        val retainedPending = pendingEvents.values.filterNot { pending ->
+            allStoredEvents.any { stored -> stored.sameCreatedEvent(pending) }
+        }
+        val mapped = (allStoredEvents + retainedPending)
             .distinctBy { it.id }
             .filter { it.status != EventStatus.DRAFT && it.status != EventStatus.CANCELLED }
             .map { it.toScheduleEvent(registeredEventIds) }
         state.update { it.copy(events = mapped) }
     }
 
+    /** Collects repository events and refreshes the local list when the source changes. */
     private fun loadEvents(showLoading: Boolean = true) {
         eventsJob?.cancel()
-        state.update { it.copy(isEventsLoading = showLoading, eventsLoadFailed = false) }
+        state.update { it.copy(isEventsLoading = showLoading) }
         eventsJob = viewModelScope.launch {
             eventRepository.getEvents()
                 .catch { error ->
@@ -183,14 +196,33 @@ class ScheduleViewModel @Inject constructor(
                 }
                 .collect { events ->
                     allStoredEvents = events
-                    events.forEach { pendingEvents.remove(it.id) }
+                    pendingEvents.entries.removeAll { (_, pending) -> events.any { it.sameCreatedEvent(pending) } }
                     reloadEvents()
                     state.update { it.copy(isEventsLoading = false, eventsLoadFailed = false) }
                 }
         }
-        eventRepository.refresh()
     }
 
+    /** Matches an optimistic event to its persisted copy when the repository assigns a new ID. */
+    private fun Event.sameCreatedEvent(other: Event): Boolean =
+        title == other.title && description == other.description && location == other.location &&
+            startAt == other.startAt && endAt == other.endAt
+
+    /** Grants event management only to teacher/organizer profiles or GV accounts. */
+    private fun hasTeacherAccess(): Boolean = currentProfile?.let { profile ->
+        profile.role.isTeacherOrOrganizer || profile.studentId.startsWith("GV", ignoreCase = true)
+    } == true
+
+    /** Refreshes an active subscription once, or restarts it after a failed load. */
+    private fun refreshEvents() {
+        if (eventsJob?.isActive == true && !state.value.eventsLoadFailed) {
+            eventRepository.refresh()
+        } else {
+            loadEvents(showLoading = false)
+        }
+    }
+
+    /** Converts a domain event to the schedule card model using the current registrations. */
     private fun Event.toScheduleEvent(registeredIds: Set<String>): ScheduleEvent {
         val startDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(startAt), ZoneId.systemDefault())
         val endDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(endAt), ZoneId.systemDefault())
@@ -214,6 +246,7 @@ class ScheduleViewModel @Inject constructor(
         )
     }
 
+    /** Applies an action emitted by the stateless schedule screen. */
     fun onAction(action: ScheduleAction) {
         when (action) {
             is ScheduleAction.SelectDate -> state.update {
@@ -226,16 +259,10 @@ class ScheduleViewModel @Inject constructor(
             }
 
             ScheduleAction.RefreshEvents -> {
-                loadEvents()
+                refreshEvents()
             }
 
-            ScheduleAction.PollEvents -> {
-                if (eventsJob?.isActive == true) {
-                    eventRepository.refresh()
-                } else {
-                    loadEvents(showLoading = false)
-                }
-            }
+            ScheduleAction.PollEvents -> refreshEvents()
 
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
 
@@ -243,7 +270,7 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
-                if (!state.value.now.isBefore(event.startAt)) return
+                if (!LocalDateTime.now(clock).isBefore(event.startAt)) return
                 registeredEventIds.add(action.id)
                 viewModelScope.launch {
                     eventRepository.registerCurrentUser(action.id)
@@ -284,13 +311,14 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.Complete -> useCase.complete(action.id)
 
-            ScheduleAction.OpenCreateEvent -> state.update { it.copy(showCreateEvent = true) }
+            ScheduleAction.OpenCreateEvent -> if (hasTeacherAccess()) {
+                state.update { it.copy(showCreateEvent = true, eventSaveFailed = false) }
+            }
 
             ScheduleAction.CloseCreateEvent -> state.update { it.copy(showCreateEvent = false) }
 
-            ScheduleAction.ToggleTeacherMode -> state.update { it.copy(isTeacher = !it.isTeacher) }
-
             is ScheduleAction.CreateWorkshopEvent -> {
+                if (!hasTeacherAccess()) return
                 val startDateTime = action.date.atTime(
                     runCatching { LocalTime.parse(action.startTime) }.getOrElse { LocalTime.of(8, 30) },
                 )
@@ -299,14 +327,14 @@ class ScheduleViewModel @Inject constructor(
                 )
                 val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val eventId = UUID.randomUUID().toString()
+                val optimisticEventId = UUID.randomUUID().toString()
                 val title = action.title.ifBlank { "Workshop: Ứng dụng AI & IoT trong Giao thông Đô thị 2026" }
                 val organizer = action.coOrganizers.joinToString(" & ").ifBlank { "Đoàn - Hội CNTT & CLB Sáng tạo Trẻ" }
                 val venue = action.venue.ifBlank { "Hội trường: A.101 (Cơ sở 1)" }
 
                 val draft = EventDraft(
                     title = title,
-                    description = action.summary.ifBlank { "Workshop do ThS. Trần Thu Trang tổ chức" },
+                    description = action.summary.ifBlank { "Workshop do giảng viên UTH tổ chức" },
                     location = venue,
                     campus = "Cơ sở 1",
                     startAt = startMillis,
@@ -315,10 +343,10 @@ class ScheduleViewModel @Inject constructor(
                 )
 
                 val newDomainEvent = Event(
-                    id = eventId,
+                    id = optimisticEventId,
                     title = title,
                     description = draft.description,
-                    orgId = "GV2023001",
+                    orgId = "DEMO_ORGANIZER",
                     orgName = organizer,
                     location = venue,
                     campus = "Cơ sở 1",
@@ -330,12 +358,24 @@ class ScheduleViewModel @Inject constructor(
                     status = EventStatus.PUBLISHED,
                 )
 
-                pendingEvents[eventId] = newDomainEvent
+                pendingEvents[optimisticEventId] = newDomainEvent
                 reloadEvents()
 
                 viewModelScope.launch {
-                    eventRepository.saveEvent(eventId, draft).onSuccess {
-                        eventRepository.refresh()
+                    eventRepository.saveEvent(null, draft).fold(
+                        onSuccess = { savedEventId ->
+                            val alreadyLoaded = allStoredEvents.any { it.id == savedEventId || it.sameCreatedEvent(newDomainEvent) }
+                            pendingEvents.remove(optimisticEventId)
+                            if (!alreadyLoaded) {
+                                pendingEvents[savedEventId] = newDomainEvent.copy(id = savedEventId)
+                            }
+                            reloadEvents()
+                        },
+                        onFailure = {
+                            pendingEvents.remove(optimisticEventId)
+                            reloadEvents()
+                            state.update { current -> current.copy(eventSaveFailed = true) }
+                        },
                     }
                 }
 
@@ -343,6 +383,7 @@ class ScheduleViewModel @Inject constructor(
                     current.copy(
                         showCreateEvent = false,
                         selectedDate = action.date,
+                        eventSaveFailed = false,
                     )
                 }
                 reloadEvents()
@@ -363,11 +404,14 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    /** Loads the signed-in user's real ticket and requests its live QR token when needed. */
     private fun openEventTicket(eventId: String) {
         val studentId = currentProfile?.studentId ?: return
         ticketJob?.cancel()
         ticketJob = viewModelScope.launch {
-            state.update { it.copy(ticketQrLoading = true, ticketQrError = null, selectedTicket = null) }
+            state.update {
+                it.copy(ticketQrLoading = true, ticketQrToken = null, ticketQrError = null, selectedTicket = null)
+            }
             ticketRepository.getTickets(studentId).fold(
                 onSuccess = { tickets ->
                     val ticket = tickets.firstOrNull { it.eventId == eventId }

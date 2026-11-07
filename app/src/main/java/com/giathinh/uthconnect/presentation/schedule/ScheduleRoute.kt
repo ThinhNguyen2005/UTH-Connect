@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
+/** Connects the schedule state holder and polls remote events while the route is visible. */
 @Composable
 fun ScheduleRoute(viewModel: ScheduleViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

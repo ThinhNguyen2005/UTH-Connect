@@ -7,6 +7,7 @@ import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+/** Immutable presentation state for the schedule, event list, and ticket QR dialog. */
 data class ScheduleUiState(
     val timetable: Timetable = Timetable(),
     val now: LocalDateTime = LocalDateTime.MIN,
@@ -17,6 +18,7 @@ data class ScheduleUiState(
     val events: List<ScheduleEvent> = emptyList(),
     val isEventsLoading: Boolean = true,
     val eventsLoadFailed: Boolean = false,
+    val eventSaveFailed: Boolean = false,
     val selectedTicket: Ticket? = null,
     val ticketQrToken: String? = null,
     val ticketQrError: String? = null,
@@ -44,8 +46,10 @@ data class ScheduleUiState(
     }
 }
 
+/** Tabs available in the schedule feature. */
 enum class ScheduleTab { EVENTS, DEADLINES }
 
+/** Event fields formatted specifically for schedule cards. */
 data class ScheduleEvent(
     val id: String,
     val title: String,
@@ -59,9 +63,13 @@ data class ScheduleEvent(
     val session: String = "",
 )
 
+/** Registration state used to choose event card actions and labels. */
 enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
+
+/** Semantic accent applied to an event card. */
 enum class EventAccent { SUCCESS, PRIMARY, WARNING }
 
+/** Time-of-day filters for class sessions. */
 enum class SchedulePeriod {
     ALL,
     MORNING,
@@ -70,6 +78,7 @@ enum class SchedulePeriod {
     ;
 
     companion object {
+        /** Returns the period containing [hour] in 24-hour local time. */
         fun fromHour(hour: Int) = when {
             hour < 12 -> MORNING
             hour < 18 -> AFTERNOON
