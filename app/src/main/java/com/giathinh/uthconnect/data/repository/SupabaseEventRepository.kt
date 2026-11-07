@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -47,6 +48,7 @@ class SupabaseEventRepository @Inject constructor(
                 val endAt = obj["endAt"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
                 val capacity = obj["capacity"]?.jsonPrimitive?.content?.toIntOrNull() ?: 100
                 val registeredCount = obj["registeredCount"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                val points = obj["points"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                 val statusStr = obj["status"]?.jsonPrimitive?.content
                 val status = EventStatus.fromString(statusStr)
                 val coverUrl = obj["coverUrl"]?.jsonPrimitive?.content
@@ -62,6 +64,7 @@ class SupabaseEventRepository @Inject constructor(
                     endAt = endAt,
                     capacity = capacity,
                     registeredCount = registeredCount,
+                    points = points,
                     status = status,
                     coverUrl = coverUrl,
                 )
@@ -85,6 +88,7 @@ class SupabaseEventRepository @Inject constructor(
                         put("endAt", e.endAt.toString())
                         put("capacity", e.capacity)
                         put("registeredCount", e.registeredCount)
+                        put("points", e.points)
                         put("status", e.status.name)
                         e.coverUrl?.let { put("coverUrl", it) }
                     },
@@ -103,12 +107,16 @@ class SupabaseEventRepository @Inject constructor(
     }
 
     override fun getEvents(campus: String?): Flow<List<Event>> = revision.map {
-        val remoteEvents = runCatching {
+        val localEvents = loadPersistedEvents()
+        val remoteEvents = try {
             val rows = client.table("events?select=*&order=start_at.asc").jsonArray
             rows.map { row -> row.jsonObject.toDomainEvent() }
-        }.getOrDefault(emptyList())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            if (localEvents.isEmpty()) throw error else emptyList()
+        }
 
-        val localEvents = loadPersistedEvents()
         val allEventsMap = LinkedHashMap<String, Event>()
         for (event in localEvents) {
             allEventsMap[event.id] = event
@@ -225,6 +233,7 @@ class SupabaseEventRepository @Inject constructor(
             endAt = draft.endAt,
             capacity = draft.capacity,
             registeredCount = 0,
+            points = 5,
             status = EventStatus.PUBLISHED,
         )
         if (index >= 0) {

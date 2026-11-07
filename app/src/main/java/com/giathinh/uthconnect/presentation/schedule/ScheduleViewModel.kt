@@ -18,9 +18,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -93,6 +96,7 @@ class ScheduleViewModel @Inject constructor(
                     startAt = draft.startAt,
                     endAt = draft.endAt,
                     capacity = draft.capacity,
+                    points = 5,
                 )
                 list.value = list.value + newEvent
                 return Result.success(Unit)
@@ -105,6 +109,7 @@ class ScheduleViewModel @Inject constructor(
 
     private val registeredEventIds = mutableSetOf<String>()
     private var allStoredEvents = listOf<Event>()
+    private var eventsJob: Job? = null
 
     private val state = MutableStateFlow(
         ScheduleUiState(
@@ -137,12 +142,7 @@ class ScheduleViewModel @Inject constructor(
                 reloadEvents()
             }
         }
-        viewModelScope.launch {
-            eventRepository.getEvents().collect { events ->
-                allStoredEvents = events
-                reloadEvents()
-            }
-        }
+        loadEvents()
         viewModelScope.launch {
             while (true) {
                 delay(60_000)
@@ -153,8 +153,28 @@ class ScheduleViewModel @Inject constructor(
     }
 
     private fun reloadEvents() {
-        val mapped = allStoredEvents.map { it.toScheduleEvent(registeredEventIds) }
+        val mapped = allStoredEvents
+            .filter { it.status != EventStatus.DRAFT && it.status != EventStatus.CANCELLED }
+            .map { it.toScheduleEvent(registeredEventIds) }
         state.update { it.copy(events = mapped) }
+    }
+
+    private fun loadEvents() {
+        eventsJob?.cancel()
+        state.update { it.copy(isEventsLoading = true, eventsLoadFailed = false) }
+        eventsJob = viewModelScope.launch {
+            eventRepository.getEvents()
+                .catch { error ->
+                    if (error is CancellationException) throw error
+                    state.update { it.copy(isEventsLoading = false, eventsLoadFailed = true) }
+                }
+                .collect { events ->
+                    allStoredEvents = events
+                    reloadEvents()
+                    state.update { it.copy(isEventsLoading = false, eventsLoadFailed = false) }
+                }
+        }
+        eventRepository.refresh()
     }
 
     private fun Event.toScheduleEvent(registeredIds: Set<String>): ScheduleEvent {
@@ -174,8 +194,8 @@ class ScheduleViewModel @Inject constructor(
             startAt = startDateTime,
             endAt = endDateTime,
             registration = if (isRegistered) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
-            accent = EventAccent.PRIMARY,
-            trainingPoints = "+5 ĐRL",
+            accent = if (isRegistered) EventAccent.PRIMARY else EventAccent.WARNING,
+            trainingPoints = points,
             session = session,
         )
     }
@@ -189,6 +209,10 @@ class ScheduleViewModel @Inject constructor(
             ScheduleAction.JumpToToday -> {
                 val today = state.value.now.toLocalDate()
                 state.update { it.copy(selectedDate = today) }
+            }
+
+            ScheduleAction.RefreshEvents -> {
+                loadEvents()
             }
 
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
@@ -271,6 +295,7 @@ class ScheduleViewModel @Inject constructor(
                     endAt = endMillis,
                     capacity = 100,
                     registeredCount = 0,
+                    points = action.trainingPoints.filter(Char::isDigit).toIntOrNull() ?: 0,
                     status = EventStatus.PUBLISHED,
                 )
 

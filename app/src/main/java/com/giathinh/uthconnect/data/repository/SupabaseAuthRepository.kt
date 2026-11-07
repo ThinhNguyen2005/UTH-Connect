@@ -3,11 +3,13 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.DomainRestrictionException
+import com.giathinh.uthconnect.domain.repository.ProfileAccessException
 import com.giathinh.uthconnect.domain.repository.SignUpResult
 import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
 import com.giathinh.uthconnect.domain.repository.VerificationRequestResult
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -37,13 +39,6 @@ class SupabaseAuthRepository @Inject constructor(
 
         try {
             client.signIn(email, password)
-            val row = ownProfileRow()
-            val isVerified = row?.bool("student_id_verified") == true && !row.string("student_id").isNullOrBlank()
-            if (!isVerified) {
-                val displayName = row?.string("display_name").orEmpty()
-                throw StudentVerificationRequiredException(email = email, displayName = displayName)
-            }
-            row.toDomainProfile()
         } catch (e: SupabaseHttpException) {
             if (e.status == 400 || e.status == 401) {
                 val demoResult = demoAuth.authenticate(trimmed, password).getOrNull()
@@ -51,13 +46,29 @@ class SupabaseAuthRepository @Inject constructor(
                 return@runCatching null
             }
             throw e
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
-            if (e is StudentVerificationRequiredException) throw e
             val demoResult = demoAuth.authenticate(trimmed, password).getOrNull()
             if (demoResult != null) return@runCatching demoResult
             client.signOut()
             throw e
         }
+
+        val row = try {
+            ownProfileRow()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            client.signOut()
+            throw ProfileAccessException((error as? SupabaseHttpException)?.status)
+        }
+        val isVerified = row?.bool("student_id_verified") == true && !row.string("student_id").isNullOrBlank()
+        if (!isVerified) {
+            val displayName = row?.string("display_name").orEmpty()
+            throw StudentVerificationRequiredException(email = email, displayName = displayName)
+        }
+        row.toDomainProfile()
     }
 
     private suspend fun ownProfile(): StudentProfile = ownProfileRow()?.toDomainProfile()

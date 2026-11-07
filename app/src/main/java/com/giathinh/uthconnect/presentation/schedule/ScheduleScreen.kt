@@ -25,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -34,7 +33,6 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -130,7 +128,7 @@ fun ScheduleScreen(
             )
 
             Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
-                if (uiState.isLoading) {
+                if (uiState.isLoading || uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -148,7 +146,18 @@ fun ScheduleScreen(
                         else -> rawEvents
                     }
 
-                    if (filteredEvents.isEmpty()) {
+                    if (uiState.eventsLoadFailed) {
+                        Spacer(Modifier.height(UthDimens.Spacing.Lg))
+                        UthCard {
+                            UthEmptyState(
+                                title = stringResource(R.string.schedule_events_load_failed),
+                                body = stringResource(R.string.schedule_events_load_failed_body),
+                                icon = Icons.Filled.DateRange,
+                                actionLabel = stringResource(R.string.common_retry),
+                                onAction = { onAction(ScheduleAction.RefreshEvents) },
+                            )
+                        }
+                    } else if (filteredEvents.isEmpty()) {
                         Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         UthCard {
                             UthEmptyState(
@@ -181,22 +190,7 @@ fun ScheduleScreen(
             }
         }
 
-        if (uiState.isTeacher) {
-            FloatingActionButton(
-                onClick = { onAction(ScheduleAction.OpenCreateEvent) },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(UthDimens.Spacing.Xl),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = stringResource(R.string.schedule_create_event),
-                )
-            }
-        }
+
     }
 
     selectedTicket?.let { ticket ->
@@ -295,27 +289,7 @@ private fun ScheduleHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
-                if (isTeacher) {
-                    Surface(
-                        onClick = { onAction(ScheduleAction.OpenCreateEvent) },
-                        modifier = Modifier.size(UthDimens.Size.HeaderAction),
-                        shape = MaterialTheme.shapes.small,
-                        color = onHeader.copy(alpha = UthDimens.Opacity.HeaderActionFill),
-                        border = BorderStroke(
-                            UthDimens.Size.Stroke,
-                            onHeader.copy(alpha = UthDimens.Opacity.HeaderActionBorder),
-                        ),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = stringResource(R.string.schedule_create_event),
-                                tint = onHeader,
-                                modifier = Modifier.size(UthDimens.Size.IconInline),
-                            )
-                        }
-                    }
-                }
+
 
                 // Nút HÔM NAY để nhảy về ngày hiện tại.
                 Surface(
@@ -753,7 +727,12 @@ private fun CampusEventCard(
                     }
 
                     val pointsBonus = stringResource(R.string.schedule_points_bonus)
-                    val displayPoints = event.trainingPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
+                    val eventPoints = if (event.trainingPoints > 0) {
+                        stringResource(R.string.schedule_points_value, event.trainingPoints)
+                    } else {
+                        ""
+                    }
+                    val displayPoints = eventPoints.ifBlank { if (!isRegistered) pointsBonus else "" }
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
@@ -931,7 +910,7 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(11, 30),
                 registration = EventRegistration.CHECKED_IN,
                 accent = EventAccent.SUCCESS,
-                trainingPoints = "+5 ĐRL",
+                trainingPoints = 5,
                 session = "Morning",
             ),
             ScheduleEvent(
@@ -943,7 +922,7 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(17, 0),
                 registration = EventRegistration.REGISTERED,
                 accent = EventAccent.PRIMARY,
-                trainingPoints = "+10 ĐRL",
+                trainingPoints = 10,
                 session = "Afternoon",
             ),
             ScheduleEvent(
@@ -955,7 +934,7 @@ private fun previewState(): ScheduleUiState {
                 endAt = date.atTime(21, 0),
                 registration = EventRegistration.NOT_REGISTERED,
                 accent = EventAccent.WARNING,
-                trainingPoints = "+5 ĐRL",
+                trainingPoints = 5,
                 session = "Evening",
             ),
         ),

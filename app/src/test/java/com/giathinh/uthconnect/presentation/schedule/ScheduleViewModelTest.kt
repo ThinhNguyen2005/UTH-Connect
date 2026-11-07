@@ -162,7 +162,7 @@ class ScheduleViewModelTest {
             val created = vm.uiState.value.events.first()
             assertEquals("Workshop: AI & IoT", created.title)
             assertEquals("Hội trường A.101", created.location)
-            assertEquals("+5 ĐRL", created.trainingPoints)
+            assertEquals(5, created.trainingPoints)
         } finally {
             vm.viewModelScope.cancel()
         }
