@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -140,6 +141,8 @@ class SupabaseRestClient @Inject constructor() {
                 check(updated.userId == latest.userId) { "Session user changed" }
                 credentials = updated
                 updated.accessToken
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 credentials = null
                 throw error
