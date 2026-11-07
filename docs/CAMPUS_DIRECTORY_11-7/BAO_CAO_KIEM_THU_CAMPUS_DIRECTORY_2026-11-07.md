@@ -1,8 +1,8 @@
-# Báo cáo kiểm tra CAMPUS-DIRECTORY
+﻿# Báo cáo kiểm tra CAMPUS-DIRECTORY
 
-**Ngày chạy:** 07/11/2026  
-**Nhánh:** `feature/KAN-95-main`, tạo từ `origin/main` (`c73d548`)  
-**Thiết bị:** Android Emulator `Medium_Phone_API_37.0`  
+**Ngày chạy:** 07/11/2026
+**Nhánh:** `feature/KAN-95-main`, tạo từ `origin/main` (`c73d548`)
+**Thiết bị:** Android Emulator `Medium_Phone_API_37.0`
 **Phạm vi:** địa chỉ 3 cơ sở, intent chỉ đường/gọi điện, kiểm tra mã nguồn và bộ kiểm tra tự động.
 
 ## Kết quả
