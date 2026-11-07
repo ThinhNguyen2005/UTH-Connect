@@ -362,9 +362,9 @@
     <string name="event_details">Chi tiết sự kiện</string>
     <string name="event_register">Đăng ký</string>
     <string name="event_view_qr">View QR Ticket</string>
-    <string name="event_session_morning">Morning</string>
-    <string name="event_session_afternoon">Afternoon</string>
-    <string name="event_session_evening">Evening</string>
+    <string name="event_session_morning">Buổi sáng</string>
+    <string name="event_session_afternoon">Buổi chiều</string>
+    <string name="event_session_evening">Buổi tối</string>
     <string name="event_qr_title">Event Ticket</string>
     <string name="event_qr_code">Ticket code: UTH-%1$s-2026</string>
     <string name="event_qr_close">Close</string>
