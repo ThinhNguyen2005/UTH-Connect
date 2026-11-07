@@ -613,7 +613,9 @@ private fun ModernPasswordContent(
                 modifier = Modifier.testTag("auth_error"),
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
-            if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected) {
+            if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected ||
+                failure == AuthFailure.SessionRestore || failure == AuthFailure.NetworkError
+            ) {
                 OutlinedButton(
                     onClick = { onAction(AuthAction.Retry) },
                     enabled = enabled,
@@ -1100,6 +1102,35 @@ private fun ModernResetPasswordContent(
             color = extended.textSecondary,
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
+
+        Text(
+            text = "Nhập mã OTP gửi tới ${uiState.forgotEmail}. Mã phải được Supabase xác minh trước khi đổi mật khẩu.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = extended.textSecondary,
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        OutlinedTextField(
+            value = uiState.resetOtp,
+            onValueChange = { onAction(AuthAction.ResetOtpChanged(it)) },
+            modifier = Modifier.fillMaxWidth().testTag("auth_reset_otp"),
+            enabled = enabled && !uiState.isResettingPassword,
+            singleLine = true,
+            label = { Text("Mã xác minh OTP") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
+            shape = textFieldShape,
+        )
+        TextButton(
+            onClick = { onAction(AuthAction.ForgotPassword) },
+            enabled = enabled && uiState.forgotCooldownSeconds == 0 && !uiState.isResettingPassword,
+        ) {
+            Text(
+                if (uiState.forgotCooldownSeconds > 0) {
+                    "Gửi lại mã sau ${uiState.forgotCooldownSeconds}s"
+                } else {
+                    "Yêu cầu gửi lại mã"
+                },
+            )
+        }
 
         OutlinedTextField(
             value = uiState.resetNewPassword,

@@ -40,6 +40,7 @@ sealed interface AuthAction {
     data object SubmitVerificationRequest : AuthAction
 
     /** Reset password actions */
+    data class ResetOtpChanged(val value: String) : AuthAction
     data class ResetNewPasswordChanged(val value: String) : AuthAction
     data class ResetConfirmPasswordChanged(val value: String) : AuthAction
     data object ToggleResetPasswordVisibility : AuthAction
@@ -47,5 +48,4 @@ sealed interface AuthAction {
 
     /** Email confirmation actions */
     data object ResendVerificationEmail : AuthAction
-    data class DeepLinkReceived(val token: String, val type: String) : AuthAction
 }

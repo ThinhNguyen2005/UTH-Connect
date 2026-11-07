@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.FakeStudentGradeRepository
+import com.giathinh.uthconnect.data.repository.SupabaseStudentGradeRepository
 import com.giathinh.uthconnect.domain.repository.StudentGradeRepository
 import dagger.Binds
 import dagger.Module
@@ -15,6 +15,6 @@ abstract class GradeDataModule {
     @Binds
     @Singleton
     abstract fun bindStudentGradeRepository(
-        impl: FakeStudentGradeRepository,
+        impl: SupabaseStudentGradeRepository,
     ): StudentGradeRepository
 }

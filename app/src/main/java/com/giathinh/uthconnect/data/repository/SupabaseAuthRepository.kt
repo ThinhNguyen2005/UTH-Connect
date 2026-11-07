@@ -24,7 +24,7 @@ class SupabaseAuthRepository @Inject constructor(
 ) : AuthRepository,
     StudentContactRepository {
 
-    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = runCatching {
+    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = suspendResult {
         val trimmed = identifier.trim()
         val email = if ('@' in trimmed) {
             trimmed
@@ -37,7 +37,7 @@ class SupabaseAuthRepository @Inject constructor(
         try {
             client.signIn(email, password)
         } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@runCatching null
+            if (e.status == 400 || e.status == 401) return@suspendResult null
             throw e
         }
 
@@ -59,11 +59,20 @@ class SupabaseAuthRepository @Inject constructor(
     private suspend fun ownProfile(): StudentProfile = ownProfileRow()?.toDomainProfile()
         ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
 
+    /** Never trust a remembered student ID: verify identity and MSSV against Supabase. */
+    suspend fun currentVerifiedProfile(): StudentProfile {
+        val row = ownProfileRow()
+        check(row?.bool("student_id_verified") == true && !row.string("student_id").isNullOrBlank()) {
+            "Tài khoản chưa được xác minh MSSV"
+        }
+        return row.toDomainProfile()
+    }
+
     private suspend fun ownProfileRow(): JsonObject? = client.table(
         "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url,phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",
     ).jsonArray.singleOrNull()?.jsonObject
 
-    override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = runCatching {
+    override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = suspendResult {
         google.exchange(idToken, rawNonce)
         val row = ownProfileRow()
         val email = row?.string("email").orEmpty()
@@ -90,7 +99,7 @@ class SupabaseAuthRepository @Inject constructor(
         password: String,
         displayName: String,
         faculty: String,
-    ): Result<SignUpResult> = runCatching {
+    ): Result<SignUpResult> = suspendResult {
         val response = client.signUp(email, password, displayName, faculty)
         val hasSession = response.containsKey("access_token")
         val userObj = response["user"]?.jsonObject
@@ -99,15 +108,15 @@ class SupabaseAuthRepository @Inject constructor(
         SignUpResult(needsEmailConfirmation = needsConfirmation, email = email)
     }
 
-    override suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
+    override suspend fun sendPasswordReset(email: String): Result<Unit> = suspendResult {
         client.recoverPassword(email)
     }
 
-    override suspend fun completePasswordReset(newPassword: String): Result<Unit> = runCatching {
-        client.updatePassword(newPassword)
+    override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = suspendResult {
+        client.resetPasswordWithOtp(email, otp, newPassword)
     }
 
-    override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = runCatching {
+    override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = suspendResult {
         val response = client.rpc(
             "submit_student_verification_request",
             buildJsonObject { put("p_student_id", studentId) },
@@ -116,7 +125,7 @@ class SupabaseAuthRepository @Inject constructor(
         VerificationRequestResult(requestId = reqId, status = VerificationStatus.PENDING)
     }
 
-    override suspend fun checkVerificationStatus(): Result<VerificationStatus?> = runCatching {
+    override suspend fun checkVerificationStatus(): Result<VerificationStatus?> = suspendResult {
         val requests = client.table(
             "student_verification_requests?select=status&order=created_at.desc&limit=1",
         ).jsonArray
@@ -134,7 +143,7 @@ class SupabaseAuthRepository @Inject constructor(
         phone: String,
         personalEmail: String,
         currentAddress: String,
-    ): Result<StudentProfile> = runCatching {
+    ): Result<StudentProfile> = suspendResult {
         val payload = buildJsonObject {
             put("phone_number", phone)
             put("personal_email", personalEmail)
@@ -144,17 +153,17 @@ class SupabaseAuthRepository @Inject constructor(
         ownProfile()
     }
 
-    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
+    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = suspendResult {
         ownProfile().takeIf { it.studentId == studentId }
     }
 
-    override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = runCatching {
+    override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = suspendResult {
         val profile = ownProfile()
         check(profile.studentId == studentId) { "Not signed in as this student" }
         try {
-            client.signIn(profile.email, oldPassword, replaceExisting = false)
+            if (!client.verifyCurrentPassword(profile.email, oldPassword)) return@suspendResult false
         } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@runCatching false
+            if (e.status == 400 || e.status == 401) return@suspendResult false
             throw e
         }
         client.updatePassword(newPassword)

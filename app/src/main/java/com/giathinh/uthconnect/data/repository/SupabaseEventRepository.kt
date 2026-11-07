@@ -27,7 +27,7 @@ class SupabaseEventRepository @Inject constructor(
             .filter { campus.isNullOrBlank() || campus == "Tất cả" || it.campus == campus }
     }
 
-    override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
+    override suspend fun getEventDetail(eventId: String): Result<Event?> = suspendResult {
         client.table("events?select=*&id=eq.${urlEncode(uuid(eventId))}").jsonArray
             .singleOrNull()?.jsonObject?.toDomainEvent()
     }
@@ -37,13 +37,13 @@ class SupabaseEventRepository @Inject constructor(
         uid: String,
         studentId: String,
         studentName: String,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = suspendResult {
         check(uid == client.userId) { "Cannot register for another user" }
         client.rpc("register_for_event", buildJsonObject { put("p_event_id", uuid(eventId)) })
         refresh()
     }
 
-    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = runCatching {
+    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = suspendResult {
         check(uid == client.userId) { "Cannot cancel another user's registration" }
         client.rpc("cancel_event_registration", buildJsonObject { put("p_event_id", uuid(eventId)) })
         refresh()
@@ -75,7 +75,7 @@ class SupabaseEventRepository @Inject constructor(
 
     override fun currentUserId(): String = client.userId
 
-    override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = runCatching {
+    override suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = suspendResult {
         val inputs = buildJsonObject {
             if (eventId != null) put("p_event_id", uuid(eventId))
             put("p_title", draft.title)
@@ -90,7 +90,7 @@ class SupabaseEventRepository @Inject constructor(
         refresh()
     }
 
-    override suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = runCatching {
+    override suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = suspendResult {
         client.rpc(
             "set_event_status",
             buildJsonObject {

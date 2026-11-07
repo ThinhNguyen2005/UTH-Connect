@@ -125,7 +125,7 @@ private val UthLightScheme = lightColorScheme(
     primaryContainer = UthNavyContainerLight,
     onPrimaryContainer = UthOnNavyContainerLight,
     secondary = UthGold,
-    onSecondary = UthNavy, // Navy trên Gold = 6.2:1 (AA). KHÔNG dùng chữ trắng trên Gold (2.0:1).
+    onSecondary = UthTextPrimaryLight, // Chữ tối trên Gold Amber = 7.7:1 (AAA). KHÔNG dùng chữ trắng trên Gold.
     secondaryContainer = UthGoldContainer,
     onSecondaryContainer = UthGoldText,
     tertiary = UthNavyLight,

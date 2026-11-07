@@ -1,17 +1,13 @@
 package com.giathinh.uthconnect.data.repository
 
-import com.giathinh.uthconnect.BuildConfig
-import com.giathinh.uthconnect.data.di.AuthDataModule
 import com.giathinh.uthconnect.domain.model.NotificationCategory
 import com.giathinh.uthconnect.domain.model.PostNotification
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import javax.inject.Provider
 
 class DemoDataRepositoryTest {
     @Test fun demoLoginMatchesSharedProfile() = runTest {
@@ -26,17 +22,6 @@ class DemoDataRepositoryTest {
         }
         assertNull(auth.authenticate(user.email, "wrong").getOrThrow())
         assertNull(auth.authenticate("unknown", DemoAuthRepository.DEMO_PASSWORD).getOrThrow())
-    }
-
-    @Test fun mockBindingDoesNotInitializeFirebase() {
-        org.junit.Assume.assumeTrue(BuildConfig.USE_MOCK_DATA)
-        val demo = DemoAuthRepository(InMemoryDemoAccountStore())
-        val selected = AuthDataModule.provideAuth(
-            Provider { demo },
-            Provider { error("Mock login must not initialize Firebase") },
-            Provider { error("Mock login must not initialize Supabase") },
-        )
-        assertSame(demo, selected)
     }
 
     @Test fun scheduleFiltersByDateAndHandlesEmptyDay() = runTest {

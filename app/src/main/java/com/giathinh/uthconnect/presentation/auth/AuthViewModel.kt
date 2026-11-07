@@ -94,6 +94,7 @@ class AuthViewModel @Inject constructor(
     private val eventChannel = Channel<AuthEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
     private var cooldownJob: Job? = null
+    private var recoveryCooldownJob: Job? = null
 
     /**
      * Ngôn ngữ đang thực sự bật (BCP-47). Giữ bản sao trong VM để pill VI/EN biết
@@ -125,8 +126,12 @@ class AuthViewModel @Inject constructor(
                         student = current.profile,
                         identifier = if (justLoggedOut) "" else it.identifier,
                         password = if (justLoggedOut) "" else it.password,
-                        rememberMe = current.remembered,
-                        failure = if (current.failure != null) AuthFailure.SessionRestore else it.failure,
+                        rememberMe = if (current.profile != null) current.remembered else it.rememberMe,
+                        failure = when {
+                            current.failure != null -> AuthFailure.SessionRestore
+                            current.profile != null -> null
+                            else -> it.failure
+                        },
                     )
                 }
             }
@@ -143,6 +148,10 @@ class AuthViewModel @Inject constructor(
                     identifier = "",
                     password = "",
                     failure = null,
+                    resetOtp = "",
+                    resetNewPassword = "",
+                    resetConfirmPassword = "",
+                    forgotEmail = "",
                 )
             }
 
@@ -167,13 +176,15 @@ class AuthViewModel @Inject constructor(
                 )
             }
 
-            AuthAction.DismissForgotPassword -> _uiState.update { it.copy(forgotDialogOpen = false) }
+            AuthAction.DismissForgotPassword -> _uiState.update { it.copy(forgotDialogOpen = false, forgotError = null) }
 
             is AuthAction.ForgotEmailChanged -> _uiState.update { it.copy(forgotEmail = action.value, forgotError = null) }
 
             AuthAction.SubmitForgotPassword -> submitForgotPassword()
 
-            AuthAction.Submit, AuthAction.Retry -> submit()
+            AuthAction.Submit -> submit()
+
+            AuthAction.Retry -> if (_uiState.value.failure == AuthFailure.SessionRestore) retryRestore() else submit()
 
             AuthAction.RequestGoogleSignIn -> _uiState.update {
                 if (googleEnabled && it.student == null) it.copy(isSigningInWithGoogle = true, failure = null) else it
@@ -193,6 +204,10 @@ class AuthViewModel @Inject constructor(
             is AuthAction.SelectStep -> _uiState.update {
                 it.copy(
                     screenStep = action.step,
+                    resetOtp = if (action.step == AuthScreenStep.ResetPassword) it.resetOtp else "",
+                    resetNewPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetNewPassword else "",
+                    resetConfirmPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else "",
+                    resetPasswordError = null,
                     failure = null,
                     identifierError = null,
                     passwordError = null,
@@ -220,6 +235,10 @@ class AuthViewModel @Inject constructor(
             AuthAction.SubmitVerificationRequest -> submitVerificationRequest()
 
             // Reset password actions
+            is AuthAction.ResetOtpChanged -> _uiState.update {
+                it.copy(resetOtp = action.value.take(8).filter(Char::isDigit), resetPasswordError = null)
+            }
+
             is AuthAction.ResetNewPasswordChanged -> _uiState.update { it.copy(resetNewPassword = action.value, resetPasswordError = null) }
 
             is AuthAction.ResetConfirmPasswordChanged -> _uiState.update { it.copy(resetConfirmPassword = action.value, resetPasswordError = null) }
@@ -230,8 +249,6 @@ class AuthViewModel @Inject constructor(
 
             // Email verification actions
             AuthAction.ResendVerificationEmail -> resendVerificationEmail()
-
-            is AuthAction.DeepLinkReceived -> handleDeepLink(action.token, action.type)
         }
     }
 
@@ -249,11 +266,21 @@ class AuthViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(identifierError = null, failure = null, forgotEmail = id) }
-        val isEnrolled = id == "2023040123" || id.startsWith("2023") || id.startsWith("215") || isUtEmail
-        if (isEnrolled) {
-            _uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
-        } else {
-            _uiState.update { it.copy(screenStep = AuthScreenStep.FirstTimeSetup) }
+        // Whether an account exists can only be decided by Supabase; do not infer it from an MSSV.
+        _uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
+    }
+
+    private fun retryRestore() {
+        if (_uiState.value.isRestoring) return
+        _uiState.update { it.copy(isRestoring = true, failure = null) }
+        viewModelScope.launch {
+            try {
+                sessions.restore()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isRestoring = false, failure = AuthFailure.SessionRestore) }
+            }
         }
     }
 
@@ -323,13 +350,24 @@ class AuthViewModel @Inject constructor(
 
     private fun submitForgotPassword() {
         val snapshot = _uiState.value
+        if (snapshot.isSendingForgot || snapshot.forgotCooldownSeconds > 0) return
         val email = snapshot.forgotEmail.trim().ifEmpty { snapshot.identifier.trim() }
         _uiState.update { it.copy(isSendingForgot = true, forgotError = null, forgotSuccessNotice = false) }
         viewModelScope.launch {
             try {
                 when (val outcome = forgotPassword(email)) {
                     ForgotPasswordOutcome.Success -> _uiState.update {
-                        it.copy(isSendingForgot = false, forgotSuccessNotice = true)
+                        it.copy(
+                            isSendingForgot = false,
+                            forgotSuccessNotice = true,
+                            forgotDialogOpen = false,
+                            forgotEmail = if ('@' in email) email else "$email@ut.edu.vn",
+                            screenStep = AuthScreenStep.ResetPassword,
+                            resetOtp = "",
+                            resetNewPassword = "",
+                            resetConfirmPassword = "",
+                            resetPasswordError = null,
+                        )
                     }
 
                     is ForgotPasswordOutcome.InvalidEmail -> _uiState.update {
@@ -341,18 +379,30 @@ class AuthViewModel @Inject constructor(
                     }
 
                     ForgotPasswordOutcome.RateLimited -> _uiState.update {
-                        it.copy(isSendingForgot = false, failure = AuthFailure.RateLimited)
+                        it.copy(isSendingForgot = false, forgotError = "Đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau.")
                     }
 
                     is ForgotPasswordOutcome.Failure -> _uiState.update {
                         it.copy(isSendingForgot = false, forgotError = outcome.message)
                     }
                 }
+                if (_uiState.value.forgotSuccessNotice) startRecoveryCooldown()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
                 _uiState.update { it.copy(isSendingForgot = false, failure = AuthFailure.Unexpected) }
             }
+        }
+    }
+
+    private fun startRecoveryCooldown() {
+        recoveryCooldownJob?.cancel()
+        recoveryCooldownJob = viewModelScope.launch {
+            for (seconds in 60 downTo 1) {
+                _uiState.update { it.copy(forgotCooldownSeconds = seconds) }
+                delay(1_000)
+            }
+            _uiState.update { it.copy(forgotCooldownSeconds = 0) }
         }
     }
 
@@ -407,7 +457,14 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(isResettingPassword = true, resetPasswordError = null) }
         viewModelScope.launch {
             try {
-                when (val outcome = completePasswordReset(snapshot.resetNewPassword, snapshot.resetConfirmPassword)) {
+                when (
+                    val outcome = completePasswordReset(
+                        snapshot.forgotEmail,
+                        snapshot.resetOtp,
+                        snapshot.resetNewPassword,
+                        snapshot.resetConfirmPassword,
+                    )
+                ) {
                     CompletePasswordResetOutcome.Success -> _uiState.update {
                         it.copy(
                             isResettingPassword = false,
@@ -415,11 +472,13 @@ class AuthViewModel @Inject constructor(
                             screenStep = AuthScreenStep.Password,
                             resetNewPassword = "",
                             resetConfirmPassword = "",
+                            resetOtp = "",
+                            forgotEmail = "",
                         )
                     }
 
                     CompletePasswordResetOutcome.TokenExpired -> _uiState.update {
-                        it.copy(isResettingPassword = false, failure = AuthFailure.TokenExpired)
+                        it.copy(isResettingPassword = false, resetPasswordError = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.")
                     }
 
                     is CompletePasswordResetOutcome.InvalidForm -> _uiState.update {
@@ -454,33 +513,17 @@ class AuthViewModel @Inject constructor(
         startVerifyEmailCooldown()
         viewModelScope.launch {
             try {
-                when (val outcome = forgotPassword(targetEmail)) {
-                    ForgotPasswordOutcome.Success -> Unit
-
-                    is ForgotPasswordOutcome.InvalidEmail -> {
-                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
-                        cooldownJob?.cancel()
-                        eventChannel.send(AuthEvent.GeneralMessage(outcome.message))
-                    }
-
-                    ForgotPasswordOutcome.NetworkError -> {
-                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
-                        cooldownJob?.cancel()
-                        _uiState.update { it.copy(failure = AuthFailure.NetworkError) }
-                    }
-
-                    ForgotPasswordOutcome.RateLimited -> {
-                        _uiState.update { it.copy(failure = AuthFailure.RateLimited) }
-                    }
-
-                    is ForgotPasswordOutcome.Failure -> {
-                        _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
-                        cooldownJob?.cancel()
-                        eventChannel.send(AuthEvent.GeneralMessage(outcome.message))
-                    }
-                }
+                supabaseRestClient.resendSignupConfirmation(targetEmail)
+                eventChannel.send(AuthEvent.GeneralMessage("Đã yêu cầu gửi lại email xác minh. Vui lòng kiểm tra hộp thư."))
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (error: com.giathinh.uthconnect.data.repository.SupabaseHttpException) {
+                if (error.status == 429) {
+                    _uiState.update { it.copy(failure = AuthFailure.RateLimited) }
+                } else {
+                    cooldownJob?.cancel()
+                    _uiState.update { it.copy(verifyEmailCooldownSeconds = 0, failure = AuthFailure.Unexpected) }
+                }
             } catch (_: Exception) {
                 _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
                 cooldownJob?.cancel()
@@ -497,19 +540,6 @@ class AuthViewModel @Inject constructor(
                 delay(1000L)
             }
             _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
-        }
-    }
-
-    private fun handleDeepLink(token: String, type: String) {
-        if (type == "recovery" || token.isNotBlank()) {
-            supabaseRestClient.recoveryToken = token
-            _uiState.update {
-                it.copy(
-                    screenStep = AuthScreenStep.ResetPassword,
-                    failure = null,
-                    resetSuccessNotice = false,
-                )
-            }
         }
     }
 

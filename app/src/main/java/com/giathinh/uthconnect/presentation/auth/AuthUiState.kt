@@ -20,7 +20,7 @@ enum class AuthScreenStep {
     /** Step 3: First-time student completes profile setup. */
     FirstTimeSetup,
 
-    /** Step 4: Password reset via deep link. */
+    /** Step 4: Password reset via email OTP. */
     ResetPassword,
 
     /** Step 5: Email verification waiting screen. */
@@ -32,7 +32,7 @@ data class AuthUiState(
     val student: StudentProfile? = null,
     val identifier: String = "",
     val password: String = "",
-    val rememberMe: Boolean = false,
+    val rememberMe: Boolean = true,
     val passwordVisible: Boolean = false,
     val isSigningIn: Boolean = false,
     val identifierError: LoginFieldError? = null,
@@ -43,6 +43,7 @@ data class AuthUiState(
     val isSendingForgot: Boolean = false,
     val forgotSuccessNotice: Boolean = false,
     val forgotError: String? = null,
+    val forgotCooldownSeconds: Int = 0,
     /** Google button only appears when the Supabase backend and a Web client ID are configured. */
     val googleSignInAvailable: Boolean = false,
     val isSigningInWithGoogle: Boolean = false,
@@ -67,6 +68,7 @@ data class AuthUiState(
     val registeredEmail: String = "",
     val verifyEmailCooldownSeconds: Int = 0,
     /** Reset password fields */
+    val resetOtp: String = "",
     val resetNewPassword: String = "",
     val resetConfirmPassword: String = "",
     val resetPasswordVisible: Boolean = false,
