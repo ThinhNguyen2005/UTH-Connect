@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.TicketRepository
@@ -104,6 +106,7 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    /** Applies a user action to the schedule and coordinates related repository operations. */
     fun onAction(action: ScheduleAction) {
         when (action) {
             is ScheduleAction.SelectDate -> state.update {
@@ -123,10 +126,34 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
-                if (LocalDateTime.now(clock) >= event.endAt) return
+                if (event.status != EventStatus.PUBLISHED || LocalDateTime.now(clock) >= event.endAt) return
+                state.update { it.copy(registrationError = null, registrationErrorCode = null) }
                 viewModelScope.launch {
-                    eventRepository.registerCurrentUser(action.id).onSuccess {
+                    try {
+                        val result = if (BuildConfig.USE_SUPABASE) {
+                            eventRepository.registerCurrentUser(action.id)
+                        } else {
+                            val profile = sessionRepository.session.value.profile
+                            val uid = eventRepository.currentUserId()
+                            if (profile == null || uid.isNullOrBlank()) {
+                                Result.failure(IllegalStateException(ServerErrorCode.AuthRequired.token))
+                            } else {
+                                eventRepository.registerEvent(action.id, uid, profile.studentId, profile.displayName)
+                            }
+                        }
+                        result.getOrThrow()
+                        registeredEventIds = registeredEventIds + action.id
+                        state.update { current -> current.copy(events = loadedEvents.mapNotNull(::toScheduleEvent)) }
                         eventRepository.refresh()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        state.update {
+                            it.copy(
+                                registrationError = error.message,
+                                registrationErrorCode = ServerErrorCode.of(error),
+                            )
+                        }
                     }
                 }
             }

@@ -2,6 +2,7 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import com.giathinh.uthconnect.domain.model.Course
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDate
@@ -15,6 +16,8 @@ data class ScheduleUiState(
     val eventsLoadFailed: Boolean = false,
     val studentId: String? = null,
     val studentName: String? = null,
+    val registrationError: String? = null,
+    val registrationErrorCode: ServerErrorCode? = null,
     val ticketQrToken: String? = null,
     val ticketQrFailed: Boolean = false,
     val selectedEvent: ScheduleEvent? = null,

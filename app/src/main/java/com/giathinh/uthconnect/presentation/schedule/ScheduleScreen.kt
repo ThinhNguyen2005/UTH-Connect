@@ -67,6 +67,7 @@ import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.model.Timetable
+import com.giathinh.uthconnect.presentation.common.messageText
 import com.giathinh.uthconnect.presentation.tickets.TicketQrScreen
 import java.time.DayOfWeek
 import java.time.LocalDateTime
@@ -113,6 +114,16 @@ fun ScheduleScreen(
             )
 
             Column(modifier = Modifier.padding(horizontal = UthDimens.Spacing.Lg)) {
+                uiState.registrationErrorCode?.let { errorCode ->
+                    UthCard {
+                        Text(
+                            text = errorCode.messageText(uiState.registrationError),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Spacer(Modifier.height(UthDimens.Spacing.Lg))
+                }
                 if (uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
