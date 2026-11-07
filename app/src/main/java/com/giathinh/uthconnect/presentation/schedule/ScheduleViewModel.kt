@@ -210,11 +210,7 @@ class ScheduleViewModel @Inject constructor(
             registration = if (event.id in registeredEventIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
             accent = if (event.id in registeredEventIds) EventAccent.PRIMARY else EventAccent.WARNING,
             status = event.status,
-            session = when (startAt.hour) {
-                in 0..11 -> "Morning"
-                in 12..17 -> "Afternoon"
-                else -> "Evening"
-            },
+            session = SchedulePeriod.fromHour(startAt.hour),
         )
     }.getOrNull()
 }

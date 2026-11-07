@@ -157,9 +157,14 @@ fun ScheduleScreen(
                             Spacer(Modifier.height(UthDimens.Spacing.Lg))
                         }
                         // Nhóm sự kiện theo ca (Sáng, Chiều, Tối).
-                        val fallbackSession = stringResource(R.string.schedule_session_default)
-                        val grouped = filteredEvents.groupBy { it.session.ifBlank { fallbackSession } }
-                        grouped.forEach { (sessionName, sessionEvents) ->
+                        val grouped = filteredEvents.groupBy { it.session }
+                        grouped.forEach { (session, sessionEvents) ->
+                            val sessionName = when (session) {
+                                SchedulePeriod.MORNING -> stringResource(R.string.event_session_morning)
+                                SchedulePeriod.AFTERNOON -> stringResource(R.string.event_session_afternoon)
+                                SchedulePeriod.EVENING -> stringResource(R.string.event_session_evening)
+                                SchedulePeriod.ALL -> stringResource(R.string.schedule_session_default)
+                            }
                             SessionHeader(sessionName)
                             Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md)) {
                                 sessionEvents.forEach { event ->
@@ -878,7 +883,7 @@ private fun previewState(): ScheduleUiState {
                 registration = EventRegistration.CHECKED_IN,
                 accent = EventAccent.SUCCESS,
                 trainingPoints = "+5 ĐRL",
-                session = "Morning",
+                session = SchedulePeriod.MORNING,
             ),
             ScheduleEvent(
                 id = "preview-career",
@@ -890,7 +895,7 @@ private fun previewState(): ScheduleUiState {
                 registration = EventRegistration.REGISTERED,
                 accent = EventAccent.PRIMARY,
                 trainingPoints = "+10 ĐRL",
-                session = "Afternoon",
+                session = SchedulePeriod.AFTERNOON,
             ),
             ScheduleEvent(
                 id = "preview-sports",
@@ -902,7 +907,7 @@ private fun previewState(): ScheduleUiState {
                 registration = EventRegistration.NOT_REGISTERED,
                 accent = EventAccent.WARNING,
                 trainingPoints = "+5 ĐRL",
-                session = "Evening",
+                session = SchedulePeriod.EVENING,
             ),
         ),
         timetable = Timetable(),

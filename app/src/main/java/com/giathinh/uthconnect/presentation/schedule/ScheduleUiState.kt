@@ -53,7 +53,7 @@ data class ScheduleEvent(
     val accent: EventAccent,
     val status: EventStatus = EventStatus.PUBLISHED,
     val trainingPoints: String = "",
-    val session: String = "",
+    val session: SchedulePeriod = SchedulePeriod.MORNING,
 )
 
 fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean =
