@@ -14,6 +14,7 @@ data class ScheduleUiState(
     val eventsLoadFailed: Boolean = false,
     val ticketQrToken: String? = null,
     val ticketQrFailed: Boolean = false,
+    val selectedEvent: ScheduleEvent? = null,
     val selectedDate: LocalDate = now.toLocalDate(),
     val period: SchedulePeriod = SchedulePeriod.ALL,
     val tab: ScheduleTab = ScheduleTab.EVENTS,

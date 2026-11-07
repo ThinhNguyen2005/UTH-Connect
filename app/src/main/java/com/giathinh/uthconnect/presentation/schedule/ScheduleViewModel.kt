@@ -119,12 +119,30 @@ class ScheduleViewModel @Inject constructor(
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
                 if (event.id !in registeredEventIds || LocalDateTime.now(clock) >= event.endAt) return
                 ticketQrJob?.cancel()
-                state.update { it.copy(ticketQrToken = null, ticketQrFailed = false) }
+                state.update {
+                    it.copy(selectedEvent = event, ticketQrToken = null, ticketQrFailed = false)
+                }
                 if (BuildConfig.USE_SUPABASE) {
                     ticketQrJob = viewModelScope.launch {
                         ticketRepository.issueCheckInToken(action.id).fold(
-                            onSuccess = { token -> state.update { it.copy(ticketQrToken = token, ticketQrFailed = false) } },
-                            onFailure = { state.update { it.copy(ticketQrToken = null, ticketQrFailed = true) } },
+                            onSuccess = { token ->
+                                state.update { current ->
+                                    if (current.selectedEvent?.id == action.id) {
+                                        current.copy(ticketQrToken = token, ticketQrFailed = false)
+                                    } else {
+                                        current
+                                    }
+                                }
+                            },
+                            onFailure = {
+                                state.update { current ->
+                                    if (current.selectedEvent?.id == action.id) {
+                                        current.copy(ticketQrToken = null, ticketQrFailed = true)
+                                    } else {
+                                        current
+                                    }
+                                }
+                            },
                         )
                     }
                 }
@@ -132,7 +150,9 @@ class ScheduleViewModel @Inject constructor(
 
             ScheduleAction.CloseEventDetails -> {
                 ticketQrJob?.cancel()
-                state.update { it.copy(ticketQrToken = null, ticketQrFailed = false) }
+                state.update {
+                    it.copy(selectedEvent = null, ticketQrToken = null, ticketQrFailed = false)
+                }
             }
 
             ScheduleAction.OpenForm -> state.update {

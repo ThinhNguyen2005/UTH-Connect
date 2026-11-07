@@ -43,7 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,7 +88,7 @@ fun ScheduleScreen(
     modifier: Modifier = Modifier,
 ) {
     var selectedCategory by remember { mutableIntStateOf(0) }
-    var selectedTicket by remember { mutableStateOf<Ticket?>(null) }
+    val selectedTicket = uiState.selectedEvent?.toTicket()
 
     Box(
         modifier = modifier
@@ -158,11 +157,7 @@ fun ScheduleScreen(
                                         event = event,
                                         now = uiState.now,
                                         onAction = onAction,
-                                        onViewQr = { selectedTicket = it.toTicket() },
-                                        onViewDetails = {
-                                            selectedTicket = it.toTicket()
-                                            onAction(ScheduleAction.OpenEventDetails(it.id))
-                                        },
+                                        onViewDetails = { onAction(ScheduleAction.OpenEventDetails(it.id)) },
                                     )
                                 }
                             }
@@ -176,7 +171,7 @@ fun ScheduleScreen(
 
     selectedTicket?.let { ticket ->
         Dialog(
-            onDismissRequest = { selectedTicket = null },
+            onDismissRequest = { onAction(ScheduleAction.CloseEventDetails) },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false,
@@ -188,10 +183,7 @@ fun ScheduleScreen(
                 secondsRemaining = 60,
                 qrToken = uiState.ticketQrToken,
                 qrError = if (uiState.ticketQrFailed) stringResource(R.string.tickets_qr_issue_failed) else null,
-                onBack = {
-                    selectedTicket = null
-                    onAction(ScheduleAction.CloseEventDetails)
-                },
+                onBack = { onAction(ScheduleAction.CloseEventDetails) },
                 onCopy = {},
             )
         }
@@ -550,7 +542,6 @@ private fun CampusEventCard(
     event: ScheduleEvent,
     now: LocalDateTime,
     onAction: (ScheduleAction) -> Unit,
-    onViewQr: (ScheduleEvent) -> Unit,
     onViewDetails: (ScheduleEvent) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
