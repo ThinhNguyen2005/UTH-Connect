@@ -89,7 +89,7 @@ fun ScheduleScreen(
     modifier: Modifier = Modifier,
 ) {
     var selectedCategory by remember { mutableIntStateOf(0) }
-    val selectedTicket = uiState.selectedEvent?.toTicket()
+    val selectedTicket = uiState.selectedEvent?.toTicket(uiState.studentId.orEmpty())
 
     Box(
         modifier = modifier
@@ -195,7 +195,7 @@ fun ScheduleScreen(
         ) {
             TicketQrScreen(
                 ticket = ticket,
-                studentName = "Nguyễn Minh Anh",
+                studentName = uiState.studentName,
                 secondsRemaining = 60,
                 qrToken = uiState.ticketQrToken,
                 qrError = if (uiState.ticketQrFailed) stringResource(R.string.tickets_qr_issue_failed) else null,
@@ -928,31 +928,17 @@ private fun previewState(): ScheduleUiState {
     )
 }
 
-private fun ScheduleEvent.toTicket(): Ticket {
-    val isSports = id.contains("sports") || title.contains("Hội thao")
-    val isAi = id.contains("ai") || title.contains("AI")
+private fun ScheduleEvent.toTicket(studentId: String): Ticket {
     return Ticket(
-        id = if (isSports) {
-            "ticket-sports"
-        } else if (isAi) {
-            "ticket-ai"
-        } else {
-            "ticket-$id"
-        },
-        studentId = "2023040123",
+        id = "ticket-$id",
+        studentId = studentId,
         eventId = id,
         eventTitle = title,
         eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
         eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
         status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
-        fallbackCode = if (isSports) {
-            "482 917"
-        } else if (isAi) {
-            "998 102"
-        } else {
-            "356 891"
-        },
+        fallbackCode = "",
         organizerName = organizer,
-        seatLabel = if (isSports) "Ghế A-14" else "Khu vực tự do",
+        seatLabel = null,
     )
 }

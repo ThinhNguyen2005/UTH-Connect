@@ -490,18 +490,20 @@ private fun TicketFooter(ticket: Ticket, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringResource(R.string.tickets_card_code, ticket.fallbackCode),
-            style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
-            color = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant,
-            textDecoration = if (active) null else TextDecoration.LineThrough,
-            maxLines = 1,
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(if (active) colors.primaryContainer else colors.surfaceVariant)
-                .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
-        )
+        ticket.fallbackCode.takeIf(String::isNotBlank)?.let { code ->
+            Text(
+                text = stringResource(R.string.tickets_card_code, code),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                textDecoration = if (active) null else TextDecoration.LineThrough,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(if (active) colors.primaryContainer else colors.surfaceVariant)
+                    .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+            )
+        }
         ticket.seatLabel?.let { seat ->
             Text(
                 text = seat,
@@ -829,11 +831,13 @@ private fun TicketPassCard(
                 } else {
                     TicketSecurityRibbon(secondsRemaining = secondsRemaining)
                     TicketQrPanel(payload = ticket.id)
-                    TicketCodeRow(
-                        code = ticket.fallbackCode,
-                        copyLabel = copyLabel,
-                        onCopy = { onCopy(ticket.fallbackCode) },
-                    )
+                    ticket.fallbackCode.takeIf(String::isNotBlank)?.let { code ->
+                        TicketCodeRow(
+                            code = code,
+                            copyLabel = copyLabel,
+                            onCopy = { onCopy(code) },
+                        )
+                    }
                 }
                 Text(
                     text = stringResource(R.string.tickets_qr_notice),
@@ -942,13 +946,15 @@ private fun TicketDetailGrid(
                 value = ticket.eventStartsAt,
                 modifier = Modifier.weight(1f),
             )
-            TicketDetailCell(
-                icon = Icons.Filled.Place,
-                label = stringResource(R.string.tickets_detail_seat),
-                value = ticket.seatLabel ?: stringResource(R.string.tickets_detail_seat_free),
-                emphasize = true,
-                modifier = Modifier.weight(1f),
-            )
+            ticket.seatLabel?.takeIf(String::isNotBlank)?.let { seatLabel ->
+                TicketDetailCell(
+                    icon = Icons.Filled.Place,
+                    label = stringResource(R.string.tickets_detail_seat),
+                    value = seatLabel,
+                    emphasize = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
         TicketDetailCell(
             icon = Icons.Filled.LocationOn,
@@ -960,7 +966,9 @@ private fun TicketDetailGrid(
             icon = Icons.Filled.Person,
             label = stringResource(R.string.tickets_detail_student),
             value = studentName,
-            trailing = stringResource(R.string.tickets_detail_student_id, ticket.studentId),
+            trailing = ticket.studentId.takeIf(String::isNotBlank)?.let {
+                stringResource(R.string.tickets_detail_student_id, it)
+            },
         )
     }
 }

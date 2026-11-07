@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
     private val eventRepository: EventRepository,
     private val ticketRepository: TicketRepository,
+    private val sessionRepository: SessionRepository,
     @param:Named("timetable") private val clock: Clock,
 ) : ViewModel() {
     private var loadedEvents: List<Event> = emptyList()
@@ -49,6 +51,16 @@ class ScheduleViewModel @Inject constructor(
     val uiState = state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            sessionRepository.session.collect { session ->
+                state.update {
+                    it.copy(
+                        studentId = session.profile?.studentId,
+                        studentName = session.profile?.displayName,
+                    )
+                }
+            }
+        }
         viewModelScope.launch {
             useCase.timetable.collect { value ->
                 state.update { it.copy(timetable = value, isLoading = false) }

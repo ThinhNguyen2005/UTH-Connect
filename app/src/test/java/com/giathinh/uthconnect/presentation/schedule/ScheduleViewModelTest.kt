@@ -3,11 +3,15 @@ package com.giathinh.uthconnect.presentation.schedule
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.data.repository.InMemoryTimetableRepository
 import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.cancel
 import org.junit.Assert.assertEquals
@@ -27,7 +31,7 @@ class ScheduleViewModelTest {
 
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
-        val vm = ScheduleViewModel(TimetableUseCase(repository), EmptyEventRepository, EmptyTicketRepository, clock)
+        val vm = ScheduleViewModel(TimetableUseCase(repository), EmptyEventRepository, EmptyTicketRepository, EmptySessionRepository, clock)
         try {
             vm.onAction(ScheduleAction.OpenForm)
             vm.onAction(ScheduleAction.Date("2026-02-30"))
@@ -69,4 +73,14 @@ private object EmptyEventRepository : EventRepository {
 
 private object EmptyTicketRepository : TicketRepository {
     override suspend fun getTickets(studentId: String) = Result.success(emptyList<com.giathinh.uthconnect.domain.model.Ticket>())
+}
+
+private object EmptySessionRepository : SessionRepository {
+    override val session = MutableStateFlow(StudentSession(isRestoring = false))
+    override suspend fun restore() = Unit
+    override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+    override suspend fun updateProfile(profile: StudentProfile) = Unit
+    override suspend fun enableBiometric(studentId: String) = Unit
+    override suspend fun disableBiometric() = Unit
+    override suspend fun signOut() = Unit
 }

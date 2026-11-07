@@ -86,7 +86,8 @@ class SupabaseMappersTest {
                 "title": "Hội thảo AI 2026",
                 "location": "Hội trường A",
                 "start_at": "2026-11-03T12:30:00+07:00",
-                "organizer_name": "Đoàn Thanh niên"
+                "organizer_name": "Đoàn Thanh niên",
+                "seat_label": "Ghế B-12"
               }
             }
         """
@@ -102,7 +103,8 @@ class SupabaseMappersTest {
         assertEquals("Hội trường A", ticket?.eventLocation)
         assertEquals("Đoàn Thanh niên", ticket?.organizerName)
         assertEquals(TicketStatus.VALID, ticket?.status)
-        assertEquals("33333333", ticket?.fallbackCode)
+        assertEquals("", ticket?.fallbackCode)
+        assertEquals("Ghế B-12", ticket?.seatLabel)
     }
 
     @Test fun toDomainTicketDistinguishesStatuses() {
@@ -118,6 +120,7 @@ class SupabaseMappersTest {
         val cancelled = objectFromJson("""{"event_id":"$eventId","status":"CANCELLED","events":{"title":"T"}}""")
             .toDomainTicket("23510001", "uid-1", emptySet())
         assertEquals(TicketStatus.CANCELLED, cancelled?.status)
+        assertEquals("", cancelled?.fallbackCode)
 
         // Checked in
         val checkedIn = objectFromJson("""{"event_id":"$eventId","status":"REGISTERED","events":{"title":"T"}}""")
