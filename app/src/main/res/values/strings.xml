@@ -353,8 +353,10 @@
     <string name="event_checked_in">Đã điểm danh</string>
     <string name="event_registered">Đã đăng ký</string>
     <string name="event_not_registered">Chưa đăng ký</string>
+    <string name="event_registration_closed">Đã bắt đầu, không thể đăng ký</string>
     <string name="event_ongoing">Đang diễn ra</string>
     <string name="event_upcoming">Sắp diễn ra</string>
+    <string name="event_ended">Đã kết thúc</string>
     <string name="event_details">Chi tiết sự kiện</string>
     <string name="event_register">Đăng ký</string>
     <string name="event_view_qr">View QR Ticket</string>

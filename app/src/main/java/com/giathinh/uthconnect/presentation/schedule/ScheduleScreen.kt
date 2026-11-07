@@ -542,14 +542,16 @@ private fun CampusEventCard(
     val colors = MaterialTheme.colorScheme
     val ext = UthTheme.extendedColors
 
-    val isOngoing = now >= event.startAt && now < event.endAt
+    val isEnded = now >= event.endAt
+    val isOngoing = now >= event.startAt && !isEnded
     val isRegistered = event.registration != EventRegistration.NOT_REGISTERED
     val isCheckedIn = event.registration == EventRegistration.CHECKED_IN
-    val isPrimaryAccent = isRegistered || event.accent == EventAccent.PRIMARY
-    val isWarningAccent = event.accent == EventAccent.WARNING
-    val isNeutral = !isOngoing && !isPrimaryAccent && !isWarningAccent
+    val isPrimaryAccent = !isEnded && (isRegistered || event.accent == EventAccent.PRIMARY)
+    val isWarningAccent = !isEnded && event.accent == EventAccent.WARNING
+    val isNeutral = isEnded || (!isOngoing && !isPrimaryAccent && !isWarningAccent)
 
     val borderColor = when {
+        isEnded -> colors.outlineVariant
         isOngoing -> ext.success
         isPrimaryAccent -> colors.primary
         isWarningAccent -> ext.warning
@@ -557,6 +559,7 @@ private fun CampusEventCard(
     }
     // Dải màu: Gold chỉ làm NỀN (chữ Navy trên Gold 6.2:1); trạng thái trung tính giữ Navy.
     val stripeColor = when {
+        isEnded -> ext.textSecondary
         isOngoing -> ext.success
         isWarningAccent -> colors.secondary
         else -> colors.primary
@@ -565,7 +568,7 @@ private fun CampusEventCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = colors.surface,
+        color = if (isEnded) colors.surfaceVariant else colors.surface,
         border = BorderStroke(
             width = if (isNeutral) UthDimens.Size.Stroke else UthDimens.Size.StrokeFocused,
             color = borderColor,
@@ -597,10 +600,18 @@ private fun CampusEventCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     // Nền vàng Gold luôn đi chữ Navy (`onSecondary`); chữ trắng trên Gold chỉ 2.0:1.
-                    val timeOnGold = isWarningAccent && !isOngoing && !isRegistered
+                    val timeOnGold = !isEnded && isWarningAccent && !isOngoing && !isRegistered
                     Surface(
-                        color = if (timeOnGold) colors.secondary else colors.primary,
-                        contentColor = if (timeOnGold) colors.onSecondary else colors.onPrimary,
+                        color = when {
+                            isEnded -> colors.surface
+                            timeOnGold -> colors.secondary
+                            else -> colors.primary
+                        },
+                        contentColor = when {
+                            isEnded -> ext.textSecondary
+                            timeOnGold -> colors.onSecondary
+                            else -> colors.onPrimary
+                        },
                         shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
@@ -619,6 +630,11 @@ private fun CampusEventCard(
                     }
 
                     when {
+                        isEnded -> UthStatusBadge(
+                            text = stringResource(R.string.event_ended),
+                            tone = BadgeTone.Neutral,
+                        )
+
                         isOngoing -> UthStatusBadge(
                             text = stringResource(R.string.event_ongoing),
                             tone = BadgeTone.Success,
@@ -642,7 +658,7 @@ private fun CampusEventCard(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = colors.onSurface,
+                        color = if (isEnded) ext.textSecondary else colors.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.event_organizer, event.organizer),
@@ -666,7 +682,7 @@ private fun CampusEventCard(
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = null,
-                            tint = colors.primary,
+                            tint = if (isEnded) ext.textSecondary else colors.primary,
                             modifier = Modifier.size(UthDimens.Size.IconCompact),
                         )
                         Spacer(Modifier.width(UthDimens.Spacing.Xs))
@@ -674,7 +690,7 @@ private fun CampusEventCard(
                             text = event.location,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = colors.onSurfaceVariant,
+                            color = ext.textSecondary,
                         )
                     }
 
@@ -683,7 +699,11 @@ private fun CampusEventCard(
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
-                            tone = if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            tone = when {
+                                isEnded -> BadgeTone.Neutral
+                                isWarningAccent && !isRegistered -> BadgeTone.Warning
+                                else -> BadgeTone.Info
+                            },
                             icon = null,
                         )
                     }
@@ -696,6 +716,14 @@ private fun CampusEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
+                        isEnded -> {
+                            RegistrationHint(
+                                icon = Icons.Filled.DateRange,
+                                label = stringResource(R.string.event_ended),
+                                tint = ext.textSecondary,
+                            )
+                        }
+
                         isCheckedIn -> {
                             RegistrationHint(
                                 icon = Icons.Filled.Check,
