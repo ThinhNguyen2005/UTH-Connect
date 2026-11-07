@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.ButtonDefaults
@@ -53,9 +52,9 @@ private fun dialPhoneNumber(context: Context, phoneNumber: String) {
     context.startActivity(intent)
 }
 
-private fun sendEmail(context: Context, emailAddress: String) {
-    val intent = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse("mailto:$emailAddress")
+private fun openDirections(context: Context, address: String) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
     }
     context.startActivity(intent)
 }
@@ -158,17 +157,17 @@ fun CampusesScreen(
                         ) {
                             Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                            Text(campus.hotline, style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.campuses_call_action))
                         }
 
                         OutlinedButton(
-                            onClick = { sendEmail(context, campus.email) },
+                            onClick = { openDirections(context, campus.address) },
                             modifier = Modifier.weight(1f),
                             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         ) {
-                            Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
+                            Icon(Icons.Filled.Place, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                            Text(campus.email, style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.campuses_directions_action))
                         }
                     }
                 }
