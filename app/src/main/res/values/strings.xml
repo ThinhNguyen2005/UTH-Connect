@@ -470,6 +470,7 @@
     <string name="lostfound_btn_close">Đóng</string>
     <string name="lostfound_image_attached_desc">Ảnh đính kèm</string>
     <string name="lostfound_poster_prefix">Người đăng: %1$s</string>
+    <string name="lostfound_image_too_large">Kích thước ảnh vượt quá giới hạn 5MB hoặc không thể đọc được</string>
 
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
     <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>

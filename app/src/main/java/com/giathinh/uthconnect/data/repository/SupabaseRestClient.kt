@@ -110,6 +110,12 @@ class SupabaseRestClient @Inject constructor() {
         )
     }
 
+    /**
+     * Executes a GET query against a PostgREST table endpoint.
+     *
+     * @param path The resource path with optional query filters.
+     * @param allowAnonymous Whether to allow anonymous access using the publishable key.
+     */
     suspend fun table(
         path: String,
         allowAnonymous: Boolean = false,
@@ -119,27 +125,36 @@ class SupabaseRestClient @Inject constructor() {
         allowAnonymous = allowAnonymous,
     )
 
+    /**
+     * Inserts a record into a PostgREST table requiring authenticated credentials.
+     *
+     * @param path The resource table endpoint path.
+     * @param body The JSON payload representing the record.
+     */
     suspend fun insertTable(
         path: String,
         body: JsonObject,
-        allowAnonymous: Boolean = false,
     ): JsonElement = authorized(
         path = "/rest/v1/$path",
         method = "POST",
         body = body,
         preferRepresentation = true,
-        allowAnonymous = allowAnonymous,
     )
 
+    /**
+     * Patches an existing record in a PostgREST table requiring authenticated credentials.
+     *
+     * @param path The resource endpoint path with equality filters.
+     * @param body The JSON payload containing fields to update.
+     */
     suspend fun patchTable(
         path: String,
         body: JsonObject,
-        allowAnonymous: Boolean = false,
     ): JsonElement = authorized(
         path = "/rest/v1/$path",
         method = "PATCH",
         body = body,
-        allowAnonymous = allowAnonymous,
+        preferRepresentation = true,
     )
 
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
@@ -149,6 +164,16 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
+    /**
+     * Uploads binary object data to a Supabase Storage bucket.
+     * Requires an authenticated session and streams data with fixed length to prevent memory buffering.
+     *
+     * @param bucket Target bucket name.
+     * @param path Path within the bucket.
+     * @param bytes Binary payload bytes.
+     * @param mimeType Media type string.
+     * @return Public URL pointing to the uploaded object.
+     */
     suspend fun uploadStorage(
         bucket: String,
         path: String,
@@ -156,7 +181,7 @@ class SupabaseRestClient @Inject constructor() {
         mimeType: String = "image/jpeg",
     ): String = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
-        val token = runCatching { freshToken() }.getOrNull() ?: BuildConfig.SUPABASE_PUBLISHABLE_KEY
+        val token = freshToken()
         val cleanPath = path.trimStart('/')
         val url = URL("${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$cleanPath")
         val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -164,6 +189,7 @@ class SupabaseRestClient @Inject constructor() {
             connectTimeout = STORAGE_TIMEOUT_MILLIS
             readTimeout = STORAGE_TIMEOUT_MILLIS
             doOutput = true
+            setFixedLengthStreamingMode(bytes.size)
             setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Content-Type", mimeType)

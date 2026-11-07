@@ -2,6 +2,7 @@ package com.giathinh.uthconnect.presentation.lostfound
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -80,6 +81,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Modal bottom sheet presenting the form to report a lost or found item.
+ *
+ * @param form Current form validation state and fields.
+ * @param onAction Callback to handle user form actions.
+ * @param onDismiss Callback triggered when user dismisses the sheet.
+ * @param modifier Optional modifier for the bottom sheet layout.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportItemBottomSheet(
@@ -273,6 +282,13 @@ fun ReportItemBottomSheet(
     }
 }
 
+/**
+ * Selector for choosing whether the item is Lost or Found.
+ *
+ * @param kind Currently selected listing kind.
+ * @param onAction Action dispatcher callback.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun ReportKindSelector(
     kind: ListingKind,
@@ -357,6 +373,13 @@ private fun ReportKindSelector(
     }
 }
 
+/**
+ * Filter chip group to select the category for the reported item.
+ *
+ * @param category Currently selected category.
+ * @param onAction Action dispatcher callback.
+ * @param modifier Optional layout modifier.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReportCategorySelector(
@@ -396,6 +419,13 @@ private fun ReportCategorySelector(
     }
 }
 
+/**
+ * Composable providing photo picker integration and image attachment preview.
+ *
+ * @param imageBytes Attached image bytes if available.
+ * @param onAction Action dispatcher callback.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun ReportImagePicker(
     imageBytes: ByteArray?,
@@ -409,18 +439,34 @@ private fun ReportImagePicker(
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
-                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val mimeType = withContext(Dispatchers.IO) {
+                    context.contentResolver.getType(uri) ?: "image/jpeg"
+                }
                 val bytes = withContext(Dispatchers.IO) {
                     runCatching {
                         context.contentResolver.openInputStream(uri)?.use { stream ->
                             val maxBytes = 5 * 1024 * 1024
-                            val buffer = stream.readBytes()
-                            if (buffer.size <= maxBytes) buffer else null
+                            val buffer = java.io.ByteArrayOutputStream()
+                            val chunk = ByteArray(8192)
+                            var total = 0
+                            var read = stream.read(chunk)
+                            while (read != -1 && total + read <= maxBytes) {
+                                total += read
+                                buffer.write(chunk, 0, read)
+                                read = stream.read(chunk)
+                            }
+                            if (read == -1) buffer.toByteArray() else null
                         }
                     }.getOrNull()
                 }
                 if (bytes != null) {
                     onAction(LostFoundAction.UpdateReportImage(bytes, mimeType, uri.toString()))
+                } else {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.lostfound_image_too_large),
+                        Toast.LENGTH_SHORT,
+                    ).show()
                 }
             }
         }

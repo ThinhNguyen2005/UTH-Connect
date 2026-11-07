@@ -79,6 +79,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
@@ -93,6 +94,12 @@ import java.net.URL
 
 private const val TIMEOUT_MILLIS = 10_000
 
+/**
+ * Triggers a phone call intent with the given contact number.
+ *
+ * @param context Android context for launching the dialer intent.
+ * @param phoneNumber Phone number string to dial.
+ */
 private fun dialPhoneNumber(context: Context, phoneNumber: String) {
     val cleanNumber = phoneNumber.replace(" ", "").trim()
     if (cleanNumber.isNotBlank()) {
@@ -103,6 +110,14 @@ private fun dialPhoneNumber(context: Context, phoneNumber: String) {
     }
 }
 
+/**
+ * Root Composable for the Lost & Found screen with Scaffold, TopAppBar, FAB, and BottomSheet.
+ *
+ * @param uiState Current Lost & Found UI state.
+ * @param onAction Callback to dispatch user actions.
+ * @param onNavigateBack Callback when back navigation is triggered.
+ * @param modifier Optional layout modifier.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LostFoundScreen(
@@ -199,6 +214,14 @@ fun LostFoundScreen(
     }
 }
 
+/**
+ * Real-time search bar section for filtering lost and found items.
+ *
+ * @param query Current search keyword.
+ * @param selectedKind Active tab (Lost or Found) to adapt the search placeholder hint.
+ * @param onQueryChange Callback triggered on text input change.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun LostFoundSearchBar(
     query: String,
@@ -251,6 +274,15 @@ private fun LostFoundSearchBar(
     )
 }
 
+/**
+ * Segmented row allowing switching between Lost items and Found items.
+ *
+ * @param selectedKind Active listing kind.
+ * @param lostCount Number of lost items.
+ * @param foundCount Number of found items.
+ * @param onSelectKind Callback triggered on tab switch.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun KindSegmentedRow(
     selectedKind: ListingKind,
@@ -323,6 +355,13 @@ private fun KindSegmentedRow(
     }
 }
 
+/**
+ * Main scrollable content displaying search bar, kind tabs, category filter, and listing items.
+ *
+ * @param uiState Current Lost & Found UI state.
+ * @param onAction Callback to dispatch user actions.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun LostFoundContentBody(
     uiState: LostFoundUiState,
@@ -401,6 +440,13 @@ private fun LostFoundContentBody(
     }
 }
 
+/**
+ * Horizontally scrollable row of category filter chips.
+ *
+ * @param selectedCategory Currently active category filter.
+ * @param onSelectCategory Callback triggered when a category chip is clicked.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun CategoryFilterRow(
     selectedCategory: ItemCategory,
@@ -437,6 +483,13 @@ private fun CategoryFilterRow(
     }
 }
 
+/**
+ * Asynchronously loads and renders an image with strict HTTPS and host allowlist validation.
+ *
+ * @param imageUrl The remote URL of the image to display.
+ * @param contentDescription Accessibility description for the image.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun AsyncListingImage(
     imageUrl: String,
@@ -450,14 +503,15 @@ private fun AsyncListingImage(
         isLoading = true
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
+                val parsed = URL(imageUrl)
                 require(
-                    imageUrl.startsWith("https://") &&
+                    parsed.protocol == "https" &&
                         (
-                            imageUrl.contains("supabase.co/storage/v1/object/public/lost-found/") ||
-                                imageUrl.contains("images.unsplash.com")
+                            imageUrl.startsWith("${BuildConfig.SUPABASE_URL}/storage/v1/object/public/lost-found/") ||
+                                parsed.host == "images.unsplash.com"
                             ),
                 ) { "Untrusted image host" }
-                val connection = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
+                val connection = (parsed.openConnection() as HttpURLConnection).apply {
                     connectTimeout = TIMEOUT_MILLIS
                     readTimeout = TIMEOUT_MILLIS
                 }
@@ -497,6 +551,14 @@ private fun AsyncListingImage(
     }
 }
 
+/**
+ * Material 3 elevated card representing a lost or found item.
+ *
+ * @param listing Item data to render.
+ * @param onToggleResolve Callback triggered when toggling the item resolved status.
+ * @param onCall Contact phone click handler.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun LostFoundItemCard(
     listing: LostFoundListing,
@@ -595,6 +657,12 @@ private fun LostFoundItemCard(
     }
 }
 
+/**
+ * Header section of the item card displaying badge, title, date, and category.
+ *
+ * @param listing Item metadata.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun ItemCardHeader(
     listing: LostFoundListing,
@@ -673,6 +741,14 @@ private fun ItemCardHeader(
     }
 }
 
+/**
+ * Action buttons at the bottom of the card for status toggling and phone contact.
+ *
+ * @param listing Item metadata.
+ * @param onToggleResolve Status toggle callback.
+ * @param onCall Contact phone click callback.
+ * @param modifier Optional layout modifier.
+ */
 @Composable
 private fun ItemCardActions(
     listing: LostFoundListing,

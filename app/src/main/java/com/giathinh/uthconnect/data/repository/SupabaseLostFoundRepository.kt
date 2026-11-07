@@ -12,16 +12,33 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Supabase-backed implementation of [LostFoundRepository].
+ * Interacts with PostgREST `lost_found_items` table and Supabase Storage `lost-found` bucket.
+ */
 @Singleton
 class SupabaseLostFoundRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : LostFoundRepository {
 
+    /**
+     * Retrieves all lost and found listings ordered by most recently created first.
+     * Allows anonymous reading so all students can browse listings without logging in.
+     */
     override suspend fun getListings(): Result<List<LostFoundListing>> = runCatching {
         val rows = client.table("lost_found_items?select=*&order=created_at.desc", allowAnonymous = true).jsonArray
         rows.map { it.jsonObject.toDomainLostFoundListing() }
     }
 
+    /**
+     * Reports a new lost or found listing with optional proof photo upload.
+     * Requires the user to be authenticated in accordance with RLS policies.
+     *
+     * @param item The listing metadata to create.
+     * @param imageBytes Optional raw byte array of the attached photo.
+     * @param imageMimeType Optional MIME type of the attached photo.
+     * @return Result containing the created [LostFoundListing].
+     */
     override suspend fun reportItem(
         item: LostFoundListing,
         imageBytes: ByteArray?,
@@ -42,7 +59,7 @@ class SupabaseLostFoundRepository @Inject constructor(
 
         val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
         val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
-        val response = client.insertTable("lost_found_items", payload, allowAnonymous = true)
+        val response = client.insertTable("lost_found_items", payload)
         val createdRow = when (response) {
             is JsonArray -> response.firstOrNull()?.jsonObject
             is JsonObject -> response
@@ -51,12 +68,18 @@ class SupabaseLostFoundRepository @Inject constructor(
         createdRow.toDomainLostFoundListing()
     }
 
+    /**
+     * Toggles the resolved status of a listing.
+     * Requires the user to be authenticated and the author/owner of the listing.
+     *
+     * @param id Unique identifier of the listing.
+     * @param isResolved New resolved boolean status.
+     */
     override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = runCatching {
         val rowId = runCatching { uuid(id) }.getOrNull() ?: id
         client.patchTable(
             "lost_found_items?id=eq.${urlEncode(rowId)}",
             buildJsonObject { put("is_resolved", isResolved) },
-            allowAnonymous = true,
         )
     }.map { }
 }

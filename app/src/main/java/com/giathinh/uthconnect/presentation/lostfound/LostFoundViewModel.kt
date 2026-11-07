@@ -18,6 +18,10 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * ViewModel managing the state and user interactions for the Lost & Found feature.
+ * Coordinates listings loading, real-time filtering, item reporting, and status resolution.
+ */
 @HiltViewModel
 class LostFoundViewModel @Inject constructor(
     private val getListingsUseCase: GetLostFoundListingsUseCase,
@@ -28,10 +32,17 @@ class LostFoundViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LostFoundUiState())
     val uiState: StateFlow<LostFoundUiState> = _uiState.asStateFlow()
 
+    private val inFlightResolvingIds = mutableSetOf<String>()
+
     init {
         loadListings()
     }
 
+    /**
+     * Dispatches user actions to appropriate state reducers and background use cases.
+     *
+     * @param action The user intent or interaction to process.
+     */
     fun onAction(action: LostFoundAction) {
         when (action) {
             is LostFoundAction.SelectKind -> {
@@ -47,7 +58,12 @@ class LostFoundViewModel @Inject constructor(
             }
 
             is LostFoundAction.ToggleResolveListing -> {
-                val currentItem = _uiState.value.listings.find { it.id == action.id } ?: return
+                if (!inFlightResolvingIds.add(action.id)) return
+                val currentItem = _uiState.value.listings.find { it.id == action.id }
+                if (currentItem == null) {
+                    inFlightResolvingIds.remove(action.id)
+                    return
+                }
                 val newStatus = !currentItem.isResolved
                 _uiState.update { current ->
                     current.copy(
@@ -61,18 +77,22 @@ class LostFoundViewModel @Inject constructor(
                     )
                 }
                 viewModelScope.launch {
-                    toggleResolveListingUseCase(action.id, newStatus).onFailure {
-                        _uiState.update { current ->
-                            current.copy(
-                                listings = current.listings.map { item ->
-                                    if (item.id == action.id) {
-                                        item.copy(isResolved = !newStatus)
-                                    } else {
-                                        item
-                                    }
-                                },
-                            )
+                    try {
+                        toggleResolveListingUseCase(action.id, newStatus).onFailure {
+                            _uiState.update { current ->
+                                current.copy(
+                                    listings = current.listings.map { item ->
+                                        if (item.id == action.id) {
+                                            item.copy(isResolved = !newStatus)
+                                        } else {
+                                            item
+                                        }
+                                    },
+                                )
+                            }
                         }
+                    } finally {
+                        inFlightResolvingIds.remove(action.id)
                     }
                 }
             }
@@ -166,6 +186,9 @@ class LostFoundViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Loads the latest lost and found items from the data source asynchronously.
+     */
     private fun loadListings() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isError = false) }
@@ -180,6 +203,9 @@ class LostFoundViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Validates and submits the current item report form.
+     */
     private fun submitReport() {
         val form = _uiState.value.reportForm
         if (form.isSubmitting) return

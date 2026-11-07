@@ -43,20 +43,30 @@ create policy "lost_found_select_all"
     for select
     using (true);
 
--- Cho phép đăng tin mất đồ / nhặt được đồ
+-- Cho phép đăng tin mất đồ / nhặt được đồ (chỉ người dùng đã đăng nhập)
 drop policy if exists "lost_found_insert_all" on public.lost_found_items;
 create policy "lost_found_insert_all"
     on public.lost_found_items
     for insert
-    with check (true);
+    to authenticated
+    with check (user_id = (select auth.uid()));
 
--- Cho phép cập nhật trạng thái đã nhận lại / đã trao trả (is_resolved)
+-- Cho phép cập nhật trạng thái đã nhận lại / đã trao trả (chỉ chủ sở hữu tin)
 drop policy if exists "lost_found_update_all" on public.lost_found_items;
 create policy "lost_found_update_all"
     on public.lost_found_items
     for update
-    using (true)
-    with check (true);
+    to authenticated
+    using (user_id = (select auth.uid()))
+    with check (user_id = (select auth.uid()));
+
+-- Cho phép xóa tin (chỉ chủ sở hữu tin)
+drop policy if exists "lost_found_delete_all" on public.lost_found_items;
+create policy "lost_found_delete_all"
+    on public.lost_found_items
+    for delete
+    to authenticated
+    using (user_id = (select auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- 3. Tạo Supabase Storage bucket 'lost-found'
@@ -75,16 +85,18 @@ create policy "lost_found_storage_public_select"
     for select
     using (bucket_id = 'lost-found');
 
--- Policy tải ảnh lên bucket lost-found
+-- Policy tải ảnh lên bucket lost-found (chỉ người dùng đã xác thực)
 drop policy if exists "lost_found_storage_insert" on storage.objects;
 create policy "lost_found_storage_insert"
     on storage.objects
     for insert
+    to authenticated
     with check (bucket_id = 'lost-found');
 
--- Policy xóa ảnh từ bucket lost-found
+-- Policy xóa ảnh từ bucket lost-found (chỉ chủ sở hữu ảnh)
 drop policy if exists "lost_found_storage_delete" on storage.objects;
 create policy "lost_found_storage_delete"
     on storage.objects
     for delete
-    using (bucket_id = 'lost-found');
+    to authenticated
+    using (bucket_id = 'lost-found' and owner_id = (select auth.uid())::text);
