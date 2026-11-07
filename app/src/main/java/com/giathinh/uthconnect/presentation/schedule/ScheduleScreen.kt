@@ -781,6 +781,7 @@ private fun CampusEventCard(
                             )
                             Button(
                                 onClick = { onAction(ScheduleAction.RegisterEvent(event.id)) },
+                                enabled = event.status == EventStatus.PUBLISHED,
                                 shape = MaterialTheme.shapes.small,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.secondary,
