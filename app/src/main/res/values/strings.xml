@@ -159,6 +159,7 @@
     <string name="campuses_list_header">Các cơ sở đào tạo</string>
     <string name="campuses_departments_header">Danh bạ phòng ban hỗ trợ</string>
     <string name="campuses_call_action">Gọi ngay</string>
+    <string name="campuses_directions_action">Chỉ đường</string>
     <string name="campuses_email_action">Gửi email</string>
 
     <!-- Cài đặt -->

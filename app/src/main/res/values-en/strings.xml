@@ -154,6 +154,7 @@
     <string name="campuses_list_header">Campus locations</string>
     <string name="campuses_departments_header">Support departments</string>
     <string name="campuses_call_action">Call</string>
+    <string name="campuses_directions_action">Directions</string>
     <string name="campuses_email_action">Email</string>
 
     <!-- Settings -->

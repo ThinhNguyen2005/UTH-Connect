@@ -42,6 +42,12 @@ class UtilitiesSubScreensTest {
         assertTrue(state.campuses.any { it.name.contains("Cơ sở 1") })
         assertTrue(state.campuses.any { it.name.contains("Cơ sở 2") })
         assertTrue(state.campuses.any { it.name.contains("Cơ sở 3") })
+        assertEquals(
+            "Số 2, Võ Oanh (Nguyễn Văn Thương cũ), P.25, Q. Bình Thạnh, TP.HCM",
+            state.campuses[0].address,
+        )
+        assertEquals("Số 10, Đường 12, P. An Khánh, TP. Thủ Đức, TP.HCM", state.campuses[1].address)
+        assertEquals("Số 70, Tô Ký, P. Tân Chánh Hiệp, Q.12, TP.HCM", state.campuses[2].address)
         assertFalse("Danh bạ phòng ban không được rỗng", state.departments.isEmpty())
     }
 
