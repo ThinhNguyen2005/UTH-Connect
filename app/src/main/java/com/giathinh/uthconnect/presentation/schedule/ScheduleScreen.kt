@@ -146,6 +146,16 @@ fun ScheduleScreen(
                             )
                         }
                     } else {
+                        if (uiState.eventsLoadFailed) {
+                            UthCard {
+                                UthEmptyState(
+                                    title = stringResource(R.string.schedule_events_load_failed),
+                                    body = stringResource(R.string.schedule_events_load_failed_body),
+                                    icon = Icons.Filled.DateRange,
+                                )
+                            }
+                            Spacer(Modifier.height(UthDimens.Spacing.Lg))
+                        }
                         // Nhóm sự kiện theo ca (Sáng, Chiều, Tối).
                         val fallbackSession = stringResource(R.string.schedule_session_default)
                         val grouped = filteredEvents.groupBy { it.session.ifBlank { fallbackSession } }
