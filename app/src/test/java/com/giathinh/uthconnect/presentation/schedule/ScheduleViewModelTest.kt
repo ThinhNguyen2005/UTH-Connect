@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -59,6 +61,14 @@ class ScheduleViewModelTest {
         } finally {
             vm.viewModelScope.cancel()
         }
+    }
+
+    private val emptyEvents = object : EventRepository {
+        override fun getEvents(campus: String?): Flow<List<Event>> = flowOf(emptyList())
+        override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(null)
+        override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+        override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+        override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = flowOf(false)
     }
 }
 

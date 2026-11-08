@@ -11,6 +11,8 @@ import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Instant
@@ -51,6 +54,7 @@ class ScheduleViewModel @Inject constructor(
         ),
     )
     val uiState = state.asStateFlow()
+    private var eventsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -68,6 +72,7 @@ class ScheduleViewModel @Inject constructor(
                 state.update { it.copy(timetable = value, isLoading = false) }
             }
         }
+        loadEvents()
         viewModelScope.launch {
             eventRepository.getEvents().retryWhen { cause, _ ->
                 if (cause is CancellationException) throw cause
@@ -123,6 +128,8 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
 
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
+
+            ScheduleAction.RetryEvents -> loadEvents()
 
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
@@ -201,13 +208,7 @@ class ScheduleViewModel @Inject constructor(
             }
 
             ScheduleAction.OpenForm -> state.update {
-                it.copy(
-                    showForm = true,
-                    date = it.now.toLocalDate().plusDays(1).toString(),
-                    titleError = false,
-                    dateError = false,
-                    timeError = false,
-                )
+                it.copy(showForm = true, date = it.now.toLocalDate().plusDays(1).toString(), titleError = false, dateError = false, timeError = false)
             }
 
             ScheduleAction.CloseForm -> state.update {

@@ -1,9 +1,9 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.FirestoreTrainingPointRepository
-import com.giathinh.uthconnect.data.repository.FirestoreTuitionRepository
 import com.giathinh.uthconnect.data.repository.PreferencesSettingsRepository
 import com.giathinh.uthconnect.data.repository.StaticUtilityModuleRepository
+import com.giathinh.uthconnect.data.repository.UnavailableTrainingPointRepository
+import com.giathinh.uthconnect.data.repository.UnavailableTuitionRepository
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.domain.repository.TrainingPointRepository
 import com.giathinh.uthconnect.domain.repository.TuitionRepository
@@ -24,12 +24,12 @@ abstract class UtilitiesDataModule {
 
     @Binds
     abstract fun bindTuitionRepository(
-        implementation: FirestoreTuitionRepository,
+        implementation: UnavailableTuitionRepository,
     ): TuitionRepository
 
     @Binds
     abstract fun bindTrainingPointRepository(
-        implementation: FirestoreTrainingPointRepository,
+        implementation: UnavailableTrainingPointRepository,
     ): TrainingPointRepository
 
     @Binds

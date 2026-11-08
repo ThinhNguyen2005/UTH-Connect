@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,8 +55,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -134,6 +134,16 @@ fun ScheduleScreen(
                         CircularProgressIndicator(modifier = Modifier.size(UthDimens.Size.Icon))
                     }
                 } else {
+                    uiState.eventError?.let { error ->
+                        UthCard {
+                            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                                Text(error, color = MaterialTheme.colorScheme.error)
+                                OutlinedButton(onClick = { onAction(ScheduleAction.RetryEvents) }) {
+                                    Text("Thử lại")
+                                }
+                            }
+                        }
+                    }
                     val rawEvents = uiState.events.filter { it.startAt.toLocalDate() == uiState.selectedDate }
                     val filteredEvents = when (selectedCategory) {
                         1 -> rawEvents.filter { it.title.contains("Workshop", ignoreCase = true) || it.title.contains("Hội thảo", ignoreCase = true) || it.title.contains("Seminar", ignoreCase = true) || it.title.contains("AI", ignoreCase = true) }
