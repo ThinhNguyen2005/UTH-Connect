@@ -354,6 +354,8 @@
     <string name="tickets_qr_issue_failed">Could not create a QR code for this ticket. Please try again.</string>
     <string name="schedule_events_load_failed">Events could not be loaded</string>
     <string name="schedule_events_load_failed_body">Check your network connection and try again.</string>
+    <string name="schedule_registrations_load_failed">Registration status could not be loaded</string>
+    <string name="schedule_registrations_load_failed_body">Your registration status may be out of date. The app will retry automatically.</string>
     <string name="event_details">Event details</string>
     <string name="event_register">Register</string>
     <string name="event_view_qr">View QR Ticket</string>

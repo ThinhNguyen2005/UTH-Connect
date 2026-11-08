@@ -10,11 +10,10 @@ import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -31,6 +30,7 @@ class ScheduleViewModelTest {
 
     private val clock = Clock.fixed(Instant.parse("2026-10-31T17:30:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"))
 
+    /** Verifies deadline validation errors appear and clear as fields are corrected. */
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
         val vm = ScheduleViewModel(TimetableUseCase(repository), EmptyEventRepository, EmptyTicketRepository, EmptySessionRepository, clock)
@@ -58,6 +58,27 @@ class ScheduleViewModelTest {
             assertEquals(5, repository.timetable.value.deadlines.size)
             assertEquals("Nộp đồ án", repository.timetable.value.deadlines.last().title)
             assertEquals(LocalDateTime.of(2026, 11, 2, 15, 30), repository.timetable.value.deadlines.last().dueAt)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
+    /** Exposes a registration lookup failure while the collector waits for its retry. */
+    @Test fun `registration lookup failure is surfaced in ui state`() {
+        val repository = object : EventRepository by EmptyEventRepository {
+            override fun currentUserRegistrations(): Flow<Set<String>> = flow {
+                error("offline")
+            }
+        }
+        val vm = ScheduleViewModel(
+            TimetableUseCase(InMemoryTimetableRepository(clock)),
+            repository,
+            EmptyTicketRepository,
+            EmptySessionRepository,
+            clock,
+        )
+        try {
+            assertTrue(vm.uiState.value.registrationsLoadFailed)
         } finally {
             vm.viewModelScope.cancel()
         }

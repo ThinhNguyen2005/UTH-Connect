@@ -359,6 +359,8 @@
     <string name="tickets_qr_issue_failed">Không thể tạo mã QR cho vé này. Vui lòng thử lại.</string>
     <string name="schedule_events_load_failed">Không tải được sự kiện</string>
     <string name="schedule_events_load_failed_body">Kiểm tra kết nối mạng rồi thử lại sau.</string>
+    <string name="schedule_registrations_load_failed">Không tải được trạng thái đăng ký</string>
+    <string name="schedule_registrations_load_failed_body">Trạng thái đăng ký có thể chưa cập nhật. Ứng dụng sẽ tự thử lại.</string>
     <string name="event_details">Chi tiết sự kiện</string>
     <string name="event_register">Đăng ký</string>
     <string name="event_view_qr">View QR Ticket</string>

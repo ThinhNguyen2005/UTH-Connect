@@ -14,6 +14,7 @@ data class ScheduleUiState(
     val isLoading: Boolean = true,
     val isEventsLoading: Boolean = true,
     val eventsLoadFailed: Boolean = false,
+    val registrationsLoadFailed: Boolean = false,
     val studentId: String? = null,
     val studentName: String? = null,
     val registrationError: String? = null,
@@ -80,6 +81,7 @@ enum class SchedulePeriod {
     ;
 
     companion object {
+        /** Maps a 24-hour clock value to its schedule period. */
         fun fromHour(hour: Int) = when {
             hour < 12 -> MORNING
             hour < 18 -> AFTERNOON

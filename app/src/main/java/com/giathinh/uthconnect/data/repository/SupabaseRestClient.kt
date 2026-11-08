@@ -38,6 +38,7 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore = store
     }
 
+    /** Restores a persisted session, clearing it only when the refresh token is rejected. */
     suspend fun restoreSavedSession(): Boolean = withContext(Dispatchers.IO) {
         refreshMutex.withLock {
             val saved = sessionStore?.load() ?: return@withLock false
@@ -63,6 +64,7 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /** Updates whether the current refresh token should be persisted across launches. */
     fun setRememberSession(remember: Boolean) {
         rememberSession = remember
         if (remember) {
@@ -73,6 +75,7 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /** Authenticates with Supabase and replaces any prior in-memory session. */
     suspend fun signIn(email: String, password: String) {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
@@ -106,6 +109,7 @@ class SupabaseRestClient @Inject constructor() {
         return parseCredentials(response).userId == currentUserId
     }
 
+    /** Creates an account and returns the authentication response. */
     suspend fun signUp(
         email: String,
         password: String,
@@ -132,6 +136,7 @@ class SupabaseRestClient @Inject constructor() {
         return response
     }
 
+    /** Requests a password recovery message for the supplied email. */
     suspend fun recoverPassword(email: String) {
         val payload = buildJsonObject { put("email", email) }
         send("/auth/v1/recover", "POST", payload, bearer = null)
@@ -175,6 +180,7 @@ class SupabaseRestClient @Inject constructor() {
         )
     }
 
+    /** Clears the active credentials and any persisted refresh token. */
     suspend fun signOut() {
         val old = credentials
         credentials = null
@@ -214,24 +220,31 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore?.clear()
     }
 
+    /** Reads a PostgREST table or view using the authenticated session. */
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    /** Updates matching rows through PostgREST. */
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
+    /** Inserts a row through PostgREST and returns the server response. */
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
+    /** Invokes an authenticated Postgres RPC function. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
+    /** Updates the password for the currently authenticated user. */
     suspend fun updatePassword(password: String): JsonElement {
         val token = freshToken()
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
+    /** Sends an authenticated request after obtaining a valid access token. */
     private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
         val accessToken = freshToken()
         return send(path, method, body, accessToken)
     }
 
+    /** Returns the current access token, refreshing it when it is close to expiration. */
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
@@ -245,13 +258,18 @@ class SupabaseRestClient @Inject constructor() {
                 updated.accessToken
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (error: Exception) {
-                credentials = null
+            } catch (error: SupabaseHttpException) {
+                if (error.status == 400 || error.status == 401) {
+                    credentials = null
+                    rememberSession = false
+                    sessionStore?.clear()
+                }
                 throw error
             }
         }
     }
 
+    /** Rotates a refresh token and rejects a response for a different authenticated user. */
     private suspend fun refreshSession(expectedUserId: String, refreshToken: String): Credentials {
         val updated = parseCredentials(
             send(
@@ -265,6 +283,7 @@ class SupabaseRestClient @Inject constructor() {
         return updated
     }
 
+    /** Parses the session fields returned by the Supabase Auth API. */
     private fun parseCredentials(payload: JsonObject): Credentials {
         val id = payload["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content
             ?: error("Auth response missing user ID")
@@ -276,6 +295,7 @@ class SupabaseRestClient @Inject constructor() {
         return Credentials(id, access, refresh, System.currentTimeMillis() + expiresIn * 1000L)
     }
 
+    /** Performs one HTTP request and converts non-success responses to [SupabaseHttpException]. */
     private suspend fun send(
         path: String,
         method: String,

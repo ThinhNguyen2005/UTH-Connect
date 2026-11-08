@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -124,6 +126,23 @@ fun ScheduleScreen(
                     }
                     Spacer(Modifier.height(UthDimens.Spacing.Lg))
                 }
+                if (uiState.registrationsLoadFailed) {
+                    UthCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+                            Text(
+                                text = stringResource(R.string.schedule_registrations_load_failed),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                text = stringResource(R.string.schedule_registrations_load_failed_body),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(UthDimens.Spacing.Lg))
+                }
                 if (uiState.isEventsLoading) {
                     Column(
                         modifier = Modifier
@@ -134,16 +153,6 @@ fun ScheduleScreen(
                         CircularProgressIndicator(modifier = Modifier.size(UthDimens.Size.Icon))
                     }
                 } else {
-                    uiState.eventError?.let { error ->
-                        UthCard {
-                            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
-                                Text(error, color = MaterialTheme.colorScheme.error)
-                                OutlinedButton(onClick = { onAction(ScheduleAction.RetryEvents) }) {
-                                    Text("Thử lại")
-                                }
-                            }
-                        }
-                    }
                     val rawEvents = uiState.events.filter { it.startAt.toLocalDate() == uiState.selectedDate }
                     val filteredEvents = when (selectedCategory) {
                         1 -> rawEvents.filter { it.title.contains("Workshop", ignoreCase = true) || it.title.contains("Hội thảo", ignoreCase = true) || it.title.contains("Seminar", ignoreCase = true) || it.title.contains("AI", ignoreCase = true) }
@@ -193,6 +202,7 @@ fun ScheduleScreen(
                                     CampusEventCard(
                                         event = event,
                                         now = uiState.now,
+                                        registrationStatusAvailable = !uiState.registrationsLoadFailed,
                                         onAction = onAction,
                                         onViewDetails = { onAction(ScheduleAction.OpenEventDetails(it.id)) },
                                     )
@@ -578,6 +588,7 @@ private fun SessionHeader(name: String) {
 private fun CampusEventCard(
     event: ScheduleEvent,
     now: LocalDateTime,
+    registrationStatusAvailable: Boolean,
     onAction: (ScheduleAction) -> Unit,
     onViewDetails: (ScheduleEvent) -> Unit,
 ) {
@@ -802,7 +813,7 @@ private fun CampusEventCard(
                             )
                             Button(
                                 onClick = { onAction(ScheduleAction.RegisterEvent(event.id)) },
-                                enabled = event.status == EventStatus.PUBLISHED,
+                                enabled = event.status == EventStatus.PUBLISHED && registrationStatusAvailable,
                                 shape = MaterialTheme.shapes.small,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.secondary,
@@ -891,16 +902,20 @@ private fun dayOfWeekLabel(day: DayOfWeek): String = when (day) {
     DayOfWeek.SUNDAY -> stringResource(R.string.schedule_day_sun)
 }
 
+/** Creates the 24-hour time formatter used for event cards. */
 private fun timeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+/** Renders the schedule screen in the light preview theme. */
 @Preview(showBackground = true)
 @Composable
 private fun LightPreview() = UthPreview { ScheduleScreen(previewState(), {}) }
 
+/** Renders the schedule screen in the dark preview theme. */
 @Preview(showBackground = true)
 @Composable
 private fun DarkPreview() = UthPreview(darkTheme = true) { ScheduleScreen(previewState(), {}) }
 
+/** Builds representative schedule data for Compose previews. */
 private fun previewState(): ScheduleUiState {
     val now = LocalDateTime.of(2026, 11, 3, 9, 41)
     val date = now.toLocalDate()
@@ -950,6 +965,7 @@ private fun previewState(): ScheduleUiState {
     )
 }
 
+/** Converts a registered schedule event into the ticket view model. */
 private fun ScheduleEvent.toTicket(studentId: String): Ticket {
     return Ticket(
         id = "ticket-$id",
