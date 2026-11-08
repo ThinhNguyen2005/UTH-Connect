@@ -243,7 +243,7 @@ Font: **Roboto** (khai sẵn của Material 3, không cần nhúng) — tương 
   - Quét trùng → `WarningContainer` + icon ! + `WarningOnContainer`: "Đã điểm danh lúc 07:01"
   - Không tồn tại / sai sự kiện → `ErrorContainer` + icon ✕ + `ErrorOnContainer`
 - Phản hồi **không chỉ thị giác**: haptic `VibrationEffect` + âm "beep" khác nhau cho OK / Trùng / Lỗi.
-- Bộ đếm phiên: `TitleLarge` — Đã quét / Trùng / Vắng, luôn hiển thị, cập nhật realtime.
+- Bộ đếm phiên: `TitleLarge` — Đã quét / Trùng / Vắng, luôn hiển thị, cập nhật sau thao tác hoặc tải lại; không mặc định cần WebSocket.
 
 ### 4.8. Deadline item (module thời khóa biểu)
 | Điều kiện | Màu | Nội dung bắt buộc |

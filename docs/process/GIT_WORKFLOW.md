@@ -103,7 +103,7 @@ git tag v0.1.0; git push origin v0.1.0
 | `UTHConnectApplication.kt` · `MainActivity.kt` | gốc DI của toàn app | **không** thêm `@Provides`/`@Binds` nghiệp vụ vào đây; binding của module để trong `data/di/<Module>DataModule.kt` của chính module |
 | `core/designsystem/component/*` · `theme/*` | ai cũng muốn dùng component đẹp | dùng lại token có sẵn; cần component mới thì mở PR `chore/` riêng, không sửa file cũ trong PR feature |
 
-**Không còn điểm đăng ký DI chung.** Trước đây `core/di/AppContainer.kt` là file nóng nhất (mọi module phải thêm một `val`); file đó đã bị xoá khi chuyển sang Hilt, và `ViewModelFactory` của từng module cũng vậy. Nay mỗi module tự khai binding trong `data/di/<Module>DataModule.kt` — không đụng file của ai khác. Quy ước phạm vi file theo từng người: `docs/REPO_TREE.md` mục 3 và 5.
+**Không còn điểm đăng ký DI chung.** Trước đây `core/di/AppContainer.kt` là file nóng nhất (mọi module phải thêm một `val`); file đó đã bị xoá khi chuyển sang Hilt, và `ViewModelFactory` của từng module cũng vậy. Nay mỗi module tự khai binding trong `data/di/<Module>DataModule.kt` — không đụng file của ai khác. Quy ước phạm vi file theo từng người: `docs/process/REPO_TREE.md` mục 3 và 5.
 
 ### 3.1. Một module mới gồm những file nào (sườn MVVM đã chốt)
 

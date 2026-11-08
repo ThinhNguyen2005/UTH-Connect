@@ -1,7 +1,7 @@
 # UTH Connect — Design Document
 
 > **Tên sản phẩm:** *UTH Connect* — thống nhất theo `rootProject.name`, `applicationId = com.giathinh.uthconnect` và `app_name` trong `res/values/strings.xml`. Tên cũ *UTH Campus* / *CampusHub* không dùng trong code, tài liệu hay UI.
-> **Nền tảng:** Android (Kotlin, Jetpack Compose) + Firebase + Admin Dashboard (web)
+> **Nền tảng:** Android (Kotlin, Compose), Supabase và Web Portal/Admin. Firebase được chọn cho vận hành di động; xem trạng thái thực tế ở README.
 > Tài liệu này mô tả **cái gì** và **vì sao**.
 
 **Bộ tài liệu và quyền ưu tiên khi mâu thuẫn**
@@ -11,9 +11,9 @@
 | `docs/Design.md` (tài liệu này) | phạm vi, vai trò, luồng nghiệp vụ, dữ liệu, bảo mật, NFR, rủi ro | phạm vi & nghiệp vụ |
 | `docs/Design-system.md` | token màu/chữ/spacing, component, dark mode, accessibility | giao diện |
 | `README.md` | spec chi tiết từng module (API, tiêu chí nghiệm thu, wireframe), roadmap, metrics, contributing | không quyết định scope |
-| `docs/GIT_WORKFLOW.md` | nhánh, quyền push, mẫu commit, quy trình review cho nhóm 6 người | quy trình Git |
+| `docs/process/GIT_WORKFLOW.md` | nhánh, quyền push, mẫu commit, quy trình review cho nhóm 6 người | quy trình Git |
 | `docs/CODING_STANDARDS.md` | quy ước code: đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, test, lệnh kiểm tra | cách viết code |
-| `docs/REPO_TREE.md` | cây thư mục đang có, mỗi người sở hữu package nào, file chung sửa ra sao, nghi thức gộp cây | cấu trúc thư mục & quyền sở hữu file |
+| `docs/process/REPO_TREE.md` | cây thư mục đang có, mỗi người sở hữu package nào, file chung sửa ra sao, nghi thức gộp cây | cấu trúc thư mục & quyền sở hữu file |
 
 ---
 
@@ -41,9 +41,10 @@ Sinh viên UTH đang dùng Facebook, Zalo, Google Sheet và giấy tờ rời r�
 |---|---|---|
 | **Student** | Sinh viên UTH | Xem/đăng ký sự kiện, dùng các module, đăng bài trong module |
 | **Organizer** | Người đại diện CLB/đoàn hội | Tạo sự kiện, quét QR điểm danh, xem thống kê sự kiện của mình |
+| **Lecturer** | Giảng viên | Truy cập chức năng được cấp quyền |
 | **Admin** | Quản trị hệ thống | Duyệt Organizer, kiểm duyệt nội dung, xem báo cáo, khóa tài khoản |
 
-Vai trò lưu bằng **Firebase custom claims** (không tin dữ liệu role do client gửi, và **không** lấy role từ một tài liệu Firestore mà client có thể sửa). Claims chỉ được ghi bởi Cloud Function/Admin SDK sau khi Admin duyệt.
+Vai trò `student`, `organizer`, `lecturer`, `admin` được kiểm soát trên Supabase bằng dữ liệu phân quyền, RPC và RLS; không tin giá trị role do client tự gửi. Các migration trong `supabase/migrations/` là nguồn đối chiếu hiện trạng.
 
 ---
 
@@ -87,19 +88,16 @@ Ghi chú nhãn: `docs/Design.md` (file này) là nguồn của **thứ tự giai
 **Admin**
 - Duyệt yêu cầu trở thành Organizer, ẩn/xóa sự kiện vi phạm.
 
-### 4.2. Luồng check-in (quyết định thiết kế)
-1. Student mở vé của sự kiện → app xin một **token ngắn hạn** từ backend.
-2. Token chứa `eventId`, `uid`, thời điểm hết hạn (≈ 60 giây), được **ký ở server** (Cloud Function). App hiển thị token dưới dạng QR và tự làm mới.
-3. Organizer quét QR bằng app → gửi token lên callable function `checkIn`.
-4. Server kiểm tra: chữ ký, hạn dùng, sinh viên đã đăng ký, chưa check-in, sự kiện đang trong khung giờ cho phép → ghi bản ghi `attendance`.
-5. Trả kết quả cho Organizer; giao diện kết quả theo `docs/Design-system.md` mục 4.7 (màu + icon + haptic).
+### 4.2. Luồng check-in
 
-**Vì sao dùng QR động phía sinh viên:** chống chụp màn hình gửi cho bạn điểm danh hộ. Kiểm tra hoàn toàn ở server nên client không thể tự "ghi" điểm danh.
+1. Sinh viên đã xác minh MSSV và đăng ký mở vé; app gọi RPC `issue_ticket_qr` để lấy mã vé có chữ ký server.
+2. Organizer quét mã và gọi RPC `check_in_ticket_qr`; server kiểm tra chữ ký, quyền, đăng ký và thời gian sự kiện trước khi ghi `attendance`.
+3. Server từ chối quét trùng; app hiển thị kết quả hoặc lỗi và cho phép tải lại. Danh sách điểm danh dùng pull-to-refresh/smart polling, chưa có WebSocket Realtime toàn app.
 
-**Phương án dự phòng (bắt buộc phải có vì mục 11):** nếu chưa chốt được gói Blaze cho Cloud Functions, MVP chạy **QR tĩnh** chứa `ticketId` + mã 6 số nhập tay, việc chống quét trùng vẫn nằm trong transaction phía server; chỉ khác là mất khả năng chống chụp màn hình. Điều này phải ghi rõ khi demo, không âm thầm đổi.
+Migration `20261104000000_stable_ticket_qr.sql` hiện cấp QR ổn định, không tự hết hạn sau 60 giây. Ảnh chụp QR có thể được chia sẻ; cần cân nhắc rủi ro này và xác minh vận hành trên staging trước khi triển khai thực tế.
 
 ### 4.3. Trường hợp biên cần xử lý
-- Mất mạng ở cửa vào: Organizer có chế độ xếp hàng quét (queue) và đồng bộ lại; token vẫn kiểm tra được khi có mạng.
+- Mất mạng ở cửa vào: báo lỗi rõ và cho quét lại khi kết nối phục hồi; hàng đợi offline chỉ là phương án tương lai, chưa coi là đã có.
 - Quét trùng hai lần → báo "đã điểm danh", không ghi thêm.
 - Sự kiện bị hủy/đổi giờ sau khi đã đăng ký → thông báo cho người đã đăng ký.
 - Đăng ký vượt số lượng (race condition) → dùng transaction phía server.
@@ -115,28 +113,16 @@ Ghi chú nhãn: `docs/Design.md` (file này) là nguồn của **thứ tự giai
 
 ```mermaid
 flowchart LR
-  subgraph Android["Android App (Kotlin + Compose)"]
-    UI[ui/ Screen · Route · ViewModel]
-    DOM[domain/ model · repository interface · engine]
-    DATA[data/ local · remote · sync]
-    UI --> DOM
-    DATA --> DOM
-  end
-  DATA --> FB[(Firebase)]
-  subgraph FB[Firebase]
-    AUTH[Authentication]
-    FS[(Firestore)]
-    ST[Storage]
-    CF[Cloud Functions]
-    FCM[Cloud Messaging]
-  end
-  ADMIN[Admin Dashboard - web] --> FB
+  UI[Android Compose] --> Domain[Domain] --> Data[Data]
+  Data --> SB[Supabase Auth, REST, PostgreSQL/RLS, Storage]
+  Web[Web Portal/Admin] --> SB
+  UI -. Vận hành dự kiến .-> Firebase[Crashlytics, Performance, Remote Config, FCM]
 ```
 
 - **Clean Architecture + Feature Packaging** (cấu trúc package đã dựng ở mục 5.1.1; cấu trúc Gradle đa module đích ở `README.md` mục 7.2; quy ước code chi tiết ở `docs/CODING_STANDARDS.md` mục 3).
 - **MVVM + UDF đã dựng sườn và có slice mẫu:** tab Tiện ích đi đủ một chiều `UiState → Screen → Action → ViewModel → UseCase → Repository` (`presentation/utilities/`), ViewModel do **Hilt** dựng. Các module khác làm theo đúng 5 file của slice đó.
 - **UDF:** Screen nhận `UiState`, phát `Action`; ViewModel giữ trạng thái. Screen **không** gọi repository.
-- **Offline-first ở mức vừa đủ:** Room làm cache cho danh sách đã xem và thời khóa biểu; Firestore persistence cho dữ liệu cần offline.
+- **Offline-first ở mức vừa đủ:** Room có thể lưu dữ liệu thời khóa biểu; các luồng khác phải nêu rõ khả năng offline và lỗi mất mạng, không mặc định hỗ trợ offline.
 
 ### 5.2. Tech stack
 
@@ -147,15 +133,15 @@ flowchart LR
 | Serialization | Kotlin serialization plugin (`2.2.10`) + `kotlinx-serialization-json 1.9.0` — **đã vào code** cho route `@Serializable` |
 | Async | Kotlin Coroutines + Flow |
 | Local | Room, DataStore |
-| Backend | Firebase Auth, Firestore, Storage, Cloud Functions, FCM |
+| Backend | Supabase Auth, PostgreSQL/RLS, REST/RPC, Storage |
+| Mobile ops (định hướng) | Firebase Crashlytics, Performance, Remote Config, FCM Topics |
+| Web | Next.js App Router + TailwindCSS, Vercel; hiện dùng Next.js 14, mục tiêu 15 |
 | Quét / tạo QR | CameraX + ML Kit Barcode Scanning; ZXing cho phía sinh mã vé |
-| Test | JUnit, MockK, Turbine, Compose UI Test, Firebase Emulator Suite |
+| Test | JUnit, MockK, Turbine, Compose UI Test, Supabase staging |
 | Crash & hiệu năng | Firebase Crashlytics, Macrobenchmark (cold start) |
 | CI | GitHub Actions (build, lint, unit test) |
 
-> **Lưu ý chi phí:** Cloud Functions yêu cầu gói Blaze của Firebase. Cần xác nhận phương án thanh toán trước khi chốt luồng check-in; nếu không dùng được, áp dụng phương án dự phòng ở mục 4.2.
-
-Bảng đối chiếu phiên bản đang thực sự khai trong code: `README.md` mục 5.3 (AGP 9.3.3, Kotlin 2.2.10, Compose BOM 2026.02.01, Navigation Compose 2.10.2 + kotlinx-serialization-json 1.9.0, **compileSdk 37.1** / targetSdk 36 / minSdk 31). compileSdk phải nâng lên 37.1 vì core-ktx 1.19.1, lifecycle 2.11.0 và navigation-compose 2.10.2 đều đòi AAR metadata "compile against version 37 or later".
+> **Trạng thái:** Firebase mobile ops, nén WebP/Coil 3 và Next.js 15 là quyết định đích; kiểm tra dependency và triển khai thực tế trước khi coi là hoàn thành. Xác minh hạn mức và chi phí của nhà cung cấp trước phát hành.
 
 ### 5.1.1. Cấu trúc package đã dựng (`app/src/main/java/com/giathinh/uthconnect/`)
 
@@ -191,11 +177,11 @@ com/giathinh/uthconnect/
 
 Không còn file factory: `AppContainer` + `CompositionLocal` DI + `ViewModelFactory` đã bị xoá khi chuyển sang Hilt. Binding interface→impl nằm trong `data/di/<Module>DataModule.kt` của chính module (`@Binds`), UseCase chỉ cần `@Inject constructor`.
 
-**Chiều phụ thuộc bắt buộc:** `presentation → domain ← data`, và trong `presentation`: `Route → ViewModel → UseCase`. `domain` không import `androidx` (chỉ thêm `javax.inject`), không biết Firestore; `presentation` chỉ biết interface trong `domain/repository`.
+**Chiều phụ thuộc bắt buộc:** `presentation → domain ← data`, và trong `presentation`: `Route → ViewModel → UseCase`. `domain` không import `androidx` (chỉ thêm `javax.inject`), không phụ thuộc SDK/backend; `presentation` chỉ biết interface trong `domain/repository`.
 
 Một màn hình mới cần có: (1) model + repository interface + use case (`@Inject constructor`) ở `domain`, (2) implementation + datasource ở `data`, (3) bộ 5 file `Screen/Route/ViewModel/UiState/Action` trong `presentation/<module>/`, (4) `data/di/<Module>DataModule.kt` với `@Binds` nếu có interface repository — **không** đăng ký ở file DI chung nào, (5) unit test ViewModel theo mẫu `UtilitiesViewModelTest` (new trực tiếp bằng fake, không cần rule Hilt) + `@Preview` đủ 4 trạng thái light/dark, (6) token/component dùng lại từ `core/designsystem` — không tự khai màu/`.dp` riêng.
 
-Phạm vi file từng người được tạo/sửa: `docs/REPO_TREE.md` mục 3–5.
+Phạm vi file từng người được tạo/sửa: `docs/process/REPO_TREE.md` mục 3–5.
 
 ### 5.3. Xác thực "là người UTH"
 - Đăng nhập bằng email trường (tên miền do trường cấp) và xác minh email.
@@ -205,50 +191,18 @@ Phạm vi file từng người được tạo/sửa: `docs/REPO_TREE.md` mục 3
 
 ---
 
-## 6. Mô hình dữ liệu (Firestore)
+## 6. Mô hình dữ liệu (Supabase PostgreSQL)
 
-```
-users/{uid}
-  displayName, studentId?, faculty, avatarUrl, createdAt
-  (role nằm trong custom claims, không lưu để client sửa)
+Các migration trong `supabase/migrations/` mô tả schema và là nguồn kiểm tra hiện trạng. Các bảng lõi gồm `profiles`, `events`, `registrations`, `attendance`, `notifications`, `schedules`, `grades`; migration bổ sung có `lost_found`, `housing_posts` và `user_roles`.
 
-organizers/{orgId}
-  name, description, logoUrl, ownerUid, status(pending|approved|rejected)
-
-events/{eventId}
-  orgId, title, description, location, startAt, endAt
-  capacity, registeredCount, status(draft|published|cancelled), coverUrl
-
-events/{eventId}/registrations/{uid}
-  registeredAt, status(registered|cancelled)
-
-events/{eventId}/attendance/{uid}
-  checkedInAt, checkedInBy
-
-reports/{reportId}
-  targetType, targetId, reason, reporterUid, status
-```
-
-**Mở rộng cho Phase 2/Backlog** (chi tiết ở `README.md` mục 3 và 6):
-
-```
-courses/{courseId}, deadlines/{id}          # Phase 2 — Room là source of truth, cloud là bản sao
-lostFound/{id}                              # Phase 3
-listings/{listingId}  kind(room|book)       # Backlog — ghép trọ và chợ sách dùng chung
-trips/{tripId}                              # Backlog — có semantics ghế/lịch trình nên tách khỏi listings
-```
-
-Nguyên tắc:
-- Dữ liệu đếm (`registeredCount`) chỉ cập nhật bằng transaction/function.
-- `attendance` **chỉ** ghi được từ Cloud Function.
-- Subcollection theo `events/{eventId}` để một sự kiện không cần scan toàn collection; nếu về sau cần query "mọi sự kiện của một sinh viên" thì mới thêm collection phẳng `registrations` kèm chỉ mục.
-- Index khai báo trong `firestore.indexes.json` và commit vào repo.
-
----
+- Supabase Auth xác định người dùng; hồ sơ và vai trò được kiểm soát qua quyền/RLS ở server.
+- Đăng ký và điểm danh dùng RPC; `attendance` dùng khóa `(event_id, user_id)` để chống trùng. Không cho client tự quyết quyền.
+- Storage cho media theo chính sách truy cập tương ứng; ảnh được định hướng nén WebP tối đa 1280px, chất lượng 80% trước upload, dùng Coil 3 để hiển thị khi được triển khai.
+- Các ý tưởng backlog không mặc nhiên là bảng đã tồn tại. Đối chiếu migration và chính sách triển khai tại môi trường đích.
 
 ## 7. Bảo mật & Quyền riêng tư
 
-- **Firestore Security Rules** viết theo nguyên tắc từ chối mặc định, có **test bằng Emulator** cho từng collection.
+- **Supabase RLS và Storage policies** theo nguyên tắc từ chối mặc định; kiểm thử quyền và RPC trên môi trường staging.
 - Student chỉ đọc/ghi hồ sơ và đăng ký của chính mình.
 - Organizer chỉ sửa sự kiện thuộc tổ chức đã được duyệt của mình.
 - Không lưu mật khẩu, khóa bí mật hay `google-services.json` thật trong repo công khai (dùng file mẫu và CI secrets).
@@ -300,7 +254,7 @@ Trạng thái theo từng tab so với sườn MVVM mục 5.1.1 (đối chiếu 
 ```
 Auth (đã dựng 05/11):   Identifier-first → Login / Register / Verify Email / Quên mật khẩu / Google SSO
 Trong tab Trang chủ:    EventList → EventDetail → Register
-Trong tab Cá nhân:      MyTickets → TicketQr (QR động) · ProfileNavRow → Vé
+Trong tab Cá nhân:      MyTickets → TicketQr (QR vé) · ProfileNavRow → Vé
 Trong tab Cá nhân*:     OrganizerEvents → EventEditor → AttendanceScanner → EventStats
 Trong tab Tiện ích:    Cài đặt (thông báo · ngôn ngữ EN/VI · giao diện) — đã dựng và có hiệu lực thật
 Trong tab Tiện ích:    Học phí · Điểm RLL · Cơ sở (màn con của graph tiện ích)
@@ -327,7 +281,7 @@ Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `docs/D
 ## 10. Kiểm thử & Phát hành
 
 - **Definition of Done** cho một tính năng: TODO checklist hoàn tất; unit test cho logic nghiệp vụ pass; `@Preview` cho màn hình ở loading/empty/error + light/dark; chuỗi EN/VI đầy đủ; security rules + test cập nhật nếu đụng dữ liệu; build CI xanh.
-- **Nhánh:** `main` luôn build được; làm việc trên `feature/<module>-<tên>` theo `docs/GIT_WORKFLOW.md`, merge bằng Pull Request có review. Không push thẳng vào `main`/`develop`.
+- **Nhánh:** `main` luôn build được; làm việc trên `feature/<module>-<tên>` theo `docs/process/GIT_WORKFLOW.md`, merge bằng Pull Request có review. Không push thẳng vào `main`/`develop`.
 - **Build cục bộ trên máy RAM thấp:** nếu Kotlin daemon báo "paging file is too small", chạy `gradlew :app:assembleDebug "-Pkotlin.compiler.execution.strategy=in-process"`.
 - **Phát hành:** APK debug/release đính kèm GitHub Releases cho giảng viên cài thử; có thể thêm Firebase App Distribution.
 
@@ -338,7 +292,7 @@ Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `docs/D
 | Rủi ro | Mức | Giảm thiểu |
 |---|---|---|
 | Phạm vi phình to (bài học từ bản cũ) | Cao | Làm theo roadmap mục 3, chỉ mở module mới khi module trước đạt DoD |
-| Cloud Functions cần gói Blaze | Trung bình | Xác nhận sớm; fallback QR tĩnh + mã 6 số (mục 4.2) |
+| QR ổn định có thể bị chia sẻ qua ảnh chụp | Cao | Đánh giá giải pháp chống gian lận; không khẳng định QR tự hết hạn (mục 4.2) |
 | Khó có người dùng thật để demo | Trung bình | Hợp tác 1–2 CLB chạy thử một sự kiện thật |
 | Nội dung vi phạm (module trọ, xe) | Cao | Để backlog, cần kiểm duyệt + xác thực trước khi mở |
 | Không có email trường để xác thực | Trung bình | Duyệt tay qua mã số sinh viên trong dashboard |
@@ -353,5 +307,5 @@ Wireframe từng màn hình: `README.md` mục 4. Giao diện tuân theo `docs/D
 3. Phân công 6 người trong nhóm (bạn + 5 bạn): mỗi người một `feature/<module>-<tên>`; module nào cho ai, thời gian học kì doanh nghiệp còn lại bao nhiêu (để cắt phạm vi cho vừa).
 4. Admin Dashboard trong repo cũ dùng công nghệ nào, giữ lại hay viết mới?
 5. Có CLB nào sẵn sàng làm đối tác chạy thử không?
-6. Chốt gói Blaze cho Cloud Functions (quyết định QR động hay phương án dự phòng mục 4.2)?
+6. Khi nào cần thay QR ổn định bằng cơ chế chống chia sẻ mạnh hơn và kiểm thử trên staging?
 7. Font Roboto hay Inter; giữ brand `#4F46E5` hay theo nhận diện Đoàn–Hội (xem `docs/Design-system.md` mục 10)?
