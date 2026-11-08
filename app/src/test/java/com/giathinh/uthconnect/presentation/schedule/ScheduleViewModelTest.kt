@@ -2,9 +2,13 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.data.repository.InMemoryTimetableRepository
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,7 +26,7 @@ class ScheduleViewModelTest {
 
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
-        val vm = ScheduleViewModel(TimetableUseCase(repository), clock)
+        val vm = ScheduleViewModel(TimetableUseCase(repository), emptyEvents, clock)
         try {
             vm.onAction(ScheduleAction.OpenForm)
             vm.onAction(ScheduleAction.Date("2026-02-30"))
@@ -50,5 +54,13 @@ class ScheduleViewModelTest {
         } finally {
             vm.viewModelScope.cancel()
         }
+    }
+
+    private val emptyEvents = object : EventRepository {
+        override fun getEvents(campus: String?): Flow<List<Event>> = flowOf(emptyList())
+        override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(null)
+        override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+        override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+        override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = flowOf(false)
     }
 }
