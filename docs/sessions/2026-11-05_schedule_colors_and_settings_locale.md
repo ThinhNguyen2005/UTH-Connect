@@ -3,7 +3,7 @@
 - **Thời gian**: 2026-11-05 (nối tiếp phiên [`2026-11-05_utilities_hub_and_4tab_nav.md`](2026-11-05_utilities_hub_and_4tab_nav.md))
 - **Nhánh làm việc**: `feature/auth-thinh` (làm trực tiếp trên nhánh hiện tại theo yêu cầu, không tạo nhánh mới, **không commit**)
 - **Tác giả / Vai trò**: Qoder pair programmer — phần UI/Design System + cơ chế locale
-- **Tham chiếu tiêu chuẩn**: `AGENTS.md`, `docs/Design-system.md` mục 1.4 / 4.12 / 4.13 / 4.14, `docs/UI-UX.mc`, `docs/Design.md` mục 8, `docs/CODING_STANDARDS.md` mục 3.1 / 6 / 7 / 8.1 / 12
+- **Tham chiếu tiêu chuẩn**: `AGENTS.md`, `docs/Design-system.md` mục 1.4 / 4.12 / 4.13 / 4.14, `docs/UI-UX.md`, `docs/Design.md` mục 8, `docs/CODING_STANDARDS.md` mục 3.1 / 6 / 7 / 8.1 / 12
 
 ---
 
@@ -75,7 +75,7 @@ Toàn bộ literal về 0. Bảng ánh xạ đã áp (không sinh hex mới — 
 | Domain | `AppSettings` thêm `languageTag` (mặc định `"vi"`) + `themeMode` (mặc định `SYSTEM`); `enum ThemeMode { SYSTEM, LIGHT, DARK }` kèm `resolveDarkTheme()`; `SettingsRepository` thêm `setLanguageTag`, `setThemeMode` và getter **đồng bộ** `currentLanguageTag()`; `UpdateSettingsUseCase` thêm hai hàm mirror |
 | Data | `PreferencesSettingsRepository` thêm key `key_language_tag`, `key_theme_mode` vào file `uth_connect_settings` sẵn có |
 | App shell | `MainActivity.attachBaseContext` bọc cấu hình theo tag qua `applyOverrideConfiguration(...)`; đọc tag bằng **`@EntryPoint` + `EntryPointAccessors.fromApplication`** qua file mới `SettingsEntryPoint.kt`; `setContent` phân giải `darkTheme` theo `ThemeMode` từ flow settings; `AndroidManifest` thêm `android:localeConfig="@xml/locales_config"` + file `res/xml/locales_config.xml` (`vi`, `en`) để Android 13+ hiện lựa chọn trong Settings hệ thống |
-| UI | `SettingsScreen` thêm card **"Ngôn ngữ & Giao diện"**: hai hàng `Row + Column(weight(1f)) + nhóm nút segmented` tự chứa trong file (không đụng `UthComponents.kt`), chọn ngôn ngữ 2 ô, chọn theme 3 ô; ô đang chọn có **icon Check** (trạng thái không chỉ bằng màu — `docs/UI-UX.mc`) và `Modifier.semantics { selected = … }`; chiều cao `Size.SegmentedControlHeight`, min touch `Size.MinTouchTarget` |
+| UI | `SettingsScreen` thêm card **"Ngôn ngữ & Giao diện"**: hai hàng `Row + Column(weight(1f)) + nhóm nút segmented` tự chứa trong file (không đụng `UthComponents.kt`), chọn ngôn ngữ 2 ô, chọn theme 3 ô; ô đang chọn có **icon Check** (trạng thái không chỉ bằng màu — `docs/UI-UX.md`) và `Modifier.semantics { selected = … }`; chiều cao `Size.SegmentedControlHeight`, min touch `Size.MinTouchTarget` |
 | Nối | `UtilitiesAction` thêm `LanguageSelected` / `ThemeModeSelected`; `UtilitiesViewModel.onAction` xử lý, gửi `UtilitiesEvent.LanguageChanged` để `UtilitiesRoute` gọi `activity.recreate()`; **pill VI/EN trên AuthScreen** giờ ghi thật vào store qua `UpdateSettingsUseCase` + request recreate bằng `Channel`/`receiveAsFlow()`/`LaunchedEffect` (mẫu mục 6) |
 
 **Hai hiệu chỉnh so với kế hoạch** (đều vì kế hoạch giả định sai cơ chế Android):

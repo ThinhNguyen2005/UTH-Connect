@@ -3,7 +3,7 @@
 - **Thời gian**: 2026-11-05
 - **Nhánh làm việc**: `feature/auth-thinh` (làm trực tiếp trên nhánh hiện tại theo yêu cầu, không tạo nhánh mới)
 - **Tác giả / Vai trò**: Qoder pair programmer — phần UI/Design System
-- **Tham chiếu tiêu chuẩn**: `AGENTS.md`, `README.md`, `docs/Design-system.md`, `docs/Design.md` mục 8, `docs/UI-UX.mc`, `docs/CODING_STANDARDS.md` mục 7 & 12
+- **Tham chiếu tiêu chuẩn**: `AGENTS.md`, `README.md`, `docs/Design-system.md`, `docs/Design.md` mục 8, `docs/UI-UX.md`, `docs/CODING_STANDARDS.md` mục 7 & 12
 
 ---
 
@@ -101,7 +101,7 @@ Không tính năng nào bị mất lối vào: **Vé** → hàng điều hướn
 ## 4. Vấn đề tồn đọng / Kỹ thuật cần lưu ý
 
 1. **`presentation/schedule/ScheduleScreen.kt` vi phạm mục 7 `CODING_STANDARDS.md`** (nhiều `.dp`, `.sp`, `Color(0x…)`, `RoundedCornerShape` thô). Câu "lệnh quét trả rỗng trên toàn bộ `app/src/main`" ở dòng 182 của tài liệu này **đang không đúng** trên nhánh này. Không thuộc phạm vi phiên nên để nguyên; owner nhánh timetable cần token-hoá.
-2. **`AGENTS.md` ép đọc `docs/UI-UX.mc` + ảnh tham chiếu, nhưng ảnh thứ hai chưa được gửi.** Bố cục hiện tại khớp một ảnh; nếu ảnh còn lại có khu vực thứ ba (banner/chương trình), màn Tiện ích phải mở thêm section.
+2. **`AGENTS.md` ép đọc `docs/UI-UX.md` + ảnh tham chiếu, nhưng ảnh thứ hai chưa được gửi.** Bố cục hiện tại khớp một ảnh; nếu ảnh còn lại có khu vực thứ ba (banner/chương trình), màn Tiện ích phải mở thêm section.
 3. **`StaticUtilityModuleRepository` vẫn là nguồn tĩnh.** `enabled = true` cho EVENTS/LOST_FOUND là quyết định UI-tạm-thời; khi có repository thật (M0), cờ phải đến từ cấu hình server, nếu không lưới "Tiện ích của tôi" sẽ hiển thị module không dùng được.
 4. **`utilities_grid_settings_desc` = "Thông báo & Phiên bản"** nay dẫn vào `SettingsScreen` nội bộ tab Tiện ích, trong khi tab Cá nhân cũng có luồng cài đặt/dăng xuất — hai điểm vào "cài đặt" dễ gây nhầm cho người dùng; cần quyết một chỗ ở M0.
 5. **Chưa đo trên thiết bị**: chưa chạy `mobile-use`/emulator để xác nhận (a) ô 3 cột không cắt nhãn ở 320dp, (b) font scale 200 % không làm lưới vỡ, (c) TalkBack đọc mỗi ô một lần. Preview có `fontScale = 1.5f` mới là một nửa bằng chứng.

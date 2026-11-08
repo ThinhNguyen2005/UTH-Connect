@@ -76,7 +76,7 @@ import java.time.temporal.ChronoUnit
  *
  * Toàn bộ màu/kích thước/bo góc lấy từ design token (`Color.kt`, `Dimens.kt`, `Theme.kt`),
  * trạng thái diễn đạt bằng [UthStatusBadge] nên màu không phải tín hiệu duy nhất
- * (`docs/UI-UX.mc`). Gradient header dùng `headerGradientStart → headerGradientEnd` với
+ * (`docs/UI-UX.md`). Gradient header dùng `headerGradientStart → headerGradientEnd` với
  * chữ `headerOnGradient` — cặp đã đo AAA ở cả hai scheme, xem [UthTheme.extendedColors].
  */
 @Composable
@@ -297,7 +297,6 @@ private fun ScheduleHeader(
                 }
 
                 // Chuông thông báo: chấm vàng chỉ là nền, tình trạng đọc được qua
-                // contentDescription (`docs/UI-UX.mc` — không truyền trạng thái chỉ bằng màu).
                 Surface(
                     modifier = Modifier.size(UthDimens.Size.HeaderAction),
                     shape = MaterialTheme.shapes.small,

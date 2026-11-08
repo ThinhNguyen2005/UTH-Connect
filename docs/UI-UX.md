@@ -2,7 +2,7 @@
 
 > **Loại file:** quy chuẩn thiết kế và checklist triển khai cho người thiết kế, lập trình viên và AI agent.
 > **Phạm vi:** Android (Kotlin, Jetpack Compose, Material 3), có thể tham khảo nguyên tắc UX cho admin dashboard.
-> **Trạng thái:** hướng dẫn bổ trợ; `.mc` là phần mở rộng do dự án yêu cầu, không phải định dạng rule tự động của Codex/Cursor.
+> **Trạng thái:** checklist UX và accessibility bổ trợ cho Design System; tài liệu được duy trì dưới tên `UI-UX.md`.
 > **Mục tiêu:** giao diện hiện đại, dễ hiểu, nhất quán, dễ truy cập, có chiều sâu vừa đủ, hoạt động tốt trong tình huống thực tế.
 
 ## 0. Cách sử dụng và thứ tự ưu tiên

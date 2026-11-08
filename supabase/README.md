@@ -1,9 +1,9 @@
 # UTH Connect — Supabase staging backend
 
-Supabase is an **opt-in experimental backend** for Auth, Events, Registrations
-and QR Attendance. The current Android default remains unchanged: mock data by
-default, or Firebase with `-PuseMockData=false`. This folder does not migrate
-existing Firebase production data.
+Supabase is the backend selected by the current Android Gradle configuration. The
+Android build requires `useSupabase=true`, `useMockData=false`, a project URL and
+a publishable key. Firebase repositories remain in the source tree but are not a
+working alternate build mode. This folder does not migrate existing data.
 
 ## Apply migrations on a disposable staging project
 
@@ -116,7 +116,7 @@ mapping if MSSV login is desired. Email verification / identity verification
 must be handled by an authorized school process; the backend does not claim
 that owning an `@ut.edu.vn` email proves enrollment.
 
-## Run Android with Supabase opt-in
+## Build Android against Supabase
 
 Using PowerShell in the repository root (use real staging URL/key):
 
@@ -126,7 +126,7 @@ Using PowerShell in the repository root (use real staging URL/key):
 
 Android uses the publishable key, a user JWT and server-side RLS/RPC checks.
 The Events tab is visible only for Supabase builds. The student can sign in,
-list events, register/cancel, open a dynamic 60-second QR in Tickets; an
+list events, register/cancel, open a stable server-signed QR in Tickets; an
 organizer/admin can capture and validate a QR with the camera. Login state is
 held **in memory** and requires signing in again after process death; remember
 me / biometric restoration is intentionally disabled for Supabase until secure
@@ -164,7 +164,7 @@ python supabase/tests/staging_acceptance.py
 
 Do not commit these credentials or point the script at production. The script
 creates three specially named test events, uses real registration/attendance
-rows, and waits for a signed token to expire. It also creates temporary
+rows, and verifies tampered/invalid signed QR rejection. It also creates temporary
 schedule, grade and recipient-only notification fixtures through the admin
 account, checks owner vs. stranger visibility and deletes those fixture rows.
 It cancels all test events when finished (the event audit rows are deliberately
@@ -189,10 +189,10 @@ does **not** replace camera testing on real devices or validating legacy rows.
 | Organizer B checks in ticket issued for Organizer A's event | `FORBIDDEN`. |
 | Check in a valid registered QR with its own organizer | One attendance record; second scan returns `ALREADY_CHECKED_IN`. |
 | Old registration of an unverified student attempts QR issue or check-in | `STUDENT_NOT_VERIFIED` and no attendance. |
-| Change a signed QR character or scan after 60 seconds | `INVALID_QR` / `QR_EXPIRED`; no attendance. |
+| Change a signed QR character | `INVALID_QR`; no attendance. |
 | Attempt check-in outside event window or after cancellation | `CHECKIN_NOT_OPEN` / `NOT_REGISTERED`. |
 | App signs in → Events → Register → Tickets QR → organizer camera | State and attendance persist after refreshing from the server. |
-| Default and Firebase Android builds | Compile and existing functionality remain unaffected. |
+| Android build with configured Supabase URL/publishable key | Compile against the selected backend configuration. |
 
 Use separate clients authenticated as different users, with the **same** event
 and with a realistic start/deadline. For the concurrency test, send both RPC

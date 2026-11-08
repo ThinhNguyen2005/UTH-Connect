@@ -4,9 +4,9 @@ Scanner CHECKIN-2: `presentation/scanner/` gồm Screen, Route, ViewModel, UiSta
 
 > **Phiên bản:** v1.4 · **Cập nhật cấu trúc lúc:** 31/10/2026 · **Người giữ tài liệu:** chủ repo (`Thịnh`)
 > **Phạm vi:** cây thư mục `app/src`, ai sở hữu nhánh nào, file nào được tạo/sửa trong phạm vi đó, và nghi thức gộp cây khi cả nhóm xong việc.
-> **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/GIT_WORKFLOW.md`).
+> **Không chứa:** quy ước viết code (`docs/CODING_STANDARDS.md`), spec nghiệp vụ từng module (`README.md`, `docs/Design.md`), token UI (`docs/Design-system.md`), quy trình nhánh/PR (`docs/process/GIT_WORKFLOW.md`).
 >
-> **⚠ Luật bảo trì — đây là điều kiện merge, không phải lời khuyên:** mọi PR làm **thay đổi cấu trúc thư mục** (thêm/xoá package, thêm/xoá file thuộc một tầng, đổi chủ sở hữu, thêm dependency build làm đổi cây) **bắt buộc** phải cập nhật file này trong cùng commit: sửa mục 2 (cây thật), mục 3 (bảng phân công), thêm một dòng vào nhật ký mục 8. PR đổi cấu trúc mà không đổi `docs/REPO_TREE.md` → review từ chối, không cần lý do khác.
+> **⚠ Luật bảo trì — đây là điều kiện merge, không phải lời khuyên:** mọi PR làm **thay đổi cấu trúc thư mục** (thêm/xoá package, thêm/xoá file thuộc một tầng, đổi chủ sở hữu, thêm dependency build làm đổi cây) **bắt buộc** phải cập nhật file này trong cùng commit: sửa mục 2 (cây thật), mục 3 (bảng phân công), thêm một dòng vào nhật ký mục 8. PR đổi cấu trúc mà không đổi `docs/process/REPO_TREE.md` → review từ chối, không cần lý do khác.
 
 ---
 
@@ -129,7 +129,7 @@ test/presentation/lostfound/ LostFoundViewModelTest.kt
 
 ## 3. Cây đích: mỗi người một nhánh
 
-Phân công khớp `docs/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
+Phân công khớp `docs/process/GIT_WORKFLOW.md` mục 3. Mỗi ô "được tạo" là cây riêng — ngoài nó, xem mục 5.
 
 | Người | Nhánh | `presentation/` | `domain/` | `data/` | `test/` mirror |
 |---|---|---|---|---|---|
@@ -198,7 +198,7 @@ Cấm: `@Component`/`@Subcomponent` tự chế, `ServiceLocator` dạng `object`
 | `test/testing/MainDispatcherRule.kt` | chủ repo | dùng trong test của bạn | sửa; cần rule khác → tạo trong `test/presentation/<module>/` |
 | `presentation/common/ServerErrorMessage.kt` | Đức (`feature/checking-duc-v2`) | gọi `ServerErrorCode.messageText()` từ Screen/Route của module mình; thêm `when` nhánh khi migration khai mã mới | nhét nghiệp vụ riêng của một module vào đây; import file từ `presentation/<module>/` khác |
 | `domain/qr/QrFrameDecoder.kt` | Đức (`feature/checking-duc-v2`) | dùng trong máy quét nào cần giải mã frame YUV | chuyển thành lớp Android (CameraX/Bitmap) — mất khả năng test JVM |
-| `docs/REPO_TREE.md` (file này) | chủ repo | cập nhật mục 2/3 khi cây bạn đổi (bắt buộc, xem header) | tạo một tài liệu phân công thứ hai song song |
+| `docs/process/REPO_TREE.md` (file này) | chủ repo | cập nhật mục 2/3 khi cây bạn đổi (bắt buộc, xem header) | tạo một tài liệu phân công thứ hai song song |
 
 Không gian tên `res/` là chung nên dễ trùng nhất: tên file resource **phải unique toàn app**; prefix module là cách rẻ nhất để đạt điều đó.
 
@@ -222,7 +222,7 @@ Select-String -Path app\src\main\java\com\giathinh\uthconnect\presentation -Patt
 # 3. build + test (ksp chạy lại toàn bộ graph DI)
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest '-Pkotlin.compiler.execution.strategy=in-process'
 # 4. cộng đúng một dòng route vào UthApp.kt / UthDestination.kt (nếu PR chưa làm)
-# 5. cập nhật docs/REPO_TREE.md mục 2 + 3 + nhật ký 8
+# 5. cập nhật docs/process/REPO_TREE.md mục 2 + 3 + nhật ký 8
 # 6. git push origin develop
 ```
 
