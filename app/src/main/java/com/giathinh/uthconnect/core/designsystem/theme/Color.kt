@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Xanh Cobalt Tech Blue #0F5FC2 — tươi sáng, sắc nét trên màn hình số, chuẩn công nghệ.
- * Chữ trắng đạt 7.8:1 (AAA).
+ * Chữ trắng đạt ~6.1:1 (chuẩn WCAG AA cho văn bản thông thường).
  */
 val UthNavy = Color(0xFF0F5FC2)
 

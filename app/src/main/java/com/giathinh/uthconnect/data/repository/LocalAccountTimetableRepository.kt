@@ -63,18 +63,18 @@ class LocalAccountTimetableRepository @Inject constructor(
     override fun addDeadline(course: Course, title: String, dueAt: LocalDateTime) {
         require(title.isNotBlank())
         synchronized(guard) {
-            val userId = verifiedActiveUser()
+            val userId = runCatching { verifiedActiveUser() }.getOrNull() ?: return
             val entries = state.value.deadlines + Deadline(UUID.randomUUID().toString(), course, title.trim(), dueAt)
-            saveDeadlines(userId, entries)
+            runCatching { saveDeadlines(userId, entries) }
             state.update { it.copy(deadlines = entries) }
         }
     }
 
     override fun completeDeadline(id: String) {
         synchronized(guard) {
-            val userId = verifiedActiveUser()
+            val userId = runCatching { verifiedActiveUser() }.getOrNull() ?: return
             val entries = state.value.deadlines.map { if (it.id == id) it.copy(completed = true) else it }
-            saveDeadlines(userId, entries)
+            runCatching { saveDeadlines(userId, entries) }
             state.update { it.copy(deadlines = entries) }
         }
     }

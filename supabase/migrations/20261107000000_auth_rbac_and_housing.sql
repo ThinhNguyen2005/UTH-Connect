@@ -59,27 +59,24 @@ $$;
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = ''
 as $$
-  select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role = 'admin')
+  select exists (
+    select 1 from public.profiles p where p.id = (select auth.uid()) and p.role::text = 'admin'
   );
 $$;
 
 create or replace function public.is_organizer() returns boolean
 language sql stable security definer set search_path = ''
 as $$
-  select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'organizer', 'lecturer'),
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('admin', 'organizer', 'lecturer'))
+  select exists (
+    select 1 from public.profiles p where p.id = (select auth.uid()) and p.role::text in ('admin', 'organizer', 'lecturer')
   );
 $$;
 
 create or replace function public.is_lecturer() returns boolean
 language sql stable security definer set search_path = ''
 as $$
-  select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'lecturer', 'organizer'),
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('admin', 'lecturer', 'organizer'))
+  select exists (
+    select 1 from public.profiles p where p.id = (select auth.uid()) and p.role::text in ('admin', 'lecturer', 'organizer')
   );
 $$;
 
@@ -114,7 +111,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_role public.user_role := 'student';
 begin
-  if new.email in ('thinhnhg8684@ut.edu.vn', 'thinh@ut.edu.vn', 'nguyenthinhk52005@gmail.com', 'admin@ut.edu.vn') then
+  if new.email_confirmed_at is not null and new.email in ('thinhnhg8684@ut.edu.vn', 'thinh@ut.edu.vn', 'nguyenthinhk52005@gmail.com', 'admin@ut.edu.vn') then
     v_role := 'admin'::public.user_role;
   end if;
 
@@ -195,8 +192,14 @@ begin
   if not exists (select 1 from pg_policies where tablename = 'housing_posts' and policyname = 'housing_posts_update') then
     create policy housing_posts_update on public.housing_posts
       for update to authenticated
-      using (author_id = (select auth.uid()) or (select public.is_admin()))
-      with check (author_id = (select auth.uid()) or (select public.is_admin()));
+      using (
+        (select public.is_admin()) or
+        (author_id = (select auth.uid()) and status != 'HIDDEN')
+      )
+      with check (
+        (select public.is_admin()) or
+        (author_id = (select auth.uid()) and status in ('ACTIVE', 'CLOSED'))
+      );
   end if;
 
   if not exists (select 1 from pg_policies where tablename = 'housing_posts' and policyname = 'housing_posts_delete') then

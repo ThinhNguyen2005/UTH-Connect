@@ -194,7 +194,7 @@ export default function PortalHomePage() {
                 notifications.map((n) => (
                   <Link
                     key={n.id}
-                    href={`/notifications/${n.id}`}
+                    href="/notifications"
                     className="block p-3 rounded-lg hover:bg-[#F8FAFC] transition group"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -244,7 +244,7 @@ export default function PortalHomePage() {
                 events.map((e) => (
                   <Link
                     key={e.id}
-                    href={`/events/${e.id}`}
+                    href="/events"
                     className="block p-3 rounded-lg hover:bg-[#F8FAFC] transition group"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">

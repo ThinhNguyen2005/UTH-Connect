@@ -280,6 +280,15 @@ class AuthViewModel @Inject constructor(
                 throw cancelled
             } catch (_: Exception) {
                 _uiState.update { it.copy(isRestoring = false, failure = AuthFailure.SessionRestore) }
+                return@launch
+            }
+            val current = sessions.observe().first()
+            _uiState.update {
+                it.copy(
+                    isRestoring = current.isRestoring,
+                    student = current.profile,
+                    failure = if (current.failure != null) AuthFailure.SessionRestore else it.failure,
+                )
             }
         }
     }
@@ -350,7 +359,12 @@ class AuthViewModel @Inject constructor(
 
     private fun submitForgotPassword() {
         val snapshot = _uiState.value
-        if (snapshot.isSendingForgot || snapshot.forgotCooldownSeconds > 0) return
+        if (snapshot.isSendingForgot) return
+        if (snapshot.forgotCooldownSeconds > 0) {
+            val waitSec = snapshot.forgotCooldownSeconds
+            _uiState.update { it.copy(forgotError = "Vui lòng đợi ${waitSec}s trước khi gửi lại.") }
+            return
+        }
         val email = snapshot.forgotEmail.trim().ifEmpty { snapshot.identifier.trim() }
         _uiState.update { it.copy(isSendingForgot = true, forgotError = null, forgotSuccessNotice = false) }
         viewModelScope.launch {

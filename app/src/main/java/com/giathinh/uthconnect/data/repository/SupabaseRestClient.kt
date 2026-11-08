@@ -38,25 +38,27 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore = store
     }
 
-    suspend fun restoreSavedSession(): Boolean = refreshMutex.withLock {
-        val saved = sessionStore?.load() ?: return@withLock false
-        if (credentials != null) return@withLock true
-        try {
-            val updated = refreshSession(saved.userId, saved.refreshToken)
-            // Persist rotation before making the new access token available.
-            sessionStore?.save(updated.userId, updated.refreshToken)
-            rememberSession = true
-            credentials = updated
-            true
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: SupabaseHttpException) {
-            if (error.status == 400 || error.status == 401) {
-                sessionStore?.clear()
-                rememberSession = false
-                false
-            } else {
-                throw error
+    suspend fun restoreSavedSession(): Boolean = withContext(Dispatchers.IO) {
+        refreshMutex.withLock {
+            val saved = sessionStore?.load() ?: return@withLock false
+            if (credentials != null) return@withLock true
+            try {
+                val updated = refreshSession(saved.userId, saved.refreshToken)
+                // Persist rotation before making the new access token available.
+                sessionStore?.save(updated.userId, updated.refreshToken)
+                rememberSession = true
+                credentials = updated
+                true
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: SupabaseHttpException) {
+                if (error.status == 400 || error.status == 401) {
+                    sessionStore?.clear()
+                    rememberSession = false
+                    false
+                } else {
+                    throw error
+                }
             }
         }
     }

@@ -17,7 +17,8 @@ create index if not exists lost_found_owner_idx on public.lost_found (owner_user
 
 alter table public.lost_found enable row level security;
 revoke all on public.lost_found from anon, authenticated;
-grant select, insert on public.lost_found to authenticated;
+grant select on public.lost_found to authenticated;
+grant insert (owner_user_id, title, description, kind, category, location, contact_name, contact_phone) on public.lost_found to authenticated;
 grant update (is_resolved) on public.lost_found to authenticated;
 
 -- A user must be authenticated and verified by an admin to read community contact info.

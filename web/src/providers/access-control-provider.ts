@@ -14,7 +14,7 @@ export const accessControlProvider: AccessControlProvider = {
     // 2. Lecturer / Organizer:
     if (role === "lecturer" || role === "organizer") {
       // Cannot manage user roles or admin settings
-      if (resource === "users" || resource === "user_roles" || resource === "student_verification_requests") {
+      if (resource === "users" || resource === "profiles" || resource === "user_roles" || resource === "student_verification_requests") {
         if (action === "list" || action === "show") return { can: true };
         return {
           can: false,
@@ -54,7 +54,7 @@ export const accessControlProvider: AccessControlProvider = {
     }
 
     // Users / Admin settings: Blocked completely
-    if (resource === "users" || resource === "user_roles" || resource === "student_verification_requests") {
+    if (resource === "users" || resource === "profiles" || resource === "user_roles" || resource === "student_verification_requests") {
       return {
         can: false,
         reason: "Khu vực này chỉ dành riêng cho Ban Quản trị.",

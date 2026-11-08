@@ -198,6 +198,7 @@ export default function AdminUsersPage() {
                         className="text-xs bg-[#F8FAFC] rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-900 transition"
                       >
                         <option value="student">Gán: Sinh viên</option>
+                        <option value="organizer">Gán: Ban tổ chức</option>
                         <option value="lecturer">Gán: Giảng viên</option>
                         <option value="admin">Gán: Admin</option>
                       </select>

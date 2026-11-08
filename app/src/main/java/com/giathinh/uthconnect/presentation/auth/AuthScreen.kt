@@ -281,7 +281,9 @@ fun AuthScreen(
                 } else {
                     Button(
                         onClick = { onAction(AuthAction.SubmitForgotPassword) },
-                        enabled = !uiState.isSendingForgot && uiState.forgotEmail.isNotBlank(),
+                        enabled = !uiState.isSendingForgot &&
+                            uiState.forgotEmail.isNotBlank() &&
+                            uiState.forgotCooldownSeconds == 0,
                         shape = UthDimens.Radius.MdShape,
                         modifier = Modifier
                             .testTag("auth_forgot_send"),
@@ -292,6 +294,8 @@ fun AuthScreen(
                                 strokeWidth = UthDimens.Size.ProgressInlineStroke,
                                 color = MaterialTheme.colorScheme.onPrimary,
                             )
+                        } else if (uiState.forgotCooldownSeconds > 0) {
+                            Text("Gửi lại sau ${uiState.forgotCooldownSeconds}s")
                         } else {
                             Text(stringResource(R.string.auth_forgot_submit))
                         }
@@ -614,7 +618,7 @@ private fun ModernPasswordContent(
             )
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
             if (failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected ||
-                failure == AuthFailure.SessionRestore || failure == AuthFailure.NetworkError
+                failure == AuthFailure.SessionRestore
             ) {
                 OutlinedButton(
                     onClick = { onAction(AuthAction.Retry) },

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { supabaseBrowserClient } from "@/utils/supabase-client";
 
 export default function VerifyEmailPage() {
-  const [email, setEmail] = useState("rae@northwind.co");
+  const [email, setEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sends, setSends] = useState(1);
   const [wait, setWait] = useState(30);
   const [left, setLeft] = useState(30);
@@ -42,18 +43,23 @@ export default function VerifyEmailPage() {
     setLeft(nextWait);
 
     try {
-      await supabaseBrowserClient.auth.resend({
+      const { error } = await supabaseBrowserClient.auth.resend({
         type: "signup",
         email: email.trim(),
       });
+      if (error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(null);
+      }
     } catch {
-      // Ignored for UX responsiveness
+      setErrorMessage("Không thể kết nối đến máy chủ.");
     } finally {
       setIsResending(false);
     }
   };
 
-  const isLocked = left > 0 || isResending;
+  const isLocked = left > 0 || isResending || !email.trim();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-14">
