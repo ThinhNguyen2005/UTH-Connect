@@ -3,7 +3,7 @@ name: Android release APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, test/observability-ci-20261109]
+    branches: [main]
 
 permissions:
   contents: read
