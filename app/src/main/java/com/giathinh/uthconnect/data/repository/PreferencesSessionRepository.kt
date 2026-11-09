@@ -114,6 +114,7 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
+    /** Clears local grants and the active session even if backend sign-out fails. */
     override suspend fun signOut() {
         mutex.withLock {
             try {

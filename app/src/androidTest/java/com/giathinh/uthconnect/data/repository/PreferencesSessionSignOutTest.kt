@@ -14,8 +14,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
 
+/** Exercises local session cleanup against Android preferences. */
 @RunWith(AndroidJUnit4::class)
 class PreferencesSessionSignOutTest {
+    /** Backend failures must not leave remembered grants or an active profile. */
     @Test fun logoutClearsLocalStateWhenBackendFails() = runBlocking {
         val base = ApplicationProvider.getApplicationContext<Context>()
         val name = "test_session_${UUID.randomUUID()}"

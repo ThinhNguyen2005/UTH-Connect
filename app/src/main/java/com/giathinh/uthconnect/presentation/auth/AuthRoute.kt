@@ -59,6 +59,7 @@ fun AuthRoute(
 
     DisposableEffect(context, viewModel) {
         val activity = findAuthActivity(context) as? ComponentActivity
+        /** Dispatches authentication tokens once from an activity intent. */
         fun handleIntent(intent: Intent?) {
             val uri = intent?.data
             if (uri != null && uri.scheme == "uthconnect" && uri.host == "auth") {
