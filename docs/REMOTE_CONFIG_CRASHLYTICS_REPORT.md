@@ -18,11 +18,11 @@
 - GitHub Actions [run #5](https://github.com/ThinhNguyen2005/UTH-Connect/actions/runs/42579449766) trên nhánh thử nghiệm `test/observability-ci-20261109`: ba test kiểm tra cấu hình đạt, bước inject thất bại vì `GOOGLE_SERVICES_JSON` và `FIREBASE_PROJECT_ID` rỗng; chưa chạy build/ký.
 - `lintDebug` toàn nhánh thất bại với 18 lỗi ở các phần gồm QR, bản dịch, Compose và `local.properties`; Release build cục bộ vẫn thành công.
 
-![Màn bảo trì](remote-config-evidence/maintenance.png)
+![Màn bảo trì](09-11-2026/anh/maintenance.png)
 
-![Màn cập nhật bắt buộc](remote-config-evidence/update-required.png)
+![Màn cập nhật bắt buộc](09-11-2026/anh/update-required.png)
 
-![Fetch và nguồn giá trị Remote Config](remote-config-evidence/remote-config-fetch.png)
+![Fetch và nguồn giá trị Remote Config](09-11-2026/anh/remote-config-fetch.png)
 
 ## Cần kiểm chứng trên môi trường dự án
 

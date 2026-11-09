@@ -210,6 +210,13 @@ class AuthViewModelTest {
         assertEquals(AuthScreenStep.ResetPassword, vm.uiState.value.screenStep)
     }
 
+    @Test fun `DeepLinkReceived with non-recovery type preserves current screen step`() = runTest {
+        val vm = newViewModel(FakeSession())
+        advanceUntilIdle()
+        vm.onAction(AuthAction.DeepLinkReceived(token = "fake-signup-token", type = "signup"))
+        assertEquals(AuthScreenStep.Identifier, vm.uiState.value.screenStep)
+    }
+
     @Test fun `ForgotPassword dialog opens and Submits successfully`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()

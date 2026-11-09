@@ -70,7 +70,11 @@ private fun sendEmail(context: Context, emailAddress: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:$emailAddress")
     }
-    context.startActivity(intent)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, R.string.campuses_call_unavailable, Toast.LENGTH_SHORT).show()
+    }
 }
 
 internal fun openDirections(

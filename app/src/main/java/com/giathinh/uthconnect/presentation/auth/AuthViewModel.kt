@@ -322,6 +322,7 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun submitForgotPassword() {
+        if (_uiState.value.isSendingForgot) return
         val snapshot = _uiState.value
         val email = snapshot.forgotEmail.trim().ifEmpty { snapshot.identifier.trim() }
         _uiState.update { it.copy(isSendingForgot = true, forgotError = null, forgotSuccessNotice = false) }
