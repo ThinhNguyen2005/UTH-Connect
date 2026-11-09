@@ -136,6 +136,7 @@ class ScheduleViewModel @Inject constructor(
                 delay(60_000)
                 val currentNow = LocalDateTime.now(clock)
                 state.update { it.copy(now = currentNow) }
+                syncDisplayedEvents()
                 eventRepository.refresh()
             }
         }
