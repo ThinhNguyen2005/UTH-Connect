@@ -88,7 +88,12 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             eventRepository.currentUserRegistrations().retryWhen { cause, _ ->
                 if (cause is CancellationException) throw cause
-                state.update { it.copy(registrationsLoadFailed = true) }
+                state.update {
+                    it.copy(
+                        isRegistrationsLoading = false,
+                        registrationsLoadFailed = true,
+                    )
+                }
                 delay(60_000)
                 true
             }
@@ -98,6 +103,7 @@ class ScheduleViewModel @Inject constructor(
                         current.copy(
                             events = loadedEvents.mapNotNull(::toScheduleEvent),
                             registrationsLoadFailed = false,
+                            isRegistrationsLoading = false,
                         )
                     }
                 }
@@ -132,7 +138,11 @@ class ScheduleViewModel @Inject constructor(
 
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
-                if (event.status != EventStatus.PUBLISHED || LocalDateTime.now(clock) >= event.endAt) return
+                val now = LocalDateTime.now(clock)
+                if (
+                    state.value.isRegistrationsLoading || state.value.registrationsLoadFailed ||
+                    event.status != EventStatus.PUBLISHED || now >= event.startAt || now >= event.endAt
+                ) return
                 state.update { it.copy(registrationError = null, registrationErrorCode = null) }
                 viewModelScope.launch {
                     try {

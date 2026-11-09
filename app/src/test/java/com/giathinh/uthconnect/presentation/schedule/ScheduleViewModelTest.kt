@@ -10,6 +10,7 @@ import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +80,68 @@ class ScheduleViewModelTest {
         )
         try {
             assertTrue(vm.uiState.value.registrationsLoadFailed)
+            assertFalse(vm.uiState.value.isRegistrationsLoading)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
+    /** Keeps the registrations stream pending and verifies initial loading is exposed. */
+    @Test fun `registration status starts loading before first emission`() {
+        val repository = object : EventRepository by EmptyEventRepository {
+            override fun currentUserRegistrations(): Flow<Set<String>> = flow {
+                awaitCancellation()
+            }
+        }
+        val vm = ScheduleViewModel(
+            TimetableUseCase(InMemoryTimetableRepository(clock)),
+            repository,
+            EmptyTicketRepository,
+            EmptySessionRepository,
+            clock,
+        )
+        try {
+            assertTrue(vm.uiState.value.isRegistrationsLoading)
+            assertFalse(vm.uiState.value.registrationsLoadFailed)
+        } finally {
+            vm.viewModelScope.cancel()
+        }
+    }
+
+    /** Prevents registration requests when an event has already started. */
+    @Test fun `registration is rejected at event start time`() {
+        val event = Event(
+            id = "started-event",
+            title = "Started event",
+            description = "",
+            orgId = "org",
+            location = "Campus",
+            campus = "UTH",
+            startAt = clock.millis() - 60_000,
+            endAt = clock.millis() + 60_000,
+            capacity = 20,
+        )
+        var registrationCalls = 0
+        val repository = object : EventRepository by EmptyEventRepository {
+            override fun getEvents(campus: String?): Flow<List<Event>> = flowOf(listOf(event))
+            override fun currentUserRegistrations(): Flow<Set<String>> = flowOf(emptySet())
+            override suspend fun registerCurrentUser(eventId: String): Result<Unit> {
+                registrationCalls++
+                return Result.success(Unit)
+            }
+        }
+        val vm = ScheduleViewModel(
+            TimetableUseCase(InMemoryTimetableRepository(clock)),
+            repository,
+            EmptyTicketRepository,
+            EmptySessionRepository,
+            clock,
+        )
+        try {
+            assertFalse(vm.uiState.value.isRegistrationsLoading)
+            assertEquals(1, vm.uiState.value.events.size)
+            vm.onAction(ScheduleAction.RegisterEvent(event.id))
+            assertEquals(0, registrationCalls)
         } finally {
             vm.viewModelScope.cancel()
         }

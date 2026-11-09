@@ -353,6 +353,7 @@
     <string name="event_checked_in">Đã điểm danh</string>
     <string name="event_registered">Đã đăng ký</string>
     <string name="event_not_registered">Chưa đăng ký</string>
+    <string name="event_registration_closed">Đã đóng đăng ký</string>
     <string name="event_ongoing">Đang diễn ra</string>
     <string name="event_upcoming">Sắp diễn ra</string>
     <string name="event_ended">Đã kết thúc</string>

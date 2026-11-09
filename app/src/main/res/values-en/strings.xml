@@ -348,6 +348,7 @@
     <string name="event_checked_in">Ticket checked in</string>
     <string name="event_registered">Registered</string>
     <string name="event_not_registered">Not registered</string>
+    <string name="event_registration_closed">Registration closed</string>
     <string name="event_ongoing">Happening now</string>
     <string name="event_upcoming">Upcoming</string>
     <string name="event_ended">Ended</string>

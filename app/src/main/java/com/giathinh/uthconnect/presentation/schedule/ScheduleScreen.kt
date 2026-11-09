@@ -202,7 +202,8 @@ fun ScheduleScreen(
                                     CampusEventCard(
                                         event = event,
                                         now = uiState.now,
-                                        registrationStatusAvailable = !uiState.registrationsLoadFailed,
+                                        registrationStatusAvailable =
+                                            !uiState.registrationsLoadFailed && !uiState.isRegistrationsLoading,
                                         onAction = onAction,
                                         onViewDetails = { onAction(ScheduleAction.OpenEventDetails(it.id)) },
                                     )
@@ -787,6 +788,12 @@ private fun CampusEventCard(
                             if (canOpenTicket) EventDetailsButton(onClick = { onViewDetails(event) })
                         }
 
+                        isOngoing && !isRegistered -> RegistrationHint(
+                            icon = Icons.Filled.DateRange,
+                            label = stringResource(R.string.event_registration_closed),
+                            tint = colors.onSurfaceVariant,
+                        )
+
                         isCheckedIn -> {
                             RegistrationHint(
                                 icon = Icons.Filled.Check,
@@ -923,6 +930,7 @@ private fun previewState(): ScheduleUiState {
         now = now,
         selectedDate = date,
         isLoading = false,
+        isRegistrationsLoading = false,
         events = listOf(
             ScheduleEvent(
                 id = "preview-ai",

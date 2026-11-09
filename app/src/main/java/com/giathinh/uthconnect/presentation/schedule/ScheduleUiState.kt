@@ -15,6 +15,7 @@ data class ScheduleUiState(
     val isEventsLoading: Boolean = true,
     val eventsLoadFailed: Boolean = false,
     val registrationsLoadFailed: Boolean = false,
+    val isRegistrationsLoading: Boolean = true,
     val studentId: String? = null,
     val studentName: String? = null,
     val registrationError: String? = null,
