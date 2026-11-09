@@ -25,8 +25,10 @@ interface AuthRepository {
      */
     suspend fun sendPasswordReset(email: String): Result<Unit> = Result.failure(UnsupportedOperationException("sendPasswordReset not implemented"))
 
-    /** Verify a recovery OTP with the provider before changing a password. */
-    suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = Result.failure(UnsupportedOperationException("completePasswordReset not implemented"))
+    /**
+     * Completes password reset with the new password.
+     */
+    suspend fun completePasswordReset(newPassword: String): Result<Unit> = Result.failure(UnsupportedOperationException("completePasswordReset not implemented"))
 
     /**
      * Submits a student ID verification request.

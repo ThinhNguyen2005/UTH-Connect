@@ -22,8 +22,10 @@ internal const val GOOGLE_EXCHANGE_LOG_TAG = "SupabaseGoogleExchange"
  * [SupabaseRestClient], which every other Supabase repository already uses, so the app keeps
  * exactly one active Bearer token instead of two competing session stores.
  *
- * The SDK's session manager is deliberately in-memory. The shared RestClient persists only an
- * Android Keystore-encrypted refresh token when the user opts in to remember-me.
+ * The SDK's session manager is deliberately in-memory. This project treats a Supabase session
+ * as valid for the current process only (see PreferencesSessionRepository, which refuses
+ * remember-me under Supabase), and the SDK's default storage would persist tokens in plain
+ * SharedPreferences.
  */
 @Singleton
 class SupabaseGoogleExchange @Inject constructor(
@@ -55,8 +57,9 @@ class SupabaseGoogleExchange @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            // Exception text and stack traces may contain provider responses or sensitive claims.
-            Log.w(GOOGLE_EXCHANGE_LOG_TAG, "Google ID-token exchange rejected")
+            // The UI only shows a generic "not authenticated" message, so GoTrue's actual reason
+            // (bad audience, provider disabled, nonce mismatch, ...) is otherwise unrecoverable.
+            Log.w(GOOGLE_EXCHANGE_LOG_TAG, "Google ID-token exchange rejected", error)
             throw error
         }
         client.attachSession(

@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.SupabaseScheduleRepository
+import com.giathinh.uthconnect.data.repository.FakeScheduleRepository
 import com.giathinh.uthconnect.domain.repository.ScheduleRepository
 import dagger.Binds
 import dagger.Module
@@ -15,6 +15,6 @@ abstract class ScheduleDataModule {
     @Binds
     @Singleton
     abstract fun bindScheduleRepository(
-        impl: SupabaseScheduleRepository,
+        impl: FakeScheduleRepository,
     ): ScheduleRepository
 }

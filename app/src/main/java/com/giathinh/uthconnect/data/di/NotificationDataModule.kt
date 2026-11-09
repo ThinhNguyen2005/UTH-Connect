@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.SupabaseNotificationRepository
+import com.giathinh.uthconnect.data.repository.FakeNotificationRepository
 import com.giathinh.uthconnect.domain.repository.NotificationRepository
 import dagger.Binds
 import dagger.Module
@@ -15,6 +15,6 @@ abstract class NotificationDataModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(
-        impl: SupabaseNotificationRepository,
+        impl: FakeNotificationRepository,
     ): NotificationRepository
 }

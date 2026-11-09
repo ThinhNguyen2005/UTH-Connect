@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.SupabaseLostFoundRepository
+import com.giathinh.uthconnect.data.repository.InMemoryLostFoundRepository
 import com.giathinh.uthconnect.domain.repository.LostFoundRepository
 import dagger.Binds
 import dagger.Module
@@ -15,6 +15,6 @@ abstract class LostFoundDataModule {
     @Binds
     @Singleton
     abstract fun bindLostFoundRepository(
-        impl: SupabaseLostFoundRepository,
+        impl: InMemoryLostFoundRepository,
     ): LostFoundRepository
 }

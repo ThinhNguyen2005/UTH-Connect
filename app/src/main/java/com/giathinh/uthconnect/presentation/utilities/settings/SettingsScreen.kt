@@ -274,7 +274,7 @@ private fun SettingsChoiceRow(
 /**
  * Nút chọn: cao [UthDimens.Size.SegmentedControlHeight] (= [UthDimens.Size.MinTouchTarget]),
  * nền `primaryContainer` + **dấu tích** khi đang chọn. Icon bắt buộc vì trạng thái không
- * được truyền tải chỉ bằng màu (`docs/UI-UX.md`).
+ * được truyền tải chỉ bằng màu (`docs/UI-UX.mc`).
  */
 @Composable
 private fun SettingsChoiceButton(

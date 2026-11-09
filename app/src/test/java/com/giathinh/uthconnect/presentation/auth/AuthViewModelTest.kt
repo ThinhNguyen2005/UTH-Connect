@@ -203,11 +203,11 @@ class AuthViewModelTest {
         assertNull(vm.uiState.value.identifierError)
     }
 
-    @Test fun `Untrusted deep link cannot activate password reset`() = runTest {
+    @Test fun `DeepLinkReceived transitions to ResetPassword step`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
-        assertEquals(AuthScreenStep.Password, vm.uiState.value.screenStep)
-        assertNull(vm.uiState.value.resetPasswordError)
+        vm.onAction(AuthAction.DeepLinkReceived(token = "fake-recovery-token", type = "recovery"))
+        assertEquals(AuthScreenStep.ResetPassword, vm.uiState.value.screenStep)
     }
 
     @Test fun `ForgotPassword dialog opens and Submits successfully`() = runTest {

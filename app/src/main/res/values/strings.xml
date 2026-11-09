@@ -1,4 +1,8 @@
 <resources>
+    <string name="maintenance_title">Ứng dụng đang bảo trì</string>
+    <string name="maintenance_message">Vui lòng quay lại sau.</string>
+    <string name="update_required_title">Cần cập nhật ứng dụng</string>
+    <string name="update_required_message">Vui lòng cập nhật UTH Connect để tiếp tục.</string>
     <string name="app_name">UTH Connect</string>
 
     <!-- Chuỗi dùng chung cho mọi module -->
@@ -159,6 +163,9 @@
     <string name="campuses_list_header">Các cơ sở đào tạo</string>
     <string name="campuses_departments_header">Danh bạ phòng ban hỗ trợ</string>
     <string name="campuses_call_action">Gọi ngay</string>
+    <string name="campuses_call_unavailable">Không tìm thấy ứng dụng điện thoại để thực hiện cuộc gọi.</string>
+    <string name="campuses_directions_action">Chỉ đường</string>
+    <string name="campuses_directions_unavailable">Không tìm thấy ứng dụng bản đồ để mở chỉ đường.</string>
     <string name="campuses_email_action">Gửi email</string>
 
     <!-- Cài đặt -->

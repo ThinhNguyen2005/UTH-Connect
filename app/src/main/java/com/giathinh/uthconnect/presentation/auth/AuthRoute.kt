@@ -53,6 +53,25 @@ fun AuthRoute(
         }
     }
 
+    LaunchedEffect(context) {
+        val activity = findAuthActivity(context)
+        val uri = activity?.intent?.data
+        if (uri != null && uri.scheme == "uthconnect" && uri.host == "auth") {
+            val fragment = uri.fragment.orEmpty()
+            val query = uri.query.orEmpty()
+            val fullParams = if (fragment.isNotEmpty()) fragment else query
+            val paramsMap = fullParams.split('&').associate { param ->
+                val parts = param.split('=', limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else parts[0] to ""
+            }
+            val accessToken = paramsMap["access_token"].orEmpty()
+            val type = paramsMap["type"].orEmpty()
+            if (accessToken.isNotEmpty()) {
+                viewModel.onAction(AuthAction.DeepLinkReceived(token = accessToken, type = type))
+            }
+        }
+    }
+
     when {
         state.isRestoring -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()

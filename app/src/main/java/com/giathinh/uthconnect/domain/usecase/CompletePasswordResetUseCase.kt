@@ -13,7 +13,7 @@ sealed interface CompletePasswordResetOutcome {
 class CompletePasswordResetUseCase @Inject constructor(
     private val authRepository: AuthRepository,
 ) {
-    suspend operator fun invoke(email: String, otp: String, password: String, confirmPassword: String): CompletePasswordResetOutcome {
+    suspend operator fun invoke(password: String, confirmPassword: String): CompletePasswordResetOutcome {
         val trimmedPassword = password.trim()
         val trimmedConfirm = confirmPassword.trim()
 
@@ -43,11 +43,7 @@ class CompletePasswordResetUseCase @Inject constructor(
             return CompletePasswordResetOutcome.InvalidForm(passwordError, confirmError)
         }
 
-        if (!email.contains('@') || !otp.trim().matches(Regex("[0-9]{6,8}"))) {
-            return CompletePasswordResetOutcome.Failure("Vui lòng nhập mã OTP hợp lệ từ email sinh viên")
-        }
-
-        return authRepository.completePasswordReset(email.trim(), otp.trim(), trimmedPassword).fold(
+        return authRepository.completePasswordReset(trimmedPassword).fold(
             onSuccess = { CompletePasswordResetOutcome.Success },
             onFailure = { error ->
                 val msg = error.message.orEmpty()

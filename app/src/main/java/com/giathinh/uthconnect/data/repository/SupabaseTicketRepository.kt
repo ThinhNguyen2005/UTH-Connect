@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class SupabaseTicketRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : TicketRepository {
-    override suspend fun getTickets(studentId: String): Result<List<Ticket>> = suspendResult {
+    override suspend fun getTickets(studentId: String): Result<List<Ticket>> = runCatching {
         val uid = uuid(client.userId)
         val student = client.table("profiles?select=student_id&id=eq.${urlEncode(uid)}").jsonArray
             .singleOrNull()?.jsonObject?.string("student_id")
@@ -33,12 +33,12 @@ class SupabaseTicketRepository @Inject constructor(
         }
     }
 
-    override suspend fun issueCheckInToken(eventId: String): Result<String> = suspendResult {
+    override suspend fun issueCheckInToken(eventId: String): Result<String> = runCatching {
         client.rpc("issue_ticket_qr", buildJsonObject { put("p_event_id", uuid(eventId)) })
             .jsonPrimitive.content
     }
 
-    override suspend fun checkIn(token: String): Result<Unit> = suspendResult {
+    override suspend fun checkIn(token: String): Result<Unit> = runCatching {
         client.rpc("check_in_ticket_qr", buildJsonObject { put("p_token", token) })
         Unit
     }

@@ -12,14 +12,14 @@ import javax.inject.Inject
  * Google counterpart of [SignInUseCase]: redeems an ID token, then opens the local student
  * session. Never called with a password, so there is nothing to validate first.
  *
- * The UI chooses whether a verified Google session should be remembered on this device.
- * Only the rotated refresh token is persisted by the Android Keystore-backed session store.
+ * `remember` is always false. A Google session is a device-local token, not a stored
+ * credential, and the Supabase backend already rejects remembered identifiers.
  */
 class SignInWithGoogleUseCase @Inject constructor(
     private val auth: AuthRepository,
     private val session: SessionRepository,
 ) {
-    suspend operator fun invoke(idToken: String, rawNonce: String, remember: Boolean = false): SignInWithGoogleResult = try {
+    suspend operator fun invoke(idToken: String, rawNonce: String): SignInWithGoogleResult = try {
         val profile = auth.authenticateWithGoogle(idToken, rawNonce).getOrElse { error ->
             return when (error) {
                 is StudentVerificationRequiredException ->
@@ -30,7 +30,7 @@ class SignInWithGoogleUseCase @Inject constructor(
                 else -> SignInWithGoogleResult.Rejected
             }
         }
-        session.start(profile, remember = remember)
+        session.start(profile, remember = false)
         SignInWithGoogleResult.Success(profile)
     } catch (cancelled: CancellationException) {
         throw cancelled

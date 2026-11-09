@@ -62,7 +62,7 @@ import com.giathinh.uthconnect.domain.model.UtilityModuleId
  * Mật độ 3 cột chỉ dành cho mục **chưa mở được**: với lề `Spacing.Xl` thì trên màn hẹp nhất
  * mỗi ô còn hơn 80dp bề ngang, đủ cho khung icon dịch vụ nhưng không đủ cho badge màu, nên
  * trạng thái diễn đạt bằng chữ (`phase_*`)
- * thay vì chỉ bằng màu — đúng checklist `docs/UI-UX.md`.
+ * thay vì chỉ bằng màu — đúng checklist `docs/UI-UX.mc`.
  */
 @Composable
 fun UtilitiesScreen(
@@ -490,7 +490,7 @@ private fun UtilitiesContentPreview() = UtilitiesStatePreview(UtilitiesUiState(i
 @Composable
 private fun UtilitiesContentDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules), darkTheme = true)
 
-// Font scale 1.5: lưới 2 cột phải wrapping chứ không cắt nhãn (docs/UI-UX.md mục phóng to chữ);
+// Font scale 1.5: lưới 2 cột phải wrapping chứ không cắt nhãn (docs/UI-UX.mc mục phóng to chữ);
 // khu 3 cột tự hạ về 2 cột theo Layout.ServiceGridColumnsLargeText.
 @Preview(name = "content large text", showBackground = true, fontScale = 1.5f)
 @Composable

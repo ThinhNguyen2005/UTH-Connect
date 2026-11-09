@@ -458,7 +458,7 @@ private fun StudentAvatar(student: StudentProfile) {
  *
  * Card chiếm nguyên hàng nên vùng chạm vượt chuẩn tối thiểu `Size.MinTouchTarget`;
  * mũi tên chỉ là gợi ý, không phải control riêng
- * (tránh hai vùng chạm chồng lấn — `docs/UI-UX.md` mục 4).
+ * (tránh hai vùng chạm chồng lấn — `docs/UI-UX.mc` mục 4).
  */
 @Composable
 private fun ProfileNavRow(

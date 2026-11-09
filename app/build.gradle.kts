@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
     alias(libs.plugins.detekt)
     alias(libs.plugins.spotless)
 }
@@ -17,8 +18,8 @@ kotlin {
     }
 }
 
-val useMockData = providers.gradleProperty("useMockData").orElse("false").get().toBooleanStrict()
-val useSupabase = providers.gradleProperty("useSupabase").orElse("true").get().toBooleanStrict()
+val useMockData = providers.gradleProperty("useMockData").orElse("true").get().toBooleanStrict()
+val useSupabase = providers.gradleProperty("useSupabase").orElse("false").get().toBooleanStrict()
 val supabaseUrl = providers.gradleProperty("supabaseUrl").orElse("").get().trimEnd('/')
 val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").orElse("").get()
 /**
@@ -26,11 +27,15 @@ val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").
  * Google ID token. It is a public identifier, not a secret, so it can live in BuildConfig.
  */
 val googleWebClientId = providers.gradleProperty("googleWebClientId").orElse("").get()
-require(useSupabase && !useMockData) { "UTH Connect requires Supabase; demo/Firebase builds are disabled" }
 if (useSupabase) {
+    require(!useMockData) { "To enable Supabase, set -PuseMockData=false" }
     require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
         "Supply -PsupabaseUrl=https://... -PsupabasePublishableKey=sb_publishable_..."
     }
+}
+if (file("google-services.json").exists()) {
+    pluginManager.apply(libs.plugins.google.services.get().pluginId)
+    pluginManager.apply(libs.plugins.firebase.crashlytics.get().pluginId)
 }
 
 android {
@@ -57,7 +62,7 @@ android {
     buildTypes {
         release {
             optimization {
-                enable = true
+                enable = false
             }
         }
     }
@@ -116,6 +121,8 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // DI
