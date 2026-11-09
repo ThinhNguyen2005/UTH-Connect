@@ -3,12 +3,15 @@ package com.giathinh.uthconnect.presentation.auth
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -16,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.util.Consumer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.BuildConfig
@@ -53,23 +57,30 @@ fun AuthRoute(
         }
     }
 
-    LaunchedEffect(context) {
-        val activity = findAuthActivity(context)
-        val uri = activity?.intent?.data
-        if (uri != null && uri.scheme == "uthconnect" && uri.host == "auth") {
-            val fragment = uri.fragment.orEmpty()
-            val query = uri.query.orEmpty()
-            val fullParams = if (fragment.isNotEmpty()) fragment else query
-            val paramsMap = fullParams.split('&').associate { param ->
-                val parts = param.split('=', limit = 2)
-                if (parts.size == 2) parts[0] to parts[1] else parts[0] to ""
-            }
-            val accessToken = paramsMap["access_token"].orEmpty()
-            val type = paramsMap["type"].orEmpty()
-            if (accessToken.isNotEmpty()) {
-                viewModel.onAction(AuthAction.DeepLinkReceived(token = accessToken, type = type))
+    DisposableEffect(context, viewModel) {
+        val activity = findAuthActivity(context) as? ComponentActivity
+        fun handleIntent(intent: Intent?) {
+            val uri = intent?.data
+            if (uri != null && uri.scheme == "uthconnect" && uri.host == "auth") {
+                val fragment = uri.fragment.orEmpty()
+                val query = uri.query.orEmpty()
+                val fullParams = if (fragment.isNotEmpty()) fragment else query
+                val paramsMap = fullParams.split('&').associate { param ->
+                    val parts = param.split('=', limit = 2)
+                    if (parts.size == 2) parts[0] to parts[1] else parts[0] to ""
+                }
+                val accessToken = paramsMap["access_token"].orEmpty()
+                val type = paramsMap["type"].orEmpty()
+                if (accessToken.isNotEmpty()) {
+                    viewModel.onAction(AuthAction.DeepLinkReceived(token = accessToken, type = type))
+                    if (type == "recovery") intent.data = null
+                }
             }
         }
+        val listener = Consumer<Intent> { handleIntent(it) }
+        activity?.addOnNewIntentListener(listener)
+        handleIntent(activity?.intent)
+        onDispose { activity?.removeOnNewIntentListener(listener) }
     }
 
     when {
@@ -77,7 +88,7 @@ fun AuthRoute(
             CircularProgressIndicator()
         }
 
-        state.student == null -> Box(modifier.fillMaxSize()) {
+        state.student == null || state.screenStep == AuthScreenStep.ResetPassword -> Box(modifier.fillMaxSize()) {
             AuthScreen(
                 uiState = state,
                 onAction = { action ->

@@ -48,6 +48,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
+/** Opens the dialer for the campus phone number. */
 internal fun dialPhoneNumber(
     context: Context,
     phoneNumber: String,
@@ -66,6 +67,7 @@ internal fun dialPhoneNumber(
     }
 }
 
+/** Opens an email app for the campus address. */
 private fun sendEmail(context: Context, emailAddress: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:$emailAddress")
@@ -77,6 +79,7 @@ private fun sendEmail(context: Context, emailAddress: String) {
     }
 }
 
+/** Opens a map app with directions to the campus address. */
 internal fun openDirections(
     context: Context,
     address: String,
@@ -94,6 +97,7 @@ internal fun openDirections(
     }
 }
 
+/** Displays campus contact details and directions. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampusesScreen(
@@ -268,6 +272,7 @@ fun CampusesScreen(
     }
 }
 
+/** Previews the campus screen in the default theme. */
 @Preview(name = "CampusesScreen Light", showBackground = true)
 @Composable
 private fun CampusesScreenPreview() {
@@ -276,6 +281,7 @@ private fun CampusesScreenPreview() {
     }
 }
 
+/** Previews the campus screen in the dark theme. */
 @Preview(name = "CampusesScreen Dark", showBackground = true)
 @Composable
 private fun CampusesScreenDarkPreview() {

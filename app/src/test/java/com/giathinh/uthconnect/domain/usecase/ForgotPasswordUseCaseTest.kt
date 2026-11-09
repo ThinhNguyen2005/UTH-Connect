@@ -75,4 +75,16 @@ class ForgotPasswordUseCaseTest {
         val result = useCase("student@ut.edu.vn")
         assertEquals(ForgotPasswordOutcome.Success, result)
     }
+
+    @Test
+    fun `unsupported backend does not report success`() = runBlocking {
+        val useCase = ForgotPasswordUseCase(createAuthRepo { Result.failure(UnsupportedOperationException()) })
+        assertTrue(useCase("student@ut.edu.vn") is ForgotPasswordOutcome.Failure)
+    }
+
+    @Test
+    fun `backend errors do not report success`() = runBlocking {
+        val useCase = ForgotPasswordUseCase(createAuthRepo { Result.failure(IllegalStateException("server unavailable")) })
+        assertTrue(useCase("student@ut.edu.vn") is ForgotPasswordOutcome.Failure)
+    }
 }

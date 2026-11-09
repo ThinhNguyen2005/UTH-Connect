@@ -15,6 +15,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object LostFoundDataModule {
 
+    /** Provides the repository for the active backend. */
     @Provides
     @Singleton
     fun provideLostFoundRepository(

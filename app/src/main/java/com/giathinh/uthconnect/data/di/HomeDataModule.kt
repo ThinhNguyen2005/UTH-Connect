@@ -1,25 +1,25 @@
 package com.giathinh.uthconnect.data.di
 
+import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.data.repository.StaticAnnouncementRepository
+import com.giathinh.uthconnect.data.repository.SupabaseAnnouncementRepository
 import com.giathinh.uthconnect.domain.repository.AnnouncementRepository
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Provider
+import javax.inject.Singleton
 
-/**
- * Binding tầng `data` của tab Trang chủ: `AnnouncementRepository` (interface ở domain)
- * → `StaticAnnouncementRepository` (impl tạm thời).
- *
- * `@Singleton` đặt trên implementation, không lặp lại ở hàm bind. Khi có Firestore, chỉ
- * thay class ở tham số dưới đây — ViewModel/UseCase không phải sửa.
- */
+/** Selects the announcement source for the configured backend. */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class HomeDataModule {
-
-    @Binds
-    abstract fun bindAnnouncementRepository(
-        implementation: StaticAnnouncementRepository,
-    ): AnnouncementRepository
+object HomeDataModule {
+    /** Provides one announcement repository for the active backend. */
+    @Provides
+    @Singleton
+    fun provideAnnouncementRepository(
+        static: Provider<StaticAnnouncementRepository>,
+        supabase: Provider<SupabaseAnnouncementRepository>,
+    ): AnnouncementRepository = if (BuildConfig.USE_SUPABASE) supabase.get() else static.get()
 }

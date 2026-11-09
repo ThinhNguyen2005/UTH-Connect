@@ -39,10 +39,10 @@ class PreferencesSessionRepository @Inject constructor(
                 // Biometric opt-in always requires new OS authentication on a cold start.
                 val candidateId = biometricId ?: rememberedId
                 // A remembered student ID is not an authenticated Supabase session.
-                val candidateProfile = if (BuildConfig.USE_SUPABASE) {
-                    null
-                } else {
-                    candidateId?.let { auth.findStudent(it).getOrThrow() }
+                val candidateProfile = when {
+                    BuildConfig.USE_SUPABASE -> null
+                    BuildConfig.USE_MOCK_DATA -> candidateId?.let { auth.findStudent(it).getOrThrow() }
+                    else -> candidateId?.let { auth.restoreAuthenticatedStudent(it).getOrThrow() }
                 }
                 if (candidateId != null && candidateProfile == null && !BuildConfig.USE_SUPABASE) {
                     check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit())
@@ -50,7 +50,7 @@ class PreferencesSessionRepository @Inject constructor(
                 _session.value = StudentSession(
                     isRestoring = false,
                     profile = if (biometricId == null) candidateProfile else null,
-                    remembered = rememberedId != null && !BuildConfig.USE_SUPABASE,
+                    remembered = rememberedId != null && candidateProfile != null && !BuildConfig.USE_SUPABASE,
                     biometricStudentId = if (candidateProfile != null) biometricId else null,
                 )
             } catch (cancelled: CancellationException) {
@@ -105,7 +105,11 @@ class PreferencesSessionRepository @Inject constructor(
         mutex.withLock {
             check(!BuildConfig.USE_SUPABASE) { "Supabase sign-in requires credentials" }
             val studentId = _session.value.biometricStudentId ?: error("Biometric login is not enabled")
-            val profile = auth.findStudent(studentId).getOrThrow() ?: error("Student account is missing")
+            val profile = if (BuildConfig.USE_MOCK_DATA) {
+                auth.findStudent(studentId).getOrThrow()
+            } else {
+                auth.restoreAuthenticatedStudent(studentId).getOrThrow()
+            } ?: error("Student session is not verified")
             _session.value = _session.value.copy(isRestoring = false, profile = profile, failure = null)
         }
     }

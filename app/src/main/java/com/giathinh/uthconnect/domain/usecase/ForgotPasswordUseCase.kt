@@ -36,6 +36,9 @@ class ForgotPasswordUseCase @Inject constructor(
             onSuccess = { ForgotPasswordOutcome.Success },
             onFailure = { error ->
                 when {
+                    error is UnsupportedOperationException ->
+                        ForgotPasswordOutcome.Failure("Backend does not support password recovery")
+
                     error is IOException || error.message?.contains("timeout", ignoreCase = true) == true ->
                         ForgotPasswordOutcome.NetworkError
 
@@ -43,9 +46,10 @@ class ForgotPasswordUseCase @Inject constructor(
                         error.message?.contains("rate limit", ignoreCase = true) == true ->
                         ForgotPasswordOutcome.RateLimited
 
-                    else ->
-                        // Anti-enumeration: treat unknown backend responses as Success unless explicit network/rate limit
+                    error.message?.contains("user not found", ignoreCase = true) == true ->
                         ForgotPasswordOutcome.Success
+
+                    else -> ForgotPasswordOutcome.Failure("Could not send password recovery email")
                 }
             },
         )

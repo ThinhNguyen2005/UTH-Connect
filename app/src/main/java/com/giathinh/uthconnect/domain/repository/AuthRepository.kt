@@ -6,6 +6,9 @@ interface AuthRepository {
     suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?>
     suspend fun findStudent(studentId: String): Result<StudentProfile?>
 
+    /** Restores only a server-verified session belonging to this student. */
+    suspend fun restoreAuthenticatedStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
+
     /** False if old password does not match. Result.failure means storage failure. */
     suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean>
     suspend fun signOut() {}

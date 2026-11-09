@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,8 +22,30 @@ class FirebaseAuthRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) : AuthRepository {
 
+    override suspend fun signOut() = firebaseAuth.signOut()
+
+    override suspend fun restoreAuthenticatedStudent(studentId: String): Result<StudentProfile?> = runCatching {
+        val user = firebaseAuth.currentUser ?: return@runCatching null
+        user.reload().await()
+        user.getIdToken(true).await()
+        val doc = firestore.collection(USERS_COLLECTION).document(user.uid).get(Source.SERVER).await()
+        if (firebaseAuth.currentUser?.uid != user.uid || !doc.exists() || doc.getString(FIELD_STUDENT_ID) != studentId) {
+            null
+        } else {
+            doc.toStudentProfile(studentId)
+        }
+    }
+
+    override suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
+        try {
+            firebaseAuth.sendPasswordResetEmail(email).await()
+        } catch (e: FirebaseAuthInvalidUserException) {
+            // Avoid revealing whether an account exists.
+        }
+    }
+
     override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = runCatching {
-        val targetEmail = resolveEmail(identifier) ?: return@runCatching null
+        val targetEmail = firebaseLoginEmail(identifier)
 
         try {
             val authResult = firebaseAuth.signInWithEmailAndPassword(targetEmail, password).await()
@@ -153,4 +176,10 @@ class FirebaseAuthRepository @Inject constructor(
         private const val FIELD_FACULTY = "faculty"
         private const val FIELD_AVATAR_URL = "avatarUrl"
     }
+}
+
+/** Uses the project's student-ID email convention without an unauthenticated Firestore read. */
+internal fun firebaseLoginEmail(identifier: String): String {
+    val trimmed = identifier.trim()
+    return if (trimmed.length in 8..12 && trimmed.all { it.isDigit() }) "$trimmed@ut.edu.vn" else trimmed
 }

@@ -579,4 +579,5 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <string name="auth_remember_unsupported">Remembering your sign-in is not supported yet.</string>
 </resources>

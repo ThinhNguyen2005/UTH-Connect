@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -44,6 +45,11 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    override fun onNewIntent(intent: Intent) {
+        setIntent(intent)
+        super.onNewIntent(intent)
+    }
 
     @Inject
     lateinit var settingsRepository: SettingsRepository

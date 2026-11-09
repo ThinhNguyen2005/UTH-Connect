@@ -502,7 +502,7 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun handleDeepLink(token: String, type: String) {
-        if (type == "recovery" || token.isNotBlank()) {
+        if (type == "recovery" && token.isNotBlank()) {
             supabaseRestClient.recoveryToken = token
             _uiState.update {
                 it.copy(

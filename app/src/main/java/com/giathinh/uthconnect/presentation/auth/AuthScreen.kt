@@ -555,7 +555,7 @@ private fun ModernPasswordContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
             ) {
-                RememberMeOption(
+                if (com.giathinh.uthconnect.BuildConfig.USE_MOCK_DATA && !com.giathinh.uthconnect.BuildConfig.USE_SUPABASE) RememberMeOption(
                     checked = uiState.rememberMe,
                     enabled = enabled,
                     onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
@@ -581,7 +581,7 @@ private fun ModernPasswordContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                RememberMeOption(
+                if (com.giathinh.uthconnect.BuildConfig.USE_MOCK_DATA && !com.giathinh.uthconnect.BuildConfig.USE_SUPABASE) RememberMeOption(
                     checked = uiState.rememberMe,
                     enabled = enabled,
                     onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
@@ -601,6 +601,10 @@ private fun ModernPasswordContent(
                     )
                 }
             }
+        }
+
+        if (com.giathinh.uthconnect.BuildConfig.USE_SUPABASE) {
+            Text(stringResource(R.string.auth_remember_unsupported), style = MaterialTheme.typography.bodySmall)
         }
 
         // Failure feedback & Retry

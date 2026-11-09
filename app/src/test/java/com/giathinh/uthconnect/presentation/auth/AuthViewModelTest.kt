@@ -218,7 +218,7 @@ class AuthViewModelTest {
         assertEquals(initialStep, vm.uiState.value.screenStep)
     }
 
-    @Test fun `ForgotPassword dialog opens and Submits successfully`() = runTest {
+    @Test fun `ForgotPassword reports unsupported backend`() = runTest {
         val vm = newViewModel(FakeSession())
         advanceUntilIdle()
         vm.onAction(AuthAction.ForgotPassword)
@@ -227,6 +227,7 @@ class AuthViewModelTest {
         vm.onAction(AuthAction.ForgotEmailChanged("student@ut.edu.vn"))
         vm.onAction(AuthAction.SubmitForgotPassword)
         advanceUntilIdle()
-        assertTrue(vm.uiState.value.forgotSuccessNotice)
+        assertFalse(vm.uiState.value.forgotSuccessNotice)
+        assertTrue(vm.uiState.value.forgotError != null)
     }
 }

@@ -30,6 +30,7 @@ class SupabaseRestClient @Inject constructor() {
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
 
+    /** Authenticates credentials, optionally replacing the current session. */
     suspend fun signIn(email: String, password: String, replaceExisting: Boolean = true) {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
@@ -46,11 +47,12 @@ class SupabaseRestClient @Inject constructor() {
             },
             bearer = null,
         ).jsonObject
-        credentials = parseCredentials(data).also {
-            if (replaceExisting) CrashIdentity.set(it.userId, "")
+        if (replaceExisting) {
+            credentials = parseCredentials(data).also { CrashIdentity.set(it.userId, "") }
         }
     }
 
+    /** Creates a new account and adopts any session returned immediately. */
     suspend fun signUp(
         email: String,
         password: String,
@@ -79,12 +81,14 @@ class SupabaseRestClient @Inject constructor() {
         return response
     }
 
+    /** Requests a password recovery email. */
     suspend fun recoverPassword(email: String, redirectTo: String = "uthconnect://auth/reset-password") {
         val encodedRedirect = urlEncode(redirectTo)
         val payload = buildJsonObject { put("email", email) }
         send("/auth/v1/recover?redirect_to=$encodedRedirect", "POST", payload, bearer = null)
     }
 
+    /** Clears local credentials and attempts to revoke the remote session. */
     suspend fun signOut() {
         val old = credentials
         credentials = null
@@ -117,8 +121,10 @@ class SupabaseRestClient @Inject constructor() {
         CrashIdentity.set(userId, "")
     }
 
+    /** Reads rows from a PostgREST path. */
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    /** Inserts a row and returns its server representation. */
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized(
         path = "/rest/v1/$path",
         method = "POST",
@@ -126,10 +132,13 @@ class SupabaseRestClient @Inject constructor() {
         headers = mapOf("Prefer" to "return=representation"),
     )
 
+    /** Updates rows matching a PostgREST path. */
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
+    /** Invokes a PostgREST function with the current session. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
+    /** Updates the password using the recovery token or current session. */
     suspend fun updatePassword(password: String): JsonElement {
         val token = recoveryToken ?: freshToken()
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)

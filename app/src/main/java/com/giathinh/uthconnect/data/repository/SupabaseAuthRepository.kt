@@ -106,6 +106,7 @@ class SupabaseAuthRepository @Inject constructor(
 
     override suspend fun completePasswordReset(newPassword: String): Result<Unit> = runCatching {
         client.updatePassword(newPassword)
+        client.recoveryToken = null
     }
 
     override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = runCatching {
