@@ -68,7 +68,6 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.Ticket
 import com.giathinh.uthconnect.domain.model.TicketStatus
-import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.presentation.common.messageText
 import com.giathinh.uthconnect.presentation.tickets.TicketQrScreen
 import java.time.DayOfWeek
@@ -912,64 +911,37 @@ private fun dayOfWeekLabel(day: DayOfWeek): String = when (day) {
 /** Creates the 24-hour time formatter used for event cards. */
 private fun timeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-/** Renders the schedule screen in the light preview theme. */
+/** Renders an empty schedule in the light preview theme. */
 @Preview(showBackground = true)
 @Composable
-private fun LightPreview() = UthPreview { ScheduleScreen(previewState(), {}) }
-
-/** Renders the schedule screen in the dark preview theme. */
-@Preview(showBackground = true)
-@Composable
-private fun DarkPreview() = UthPreview(darkTheme = true) { ScheduleScreen(previewState(), {}) }
-
-/** Builds representative schedule data for Compose previews. */
-private fun previewState(): ScheduleUiState {
-    val now = LocalDateTime.of(2026, 11, 3, 9, 41)
-    val date = now.toLocalDate()
-    return ScheduleUiState(
-        now = now,
-        selectedDate = date,
-        isLoading = false,
-        isRegistrationsLoading = false,
-        events = listOf(
-            ScheduleEvent(
-                id = "preview-ai",
-                title = "Workshop: AI & Tương lai ngành Giao thông thông minh",
-                organizer = "Đoàn Thanh niên & Khoa CNTT",
-                location = "Hội trường: A.101 (Cơ sở chính)",
-                startAt = date.atTime(8, 0),
-                endAt = date.atTime(11, 30),
-                registration = EventRegistration.CHECKED_IN,
-                accent = EventAccent.SUCCESS,
-                trainingPoints = "+5 ĐRL",
-                session = SchedulePeriod.MORNING,
-            ),
-            ScheduleEvent(
-                id = "preview-career",
-                title = "Ngày hội Việc làm & Kết nối Doanh nghiệp Logistics 2026",
-                organizer = "Trung tâm Hướng nghiệp & Tuyển dụng UTH",
-                location = "Địa điểm: Sân trung tâm & Hội trường B",
-                startAt = date.atTime(14, 0),
-                endAt = date.atTime(17, 0),
-                registration = EventRegistration.REGISTERED,
-                accent = EventAccent.PRIMARY,
-                trainingPoints = "+10 ĐRL",
-                session = SchedulePeriod.AFTERNOON,
-            ),
-            ScheduleEvent(
-                id = "preview-sports",
-                title = "Hội thao Sinh viên UTH 2026",
-                organizer = "CLB Thể Thao UTH",
-                location = "Địa điểm: Sân vận động Cơ sở 2",
-                startAt = date.atTime(18, 30),
-                endAt = date.atTime(21, 0),
-                registration = EventRegistration.NOT_REGISTERED,
-                accent = EventAccent.WARNING,
-                trainingPoints = "+5 ĐRL",
-                session = SchedulePeriod.EVENING,
-            ),
+private fun LightPreview() = UthPreview {
+    val now = LocalDateTime.now()
+    ScheduleScreen(
+        uiState = ScheduleUiState(
+            now = now,
+            selectedDate = now.toLocalDate(),
+            isLoading = false,
+            isEventsLoading = false,
+            isRegistrationsLoading = false,
         ),
-        timetable = Timetable(),
+        onAction = {},
+    )
+}
+
+/** Renders an empty schedule in the dark preview theme. */
+@Preview(showBackground = true)
+@Composable
+private fun DarkPreview() = UthPreview(darkTheme = true) {
+    val now = LocalDateTime.now()
+    ScheduleScreen(
+        uiState = ScheduleUiState(
+            now = now,
+            selectedDate = now.toLocalDate(),
+            isLoading = false,
+            isEventsLoading = false,
+            isRegistrationsLoading = false,
+        ),
+        onAction = {},
     )
 }
 
