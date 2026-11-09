@@ -52,6 +52,29 @@ class ScheduleViewModel @Inject constructor(
     )
     val uiState = state.asStateFlow()
 
+    /** Refreshes displayed events and closes a selected ticket if it is no longer eligible. */
+    private fun syncDisplayedEvents() {
+        val updatedEvents = loadedEvents.mapNotNull(::toScheduleEvent)
+        var shouldCloseTicket = false
+        state.update { current ->
+            val selectedEvent = current.selectedEvent?.let { selected ->
+                updatedEvents.firstOrNull { it.id == selected.id }
+                    ?.takeIf { it.canOpenTicketAt(LocalDateTime.now(clock)) }
+            }
+            shouldCloseTicket = current.selectedEvent != null && selectedEvent == null
+            current.copy(
+                events = updatedEvents,
+                selectedEvent = selectedEvent,
+                ticketQrToken = if (selectedEvent == null) null else current.ticketQrToken,
+                ticketQrFailed = if (selectedEvent == null) false else current.ticketQrFailed,
+            )
+        }
+        if (shouldCloseTicket) {
+            ticketQrJob?.cancel()
+            ticketQrJob = null
+        }
+    }
+
     init {
         viewModelScope.launch {
             sessionRepository.session.collect { session ->
@@ -78,11 +101,11 @@ class ScheduleViewModel @Inject constructor(
                 loadedEvents = events
                 state.update {
                     it.copy(
-                        events = events.mapNotNull(::toScheduleEvent),
                         isEventsLoading = false,
                         eventsLoadFailed = false,
                     )
                 }
+                syncDisplayedEvents()
             }
         }
         viewModelScope.launch {
@@ -101,11 +124,11 @@ class ScheduleViewModel @Inject constructor(
                     registeredEventIds = ids
                     state.update { current ->
                         current.copy(
-                            events = loadedEvents.mapNotNull(::toScheduleEvent),
                             registrationsLoadFailed = false,
                             isRegistrationsLoading = false,
                         )
                     }
+                    syncDisplayedEvents()
                 }
         }
         viewModelScope.launch {
