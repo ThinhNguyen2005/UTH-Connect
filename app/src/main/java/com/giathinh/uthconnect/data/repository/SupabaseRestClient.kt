@@ -119,6 +119,13 @@ class SupabaseRestClient @Inject constructor() {
 
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized(
+        path = "/rest/v1/$path",
+        method = "POST",
+        body = body,
+        headers = mapOf("Prefer" to "return=representation"),
+    )
+
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
@@ -128,9 +135,14 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-    private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
+    private suspend fun authorized(
+        path: String,
+        method: String,
+        body: JsonObject? = null,
+        headers: Map<String, String> = emptyMap(),
+    ): JsonElement {
         val accessToken = freshToken()
-        return send(path, method, body, accessToken)
+        return send(path, method, body, accessToken, headers)
     }
 
     private suspend fun freshToken(): String {
@@ -174,6 +186,7 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         bearer: String?,
+        headers: Map<String, String> = emptyMap(),
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
@@ -184,6 +197,9 @@ class SupabaseRestClient @Inject constructor() {
                 connection.setRequestProperty("Prefer", "return=representation")
             } else {
                 connection.requestMethod = method
+            }
+            for ((key, value) in headers) {
+                connection.setRequestProperty(key, value)
             }
             connection.connectTimeout = 15_000
             connection.readTimeout = 15_000
