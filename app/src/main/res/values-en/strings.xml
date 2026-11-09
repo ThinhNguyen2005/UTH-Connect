@@ -1,4 +1,8 @@
 <resources>
+    <string name="maintenance_title">App under maintenance</string>
+    <string name="maintenance_message">Please try again later.</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_message">Please update UTH Connect to continue.</string>
     <!-- Bản dịch tiếng Anh. Mặc định của app là tiếng Việt (values/strings.xml). -->
 
     <string name="app_name">UTH Connect</string>
@@ -154,6 +158,9 @@
     <string name="campuses_list_header">Campus locations</string>
     <string name="campuses_departments_header">Support departments</string>
     <string name="campuses_call_action">Call</string>
+    <string name="campuses_call_unavailable">No phone app is available to place a call.</string>
+    <string name="campuses_directions_action">Directions</string>
+    <string name="campuses_directions_unavailable">No map app is available to open directions.</string>
     <string name="campuses_email_action">Email</string>
 
     <!-- Settings -->

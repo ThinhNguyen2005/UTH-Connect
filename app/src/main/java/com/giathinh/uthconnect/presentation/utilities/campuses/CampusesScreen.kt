@@ -1,8 +1,10 @@
 package com.giathinh.uthconnect.presentation.utilities.campuses
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,12 +48,22 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
-private fun dialPhoneNumber(context: Context, phoneNumber: String) {
+internal fun dialPhoneNumber(
+    context: Context,
+    phoneNumber: String,
+    onUnavailable: () -> Unit = {
+        Toast.makeText(context, R.string.campuses_call_unavailable, Toast.LENGTH_SHORT).show()
+    },
+) {
     val cleanNumber = phoneNumber.replace(" ", "")
     val intent = Intent(Intent.ACTION_DIAL).apply {
         data = Uri.parse("tel:$cleanNumber")
     }
-    context.startActivity(intent)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        onUnavailable()
+    }
 }
 
 private fun sendEmail(context: Context, emailAddress: String) {
@@ -58,6 +71,23 @@ private fun sendEmail(context: Context, emailAddress: String) {
         data = Uri.parse("mailto:$emailAddress")
     }
     context.startActivity(intent)
+}
+
+internal fun openDirections(
+    context: Context,
+    address: String,
+    onUnavailable: () -> Unit = {
+        Toast.makeText(context, R.string.campuses_directions_unavailable, Toast.LENGTH_SHORT).show()
+    },
+) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        onUnavailable()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -170,6 +200,20 @@ fun CampusesScreen(
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
                             Text(campus.email, style = MaterialTheme.typography.bodySmall)
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = { openDirections(context, campus.address) },
+                        modifier = Modifier.fillMaxWidth().testTag("campus_directions_button"),
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                    ) {
+                        Icon(
+                            Icons.Filled.Place,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconCompact),
+                        )
+                        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                        Text(stringResource(R.string.campuses_directions_action))
                     }
                 }
             }
