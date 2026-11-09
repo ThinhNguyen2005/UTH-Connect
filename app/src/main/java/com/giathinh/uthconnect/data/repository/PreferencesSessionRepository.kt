@@ -116,10 +116,16 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun signOut() {
         mutex.withLock {
-            auth.signOut()
-            // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
-            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
-            _session.value = StudentSession(isRestoring = false)
+            try {
+                auth.signOut()
+            } finally {
+                val committed = try {
+                    prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()
+                } finally {
+                    _session.value = StudentSession(isRestoring = false)
+                }
+                check(committed) { "Cannot revoke session" }
+            }
         }
     }
 

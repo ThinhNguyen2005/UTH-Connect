@@ -73,7 +73,7 @@ fun AuthRoute(
                 val type = paramsMap["type"].orEmpty()
                 if (accessToken.isNotEmpty()) {
                     viewModel.onAction(AuthAction.DeepLinkReceived(token = accessToken, type = type))
-                    if (type == "recovery") intent.data = null
+                    intent.data = null
                 }
             }
         }

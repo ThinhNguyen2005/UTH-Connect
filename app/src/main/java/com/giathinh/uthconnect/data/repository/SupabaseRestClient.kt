@@ -48,7 +48,9 @@ class SupabaseRestClient @Inject constructor() {
             bearer = null,
         ).jsonObject
         if (replaceExisting) {
-            credentials = parseCredentials(data).also { CrashIdentity.set(it.userId, "") }
+            val newCredentials = parseCredentials(data)
+            recoveryToken = null
+            credentials = newCredentials.also { CrashIdentity.set(it.userId, "") }
         }
     }
 
@@ -75,7 +77,9 @@ class SupabaseRestClient @Inject constructor() {
         val response = send("/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject
         if (response.containsKey("access_token") && response.containsKey("user")) {
             runCatching {
-                credentials = parseCredentials(response).also { CrashIdentity.set(it.userId, "") }
+                val newCredentials = parseCredentials(response)
+                recoveryToken = null
+                credentials = newCredentials.also { CrashIdentity.set(it.userId, "") }
             }
         }
         return response
@@ -112,6 +116,7 @@ class SupabaseRestClient @Inject constructor() {
         expiresInSeconds: Long,
     ) {
         CrashIdentity.clear()
+        recoveryToken = null
         credentials = Credentials(
             userId = userId,
             accessToken = accessToken,

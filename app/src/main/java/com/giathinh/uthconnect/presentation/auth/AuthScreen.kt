@@ -405,6 +405,7 @@ private fun ModernPasswordContent(
     modifier: Modifier = Modifier,
 ) {
     val extended = UthTheme.extendedColors
+    val showRememberMe = com.giathinh.uthconnect.BuildConfig.USE_MOCK_DATA && !com.giathinh.uthconnect.BuildConfig.USE_SUPABASE
     val textFieldShape = UthDimens.Radius.LgShape
 
     Column(
@@ -555,7 +556,7 @@ private fun ModernPasswordContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
             ) {
-                if (com.giathinh.uthconnect.BuildConfig.USE_MOCK_DATA && !com.giathinh.uthconnect.BuildConfig.USE_SUPABASE) RememberMeOption(
+                if (showRememberMe) RememberMeOption(
                     checked = uiState.rememberMe,
                     enabled = enabled,
                     onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
@@ -581,7 +582,7 @@ private fun ModernPasswordContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                if (com.giathinh.uthconnect.BuildConfig.USE_MOCK_DATA && !com.giathinh.uthconnect.BuildConfig.USE_SUPABASE) RememberMeOption(
+                if (showRememberMe) RememberMeOption(
                     checked = uiState.rememberMe,
                     enabled = enabled,
                     onCheckedChange = { onAction(AuthAction.RememberChanged(it)) },
