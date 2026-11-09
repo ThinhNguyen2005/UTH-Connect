@@ -164,6 +164,7 @@
     <string name="campuses_departments_header">Danh bạ phòng ban hỗ trợ</string>
     <string name="campuses_call_action">Gọi ngay</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng điện thoại để thực hiện cuộc gọi.</string>
+    <string name="campuses_email_unavailable">Không tìm thấy ứng dụng email để gửi thư.</string>
     <string name="campuses_directions_action">Chỉ đường</string>
     <string name="campuses_directions_unavailable">Không tìm thấy ứng dụng bản đồ để mở chỉ đường.</string>
     <string name="campuses_email_action">Gửi email</string>

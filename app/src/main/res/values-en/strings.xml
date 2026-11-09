@@ -159,6 +159,7 @@
     <string name="campuses_departments_header">Support departments</string>
     <string name="campuses_call_action">Call</string>
     <string name="campuses_call_unavailable">No phone app is available to place a call.</string>
+    <string name="campuses_email_unavailable">No email app is available to send email.</string>
     <string name="campuses_directions_action">Directions</string>
     <string name="campuses_directions_unavailable">No map app is available to open directions.</string>
     <string name="campuses_email_action">Email</string>

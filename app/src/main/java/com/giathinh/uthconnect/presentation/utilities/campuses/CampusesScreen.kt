@@ -73,7 +73,7 @@ private fun sendEmail(context: Context, emailAddress: String) {
     try {
         context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, R.string.campuses_call_unavailable, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.campuses_email_unavailable, Toast.LENGTH_SHORT).show()
     }
 }
 
