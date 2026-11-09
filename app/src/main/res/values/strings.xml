@@ -1,4 +1,8 @@
 <resources>
+    <string name="maintenance_title">Ứng dụng đang bảo trì</string>
+    <string name="maintenance_message">Vui lòng quay lại sau.</string>
+    <string name="update_required_title">Cần cập nhật ứng dụng</string>
+    <string name="update_required_message">Vui lòng cập nhật UTH Connect để tiếp tục.</string>
     <string name="app_name">UTH Connect</string>
 
     <!-- Chuỗi dùng chung cho mọi module -->

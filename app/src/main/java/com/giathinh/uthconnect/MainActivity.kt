@@ -7,6 +7,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -19,7 +24,12 @@ import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import com.google.firebase.FirebaseApp
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.Locale
 import javax.inject.Inject
 
@@ -43,6 +53,7 @@ class MainActivity : ComponentActivity() {
      * là recompose ngay, không cần dựng lại activity.
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
+    private var appAvailability by mutableStateOf<AppAvailability?>(null)
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -68,9 +79,40 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         observeThemeMode()
+        observeRemoteConfig()
         setContent {
             UTHConnectTheme(darkTheme = themeMode.resolveDarkTheme(isSystemInDarkTheme())) {
-                UthApp()
+                when (val state = appAvailability) {
+                    null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    AppAvailability.AVAILABLE -> UthApp()
+                    else -> AvailabilityScreen(state)
+                }
+            }
+        }
+    }
+
+    /** Applies cached Remote Config immediately, then refreshes the app gate. */
+    private fun observeRemoteConfig() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
+                    appAvailability = AppAvailability.AVAILABLE
+                    return@repeatOnLifecycle
+                }
+                try {
+                    val config = FirebaseRemoteConfig.getInstance()
+                    config.setConfigSettingsAsync(FirebaseRemoteConfigSettings.Builder().setMinimumFetchIntervalInSeconds(0).build()).await()
+                    config.setDefaultsAsync(mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false)).await()
+                    refreshAvailability(
+                        read = { availability(config.getBoolean("maintenance_mode"), BuildConfig.VERSION_NAME, config.getString("force_update_min_version")) },
+                        fetchAndActivate = { config.fetchAndActivate().await() },
+                        publish = { appAvailability = it },
+                    )
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    if (appAvailability == null) appAvailability = AppAvailability.AVAILABLE
+                }
             }
         }
     }
