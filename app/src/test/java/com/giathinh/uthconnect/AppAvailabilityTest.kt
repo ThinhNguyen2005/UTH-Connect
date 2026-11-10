@@ -23,6 +23,40 @@ class AppAvailabilityTest {
     }
 
     @Test
+    fun savedGateBlockingDoesNotPublishAvailableOnDefaultSource() {
+        val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
+        val (state, _) = resolveGate(saved, null, null, "1.0.0")
+        assertEquals(AppAvailability.MAINTENANCE, state)
+    }
+
+    @Test
+    fun savedGateBlockingStaysBlockedOnFetchFailure() {
+        val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
+        val (state, _) = resolveGate(saved, null, null, "1.0.0")
+        assertEquals(AppAvailability.MAINTENANCE, state)
+    }
+
+    @Test
+    fun savedGateBlockingUnblocksWhenRemoteMaintenanceTurnsFalse() {
+        val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
+        val (state, newSaved) = resolveGate(
+            saved = saved,
+            remoteMaintenance = false,
+            remoteMinVersion = "1.0.0",
+            currentVersion = "1.0.0",
+        )
+        assertEquals(AppAvailability.AVAILABLE, state)
+        assertEquals(false, newSaved.maintenanceMode)
+    }
+
+    @Test
+    fun freshInstallFailsOpenAsAvailable() {
+        val saved = SavedGate(hasSavedState = false)
+        val (state, _) = resolveGate(saved, null, null, "1.0.0")
+        assertEquals(AppAvailability.AVAILABLE, state)
+    }
+
+    @Test
     fun newlyActivatedConfigurationChangesTheAppGate() = runTest {
         var maintenance = false
         val published = mutableListOf<AppAvailability>()
