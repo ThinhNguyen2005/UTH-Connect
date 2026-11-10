@@ -2,9 +2,7 @@ package com.giathinh.uthconnect.presentation.tickets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
-import com.giathinh.uthconnect.domain.model.TicketQrPayload
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
@@ -12,7 +10,6 @@ import com.giathinh.uthconnect.domain.usecase.GetTicketsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,7 +90,7 @@ class TicketsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedTicket = ticket,
-                secondsRemaining = if (BuildConfig.USE_SUPABASE) 0 else QR_TTL_SECONDS,
+                secondsRemaining = 0,
                 qrToken = null,
                 qrError = null,
                 qrErrorCode = null,
@@ -101,25 +98,7 @@ class TicketsViewModel @Inject constructor(
         }
         viewModelScope.launch { _events.send(TicketsEvent.OpenQr(ticketId)) }
         qrJob = viewModelScope.launch {
-            if (BuildConfig.USE_SUPABASE) {
-                refreshLiveQr(ticket)
-                return@launch
-            }
-            while (_uiState.value.selectedTicket?.id == ticketId && _uiState.value.secondsRemaining > 0) {
-                delay(ONE_SECOND_MILLIS)
-                _uiState.update { state ->
-                    if (state.selectedTicket?.id != ticketId) {
-                        state
-                    } else if (state.secondsRemaining <= 1) {
-                        state.copy(
-                            secondsRemaining = QR_TTL_SECONDS,
-                            qrToken = TicketQrPayload.create(ticketId, System.currentTimeMillis()),
-                        )
-                    } else {
-                        state.copy(secondsRemaining = state.secondsRemaining - 1)
-                    }
-                }
-            }
+            refreshLiveQr(ticket)
         }
     }
 
@@ -142,11 +121,6 @@ class TicketsViewModel @Inject constructor(
                 }
             },
         )
-    }
-
-    private companion object {
-        const val QR_TTL_SECONDS = 60
-        const val ONE_SECOND_MILLIS = 1_000L
     }
 }
 

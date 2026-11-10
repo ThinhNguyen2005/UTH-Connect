@@ -2,7 +2,7 @@ package com.giathinh.uthconnect.domain.model
 
 import java.time.LocalDateTime
 
-/** Supported mock courses; presentation owns their localized labels. */
+/** Locally selectable deadline categories until an authenticated course catalog is available. */
 enum class Course { ANDROID, DATABASE, ENGLISH }
 
 data class ClassSession(

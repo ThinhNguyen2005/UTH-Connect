@@ -2,28 +2,29 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>ComplexCondition:AuthScreen.kt$failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected || failure == AuthFailure.SessionRestore || failure == AuthFailure.NetworkError</ID>
     <ID>ComplexCondition:EventsScreen.kt$validationError == null &amp;&amp; start != null &amp;&amp; end != null &amp;&amp; count != null</ID>
     <ID>ComplexCondition:LostFoundViewModel.kt$LostFoundViewModel$titleError != null || descriptionError != null || locationError != null || phoneError != null</ID>
     <ID>ComplexCondition:SignUpUseCase.kt$SignUpUseCase$nameError != null || emailError != null || passwordError != null || confirmError != null</ID>
     <ID>CyclomaticComplexMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
-    <ID>CyclomaticComplexMethod:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator fun invoke(password: String, confirmPassword: String): CompletePasswordResetOutcome</ID>
+    <ID>CyclomaticComplexMethod:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator fun invoke(email: String, otp: String, password: String, confirmPassword: String): CompletePasswordResetOutcome</ID>
     <ID>CyclomaticComplexMethod:FirestoreEventRepository.kt$FirestoreEventRepository$private fun DocumentSnapshot.toEvent(): Event?</ID>
-    <ID>CyclomaticComplexMethod:FirestoreTrainingPointRepository.kt$FirestoreTrainingPointRepository$@Suppress("UNCHECKED_CAST") private fun mapSnapshot(snapshot: DocumentSnapshot): TrainingPointInfo</ID>
-    <ID>CyclomaticComplexMethod:FirestoreTuitionRepository.kt$FirestoreTuitionRepository$@Suppress("UNCHECKED_CAST") private fun mapSnapshot(snapshot: DocumentSnapshot): TuitionInfo</ID>
     <ID>CyclomaticComplexMethod:LostFoundViewModel.kt$LostFoundViewModel$fun onAction(action: LostFoundAction)</ID>
     <ID>CyclomaticComplexMethod:PasswordChangeValidator.kt$PasswordChangeValidator$fun validate(old: String, updated: String, confirmation: String): PasswordValidation</ID>
     <ID>CyclomaticComplexMethod:ProfileViewModel.kt$ProfileViewModel$fun onAction(action: ProfileAction)</ID>
     <ID>CyclomaticComplexMethod:ScheduleViewModel.kt$ScheduleViewModel$fun onAction(action: ScheduleAction)</ID>
+    <ID>InstanceOfCheckForException:ScheduleViewModel.kt$ScheduleViewModel$error is CancellationException</ID>
     <ID>LongMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
     <ID>LongMethod:AuthViewModel.kt$AuthViewModel$private fun submitFirstTimeSetup()</ID>
     <ID>LongMethod:FirestoreEventSeeder.kt$FirestoreEventSeeder$suspend fun seedSampleEvents(firestore: FirebaseFirestore): Result&lt;Int&gt;</ID>
     <ID>LongMethod:HomeScreen.kt$private fun LazyListScope.homeFeed( state: HomeUiState, onOpen: (String) -&gt; Unit, onOpenFilter: () -&gt; Unit, onOpenArchive: () -&gt; Unit, onSelectCategory: (AnnouncementCategory?) -&gt; Unit, )</ID>
     <ID>LongMethod:LostFoundViewModel.kt$LostFoundViewModel$fun onAction(action: LostFoundAction)</ID>
     <ID>LongMethod:LostFoundViewModel.kt$LostFoundViewModel$private fun submitReport()</ID>
-    <ID>LongMethod:ScheduleViewModel.kt$ScheduleViewModel$private fun sampleEvents(date: LocalDate, now: LocalDateTime): List&lt;ScheduleEvent&gt;</ID>
     <ID>LongParameterList:AuthViewModel.kt$AuthViewModel$( private val signIn: SignInUseCase, private val sessions: AccessStudentSessionUseCase, private val signInWithGoogle: SignInWithGoogleUseCase, private val signUp: SignUpUseCase, private val forgotPassword: ForgotPasswordUseCase, private val completePasswordReset: CompletePasswordResetUseCase, private val submitVerification: SubmitVerificationRequestUseCase, private val supabaseRestClient: SupabaseRestClient, private val getSettings: GetSettingsUseCase, private val updateSettings: UpdateSettingsUseCase, )</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$1000L</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$12</ID>
+    <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$1_000</ID>
+    <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$429</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$60</ID>
     <ID>MagicNumber:AuthViewModel.kt$AuthViewModel$8</ID>
     <ID>MagicNumber:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$64</ID>
@@ -74,18 +75,8 @@
     <ID>MagicNumber:ScheduleScreen.kt$9</ID>
     <ID>MagicNumber:ScheduleUiState.kt$SchedulePeriod.Companion$12</ID>
     <ID>MagicNumber:ScheduleUiState.kt$SchedulePeriod.Companion$18</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$10</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$11</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$14</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$17</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$18</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$21</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$3</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$30</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$45</ID>
     <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$60_000</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$75</ID>
-    <ID>MagicNumber:ScheduleViewModel.kt$ScheduleViewModel$8</ID>
+    <ID>MagicNumber:SecureSessionStore.kt$SecureSessionStore$128</ID>
     <ID>MagicNumber:SignUpUseCase.kt$SignUpUseCase$12</ID>
     <ID>MagicNumber:SignUpUseCase.kt$SignUpUseCase$6</ID>
     <ID>MagicNumber:SignUpUseCase.kt$SignUpUseCase$8</ID>
@@ -96,6 +87,7 @@
     <ID>MagicNumber:SupabaseAuthRepository.kt$SupabaseAuthRepository$400</ID>
     <ID>MagicNumber:SupabaseAuthRepository.kt$SupabaseAuthRepository$401</ID>
     <ID>MagicNumber:SupabaseAuthRepository.kt$SupabaseAuthRepository$8</ID>
+    <ID>MagicNumber:SupabaseLostFoundRepository.kt$SupabaseLostFoundRepository$20</ID>
     <ID>MagicNumber:SupabaseMappers.kt$8</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$1000L</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$15_000</ID>
@@ -103,6 +95,9 @@
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$299</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$30_000L</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$3600L</ID>
+    <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$400</ID>
+    <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$401</ID>
+    <ID>MagicNumber:SupabaseUniversityRepositories.kt$SupabaseAnnouncementRepository$5</ID>
     <ID>MagicNumber:TuitionUiState.kt$TuitionUiState$3</ID>
     <ID>MatchingDeclarationName:AnnouncementNavigation.kt$AnnouncementDetailDestination</ID>
     <ID>MatchingDeclarationName:AttendanceNavigation.kt$AttendanceDestination</ID>
@@ -127,7 +122,6 @@
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest$fun</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest.CountingAuthRepository$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:AuthAdversarialStressTest.kt$AuthAdversarialStressTest.CountingAuthRepository$val valid = (identifier.trim() == student.studentId || identifier.trim().equals(student.email, ignoreCase = true)) &amp;&amp; password == "correct_password"</ID>
-    <ID>MaxLineLength:AuthDataModule.kt$AuthDataModule.Companion$fun</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 1: DOMAIN VALIDATION &amp; CRYPTO ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 2: VIEWMODEL STATE MACHINE ─────────────────────────────────────────</ID>
     <ID>MaxLineLength:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest$// ───────────────────────────────────────── TIER 3: UI SEMANTICS &amp; ACCESSIBILITY CONTRACT ─────────────────────────────────────────</ID>
@@ -146,15 +140,20 @@
     <ID>MaxLineLength:AuthSecurityAdversarialChallengeTest.kt$AuthSecurityAdversarialChallengeTest$val passedDomainCheck = email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true)</ID>
     <ID>MaxLineLength:AuthSecurityAdversarialChallengeTest.kt$AuthSecurityAdversarialChallengeTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String)</ID>
     <ID>MaxLineLength:AuthSecurityAdversarialChallengeTest.kt$AuthSecurityAdversarialChallengeTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
+    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$AuthAction.DismissForgotPassword -&gt; _uiState.update { it.copy(forgotDialogOpen = false, forgotError = null) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$AuthAction.ToggleResetPasswordVisibility -&gt; _uiState.update { it.copy(resetPasswordVisible = !it.resetPasswordVisible) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$_uiState.update { it.copy(isSubmittingVerification = false, verificationNotice = "Không thể gửi yêu cầu xác minh") }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$completePasswordReset</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$eventChannel.send(AuthEvent.GeneralMessage("Chỉ chấp nhận email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)"))</ID>
+    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$eventChannel.send(AuthEvent.GeneralMessage("Đã yêu cầu gửi lại email xác minh. Vui lòng kiểm tra hộp thư."))</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$is AuthAction.ForgotEmailChanged -&gt; _uiState.update { it.copy(forgotEmail = action.value, forgotError = null) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$is AuthAction.ResetConfirmPasswordChanged -&gt; _uiState.update { it.copy(resetConfirmPassword = action.value, resetPasswordError = null) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$is AuthAction.ResetNewPasswordChanged -&gt; _uiState.update { it.copy(resetNewPassword = action.value, resetPasswordError = null) }</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$is AuthAction.VerificationStudentIdChanged -&gt; _uiState.update { it.copy(verificationStudentId = action.value) }</ID>
+    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$it.copy(isResettingPassword = false, resetPasswordError = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.")</ID>
+    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$it.copy(isSendingForgot = false, forgotError = "Đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau.")</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$it.copy(isSigningIn = false, identifierError = outcome.identifier, passwordError = outcome.password)</ID>
+    <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$resetConfirmPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else ""</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$submitVerification</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$val isUtEmail = (id.endsWith("@ut.edu.vn", ignoreCase = true) || id.endsWith("@uth.edu.vn", ignoreCase = true)) &amp;&amp; id.indexOf('@') &gt; 0</ID>
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel$val targetEmail = snapshot.registeredEmail.ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }.trim()</ID>
@@ -166,8 +165,10 @@
     <ID>MaxLineLength:CampusesScreen.kt$Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))</ID>
     <ID>MaxLineLength:CampusesUiState.kt$CampusesUiState$DepartmentInfo("Trung tâm Thông tin - Thư viện", "028 3899 1373", "thuvien@ut.edu.vn", "Tòa nhà Thư viện - CS1")</ID>
     <ID>MaxLineLength:CheckInUseCaseTest.kt$CheckInUseCaseTest.Companion$val profile = StudentProfile("organizer-1", "demo@ut.edu.vn", "Demo", "A", "IT", "IT", role = UserRole.ORGANIZER)</ID>
+    <ID>MaxLineLength:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
+    <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:DemoAccountStore.kt$SharedPreferencesDemoAccountStore$override fun putAll(values: Map&lt;String, String&gt;): Boolean</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$override suspend</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$private</ID>
@@ -231,7 +232,6 @@
     <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `accept strong distinct password`()</ID>
     <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `reject whitespace and excessive password`()</ID>
     <ID>MaxLineLength:PostNotification.kt$NotificationCategory.Companion$fun fromString(value: String?): NotificationCategory</ID>
-    <ID>MaxLineLength:PreferencesSessionRepository.kt$PreferencesSessionRepository$if (remember &amp;&amp; !BuildConfig.USE_SUPABASE) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)</ID>
     <ID>MaxLineLength:ProfileScreen.kt$)</ID>
     <ID>MaxLineLength:ProfileScreen.kt$if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress</ID>
     <ID>MaxLineLength:ProfileScreen.kt$if (student.personalEmail.isBlank()) stringResource(R.string.auth_contact_not_set) else student.personalEmail</ID>
@@ -251,14 +251,20 @@
     <ID>MaxLineLength:ScheduleScreen.kt$1 -&gt; rawEvents.filter { it.title.contains("Workshop", ignoreCase = true) || it.title.contains("Hội thảo", ignoreCase = true) || it.title.contains("Seminar", ignoreCase = true) || it.title.contains("AI", ignoreCase = true) }</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$2 -&gt; rawEvents.filter { it.title.contains("Hội thao", ignoreCase = true) || it.title.contains("Thể thao", ignoreCase = true) || it.title.contains("Sports", ignoreCase = true) || it.title.contains("Festival", ignoreCase = true) }</ID>
     <ID>MaxLineLength:ScheduleScreen.kt$3 -&gt; rawEvents.filter { it.title.contains("Doanh nghiệp", ignoreCase = true) || it.title.contains("Logistics", ignoreCase = true) || it.title.contains("Career", ignoreCase = true) || it.title.contains("Đoàn", ignoreCase = true) }</ID>
-    <ID>MaxLineLength:ScheduleScreen.kt$eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}"</ID>
+    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$combine</ID>
+    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$it.copy(showForm = true, date = it.now.toLocalDate().plusDays(1).toString(), titleError = false, dateError = false, timeError = false)</ID>
+    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$registration = if (event.id in registeredIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED</ID>
+    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$state.update { it.copy(eventError = "Đăng ký thất bại. Kiểm tra kết nối hoặc điều kiện tham gia.") }</ID>
+    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$state.update { it.copy(isLoadingEvents = false, eventError = "Không thể tải sự kiện. Vui lòng thử lại.") }</ID>
     <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$state.update { it.copy(showForm = !valid, dateError = !valid, timeError = !valid, title = if (valid) "" else it.title) }</ID>
-    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event1Reg = if (registeredEventIds.contains("event-ai")) EventRegistration.REGISTERED else EventRegistration.CHECKED_IN</ID>
-    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event2Reg = if (registeredEventIds.contains("event-career")) EventRegistration.REGISTERED else EventRegistration.REGISTERED</ID>
-    <ID>MaxLineLength:ScheduleViewModel.kt$ScheduleViewModel$val event3Reg = if (registeredEventIds.contains("event-sports")) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED</ID>
+    <ID>MaxLineLength:ScheduleViewModelTest.kt$ScheduleViewModelTest.&lt;no name provided&gt;$override suspend fun cancelRegistration(eventId: String, uid: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:ScheduleViewModelTest.kt$ScheduleViewModelTest.&lt;no name provided&gt;$override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:SecureSessionStore.kt$SecureSessionStore$val encoded = Base64.encodeToString(cipher.iv + cipher.doFinal("$userId\n$refreshToken".toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)</ID>
+    <ID>MaxLineLength:SecureSessionStore.kt$SecureSessionStore$val parts = cipher.doFinal(bytes.copyOfRange(IV_LENGTH, bytes.size)).toString(Charsets.UTF_8).split('\n', limit = 2)</ID>
     <ID>MaxLineLength:ServerErrorCode.kt$ServerErrorCode.Companion$fun</ID>
     <ID>MaxLineLength:SignInUseCaseTest.kt$SignInUseCaseTest.&lt;no name provided&gt;$override suspend</ID>
     <ID>MaxLineLength:SignInUseCaseTest.kt$SignInUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
+    <ID>MaxLineLength:SignInWithGoogleUseCase.kt$SignInWithGoogleUseCase$suspend operator</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String)</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
     <ID>MaxLineLength:SignInWithGoogleUseCaseTest.kt$SignInWithGoogleUseCaseTest.FakeAuth$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
@@ -278,6 +284,10 @@
     <ID>MaxLineLength:SupabaseEventRepository.kt$SupabaseEventRepository$client.table("registrations?select=status&amp;event_id=eq.${urlEncode(uuid(eventId))}&amp;user_id=eq.${urlEncode(uuid(uid))}")</ID>
     <ID>MaxLineLength:SupabaseEventRepository.kt$SupabaseEventRepository$override suspend fun cancelCurrentRegistration(eventId: String): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:SupabaseRestClient.kt$SupabaseRestClient$suspend fun rpc(function: String, params: JsonObject): JsonElement</ID>
+    <ID>MaxLineLength:SupabaseRestClient.kt$SupabaseRestClient$val response = send(if (redirectTo.isBlank()) "/auth/v1/signup" else "/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject</ID>
+    <ID>MaxLineLength:SupabaseUniversityRepositories.kt$SupabaseAnnouncementRepository$blocks = notice.content.takeIf { it.isNotBlank() }?.let { listOf(AnnouncementBlock.Paragraph(it)) }.orEmpty()</ID>
+    <ID>MaxLineLength:SupabaseUniversityRepositories.kt$SupabaseStudentGradeRepository$emit(if (totalCredits == 0) 0f else grades.sumOf { it.totalScore4.toDouble() * it.credits }.div(totalCredits).toFloat())</ID>
+    <ID>MaxLineLength:SupabaseUniversityRepositories.kt$private</ID>
     <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun checkIn(identifier: String, organizerId: String): Result&lt;TicketCheckInOutcome&gt;</ID>
     <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun checkIn(token: String): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:TicketRepository.kt$TicketRepository$suspend fun issueCheckInToken(eventId: String): Result&lt;String&gt;</ID>
@@ -292,12 +302,15 @@
     <ID>MaxLineLength:TimetableUseCase.kt$TimetableUseCase.Companion$fun isUrgent(dueAt: LocalDateTime, now: LocalDateTime): Boolean</ID>
     <ID>MaxLineLength:TimetableUseCase.kt$TimetableUseCase.Companion$fun tomorrow(value: Timetable, today: LocalDate)</ID>
     <ID>MaxLineLength:TrainingPointScreen.kt$text = stringResource(R.string.training_point_criteria_score, criteria.score, criteria.maxScore)</ID>
+    <ID>MaxLineLength:UnavailableUniversityRepositories.kt$UnavailableTrainingPointRepository$override suspend fun getTrainingPoint(): Result&lt;TrainingPointInfo&gt;</ID>
+    <ID>MaxLineLength:UnavailableUniversityRepositories.kt$UnavailableTuitionRepository$override suspend fun getTuition(): Result&lt;TuitionInfo&gt;</ID>
     <ID>MaxLineLength:UthDestination.kt$UthDestination.Companion$fun</ID>
     <ID>MaxLineLength:UtilitiesScreen.kt$private</ID>
     <ID>MaxLineLength:UtilitiesViewModelTest.kt$UtilitiesViewModelTest.FakeUtilityRepository$override suspend fun modules(): Result&lt;List&lt;UtilityModule&gt;&gt;</ID>
     <ID>ReturnCount:AuthE2EWorkflowTest.kt$AuthE2EWorkflowTest.FakeAuthRepository$override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result&lt;StudentProfile&gt;</ID>
     <ID>ReturnCount:ChangePasswordUseCase.kt$ChangePasswordUseCase$suspend operator fun invoke(old: String, updated: String, confirmed: String): ChangePasswordResult</ID>
     <ID>ReturnCount:CheckInUseCase.kt$CheckInUseCase$suspend operator fun invoke(rawCode: String): CheckInResult</ID>
+    <ID>ReturnCount:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator fun invoke(email: String, otp: String, password: String, confirmPassword: String): CompletePasswordResetOutcome</ID>
     <ID>ReturnCount:FirebaseAuthRepository.kt$FirebaseAuthRepository$private suspend fun resolveEmail(identifier: String): String?</ID>
     <ID>ReturnCount:GoogleIdTokenSource.kt$GoogleIdTokenSource$suspend fun request(activity: Activity, webClientId: String): GoogleIdTokenResult</ID>
     <ID>ReturnCount:QrFrameDecoder.kt$QrFrameDecoder$fun compactLuminance(plane: ByteBuffer, width: Int, height: Int, rowStride: Int): ByteArray</ID>
@@ -305,13 +318,16 @@
     <ID>ReturnCount:SupabaseMappers.kt$internal fun JsonObject.toDomainTicket( studentId: String, userId: String, attendedEventIds: Set&lt;String&gt;, ): Ticket?</ID>
     <ID>ReturnCount:UpdateStudentContactUseCase.kt$UpdateStudentContactUseCase$suspend operator fun invoke(phone: String, email: String, address: String): UpdateContactResult</ID>
     <ID>SwallowedException:GoogleIdTokenSource.kt$GoogleIdTokenSource$cancelled: GetCredentialCancellationException</ID>
+    <ID>SwallowedException:SecureSessionStore.kt$SecureSessionStore$error: Exception</ID>
     <ID>TooGenericExceptionCaught:AttendanceViewModel.kt$AttendanceViewModel$error: Exception</ID>
     <ID>TooGenericExceptionCaught:EventsViewModel.kt$EventsViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:ScheduleViewModel.kt$ScheduleViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:SecureSessionStore.kt$SecureSessionStore$error: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseAttendanceRosterRepository.kt$SupabaseAttendanceRosterRepository$error: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseAuthRepository.kt$SupabaseAuthRepository$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseAuthRepository.kt$SupabaseAuthRepository$error: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseGoogleExchange.kt$SupabaseGoogleExchange$error: Exception</ID>
-    <ID>TooGenericExceptionCaught:SupabaseRestClient.kt$SupabaseRestClient$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:SuspendResults.kt$error: Exception</ID>
     <ID>TooManyFunctions:AnnouncementScreen.kt$com.giathinh.uthconnect.presentation.announcement.AnnouncementScreen.kt</ID>
     <ID>TooManyFunctions:AuthScreen.kt$com.giathinh.uthconnect.presentation.auth.AuthScreen.kt</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
@@ -326,7 +342,6 @@
     <ID>TooManyFunctions:SupabaseRestClient.kt$SupabaseRestClient</ID>
     <ID>TooManyFunctions:TicketsScreen.kt$com.giathinh.uthconnect.presentation.tickets.TicketsScreen.kt</ID>
     <ID>TooManyFunctions:UtilitiesScreen.kt$com.giathinh.uthconnect.presentation.utilities.UtilitiesScreen.kt</ID>
-    <ID>UnusedParameter:ScheduleScreen.kt$onViewQr: (ScheduleEvent) -&gt; Unit</ID>
     <ID>UnusedPrivateMember:AnnouncementScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun AnnouncementContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:AnnouncementScreen.kt$@Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f) @Composable private fun AnnouncementContentFontScalePreview()</ID>
     <ID>UnusedPrivateMember:AnnouncementScreen.kt$@Preview(name = "content light", showBackground = true) @Composable private fun AnnouncementContentPreview()</ID>

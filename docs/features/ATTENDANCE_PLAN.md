@@ -74,4 +74,4 @@
 
 - Supabase Realtime để danh sách tự cập nhật là cải tiến sau khi truy vấn và tải lại ổn định.
 - Đồng bộ Google Sheets tự động chỉ bổ sung khi ban tổ chức cần một Sheet luôn cập nhật; khi đó đồng bộ một chiều từ Supabase, có thử lại và đối soát. Sheet không thay thế bản ghi attendance.
-- Cập nhật `README.md`, `docs/Design.md` và `docs/DATABASE_SCHEMA.md` khi Supabase được chốt làm backend chính; hiện các tài liệu đó còn mô tả Firebase/Firestore.
+- Đối chiếu `README.md`, `docs/Design.md` và `docs/data/DATABASE_SCHEMA.md` với migrations khi schema hoặc trạng thái rollout thay đổi; Supabase hiện là backend được cấu hình cho Android.

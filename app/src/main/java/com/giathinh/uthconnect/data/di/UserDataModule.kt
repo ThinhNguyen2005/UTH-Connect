@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.FakeUserRepository
+import com.giathinh.uthconnect.data.repository.SupabaseUserRepository
 import com.giathinh.uthconnect.domain.repository.UserRepository
 import dagger.Binds
 import dagger.Module
@@ -15,6 +15,6 @@ abstract class UserDataModule {
     @Binds
     @Singleton
     abstract fun bindUserRepository(
-        impl: FakeUserRepository,
+        impl: SupabaseUserRepository,
     ): UserRepository
 }

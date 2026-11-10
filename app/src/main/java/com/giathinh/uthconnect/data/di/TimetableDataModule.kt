@@ -1,6 +1,6 @@
 package com.giathinh.uthconnect.data.di
 
-import com.giathinh.uthconnect.data.repository.InMemoryTimetableRepository
+import com.giathinh.uthconnect.data.repository.LocalAccountTimetableRepository
 import com.giathinh.uthconnect.domain.repository.TimetableRepository
 import dagger.Module
 import dagger.Provides
@@ -19,5 +19,5 @@ object TimetableDataModule {
     fun clock(): Clock = Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"))
 
     @Provides @Singleton
-    fun repository(@Named("timetable") clock: Clock): TimetableRepository = InMemoryTimetableRepository(clock)
+    fun repository(impl: LocalAccountTimetableRepository): TimetableRepository = impl
 }

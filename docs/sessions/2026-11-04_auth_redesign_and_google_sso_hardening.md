@@ -10,7 +10,7 @@
 
 Triển khai đầy đủ các yêu cầu trọng tâm (R1, R2, R3), chẩn đoán thực tế và hạ tầng kiểm thử E2E:
 1. **R1: Tái thiết kế Giao diện AuthScreen trong Jetpack Compose**:
-   - Chuyển đổi giao diện đăng nhập sang chuẩn Stitch AI hiện đại, bám sát UTH Design System (`docs/Design-system.md`, `docs/UI-UX.mc`, `AGENTS.md`).
+   - Chuyển đổi giao diện đăng nhập sang chuẩn Stitch AI hiện đại, bám sát UTH Design System (`docs/Design-system.md`, `docs/UI-UX.md`, `AGENTS.md`).
    - Tích hợp Brand Header với logo monogram UTH, tiêu đề kèm badge `PRO` (Accent tone / Gold container), bộ chọn ngôn ngữ pill `VI`/`EN` đạt chuẩn touch target 48dp.
    - Bổ sung bộ điều khiển phân đoạn Segmented Control chuyển đổi mượt mà giữa "1. Nhập mật khẩu" và "2. Sinh trắc học".
    - Chế độ Password Mode: Input MSSV/Email, Password kèm nút show/hide, checkbox kích hoạt vân tay lần sau, liên kết quên mật khẩu, nút chính "ĐĂNG NHẬP" (in hoa, spinner loading), đường kẻ phân cách "Hoặc" và nút Google SSO.
