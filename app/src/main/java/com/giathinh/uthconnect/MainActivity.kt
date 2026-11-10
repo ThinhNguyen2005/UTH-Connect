@@ -121,47 +121,7 @@ class MainActivity : ComponentActivity() {
 
                 try {
                     withContext(Dispatchers.IO) {
-                        val config = FirebaseRemoteConfig.getInstance()
-                        val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
-                        val settings = FirebaseRemoteConfigSettings.Builder()
-                            .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
-                            .build()
-                        config.setConfigSettingsAsync(settings).await()
-                        config.setDefaultsAsync(
-                            mapOf(
-                                "force_update_min_version" to "1.0.0",
-                                "maintenance_mode" to false,
-                            ),
-                        ).await()
-
-                        config.fetchAndActivate().await()
-
-                        val maintVal = config.getValue("maintenance_mode")
-                        val minVerVal = config.getValue("force_update_min_version")
-
-                        val remoteMaint = if (maintVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-                            maintVal.asBoolean()
-                        } else {
-                            null
-                        }
-
-                        val remoteMinVer = if (minVerVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-                            minVerVal.asString()
-                        } else {
-                            null
-                        }
-
-                        val (newState, newSaved) = resolveGate(
-                            saved = saved,
-                            remoteMaintenance = remoteMaint,
-                            remoteMinVersion = remoteMinVer,
-                            currentVersion = BuildConfig.VERSION_NAME,
-                        )
-                        saveGate(this@MainActivity, newSaved)
-
-                        withContext(Dispatchers.Main) {
-                            appAvailability = newState
-                        }
+                        updateRemoteConfigGate(saved)
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -175,6 +135,46 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun updateRemoteConfigGate(saved: SavedGate) {
+        val config = FirebaseRemoteConfig.getInstance()
+        val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
+        val settings = FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
+            .build()
+        config.setConfigSettingsAsync(settings).await()
+        config.setDefaultsAsync(
+            mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
+        ).await()
+
+        config.fetchAndActivate().await()
+
+        val maintVal = config.getValue("maintenance_mode")
+        val minVerVal = config.getValue("force_update_min_version")
+
+        val remoteMaint = if (maintVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
+            maintVal.asBoolean()
+        } else {
+            null
+        }
+        val remoteMinVer = if (minVerVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
+            minVerVal.asString()
+        } else {
+            null
+        }
+
+        val (newState, newSaved) = resolveGate(
+            saved = saved,
+            remoteMaintenance = remoteMaint,
+            remoteMinVersion = remoteMinVer,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
+        saveGate(this@MainActivity, newSaved)
+
+        withContext(Dispatchers.Main) {
+            appAvailability = newState
         }
     }
 
