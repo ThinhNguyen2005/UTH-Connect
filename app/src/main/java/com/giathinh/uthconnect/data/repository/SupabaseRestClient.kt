@@ -1,11 +1,6 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.BuildConfig
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -19,7 +14,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.net.HttpURLConnection
+import java.net.URL
+import javax.inject.Inject
+import javax.inject.Singleton
 
+/** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
@@ -110,41 +110,39 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun signUp(
         email: String,
         password: String,
-        metadata: JsonObject = buildJsonObject {},
+        displayName: String,
+        faculty: String,
         redirectTo: String = "",
-    ): JsonElement {
+    ): JsonObject {
         val encodedRedirect = urlEncode(redirectTo)
         val payload = buildJsonObject {
             put("email", email)
             put("password", password)
-            put("data", metadata)
+            put(
+                "data",
+                buildJsonObject {
+                    put("display_name", displayName)
+                    put("faculty", faculty)
+                },
+            )
         }
-        val response = send(
-            if (redirectTo.isBlank()) "/auth/v1/signup" else "/auth/v1/signup?redirect_to=$encodedRedirect",
-            "POST",
-            payload,
-            bearer = null,
-        )
-        runCatching {
-            val creds = parseCredentials(response.jsonObject)
-            credentials = creds
+        val response = send(if (redirectTo.isBlank()) "/auth/v1/signup" else "/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject
+        if (response.containsKey("access_token") && response.containsKey("user")) {
+            credentials = parseCredentials(response)
         }
         return response
     }
 
-    suspend fun recoverPassword(email: String, redirectTo: String = "uthconnect://auth/reset-password") {
-        val encodedRedirect = urlEncode(redirectTo)
+    suspend fun recoverPassword(email: String) {
         val payload = buildJsonObject { put("email", email) }
-        val path = if (redirectTo.isBlank()) "/auth/v1/recover" else "/auth/v1/recover?redirect_to=$encodedRedirect"
-        send(path, "POST", payload, bearer = null)
+        send("/auth/v1/recover", "POST", payload, bearer = null)
     }
 
     /**
-     * One-shot recovery: use the access token returned by verify-otp as bearer for the subsequent
-     * user update call. We deliberately do NOT establish a full session here so that cancel flows
-     * cannot leave the app in a logged-in state without an explicit user sign-in.
+     * One-shot recovery: use the access token returned by GoTrue OTP verification
+     * exclusively for updating that account's password. Never adopt or persist it.
      */
-    suspend fun resetPasswordWithOtp(email: String, otp: String, newPassword: String) {
+    suspend fun resetPasswordWithOtp(email: String, otp: String, password: String) {
         val verified = send(
             "/auth/v1/verify",
             "POST",
@@ -156,16 +154,16 @@ class SupabaseRestClient @Inject constructor() {
             bearer = null,
         ).jsonObject
         val recoveryAccessToken = verified["access_token"]?.jsonPrimitive?.content
-            ?: error("OTP verification response missing recovery token")
+            ?: error("Supabase recovery verification did not return a session")
         send(
             "/auth/v1/user",
             "PUT",
-            buildJsonObject { put("password", newPassword) },
+            buildJsonObject { put("password", password) },
             bearer = recoveryAccessToken,
         )
     }
 
-    /** Resend a signup verification email, never a password-recovery email. */
+    /** Sends a signup verification email, never a password-recovery email. */
     suspend fun resendSignupConfirmation(email: String) {
         send(
             "/auth/v1/resend",
@@ -184,30 +182,29 @@ class SupabaseRestClient @Inject constructor() {
         rememberSession = false
         sessionStore?.clear()
         if (old != null) {
-            runCatching { send("/auth/v1/logout", "POST", bearer = old.accessToken) }
+            try {
+                send("/auth/v1/logout", "POST", bearer = old.accessToken)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A revoked local session cannot be restored, including when offline.
+            }
         }
     }
 
-    fun hasActiveSession(): Boolean = credentials != null
-
     /**
-     * Establish or overwrite the in-memory session directly from raw tokens.
-     * Used by the deep-link recovery callback flow, which bypasses the standard signIn() method.
+     * Adopts a session that was established outside this client — today only the
+     * supabase-kt native Google exchange. The tokens behave identically to a password
+     * login, so [freshToken] can still refresh them through `grant_type=refresh_token`.
+     *
+     * The session repository subsequently applies the user's remember-me choice.
      */
-    fun attachSession(accessToken: String, refreshToken: String, expiresInSeconds: Long = 3600L) {
-        val payload = runCatching {
-            val tokenPayload = accessToken.split(".")[1]
-            val padded = when (tokenPayload.length % 4) {
-                2 -> "$tokenPayload=="
-                3 -> "$tokenPayload="
-                else -> tokenPayload
-            }
-            java.util.Base64.getUrlDecoder().decode(padded).decodeToString()
-        }.getOrNull() ?: error("Cannot decode access token")
-        val userId = runCatching {
-            json.parseToJsonElement(payload).jsonObject["sub"]?.jsonPrimitive?.content
-        }.getOrNull() ?: error("Cannot parse sub from access token")
-
+    suspend fun attachSession(
+        userId: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresInSeconds: Long,
+    ) {
         credentials = Credentials(
             userId = userId,
             accessToken = accessToken,
@@ -218,43 +215,13 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore?.clear()
     }
 
-    suspend fun table(
-        path: String,
-        allowAnonymous: Boolean = false,
-    ): JsonElement = authorized(
-        path = "/rest/v1/$path",
-        method = "GET",
-        allowAnonymous = allowAnonymous,
-    )
+    suspend fun table(path: String, allowAnonymous: Boolean = false): JsonElement = authorized("/rest/v1/$path", "GET", allowAnonymous = allowAnonymous)
 
-    suspend fun patchTable(
-        path: String,
-        body: JsonObject,
-    ): JsonElement = authorized(
-        path = "/rest/v1/$path",
-        method = "PATCH",
-        body = body,
-        preferRepresentation = true,
-    )
+    suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
-    suspend fun insertTable(
-        path: String,
-        body: JsonObject,
-    ): JsonElement = authorized(
-        path = "/rest/v1/$path",
-        method = "POST",
-        body = body,
-        preferRepresentation = true,
-    )
+    suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
-    suspend fun rpc(
-        function: String,
-        params: JsonObject,
-    ): JsonElement = authorized(
-        path = "/rest/v1/rpc/$function",
-        method = "POST",
-        body = params,
-    )
+    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
     suspend fun updatePassword(password: String): JsonElement {
         val token = freshToken()
@@ -274,7 +241,7 @@ class SupabaseRestClient @Inject constructor() {
             doOutput = true
             connectTimeout = 15_000
             readTimeout = 30_000
-            setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Content-Type", mimeType)
             setRequestProperty("x-upsert", "true")
@@ -299,7 +266,7 @@ class SupabaseRestClient @Inject constructor() {
             requestMethod = "DELETE"
             connectTimeout = 15_000
             readTimeout = 30_000
-            setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Authorization", "Bearer $token")
         }
         val status = connection.responseCode
@@ -314,34 +281,38 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         allowAnonymous: Boolean = false,
-        preferRepresentation: Boolean = false,
     ): JsonElement {
         val accessToken = if (allowAnonymous) {
             freshTokenOrNull()
         } else {
             freshToken()
         }
-        return send(path, method, body, bearer = accessToken, preferRepresentation = preferRepresentation)
+        return send(path, method, body, bearer = accessToken)
     }
 
     private suspend fun freshTokenOrNull(): String? = runCatching { freshToken() }.getOrNull()
 
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
-        if (System.currentTimeMillis() < session.expiresAtMillis - 60_000L) {
-            return session.accessToken
-        }
+        if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
         return refreshMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
-            if (System.currentTimeMillis() < latest.expiresAtMillis - 60_000L) {
-                return@withLock latest.accessToken
+            if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
+            try {
+                val updated = refreshSession(latest.userId, latest.refreshToken)
+                if (rememberSession) sessionStore?.save(updated.userId, updated.refreshToken)
+                credentials = updated
+                updated.accessToken
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: SupabaseHttpException) {
+                if (error.status == 400 || error.status == 401) {
+                    credentials = null
+                    rememberSession = false
+                    sessionStore?.clear()
+                }
+                throw error
             }
-            val updated = refreshSession(latest.userId, latest.refreshToken)
-            if (rememberSession) {
-                sessionStore?.save(updated.userId, updated.refreshToken)
-            }
-            credentials = updated
-            updated.accessToken
         }
     }
 
@@ -373,34 +344,30 @@ class SupabaseRestClient @Inject constructor() {
         path: String,
         method: String,
         body: JsonObject? = null,
-        bearer: String? = null,
-        preferRepresentation: Boolean = false,
+        bearer: String?,
     ): JsonElement = withContext(Dispatchers.IO) {
-        var connection: HttpURLConnection? = null
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
         try {
-            connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15_000
-                readTimeout = 15_000
-                setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
-                if (bearer != null) {
-                    connection.setRequestProperty("Authorization", "Bearer $bearer")
-                }
-                if (body != null) {
-                    connection.doOutput = true
-                    connection.setRequestProperty("Content-Type", "application/json")
-                }
-                if (method == "PATCH") {
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-                } else {
-                    connection.requestMethod = method
-                }
-                if (preferRepresentation || (method == "POST" && path.startsWith("/rest/v1/"))) {
+            if (method == "PATCH") {
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+                connection.setRequestProperty("Prefer", "return=representation")
+            } else {
+                connection.requestMethod = method
+                if (method == "POST" && path.startsWith("/rest/v1/")) {
                     connection.setRequestProperty("Prefer", "return=representation")
                 }
             }
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 15_000
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Accept", "application/json")
+            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer $bearer")
             if (body != null) {
-                connection.outputStream.bufferedWriter().use { it.write(body.toString()) }
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             }
             val status = connection.responseCode
             val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
@@ -408,20 +375,15 @@ class SupabaseRestClient @Inject constructor() {
             if (status !in 200..299) {
                 val message = runCatching {
                     val error = json.parseToJsonElement(response).jsonObject
-                    error["message"]?.jsonPrimitive?.content
-                        ?: error["msg"]?.jsonPrimitive?.content
-                        ?: error["error_description"]?.jsonPrimitive?.content
-                        ?: error["error"]?.jsonPrimitive?.content
-                }.getOrNull() ?: response.ifBlank { "HTTP $status" }
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase HTTP $status"
                 throw SupabaseHttpException(status, message)
             }
             if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
         } finally {
-            connection?.disconnect()
+            connection.disconnect()
         }
     }
-
-    private fun urlEncode(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     private data class Credentials(
         val userId: String,
@@ -430,3 +392,5 @@ class SupabaseRestClient @Inject constructor() {
         val expiresAtMillis: Long,
     )
 }
+
+class SupabaseHttpException(val status: Int, message: String) : IllegalStateException(message)
