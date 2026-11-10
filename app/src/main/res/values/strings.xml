@@ -541,7 +541,15 @@
     <string name="books_error_body">Hãy thử tải lại.</string>
     <string name="books_auth_required_title">Cần đăng nhập tài khoản UTH thật</string>
     <string name="books_auth_required_body">Vui lòng đăng nhập tài khoản UTH để xem và đăng bài.</string>
-    <string name="books_save_error">Không lưu được thay đổi. Hãy thử lại.</string>
+    <string name="books_save_error">Không lưu được bài đăng. Hãy thử lại.</string>
+    <string name="books_delete_error">Không xóa được bài đăng. Hãy thử lại.</string>
+    <string name="books_status_error">Không cập nhật được trạng thái bài đăng. Hãy thử lại.</string>
+    <string name="books_error_title_invalid">Tên sách phải từ 1 đến 160 ký tự</string>
+    <string name="books_error_subject_invalid">Môn học phải từ 1 đến 100 ký tự</string>
+    <string name="books_error_seller_invalid">Tên người đăng phải từ 1 đến 100 ký tự</string>
+    <string name="books_error_description_invalid">Mô tả tối đa 2000 ký tự</string>
+    <string name="books_error_contact_invalid">Cần nhập email hợp lệ hoặc số điện thoại (tối thiểu 8 chữ số)</string>
+    <string name="books_error_price_invalid">Giá bán phải lớn hơn 0 VND</string>
     <string name="books_empty_title">Chưa có sách được đăng</string>
     <string name="books_empty_body">Bạn có thể đăng sách giáo trình để bán hoặc trao đổi.</string>
     <string name="books_no_results_title">Không tìm thấy sách</string>

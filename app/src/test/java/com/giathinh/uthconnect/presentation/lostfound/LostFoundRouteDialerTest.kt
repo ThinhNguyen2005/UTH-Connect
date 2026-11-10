@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.lostfound
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -10,34 +11,48 @@ import org.junit.Test
 class LostFoundRouteDialerTest {
 
     @Test
-    fun `startActivity throws ActivityNotFoundException does not crash caller`() {
-        var errorCaught = false
+    fun `launchDialer catches ActivityNotFoundException and invokes onError`() {
+        var errorInvoked = false
         val failingContext = object : android.content.ContextWrapper(null) {
-            override fun startActivity(intent: Intent?): Unit = throw ActivityNotFoundException("No Activity found to handle Intent { act=android.intent.action.DIAL }")
+            override fun startActivity(intent: Intent?): Unit = throw ActivityNotFoundException("No dialer available")
         }
 
-        try {
-            failingContext.startActivity(Intent(Intent.ACTION_DIAL))
-        } catch (_: ActivityNotFoundException) {
-            errorCaught = true
+        launchDialer(failingContext, "0901234567", intentFactory = { Intent(Intent.ACTION_DIAL) }) {
+            errorInvoked = true
         }
 
-        assertTrue("ActivityNotFoundException must be caught safely", errorCaught)
+        assertTrue("onError must be called when ActivityNotFoundException occurs", errorInvoked)
     }
 
     @Test
-    fun `startActivity throws SecurityException does not crash caller`() {
-        var errorCaught = false
+    fun `launchDialer catches SecurityException and invokes onError`() {
+        var errorInvoked = false
         val failingContext = object : android.content.ContextWrapper(null) {
-            override fun startActivity(intent: Intent?): Unit = throw SecurityException("Permission denied to dial")
+            override fun startActivity(intent: Intent?): Unit = throw SecurityException("Dialer permission denied")
         }
 
-        try {
-            failingContext.startActivity(Intent(Intent.ACTION_DIAL))
-        } catch (_: SecurityException) {
-            errorCaught = true
+        launchDialer(failingContext, "0901234567", intentFactory = { Intent(Intent.ACTION_DIAL) }) {
+            errorInvoked = true
         }
 
-        assertTrue("SecurityException must be caught safely", errorCaught)
+        assertTrue("onError must be called when SecurityException occurs", errorInvoked)
+    }
+
+    @Test
+    fun `launchDialer succeeds without invoking onError when dialer is available`() {
+        var errorInvoked = false
+        var startActivityCalled = false
+        val successfulContext = object : android.content.ContextWrapper(null) {
+            override fun startActivity(intent: Intent?) {
+                startActivityCalled = true
+            }
+        }
+
+        launchDialer(successfulContext, "0901234567", intentFactory = { Intent(Intent.ACTION_DIAL) }) {
+            errorInvoked = true
+        }
+
+        assertFalse("onError must not be called when startActivity succeeds", errorInvoked)
+        assertTrue("startActivity must be called on successful execution", startActivityCalled)
     }
 }

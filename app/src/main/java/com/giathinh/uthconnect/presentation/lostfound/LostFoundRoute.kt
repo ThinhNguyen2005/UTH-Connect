@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -30,16 +31,27 @@ fun LostFoundRoute(
             if (onCallContact != null) {
                 onCallContact(phone)
             } else {
-                try {
-                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                    context.startActivity(dialIntent)
-                } catch (_: ActivityNotFoundException) {
-                    Toast.makeText(context, R.string.lostfound_no_dialer_error, Toast.LENGTH_SHORT).show()
-                } catch (_: SecurityException) {
+                launchDialer(context, phone) {
                     Toast.makeText(context, R.string.lostfound_no_dialer_error, Toast.LENGTH_SHORT).show()
                 }
             }
         },
         modifier = modifier,
     )
+}
+
+internal fun launchDialer(
+    context: Context,
+    phone: String,
+    intentFactory: (String) -> Intent = { Intent(Intent.ACTION_DIAL, Uri.parse("tel:$it")) },
+    onError: () -> Unit,
+) {
+    try {
+        val dialIntent = intentFactory(phone)
+        context.startActivity(dialIntent)
+    } catch (_: ActivityNotFoundException) {
+        onError()
+    } catch (_: SecurityException) {
+        onError()
+    }
 }

@@ -5,7 +5,12 @@ import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookListingStatus
 
-enum class BooksFailure { LOAD_FAILED, SAVE_FAILED }
+enum class BooksFailure {
+    LOAD_FAILED,
+    SAVE_FAILED,
+    DELETE_FAILED,
+    UPDATE_STATUS_FAILED,
+}
 
 data class BooksUiState(
     val isLoading: Boolean = true,

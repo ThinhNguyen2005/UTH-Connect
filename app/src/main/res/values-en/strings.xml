@@ -511,7 +511,15 @@
     <string name="books_error_body">Try loading the listings again.</string>
     <string name="books_auth_required_title">A live UTH account is required</string>
     <string name="books_auth_required_body">Please sign in with a UTH account to browse and post books.</string>
-    <string name="books_save_error">Could not save changes. Try again.</string>
+    <string name="books_save_error">Could not save listing. Try again.</string>
+    <string name="books_delete_error">Could not delete listing. Try again.</string>
+    <string name="books_status_error">Could not update listing status. Try again.</string>
+    <string name="books_error_title_invalid">Title must be 1 to 160 characters</string>
+    <string name="books_error_subject_invalid">Subject must be 1 to 100 characters</string>
+    <string name="books_error_seller_invalid">Seller name must be 1 to 100 characters</string>
+    <string name="books_error_description_invalid">Description must not exceed 2000 characters</string>
+    <string name="books_error_contact_invalid">Must be a valid email or phone number (at least 8 digits)</string>
+    <string name="books_error_price_invalid">Price must be greater than 0 VND</string>
     <string name="books_empty_title">No books listed yet</string>
     <string name="books_empty_body">Post a textbook to sell or exchange it.</string>
     <string name="books_no_results_title">No matching books</string>

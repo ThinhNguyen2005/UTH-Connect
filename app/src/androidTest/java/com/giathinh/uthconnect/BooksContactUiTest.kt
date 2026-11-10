@@ -58,7 +58,7 @@ class BooksContactUiTest {
         var state by mutableStateOf(BooksUiState(isLoading = false, currentUserUid = "owner"))
         compose.setContent {
             BooksScreen(state, { action ->
-                if (action is BooksAction.Save) state = state.copy(failure = BooksFailure.SAVE_FAILED)
+                if (action is BooksAction.Save) state = state.copy(saveFailure = BooksFailure.SAVE_FAILED)
             }, {})
         }
         val context = InstrumentationRegistry.getInstrumentation().targetContext

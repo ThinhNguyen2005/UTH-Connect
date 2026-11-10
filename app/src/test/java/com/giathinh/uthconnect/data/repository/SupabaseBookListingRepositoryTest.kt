@@ -2,7 +2,10 @@ package com.giathinh.uthconnect.data.repository
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 class SupabaseBookListingRepositoryTest {
 
@@ -55,5 +58,44 @@ class SupabaseBookListingRepositoryTest {
         assertThrows(IllegalArgumentException::class.java) {
             SupabaseBookListingRepository.validateImageBytes(largeBytes)
         }
+    }
+
+    @Test
+    fun `readAndValidateStream accepts valid stream and parses mime type`() {
+        val pngBytes = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(), 0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(), 0, 0, 0, 0)
+        val stream = ByteArrayInputStream(pngBytes)
+
+        val (bytes, mime) = SupabaseBookListingRepository.readAndValidateStream(stream)
+
+        assertEquals("image/png", mime)
+        assertEquals(12, bytes.size)
+    }
+
+    @Test
+    fun `readAndValidateStream stops reading and throws early when stream exceeds 5MB`() {
+        var totalBytesSupplied = 0L
+        val oversizedStream = object : InputStream() {
+            override fun read(): Int {
+                totalBytesSupplied++
+                return 0
+            }
+
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                val toRead = minOf(len, 8192)
+                for (i in 0 until toRead) {
+                    b[off + i] = 0
+                }
+                totalBytesSupplied += toRead
+                return toRead
+            }
+        }
+
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            SupabaseBookListingRepository.readAndValidateStream(oversizedStream)
+        }
+
+        assertTrue(exception.message?.contains("5 MB") == true)
+        // Should have aborted shortly after exceeding 5 MB (e.g. within 1 buffer chunk of 8 KB)
+        assertTrue(totalBytesSupplied in (5L * 1024 * 1024)..(5L * 1024 * 1024 + 16384))
     }
 }

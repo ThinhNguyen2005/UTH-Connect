@@ -55,9 +55,12 @@ create policy book_listings_own_delete on public.book_listings for delete to aut
   using (owner_user_id = (select auth.uid()));
 
 -- Storage bucket configuration for book_listings
-insert into storage.buckets (id, name, public)
-values ('book_listings', 'book_listings', true)
-on conflict (id) do update set public = true;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('book_listings', 'book_listings', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = true,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 -- Storage policies: path must start with user ID: "<auth.uid()>/..."
 drop policy if exists book_storage_read on storage.objects;

@@ -60,6 +60,8 @@ class BooksViewModel @Inject constructor(
             is BooksAction.SetStatus -> setStatus(action.listing.id, action.status)
 
             is BooksAction.Delete -> delete(action.id)
+
+            is BooksAction.DismissError -> _uiState.update { it.copy(saveFailure = null) }
         }
     }
 
@@ -87,13 +89,13 @@ class BooksViewModel @Inject constructor(
                         _uiState.update { it.copy(saveFailure = null) }
                     },
                     onFailure = {
-                        _uiState.update { it.copy(saveFailure = BooksFailure.SAVE_FAILED) }
+                        _uiState.update { it.copy(saveFailure = BooksFailure.UPDATE_STATUS_FAILED) }
                     },
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                _uiState.update { it.copy(saveFailure = BooksFailure.SAVE_FAILED) }
+                _uiState.update { it.copy(saveFailure = BooksFailure.UPDATE_STATUS_FAILED) }
             } finally {
                 _uiState.update { it.copy(mutatingIds = it.mutatingIds - id) }
             }
@@ -110,13 +112,13 @@ class BooksViewModel @Inject constructor(
                         _uiState.update { it.copy(saveFailure = null) }
                     },
                     onFailure = {
-                        _uiState.update { it.copy(saveFailure = BooksFailure.SAVE_FAILED) }
+                        _uiState.update { it.copy(saveFailure = BooksFailure.DELETE_FAILED) }
                     },
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                _uiState.update { it.copy(saveFailure = BooksFailure.SAVE_FAILED) }
+                _uiState.update { it.copy(saveFailure = BooksFailure.DELETE_FAILED) }
             } finally {
                 _uiState.update { it.copy(mutatingIds = it.mutatingIds - id) }
             }

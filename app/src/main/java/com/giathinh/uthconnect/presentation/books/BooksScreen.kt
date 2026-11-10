@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -274,7 +275,36 @@ fun BooksScreen(
             }
         } else if (uiState.saveFailure != null && !showForm) {
             item {
-                Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = UthDimens.Spacing.Md, vertical = UthDimens.Spacing.Sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                when (uiState.saveFailure) {
+                                    BooksFailure.DELETE_FAILED -> R.string.books_delete_error
+                                    BooksFailure.UPDATE_STATUS_FAILED -> R.string.books_status_error
+                                    else -> R.string.books_save_error
+                                },
+                            ),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        IconButton(onClick = { onAction(BooksAction.DismissError) }) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.books_close),
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -582,9 +612,27 @@ private fun ListingFormDialog(
         }
     }
 
+    val titleTrim = title.trim()
+    val subjectTrim = subject.trim()
+    val sellerTrim = seller.trim()
+    val descriptionTrim = description.trim()
+    val contactTrim = contact.trim()
+
+    val titleError = title.isNotBlank() && titleTrim.length > 160
+    val subjectError = subject.isNotBlank() && subjectTrim.length > 100
+    val sellerError = seller.isNotBlank() && sellerTrim.length > 100
+    val descriptionError = descriptionTrim.length > 2000
+    val contactError = contact.isNotBlank() && (contactTrim.length !in 5..254 || !isValidContact(contactTrim))
+
     val priceValue = price.toLongOrNull()
-    val valid = title.isNotBlank() && subject.isNotBlank() && seller.isNotBlank() &&
-        contact.isNotBlank() && (dealType != BookDealType.SALE || (priceValue != null && priceValue > 0))
+    val priceError = dealType == BookDealType.SALE && price.isNotBlank() && (priceValue == null || priceValue <= 0)
+
+    val valid = titleTrim.isNotEmpty() && !titleError &&
+        subjectTrim.isNotEmpty() && !subjectError &&
+        sellerTrim.isNotEmpty() && !sellerError &&
+        !descriptionError &&
+        contactTrim.isNotEmpty() && !contactError &&
+        (dealType != BookDealType.SALE || (priceValue != null && priceValue > 0))
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
@@ -594,8 +642,20 @@ private fun ListingFormDialog(
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
                 modifier = Modifier.padding(top = UthDimens.Spacing.Sm).verticalScroll(rememberScrollState()),
             ) {
-                FormField(title, { title = it }, R.string.books_book_title)
-                FormField(subject, { subject = it }, R.string.books_subject)
+                FormField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = R.string.books_book_title,
+                    isError = titleError,
+                    errorMessage = if (titleError) stringResource(R.string.books_error_title_invalid) else null,
+                )
+                FormField(
+                    value = subject,
+                    onValueChange = { subject = it },
+                    label = R.string.books_subject,
+                    isError = subjectError,
+                    errorMessage = if (subjectError) stringResource(R.string.books_error_subject_invalid) else null,
+                )
                 Text(stringResource(R.string.books_condition))
                 Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
                     BookCondition.entries.forEach { value ->
@@ -609,8 +669,24 @@ private fun ListingFormDialog(
                         })
                     }
                 }
-                if (dealType == BookDealType.SALE) FormField(price, { price = it }, R.string.books_price, numeric = true)
-                FormField(description, { description = it }, R.string.books_description, singleLine = false)
+                if (dealType == BookDealType.SALE) {
+                    FormField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = R.string.books_price,
+                        numeric = true,
+                        isError = priceError,
+                        errorMessage = if (priceError) stringResource(R.string.books_error_price_invalid) else null,
+                    )
+                }
+                FormField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = R.string.books_description,
+                    singleLine = false,
+                    isError = descriptionError,
+                    errorMessage = if (descriptionError) stringResource(R.string.books_error_description_invalid) else null,
+                )
                 Surface(
                     modifier = Modifier.fillMaxWidth().height(160.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -627,8 +703,20 @@ private fun ListingFormDialog(
                     Text(stringResource(R.string.books_pick_photo))
                 }
                 if (photoTooLarge) Text(stringResource(R.string.books_photo_too_large), color = MaterialTheme.colorScheme.error)
-                FormField(seller, { seller = it }, R.string.books_seller)
-                FormField(contact, { contact = it }, R.string.books_contact)
+                FormField(
+                    value = seller,
+                    onValueChange = { seller = it },
+                    label = R.string.books_seller,
+                    isError = sellerError,
+                    errorMessage = if (sellerError) stringResource(R.string.books_error_seller_invalid) else null,
+                )
+                FormField(
+                    value = contact,
+                    onValueChange = { contact = it },
+                    label = R.string.books_contact,
+                    isError = contactError,
+                    errorMessage = if (contactError) stringResource(R.string.books_error_contact_invalid) else null,
+                )
                 if (saveFailed) Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
                 if (!valid) Text(stringResource(R.string.books_form_invalid), color = MaterialTheme.colorScheme.error)
             }
@@ -675,6 +763,8 @@ private fun FormField(
     label: Int,
     numeric: Boolean = false,
     singleLine: Boolean = true,
+    isError: Boolean = false,
+    errorMessage: String? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -682,8 +772,20 @@ private fun FormField(
         modifier = Modifier.fillMaxWidth(),
         label = { Text(stringResource(label)) },
         singleLine = singleLine,
+        isError = isError,
+        supportingText = if (isError && errorMessage != null) {
+            { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+        } else {
+            null
+        },
         keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text),
     )
+}
+
+private fun isValidContact(value: String): Boolean {
+    val contact = value.trim()
+    return contact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
+        (contact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && contact.filter(Char::isDigit).length >= 8)
 }
 
 @Composable

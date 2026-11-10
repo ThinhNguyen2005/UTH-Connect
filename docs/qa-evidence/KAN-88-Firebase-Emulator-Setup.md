@@ -29,7 +29,7 @@ To ensure test evidence integrity, tests in this repository are categorized as f
 ```
 
 ### Building with Supabase Configuration
-Builds require Supabase configuration flags:
+UTH Connect enforces Supabase builds (`useSupabase=true` and `useMockData=false`). In `app/build.gradle.kts`, builds without Supabase configuration fail fast via Gradle property validation. Builds require valid HTTPS Supabase URL and a publishable key:
 ```powershell
 .\gradlew.bat -PuseSupabase=true -PuseMockData=false -PsupabaseUrl="https://<project-ref>.supabase.co" -PsupabasePublishableKey="sb_publishable_..." assembleDebug
 ```

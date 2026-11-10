@@ -110,6 +110,70 @@ class BooksViewModelTest {
         assertNull(viewModel.uiState.value.saveFailure)
     }
 
+    @Test
+    fun `DismissError clears saveFailure`() {
+        val viewModel = BooksViewModel(BookListingUseCases(FailingSaveRepository))
+
+        viewModel.onAction(
+            BooksAction.Save(
+                BookListing(
+                    id = "book-1", title = "Kotlin", subject = "Programming", condition = BookCondition.GOOD,
+                    dealType = BookDealType.SALE, priceVnd = 1000, description = "", sellerName = "Student",
+                    contact = "student@example.edu",
+                ),
+            ),
+        )
+
+        assertEquals(BooksFailure.SAVE_FAILED, viewModel.uiState.value.saveFailure)
+
+        viewModel.onAction(BooksAction.DismissError)
+
+        assertNull(viewModel.uiState.value.saveFailure)
+    }
+
+    @Test
+    fun `failed setStatus reports UPDATE_STATUS_FAILED and clears mutating state`() {
+        val repository = object : BookListingRepository {
+            override fun currentUserId() = "student-1"
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing) = Result.success(Unit)
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.failure<Unit>(IllegalStateException("network error"))
+            override suspend fun deleteListing(id: String) = Result.success(Unit)
+            override fun refresh() = Unit
+        }
+
+        val viewModel = BooksViewModel(BookListingUseCases(repository))
+        val sample = BookListing(
+            id = "book-42", title = "Network", subject = "IT", condition = BookCondition.GOOD,
+            dealType = BookDealType.SALE, priceVnd = 50000, description = "desc", sellerName = "Me",
+            contact = "0912345678", status = BookListingStatus.AVAILABLE,
+        )
+
+        viewModel.onAction(BooksAction.SetStatus(sample, BookListingStatus.SOLD))
+
+        assertEquals(BooksFailure.UPDATE_STATUS_FAILED, viewModel.uiState.value.saveFailure)
+        assertTrue(viewModel.uiState.value.mutatingIds.isEmpty())
+    }
+
+    @Test
+    fun `failed delete reports DELETE_FAILED and clears mutating state`() {
+        val repository = object : BookListingRepository {
+            override fun currentUserId() = "student-1"
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing) = Result.success(Unit)
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.success(Unit)
+            override suspend fun deleteListing(id: String) = Result.failure<Unit>(IllegalStateException("network error"))
+            override fun refresh() = Unit
+        }
+
+        val viewModel = BooksViewModel(BookListingUseCases(repository))
+
+        viewModel.onAction(BooksAction.Delete("book-99"))
+
+        assertEquals(BooksFailure.DELETE_FAILED, viewModel.uiState.value.saveFailure)
+        assertTrue(viewModel.uiState.value.mutatingIds.isEmpty())
+    }
+
     private object FailingSaveRepository : BookListingRepository {
         override fun currentUserId() = "student-1"
         override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
