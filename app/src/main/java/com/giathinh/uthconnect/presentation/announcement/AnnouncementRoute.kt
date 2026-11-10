@@ -6,7 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.R
 
@@ -56,12 +56,11 @@ fun AnnouncementRoute(
 }
 
 /** Share sheet chuẩn: chỉ gửi chữ thuần, không đính kèm tệp và không xin quyền gì thêm. */
-private fun shareChooser(text: String, subject: String, title: String): Intent =
-    Intent.createChooser(
-        Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, subject)
-            putExtra(Intent.EXTRA_TEXT, text)
-        },
-        title,
-    )
+private fun shareChooser(text: String, subject: String, title: String): Intent = Intent.createChooser(
+    Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, text)
+    },
+    title,
+)

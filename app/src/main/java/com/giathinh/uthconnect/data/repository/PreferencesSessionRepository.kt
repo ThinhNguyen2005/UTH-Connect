@@ -7,20 +7,23 @@ import com.giathinh.uthconnect.domain.repository.SessionFailure
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import javax.inject.Inject
+import javax.inject.Singleton
 
-/** SharedPreferences đáp ứng ảnh giao việc và không cần sửa dependency của repo nhóm. */
+/** Only student ID / biometric opt-in; never password, raw biometric, session token. */
 @Singleton
 class PreferencesSessionRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val auth: AuthRepository,
+    private val client: SupabaseRestClient,
+    private val supabaseAuth: SupabaseAuthRepository,
+    private val secureStore: SecureSessionStore,
 ) : SessionRepository {
     private val prefs = context.getSharedPreferences("uth_auth_demo", Context.MODE_PRIVATE)
     private val mutex = Mutex()
@@ -28,25 +31,27 @@ class PreferencesSessionRepository @Inject constructor(
     override val session: StateFlow<StudentSession> = _session.asStateFlow()
     private var restored = false
 
+    init {
+        client.attachSecureStore(secureStore)
+    }
+
     override suspend fun restore() {
         mutex.withLock {
             if (restored) return
             restored = true
             try {
-                val studentId = prefs.getString(KEY_ID, null)
-                val profile = studentId?.let { auth.findStudent(it).getOrThrow() }
-                if (studentId != null && profile == null) {
-                    prefs.edit().remove(KEY_ID).commit()
-                }
+                val hasSession = client.restoreSavedSession()
+                val candidateProfile = if (hasSession) supabaseAuth.currentVerifiedProfile() else null
                 _session.value = StudentSession(
                     isRestoring = false,
-                    profile = profile,
-                    remembered = profile != null,
+                    profile = candidateProfile,
+                    remembered = hasSession,
                 )
             } catch (cancelled: CancellationException) {
                 restored = false
                 throw cancelled
             } catch (_: Exception) {
+                restored = false // Allow retry after connectivity/timeout failures.
                 _session.value = StudentSession(isRestoring = false, failure = SessionFailure.RestoreFailed)
             }
         }
@@ -54,9 +59,8 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun start(profile: StudentProfile, remember: Boolean) {
         mutex.withLock {
-            val edit = prefs.edit()
-            if (remember) edit.putString(KEY_ID, profile.studentId) else edit.remove(KEY_ID)
-            if (!edit.commit()) throw IllegalStateException("Không ghi được phiên demo")
+            client.setRememberSession(remember)
+            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot clear old preferences" }
             _session.value = StudentSession(
                 isRestoring = false,
                 profile = profile,
@@ -65,14 +69,47 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
-    override suspend fun signOut() {
+    override suspend fun updateProfile(profile: StudentProfile) {
         mutex.withLock {
-            if (!prefs.edit().remove(KEY_ID).commit()) {
-                throw IllegalStateException("Không thể xóa phiên đã lưu")
-            }
-            _session.value = StudentSession(isRestoring = false)
+            check(_session.value.profile?.studentId == profile.studentId) { "No active session" }
+            _session.value = _session.value.copy(profile = profile)
         }
     }
 
-    private companion object { const val KEY_ID = "remembered_student_id" }
+    override suspend fun enableBiometric(studentId: String) {
+        mutex.withLock {
+            error("Biometric login is not enabled without a signed-in Supabase session")
+        }
+    }
+
+    override suspend fun disableBiometric() {
+        mutex.withLock {
+            check(prefs.edit().remove(KEY_BIO_ID).commit()) { "Cannot disable biometric preference" }
+            _session.value = _session.value.copy(biometricStudentId = null)
+        }
+    }
+
+    override suspend fun unlockWithBiometric() {
+        mutex.withLock {
+            error("Biometric unlock is disabled")
+        }
+    }
+
+    override suspend fun signOut() {
+        mutex.withLock {
+            client.setRememberSession(false)
+            try {
+                auth.signOut()
+            } finally {
+                _session.value = StudentSession(isRestoring = false)
+            }
+            // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
+            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+        }
+    }
+
+    private companion object {
+        const val KEY_ID = "remembered_student_id"
+        const val KEY_BIO_ID = "biometric_student_id"
+    }
 }

@@ -1,0 +1,91 @@
+package com.giathinh.uthconnect.presentation.schedule
+
+import com.giathinh.uthconnect.domain.model.Course
+import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
+import com.giathinh.uthconnect.domain.model.Timetable
+import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+data class ScheduleUiState(
+    val timetable: Timetable = Timetable(),
+    val now: LocalDateTime = LocalDateTime.MIN,
+    val isLoading: Boolean = true,
+    val isEventsLoading: Boolean = true,
+    val eventsLoadFailed: Boolean = false,
+    val registrationsLoadFailed: Boolean = false,
+    val isRegistrationsLoading: Boolean = true,
+    val studentId: String? = null,
+    val studentName: String? = null,
+    val registrationError: String? = null,
+    val registrationErrorCode: ServerErrorCode? = null,
+    val ticketQrToken: String? = null,
+    val ticketQrFailed: Boolean = false,
+    val selectedEvent: ScheduleEvent? = null,
+    val selectedDate: LocalDate = now.toLocalDate(),
+    val period: SchedulePeriod = SchedulePeriod.ALL,
+    val tab: ScheduleTab = ScheduleTab.EVENTS,
+    val events: List<ScheduleEvent> = emptyList(),
+    val showForm: Boolean = false,
+    val course: Course = Course.ANDROID,
+    val title: String = "",
+    val date: String = "",
+    val time: String = "23:59",
+    val titleError: Boolean = false,
+    val dateError: Boolean = false,
+    val timeError: Boolean = false,
+) {
+    val visibleClasses get() = timetable.sessions
+        .filter { it.startsAt.toLocalDate() == selectedDate }
+        .filter { period == SchedulePeriod.ALL || SchedulePeriod.fromHour(it.startsAt.hour) == period }
+        .sortedBy { it.startsAt }
+    val tomorrowClasses get() = TimetableUseCase.tomorrow(timetable, now.toLocalDate())
+    val urgentDeadlines get() = TimetableUseCase.urgent(timetable, now)
+    val laterDeadlines get() = TimetableUseCase.pending(timetable).filterNot {
+        TimetableUseCase.isUrgent(it.dueAt, now)
+    }
+}
+
+enum class ScheduleTab { EVENTS, DEADLINES }
+
+data class ScheduleEvent(
+    val id: String,
+    val title: String,
+    val organizer: String,
+    val location: String,
+    val startAt: LocalDateTime,
+    val endAt: LocalDateTime,
+    val registration: EventRegistration,
+    val accent: EventAccent,
+    val status: EventStatus = EventStatus.PUBLISHED,
+    val trainingPoints: String = "",
+    val session: SchedulePeriod = SchedulePeriod.MORNING,
+)
+
+/** Returns true while a registered ticket can be opened, including the 30-minute check-in grace period. */
+fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean = registration != EventRegistration.NOT_REGISTERED &&
+    (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
+    !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
+
+private const val TICKET_CHECK_IN_GRACE_MINUTES = 30L
+
+enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
+enum class EventAccent { SUCCESS, PRIMARY, WARNING }
+
+enum class SchedulePeriod {
+    ALL,
+    MORNING,
+    AFTERNOON,
+    EVENING,
+    ;
+
+    companion object {
+        /** Maps a 24-hour clock value to its schedule period. */
+        fun fromHour(hour: Int) = when {
+            hour < 12 -> MORNING
+            hour < 18 -> AFTERNOON
+            else -> EVENING
+        }
+    }
+}

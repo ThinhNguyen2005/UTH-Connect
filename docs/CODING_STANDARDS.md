@@ -1,8 +1,8 @@
 # UTH Connect — Coding Standards
 
 > **Phiên bản:** v1.2 · **Phạm vi:** *cách viết code* — đặt tên, ranh giới tầng, Kotlin/Compose style, coroutines, navigation type-safe, test, tài nguyên.
-> **Không chứa:** nghiệp vụ & phạm vi (xem `docs/Design.md`), token màu/chữ/spacing (xem `docs/Design-system.md`), nhánh & phân quyền Git (xem `docs/GIT_WORKFLOW.md`), cây thư mục & quyền sở hữu file (xem `docs/REPO_TREE.md`), spec từng module (xem `README.md`).
-> **Ép thực hiện:** chưa có ktlint/spotless/CI — mọi mục dưới đây đang là chuẩn **review bằng mắt**. Khi CI vào (M0), mục 12 đổi thành chuẩn **bắt buộc bởi máy**.
+> **Không chứa:** nghiệp vụ & phạm vi (xem `docs/Design.md`), token màu/chữ/spacing (xem `docs/Design-system.md`), nhánh & phân quyền Git (xem `docs/process/GIT_WORKFLOW.md`), cây thư mục & quyền sở hữu file (xem `docs/process/REPO_TREE.md`), spec từng module (xem `README.md`).
+> **Kiểm chứng:** chạy `./gradlew detekt spotlessCheck` sau khi sửa Kotlin; kiểm tra quyền và dữ liệu bằng các bài kiểm thử phù hợp.
 
 ## 0. Quyền ưu tiên khi mâu thuẫn
 
@@ -11,8 +11,8 @@
 | "Có làm tính năng này không, ai được làm?" | `docs/Design.md` |
 | "Màu này, bo góc này, tương phản này đúng không?" | `docs/Design-system.md` |
 | "Đặt file ở đâu, đặt tên ra sao, tầng nào được gọi tầng nào?" | **tài liệu này** |
-| "File này của ai, tôi được tạo/sửa những gì?" | `docs/REPO_TREE.md` |
-| "Nhánh nào, PR vào đâu, ai approve?" | `docs/GIT_WORKFLOW.md` |
+| "File này của ai, tôi được tạo/sửa những gì?" | `docs/process/REPO_TREE.md` |
+| "Nhánh nào, PR vào đâu, ai approve?" | `docs/process/GIT_WORKFLOW.md` |
 
 Code và tài liệu này lệch nhau → **sửa code trước, chỉ sửa tài liệu khi có quyết định mới được ghi rõ ở PR.**
 
@@ -61,11 +61,11 @@ Không đặt tên theo tầng ở cuối file: `UtilitiesViewModel`, **không**
 
 | Tầng | Được import | Bị cấm |
 |---|---|---|
-| `presentation/<module>/…Screen.kt` | `core/designsystem`, `domain/model`, `androidx.compose.*` | repository, use case, `hiltViewModel()`, Firestore, `Context` |
+| `presentation/<module>/…Screen.kt` | `core/designsystem`, `domain/model`, `androidx.compose.*` | repository, use case, `hiltViewModel()`, SDK/backend, `Context` |
 | `presentation/<module>/…Route.kt` | như Screen **cộng** `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`; `LaunchedEffect` khi module có event một lần | logic nghiệp vụ, gọi repository thẳng, tự dựng `ViewModelProvider.Factory` |
-| `presentation/<module>/…ViewModel.kt` | `domain/usecase`, `domain/model`, `androidx.lifecycle`, `dagger.hilt.android.lifecycle.HiltViewModel`, `javax.inject`, `kotlinx.coroutines` | `android.content.Context`, `Modifier`, `@StringRes`, Compose, Firestore type |
-| `domain/` | thuần Kotlin (`kotlin.*`) + `javax.inject` (JSR-330 — `@Inject`, `@Singleton`) | **mọi** `androidx.*`/`android.*`/`dagger.*`/`javax.hilt`, `Result` của Firestore, enum UI |
-| `data/` | `domain`, Firebase/Room/Ktor, `dagger.*` (khai binding) | `presentation`, Compose |
+| `presentation/<module>/…ViewModel.kt` | `domain/usecase`, `domain/model`, `androidx.lifecycle`, `dagger.hilt.android.lifecycle.HiltViewModel`, `javax.inject`, `kotlinx.coroutines` | `android.content.Context`, `Modifier`, `@StringRes`, Compose, kiểu SDK/backend |
+| `domain/` | thuần Kotlin (`kotlin.*`) + `javax.inject` (JSR-330 — `@Inject`, `@Singleton`) | **mọi** `androidx.*`/`android.*`/`dagger.*`/`javax.hilt`, `Result` của SDK/backend, enum UI |
+| `data/` | `domain`, Supabase/Room/Ktor, `dagger.*` (khai binding) | `presentation`, Compose |
 | `data/di/<Module>DataModule.kt` | `domain/repository`, `data/repository`, `dagger`, `dagger.hilt` | `presentation`, Compose, binding **hộ** module khác |
 | `core/designsystem` | `androidx.compose.*` | `domain`, `data`, `presentation` (design system không biết nghiệp vụ) |
 
@@ -92,7 +92,7 @@ data/di/<Module>DataModule.kt            @Binds interface→impl (chỉ khi có 
 presentation/<module>/<Module>Navigation.kt   graph route con type-safe (`composable<…>`); UthApp.kt chỉ nhận thêm một dòng
 ```
 
-Thêm module mới **không** phải sửa file DI của người khác và không cần xin thêm dependency: KSP + Hilt + serialization đã bật ở `app/build.gradle.kts`. Quyền sở hữu cây file theo `docs/REPO_TREE.md` mục 3–5.
+Thêm module mới **không** phải sửa file DI của người khác và không cần xin thêm dependency: KSP + Hilt + serialization đã bật ở `app/build.gradle.kts`. Quyền sở hữu cây file theo `docs/process/REPO_TREE.md` mục 3–5.
 
 ### 3.2.1. Route là type-safe, không phải chuỗi
 
@@ -145,7 +145,7 @@ Destination cấp 1 khai ở `presentation/navigation/UthDestination.kt` dưới
 - Nạp dữ liệu trong `init`, nhưng luôn có đường nạp lại bằng action (`Retry`), không nạp lại thủ công trong Screen.
 - Chỉ một nguồn sự thật mỗi màn hình: `StateFlow<UiState>`. Không thêm `StateFlow` phụ song song.
 - Mọi cập nhật qua `_uiState.update { it.copy(...) }` — tránh race khi nhiều coroutine cùng ghi.
-- Scope: `viewModelScope` cho việc dẫn đường UI; `Dispatchers.IO` cho repository khi có I/O thật. Khi thêm Room/Firestore, UseCase nhận `Dispatcher` qua constructor để test không cần `Thread.sleep`.
+- Scope: `viewModelScope` cho việc dẫn đường UI; `Dispatchers.IO` cho repository khi có I/O thật. Khi thêm Room/Supabase, UseCase nhận `Dispatcher` qua constructor để test không cần `Thread.sleep`.
 - ViewModel luôn là `@HiltViewModel class X @Inject constructor(...)`. Cấm `new` ViewModel trong code app; nhưng **test thì new trực tiếp bằng fake** — Hilt dựng ViewModel qua `ViewModelProvider`, còn constructor vẫn là Kotlin thường, nên unit test không cần `HiltAndroidRule`.
 - Việc chạy nền ngoài ViewModel phải có lý do sống-sót ghi bằng comment (`WorkManager`/`Service`).
 - Event một lần (Snackbar, dẫn đường từ ViewModel): **đã chốt — `Channel` + `receiveAsFlow()`.** ViewModel giữ kênh private, phát `send(...)`, Screen/Route thu một lần qua `LaunchedEffect`. Kiểu event khai trong chính file `<Module>ViewModel.kt` (không thêm file thứ sáu). Mẫu:
@@ -179,7 +179,7 @@ Tóm tắt; chi tiết và số đo tương phản ở `docs/Design-system.md`.
 
 Ba file **được phép** chứa literal: `Color.kt`, `Dimens.kt`, `Type.kt`. Kiểm tra nhanh trước khi push (không có kết quả nghĩa là đạt; lưu ý lệnh quét cả **comment**, nên đừng chép số hardcode vào comment):
 
-> Trạng thái đã kiểm chứng ở v1.0: lệnh dưới đây trả rỗng trên toàn bộ `app/src/main`.
+> Trạng thái đã kiểm chứng ở v1.0 và **lại một lần nữa ngày 05/11/2026**: lệnh dưới đây trả rỗng trên toàn bộ `app/src/main`. Lần kiểm tra thứ hai có giá trị hơn vì `presentation/schedule/ScheduleScreen.kt` — file duy nhất từng khiến lệnh này in kết quả — đã được token-hoá hết.
 
 ```powershell
 cd "d:\UTH Connect\app\src\main\java\com\giathinh\uthconnect"
@@ -187,7 +187,7 @@ Get-ChildItem -Recurse -Filter *.kt | Where-Object Name -notin 'Dimens.kt','Colo
   Select-String -Pattern '[0-9]+\.dp|Color\(0x|[0-9.]+\.sp'
 ```
 
-Icon: `material-icons-core 1.7.8` đã đóng băng, chỉ dùng cho khung nav/badge. Icon thiết kế riêng vào `res/drawable` và gọi qua `painterResource`, không thêm dependency icon mới.
+Icon: `material-icons-core 1.7.8` đã đóng băng, chỉ dùng cho khung nav/badge. Icon nghiệp vụ lấy vector **two-tone** gốc từ `google/material-design-icons` (Apache-2.0), copy vào `res/drawable/ic_<chuc_nang>.xml`, bỏ `android:tint="?attr/colorControlNormal"` và thay `@android:color/white` bằng `#FF000000` để màu do `Icon(tint = …)` cấp theo token; gọi qua `painterResource`. Không thêm dependency icon, không tự viết path data. Spec mật độ lưới ở `docs/Design-system.md` mục 4.12.
 
 Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBadge`, không `Size14`), có comment nói dùng ở đâu, và cập nhật bảng tương ứng trong `docs/Design-system.md` mục 3.
 
@@ -201,6 +201,18 @@ Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBa
 - MSSV, giờ, số liệu trong bảng: `MaterialTheme.typography.tabularFigures` để thẳng cột.
 - Không ghép chuỗi bằng `+` để dựng câu có nghĩa: dùng placeholder `%1$d`, `%2$s`.
 
+### 8.1. Cơ chế đổi ngôn ngữ/giao diện đã chọn (05/11/2026)
+
+Áp dụng khi người dùng bấm hàng **Ngôn ngữ** / **Giao diện** trong `presentation/utilities/settings/`:
+
+- Trạng thái nằm ở `domain/model/AppSettings` (`languageTag`, `themeMode`), repository là `PreferencesSettingsRepository` — **không** thêm dependency thư viện theme/ngôn ngữ nào.
+- `ThemeMode.resolveDarkTheme(systemInDarkTheme)` là hàm của **enum trong domain**, không đặt ở `core/designsystem/theme/`: mục 3.1 cấm `core/designsystem` import `domain`.
+- Locale áp trong `MainActivity.attachBaseContext` bằng `applyOverrideConfiguration(Configuration(...).apply { setLocale(tag) })` — chạy trước mọi Composable nên **phải đọc đồng bộ**; vì field injection của Hilt chưa chạy tại thời điểm đó, repository lấy qua `@EntryPoint` + `EntryPointAccessors.fromApplication` (`SettingsEntryPoint.kt`), không qua `@Inject` của activity.
+- Đổi ngôn ngữ ⇒ ghi store trước, phát `UtilitiesEvent.LanguageChanged`/`AuthEvent.LanguageChanged` (kênh một lần, mục 6), Route mới gọi `activity.recreate()`. Thứ tự ngược lại sẽ dựng lại activity với locale cũ.
+- Chọn lại đúng giá trị đang bật ⇒ **không** recreate.
+- `android:localeConfig="@xml/locales_config"` khai `vi` + `en` để Android 13+ hiện lựa chọn trong Settings hệ thống; thêm locale mới phải vào cả file xml lẫn `values-<locale>/`.
+- Giao diện sáng/tối áp ngay qua tham số `darkTheme` của `UTHConnectTheme`, không recreate.
+
 ---
 
 ## 9. Test
@@ -209,7 +221,7 @@ Ghi chú khi thêm token mới: token phải có **tên theo vai trò** (`IconBa
 |---|---|---|
 | Unit test ViewModel/UseCase | `app/src/test/java/…` (mirror package) | mọi module |
 | Compose UI test | `app/src/androidTest/java/…` | luồng chính của module (không test mọi pixel) |
-| Rules Firestore | `firestore-tests/` (tên đề xuất — chưa tạo, M0) | mọi collection thêm mới |
+| RLS/RPC Supabase | migration và kiểm thử staging | bảng, policy hoặc RPC có thay đổi về quyền/dữ liệu |
 
 Chuẩn viết test:
 
@@ -264,7 +276,7 @@ cd "d:\UTH Connect"
 - [ ] Test: success / failure / retry, chạy không cần mạng
 - [ ] `:app:assembleDebug` + `:app:testDebugUnitTest` xanh trên máy mình
 - [ ] Không đổi file nóng (`UthApp.kt`, `libs.versions.toml`, `strings.xml`, theme, `MainActivity.kt`, `UTHConnectApplication.kt`) quá mức cần thiết — mỗi file một dòng cộng
-- [ ] Đổi cấu trúc thư mục (thêm/xoá package, tầng, file chung) → đã cập nhật `docs/REPO_TREE.md` mục 2/3/8 trong cùng commit
+- [ ] Đổi cấu trúc thư mục (thêm/xoá package, tầng, file chung) → đã cập nhật `docs/process/REPO_TREE.md` mục 2/3/8 trong cùng commit
 
 ---
 

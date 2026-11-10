@@ -2,57 +2,114 @@ package com.giathinh.uthconnect.presentation.utilities
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.domain.model.AppSettings
+import com.giathinh.uthconnect.domain.model.TrainingPointInfo
+import com.giathinh.uthconnect.domain.model.TuitionInfo
+import com.giathinh.uthconnect.domain.usecase.GetSettingsUseCase
+import com.giathinh.uthconnect.domain.usecase.GetTrainingPointUseCase
+import com.giathinh.uthconnect.domain.usecase.GetTuitionUseCase
 import com.giathinh.uthconnect.domain.usecase.GetUtilityModulesUseCase
+import com.giathinh.uthconnect.domain.usecase.UpdateSettingsUseCase
+import com.giathinh.uthconnect.presentation.utilities.settings.SettingsUiState
+import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingCriteria
+import com.giathinh.uthconnect.presentation.utilities.trainingpoint.TrainingPointUiState
+import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionCourse
+import com.giathinh.uthconnect.presentation.utilities.tuition.TuitionUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Giữ toàn bộ trạng thái của tab Tiện ích theo mô hình UDF:
- *
- * ```
- * UiState ──▶ Screen ──▶ Action ──▶ ViewModel ──▶ UseCase ──▶ Repository
- *                  (một chiều, không đường tắt nào khác)
- * ```
- *
- * - Không import `android.*` ngoài `androidx.lifecycle`, không cầm `Context`,
- *   `Modifier` hay `@StringRes` (`README.md` mục 5.2).
- * - `_uiState` private, chỉ expose `StateFlow` đọc được.
- * - Mọi cập nhật qua `update { it.copy(...) }` để không có race khi nhiều nguồn
- *   ghi cùng lúc.
- *
- * `@HiltViewModel` + `@Inject constructor`: Hilt dựng ViewModel qua
- * `ViewModelProvider` chứ không gọi constructor trực tiếp, nên unit test vẫn new
- * bình thường bằng fake (`UtilitiesViewModelTest`) — không cần rule Hilt.
- */
 @HiltViewModel
 class UtilitiesViewModel @Inject constructor(
     private val getUtilityModules: GetUtilityModulesUseCase,
+    private val getTuition: GetTuitionUseCase,
+    private val getTrainingPoint: GetTrainingPointUseCase,
+    getSettings: GetSettingsUseCase,
+    private val updateSettings: UpdateSettingsUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UtilitiesUiState())
     val uiState: StateFlow<UtilitiesUiState> = _uiState.asStateFlow()
 
+    private val _tuitionState = MutableStateFlow(TuitionUiState())
+    val tuitionState: StateFlow<TuitionUiState> = _tuitionState.asStateFlow()
+
+    private val _trainingPointState = MutableStateFlow(TrainingPointUiState())
+    val trainingPointState: StateFlow<TrainingPointUiState> = _trainingPointState.asStateFlow()
+
+    private val _events = Channel<UtilitiesEvent>(Channel.BUFFERED)
+
+    /** Event một lần, thu trong `UtilitiesRoute` — xem `docs/CODING_STANDARDS.md` mục 6. */
+    val events = _events.receiveAsFlow()
+
+    val settingsState: StateFlow<SettingsUiState> = getSettings()
+        .map { it.toUiState() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = SettingsUiState(),
+        )
+
     init {
-        load()
+        loadModules()
+        loadTuition()
+        loadTrainingPoint()
     }
 
-    /** Điểm nạp duy nhất: Screen không tự gọi, chỉ phát [UtilitiesAction.Retry]. */
     fun onAction(action: UtilitiesAction) {
         when (action) {
-            UtilitiesAction.Retry -> load()
+            UtilitiesAction.Retry -> {
+                loadModules()
+                loadTuition()
+                loadTrainingPoint()
+            }
+
             is UtilitiesAction.OpenModule -> {
-                // Để trống có chủ đích — module chưa có graph con. Giữ action ở đây
-                // để branch của module chỉ cần thay phần thân, không đổi chữ ký Screen.
+                // Handled via navigation routes
+            }
+
+            is UtilitiesAction.TuitionReminderChanged -> viewModelScope.launch {
+                updateSettings.setTuitionReminder(action.enabled)
+            }
+
+            is UtilitiesAction.TrainingPointNotifChanged -> viewModelScope.launch {
+                updateSettings.setTrainingPointNotif(action.enabled)
+            }
+
+            is UtilitiesAction.LanguageSelected -> selectLanguage(action.languageTag)
+
+            // Chọn giao diện: không cần dựng lại activity vì theme là state flow đang compose.
+            is UtilitiesAction.ThemeModeSelected -> viewModelScope.launch {
+                updateSettings.setThemeMode(action.themeMode)
             }
         }
     }
 
-    private fun load() {
+    /**
+     * Đổi ngôn ngữ toàn app.
+     *
+     * Ghi store **trước** rồi mới phát event: Route gọi `recreate()` ngay, và
+     * `MainActivity.attachBaseContext` của activity mới phải đọc được tag vừa lưu.
+     */
+    private fun selectLanguage(languageTag: String) {
+        viewModelScope.launch {
+            // Chọn lại đúng ngôn ngữ đang bật thì không dựng lại activity làm trắng màn hình.
+            if (languageTag == settingsState.value.languageTag) return@launch
+            updateSettings.setLanguageTag(languageTag)
+            _events.send(UtilitiesEvent.LanguageChanged)
+        }
+    }
+
+    private fun loadModules() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, failure = null) }
             getUtilityModules().fold(
@@ -67,4 +124,49 @@ class UtilitiesViewModel @Inject constructor(
             )
         }
     }
+
+    private fun loadTuition() {
+        viewModelScope.launch {
+            getTuition().onSuccess { info ->
+                _tuitionState.value = info.toUiState()
+            }
+        }
+    }
+
+    private fun loadTrainingPoint() {
+        viewModelScope.launch {
+            getTrainingPoint().onSuccess { info ->
+                _trainingPointState.value = info.toUiState()
+            }
+        }
+    }
+
+    private fun TuitionInfo.toUiState() = TuitionUiState(
+        semester = semester,
+        isPaid = isPaid,
+        totalAmount = totalAmount,
+        paidAmount = paidAmount,
+        remainingAmount = remainingAmount,
+        creditsCount = creditsCount,
+        dueDate = dueDate,
+        courses = courses.map { TuitionCourse(it.code, it.name, it.credits, it.fee) },
+    )
+
+    private fun TrainingPointInfo.toUiState() = TrainingPointUiState(
+        semester = semester,
+        totalScore = totalScore,
+        maxScore = maxScore,
+        rank = rank,
+        criteriaList = criteriaList.map { TrainingCriteria(it.title, it.score, it.maxScore, it.description) },
+    )
+
+    private fun AppSettings.toUiState() = SettingsUiState(
+        tuitionReminderEnabled = tuitionReminderEnabled,
+        trainingPointNotifEnabled = trainingPointNotifEnabled,
+        languageTag = languageTag,
+        themeMode = themeMode,
+        appVersion = appVersion,
+        buildNumber = buildNumber,
+        developer = developer,
+    )
 }

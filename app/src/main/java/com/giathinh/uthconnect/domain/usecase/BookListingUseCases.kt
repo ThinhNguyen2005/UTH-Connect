@@ -1,14 +1,16 @@
 package com.giathinh.uthconnect.domain.usecase
 
-import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookDealType
+import com.giathinh.uthconnect.domain.model.BookListing
+import com.giathinh.uthconnect.domain.model.BookListingStatus
 import com.giathinh.uthconnect.domain.repository.BookListingRepository
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 class BookListingUseCases @Inject constructor(private val repository: BookListingRepository) {
     fun currentUserId(): String? = repository.currentUserId()
     fun observeListings(): Flow<List<BookListing>> = repository.observeListings()
+    fun refresh() = repository.refresh()
 
     suspend fun save(listing: BookListing): Result<Unit> {
         if (listing.id.isBlank() || listing.title.isBlank() || listing.title.length > 160 ||
@@ -18,11 +20,21 @@ class BookListingUseCases @Inject constructor(private val repository: BookListin
             !isValidContact(listing.contact) ||
             (listing.dealType == BookDealType.SALE && (listing.priceVnd ?: 0) <= 0) ||
             (listing.dealType == BookDealType.EXCHANGE && listing.priceVnd != null)
-        ) return Result.failure(IllegalArgumentException("Invalid book listing"))
+        ) {
+            return Result.failure(IllegalArgumentException("Invalid book listing"))
+        }
         return repository.saveListing(listing)
     }
 
-    suspend fun delete(id: String): Result<Unit> = repository.deleteListing(id)
+    suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> {
+        if (id.isBlank()) return Result.failure(IllegalArgumentException("Invalid listing ID"))
+        return repository.updateStatus(id, status)
+    }
+
+    suspend fun delete(id: String): Result<Unit> {
+        if (id.isBlank()) return Result.failure(IllegalArgumentException("Invalid listing ID"))
+        return repository.deleteListing(id)
+    }
 
     private fun isValidContact(value: String): Boolean {
         val contact = value.trim()

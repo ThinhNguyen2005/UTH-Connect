@@ -57,6 +57,34 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
+    override suspend fun changePassword(
+        studentId: String,
+        oldPassword: String,
+        newPassword: String,
+    ): Result<Boolean> = runCatching {
+        val email = resolveEmail(studentId) ?: return@runCatching false
+
+        // Firebase yeu cau re-authenticate truoc khi doi mat khau: dang nhap lai
+        // bang mat khau cu vua de lay token moi, vua de kiem tra mat khau cu dung.
+        try {
+            firebaseAuth.signInWithEmailAndPassword(email, oldPassword).await()
+        } catch (e: FirebaseAuthException) {
+            return@runCatching when (e.errorCode) {
+                "ERROR_WRONG_PASSWORD",
+                "ERROR_INVALID_CREDENTIALS",
+                "ERROR_USER_NOT_FOUND",
+                "ERROR_INVALID_EMAIL",
+                -> false
+
+                else -> throw e
+            }
+        }
+
+        val user = firebaseAuth.currentUser ?: return@runCatching false
+        user.updatePassword(newPassword).await()
+        true
+    }
+
     private suspend fun resolveEmail(identifier: String): String? {
         if (identifier.contains("@")) {
             return identifier
@@ -105,17 +133,15 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
-    private fun DocumentSnapshot.toStudentProfile(fallbackStudentId: String): StudentProfile {
-        return StudentProfile(
-            studentId = getString(FIELD_STUDENT_ID) ?: fallbackStudentId,
-            email = getString(FIELD_EMAIL) ?: "",
-            displayName = getString(FIELD_DISPLAY_NAME) ?: "Sinh viên UTH",
-            className = getString(FIELD_CLASS_NAME) ?: "Chưa cập nhật",
-            major = getString(FIELD_MAJOR) ?: "Chưa cập nhật",
-            faculty = getString(FIELD_FACULTY) ?: "Chưa cập nhật",
-            avatarUrl = getString(FIELD_AVATAR_URL),
-        )
-    }
+    private fun DocumentSnapshot.toStudentProfile(fallbackStudentId: String): StudentProfile = StudentProfile(
+        studentId = getString(FIELD_STUDENT_ID) ?: fallbackStudentId,
+        email = getString(FIELD_EMAIL) ?: "",
+        displayName = getString(FIELD_DISPLAY_NAME) ?: "Sinh viên UTH",
+        className = getString(FIELD_CLASS_NAME) ?: "Chưa cập nhật",
+        major = getString(FIELD_MAJOR) ?: "Chưa cập nhật",
+        faculty = getString(FIELD_FACULTY) ?: "Chưa cập nhật",
+        avatarUrl = getString(FIELD_AVATAR_URL),
+    )
 
     companion object {
         private const val USERS_COLLECTION = "users"

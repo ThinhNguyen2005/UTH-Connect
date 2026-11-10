@@ -1,7 +1,6 @@
 package com.giathinh.uthconnect.core.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +27,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
@@ -42,17 +47,35 @@ fun UthCard(
     contentPadding: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
-    Card(
-        modifier = modifier.then(clickModifier),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline),
-        elevation = CardDefaults.cardElevation(defaultElevation = UthDimens.Elevation.Card),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
+    val shape = MaterialTheme.shapes.medium
+    val border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline)
+    val elevation = CardDefaults.cardElevation(defaultElevation = UthDimens.Elevation.Card)
+    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = if (contentPadding) Modifier.padding(UthDimens.Spacing.Lg) else Modifier,
             content = content,
+        )
+    }
+
+    if (onClick == null) {
+        Card(
+            modifier = modifier,
+            shape = shape,
+            border = border,
+            elevation = elevation,
+            colors = colors,
+            content = cardContent,
+        )
+    } else {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            shape = shape,
+            border = border,
+            elevation = elevation,
+            colors = colors,
+            content = cardContent,
         )
     }
 }
@@ -82,7 +105,7 @@ fun UthSectionHeader(
 
 /**
  * Nút chính cao 48dp, bo 8dp — `docs/Design-system.md` mục 4.1.
- * `loading = true` đổi chữ thành spinner và chặn chạm (chống double-submit).
+ * `loading = true` giữ nhãn, thông báo trạng thái và chặn chạm (chống double-submit).
  */
 @Composable
 fun UthPrimaryButton(
@@ -93,25 +116,29 @@ fun UthPrimaryButton(
     loading: Boolean = false,
     leadingIcon: ImageVector? = null,
 ) {
-    val extended = UthTheme.extendedColors
+    val loadingDescription = stringResource(R.string.common_loading)
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
-        modifier = modifier.height(UthDimens.Size.ButtonHeight),
+        modifier = modifier.heightIn(min = UthDimens.Size.ButtonHeight).semantics {
+            if (loading) stateDescription = loadingDescription
+        },
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = extended.textTertiary,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         if (loading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(UthDimens.Size.ProgressInline),
-                color = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(UthDimens.Size.ProgressInline).clearAndSetSemantics { },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = UthDimens.Size.ProgressInlineStroke,
             )
+            Spacer(Modifier.width(UthDimens.Spacing.Sm))
+            Text(text = text.uppercase(), style = MaterialTheme.typography.labelLarge)
         } else {
             if (leadingIcon != null) {
                 Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconInline))

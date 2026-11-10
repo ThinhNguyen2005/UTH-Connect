@@ -11,16 +11,16 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
-import com.giathinh.uthconnect.presentation.books.BooksScreen
 import com.giathinh.uthconnect.presentation.books.BooksAction
 import com.giathinh.uthconnect.presentation.books.BooksFailure
+import com.giathinh.uthconnect.presentation.books.BooksScreen
 import com.giathinh.uthconnect.presentation.books.BooksUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -32,10 +32,15 @@ class BooksContactUiTest {
     @Test fun contactFailureShowsError() {
         var opened = ""
         val handler = object : UriHandler {
-            override fun openUri(uri: String) { opened = uri; throw IllegalStateException("No handler") }
+            override fun openUri(uri: String) {
+                opened = uri
+                throw IllegalStateException("No handler")
+            }
         }
-        val listing = BookListing("qa", "QA contact book", "QA", BookCondition.GOOD,
-            BookDealType.SALE, 1000, "", "Seller", "qa@example.com", ownerUid = "seller")
+        val listing = BookListing(
+            "qa", "QA contact book", "QA", BookCondition.GOOD,
+            BookDealType.SALE, 1000, "", "Seller", "qa@example.com", ownerUid = "seller",
+        )
         compose.setContent {
             CompositionLocalProvider(LocalUriHandler provides handler) {
                 BooksScreen(BooksUiState(isLoading = false, currentUserUid = "buyer", listings = listOf(listing)), {}, {})

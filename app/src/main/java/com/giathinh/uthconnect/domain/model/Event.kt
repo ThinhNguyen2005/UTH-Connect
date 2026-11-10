@@ -19,16 +19,26 @@ data class Event(
     val coverUrl: String? = null,
 )
 
+/** Data an organizer can edit. Ownership and status are decided by the server. */
+data class EventDraft(
+    val title: String,
+    val description: String,
+    val location: String,
+    val campus: String,
+    val startAt: Long,
+    val endAt: Long,
+    val capacity: Int,
+)
+
 enum class EventStatus {
     DRAFT,
     PUBLISHED,
     HAPPENING,
     COMPLETED,
-    CANCELLED;
+    CANCELLED,
+    ;
 
     companion object {
-        fun fromString(value: String?): EventStatus {
-            return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: PUBLISHED
-        }
+        fun fromString(value: String?): EventStatus = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: PUBLISHED
     }
 }

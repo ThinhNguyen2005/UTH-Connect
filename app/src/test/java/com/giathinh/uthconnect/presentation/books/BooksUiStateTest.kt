@@ -40,10 +40,9 @@ class BooksUiStateTest {
         assertEquals(listOf(cheap), state.visibleListings)
     }
 
-    private fun listing(title: String, deal: BookDealType, status: BookListingStatus = BookListingStatus.AVAILABLE) =
-        BookListing(
-            id = "$title-$deal", title = title, subject = "CS", condition = BookCondition.GOOD,
-            dealType = deal, priceVnd = 1000, description = "", sellerName = "Seller",
-            contact = "0901234567", status = status,
-        )
+    private fun listing(title: String, deal: BookDealType, status: BookListingStatus = BookListingStatus.AVAILABLE) = BookListing(
+        id = "$title-$deal", title = title, subject = "CS", condition = BookCondition.GOOD,
+        dealType = deal, priceVnd = 1000, description = "", sellerName = "Seller",
+        contact = "0901234567", status = status,
+    )
 }

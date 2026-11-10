@@ -1,0 +1,1340 @@
+package com.giathinh.uthconnect.presentation.tickets
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
+import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
+import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
+import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
+import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
+import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
+import com.giathinh.uthconnect.domain.model.Ticket
+import com.giathinh.uthconnect.domain.model.TicketQrPayload
+import com.giathinh.uthconnect.domain.model.TicketStatus
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.common.BitMatrix
+import com.google.zxing.qrcode.QRCodeWriter
+
+/**
+ * Tab Vé: thanh nhận diện rút gọn kiểu Trang chủ, bộ lọc hai nhóm và danh sách vé dạng
+ * boarding pass (dải nhận diện · nội dung · đường xé · cuống vé có QR mini).
+ *
+ * Screen **stateless**: chỉ render [TicketsUiState] và phát [TicketsAction] — cùng ràng buộc
+ * tầng `presentation` như các module khác.
+ */
+@Composable
+fun TicketsScreen(
+    uiState: TicketsUiState,
+    onAction: (TicketsAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        TicketsTopBar()
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = UthDimens.Spacing.Xl,
+                end = UthDimens.Spacing.Xl,
+                top = UthDimens.Spacing.Lg,
+                bottom = UthDimens.Spacing.Xxl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            val hasTickets = !uiState.isLoading && uiState.failure == null && uiState.tickets.isNotEmpty()
+            val ticketCount = if (hasTickets) uiState.visibleTickets.size else null
+
+            item(key = TicketsKey.Intro) {
+                TicketsIntro(ticketCount = ticketCount)
+            }
+
+            if (uiState.isOrganizer) {
+                item { Button(onClick = { onAction(TicketsAction.OpenScanner) }) { Text(stringResource(R.string.scanner_open)) } }
+            }
+
+            if (hasTickets) {
+                item(key = TicketsKey.Filters) {
+                    TicketsFilterTabs(
+                        selected = uiState.filter,
+                        upcomingCount = uiState.upcomingTickets.size,
+                        pastCount = uiState.pastTickets.size,
+                        onSelect = { onAction(TicketsAction.SelectFilter(it)) },
+                    )
+                }
+            }
+
+            when {
+                uiState.isLoading -> item(key = TicketsKey.Loading) { TicketsLoading() }
+
+                uiState.failure != null -> item(key = TicketsKey.Error) {
+                    UthEmptyState(
+                        title = stringResource(R.string.tickets_error_title),
+                        body = stringResource(R.string.tickets_error_body),
+                        icon = Icons.Filled.Warning,
+                        actionLabel = stringResource(R.string.common_retry),
+                        onAction = { onAction(TicketsAction.Retry) },
+                        modifier = Modifier.padding(top = UthDimens.Spacing.Xl),
+                    )
+                }
+
+                uiState.tickets.isEmpty() -> item(key = TicketsKey.Empty) {
+                    UthEmptyState(
+                        title = stringResource(R.string.tickets_empty_title),
+                        body = stringResource(R.string.tickets_empty_body),
+                        icon = Icons.Filled.DateRange,
+                        modifier = Modifier.padding(top = UthDimens.Spacing.Xl),
+                    )
+                }
+
+                uiState.visibleTickets.isEmpty() -> item(key = TicketsKey.FilterEmpty) {
+                    // Tab rỗng khác trạng thái rỗng toàn màn: người dùng còn vé ở tab kia.
+                    val past = uiState.filter == TicketFilter.Past
+                    UthEmptyState(
+                        title = stringResource(
+                            if (past) R.string.tickets_past_empty_title else R.string.tickets_upcoming_empty_title,
+                        ),
+                        body = stringResource(
+                            if (past) R.string.tickets_past_empty_body else R.string.tickets_upcoming_empty_body,
+                        ),
+                        icon = Icons.Filled.DateRange,
+                        modifier = Modifier.padding(top = UthDimens.Spacing.Xl),
+                    )
+                }
+
+                else -> items(uiState.visibleTickets, key = Ticket::id) { ticket ->
+                    TicketCard(
+                        ticket = ticket,
+                        onOpenTicket = { onAction(TicketsAction.OpenTicket(ticket.id)) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Bản rút gọn của thanh nhận diện Trang chủ: giữ dải nền `primary`, ô logo chữ tắt trường và
+ * tên tab; bỏ lời chào và chuông thông báo vì tab Vé không có luồng thông báo riêng.
+ *
+ * Hai vòng tròn trang trí vẽ bằng [drawBehind] ở alpha thấp, không mang thông tin nên không
+ * ảnh hưởng TalkBack.
+ */
+@Composable
+private fun TicketsTopBar(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.primary)
+            .drawBehind {
+                val radius = size.width * UthDimens.Layout.TicketRingRadiusFraction
+                drawCircle(
+                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.TicketHeaderRing),
+                    radius = radius,
+                    center = Offset(size.width * UthDimens.Layout.TicketRingCenterFraction, 0f),
+                    style = Stroke(width = size.width * UthDimens.Layout.TicketRingStrokeFraction),
+                )
+            }
+            .padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Lg),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(UthDimens.Size.Avatar)
+                .clip(MaterialTheme.shapes.small)
+                .background(colors.onPrimary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.tickets_logo_abbr),
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.primary,
+            )
+        }
+        Spacer(Modifier.width(UthDimens.Spacing.Md))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.tickets_brand).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(R.string.tickets_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = colors.onPrimary,
+            )
+        }
+    }
+}
+
+/** Dòng mô tả ngắn + số vé của tab đang xem; không lặp lại tiêu đề đã có trên top bar. */
+@Composable
+private fun TicketsIntro(ticketCount: Int?, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.tickets_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (ticketCount != null && ticketCount > 0) {
+            Spacer(Modifier.width(UthDimens.Spacing.Sm))
+            Text(
+                text = pluralStringResource(R.plurals.tickets_count, ticketCount, ticketCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+            )
+        }
+    }
+}
+
+/** Segmented control hai nhóm vé; nhóm suy ra từ trạng thái vé nên không cần nút "Lịch sử" riêng. */
+@Composable
+private fun TicketsFilterTabs(
+    selected: TicketFilter,
+    upcomingCount: Int,
+    pastCount: Int,
+    onSelect: (TicketFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(UthDimens.Spacing.Xs)
+            .selectableGroup(),
+    ) {
+        TicketsFilterTab(
+            label = stringResource(R.string.tickets_tab_upcoming),
+            icon = Icons.AutoMirrored.Filled.List,
+            count = upcomingCount,
+            selected = selected == TicketFilter.Upcoming,
+            onClick = { onSelect(TicketFilter.Upcoming) },
+            modifier = Modifier.weight(1f),
+        )
+        TicketsFilterTab(
+            label = stringResource(R.string.tickets_tab_past),
+            icon = Icons.Filled.DateRange,
+            count = pastCount,
+            selected = selected == TicketFilter.Past,
+            onClick = { onSelect(TicketFilter.Past) },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun TicketsFilterTab(
+    label: String,
+    icon: ImageVector,
+    count: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val contentColor = if (selected) colors.onPrimary else colors.onSurfaceVariant
+
+    Row(
+        modifier = modifier
+            .height(UthDimens.Size.MinTouchTarget)
+            .clip(MaterialTheme.shapes.small)
+            .background(if (selected) colors.primary else Color.Transparent)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .padding(horizontal = UthDimens.Spacing.Sm),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(UthDimens.Size.IconInline),
+        )
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            maxLines = 1,
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(if (selected) colors.onPrimary.copy(alpha = UthDimens.Opacity.TicketSelectedCount) else colors.surface)
+                .padding(horizontal = UthDimens.Spacing.Xs, vertical = UthDimens.Spacing.Xxs),
+        )
+    }
+}
+
+/** Indicator tải danh sách: không phủ overlay, chỉ đặt giữa vùng nội dung. */
+@Composable
+private fun TicketsLoading(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = UthDimens.Spacing.Section),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = UthDimens.Size.ProgressStroke,
+            modifier = Modifier.size(UthDimens.Size.Progress),
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Md))
+        Text(
+            text = stringResource(R.string.tickets_loading),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Thẻ vé dạng boarding pass: dải màu trạng thái bên trái, khối nội dung ở giữa, đường xé nét
+ * đứt và cuống vé bên phải. Toàn bộ cuống vé là một vùng chạm duy nhất (≥ [UthDimens.Size.MinTouchTarget])
+ * nên không cần thêm nút phụ trong khối nội dung.
+ */
+@Composable
+private fun TicketCard(
+    ticket: Ticket,
+    onOpenTicket: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(modifier = modifier.fillMaxWidth(), contentPadding = false) {
+        Row(Modifier.height(IntrinsicSize.Min)) {
+            Box(
+                modifier = Modifier
+                    .width(UthDimens.Size.TicketStripe)
+                    .fillMaxHeight()
+                    .background(ticketStripeColor(ticket.status)),
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(UthDimens.Spacing.Md),
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            ) {
+                TicketHeadline(ticket)
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = UthDimens.Spacing.Xs),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                TicketMetaRow(
+                    icon = Icons.Filled.DateRange,
+                    text = ticket.eventStartsAt,
+                    emphasized = ticket.status == TicketStatus.VALID,
+                )
+                TicketMetaRow(
+                    icon = Icons.Filled.LocationOn,
+                    text = ticket.eventLocation,
+                    emphasized = false,
+                )
+                TicketFooter(ticket)
+            }
+            TicketPerforation(modifier = Modifier.fillMaxHeight())
+            TicketStub(ticket = ticket, onOpenTicket = onOpenTicket, modifier = Modifier.fillMaxHeight())
+        }
+    }
+}
+
+/** Badge trạng thái, tên sự kiện và đơn vị tổ chức — một badge nhấn mỗi thẻ. */
+@Composable
+private fun TicketHeadline(ticket: Ticket, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+        UthStatusBadge(text = ticketStatusLabel(ticket.status), tone = ticketStatusTone(ticket.status))
+        Text(
+            text = ticket.eventTitle,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        ticket.organizerName?.let { organizer ->
+            Text(
+                text = organizer,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** Một dòng thông tin sự kiện: icon + chữ, tối đa một dòng để giữ nhịp thẻ vé. */
+@Composable
+private fun TicketMetaRow(
+    icon: ImageVector,
+    text: String,
+    emphasized: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (emphasized) colors.primary else colors.onSurfaceVariant,
+            modifier = Modifier.size(UthDimens.Size.IconInline),
+        )
+        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+        Text(
+            text = text,
+            style = if (emphasized) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodySmall,
+            color = if (emphasized) colors.onSurface else colors.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Mã vé (monospace) bên trái, chỗ ngồi bên phải khi sự kiện có chia chỗ. */
+@Composable
+private fun TicketFooter(ticket: Ticket, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val active = ticket.status == TicketStatus.VALID
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = UthDimens.Spacing.Xs),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ticket.fallbackCode.takeIf(String::isNotBlank)?.let { code ->
+            Text(
+                text = stringResource(R.string.tickets_card_code, code),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                textDecoration = if (active) null else TextDecoration.LineThrough,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(if (active) colors.primaryContainer else colors.surfaceVariant)
+                    .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+            )
+        }
+        ticket.seatLabel?.let { seat ->
+            Text(
+                text = seat,
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(colors.surfaceVariant)
+                    .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+            )
+        }
+    }
+}
+
+/** Đường xé dọc nét đứt — dấu hiệu "vé" duy nhất, không cần notch để tránh cắt nền phức tạp. */
+@Composable
+private fun TicketPerforation(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Canvas(
+        modifier = modifier
+            .width(UthDimens.Spacing.Sm)
+            .padding(vertical = UthDimens.Spacing.Md),
+    ) {
+        val x = size.width / 2f
+        drawLine(
+            color = colors.outlineVariant,
+            start = Offset(x, 0f),
+            end = Offset(x, size.height),
+            strokeWidth = UthDimens.Size.Stroke.toPx(),
+            pathEffect = PathEffect.dashPathEffect(
+                intervals = floatArrayOf(
+                    size.width * UthDimens.Layout.TicketDashedLineDashFactor,
+                    size.width * UthDimens.Layout.TicketDashedLineGapFactor,
+                ),
+            ),
+        )
+    }
+}
+
+/** Cuống vé: mã QR chỉ xuất hiện sau khi nhận token hợp lệ từ server. */
+@Composable
+private fun TicketStub(
+    ticket: Ticket,
+    onOpenTicket: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .width(UthDimens.Size.TicketStub)
+            .background(colors.surfaceVariant.copy(alpha = UthDimens.Opacity.TicketStub))
+            .clickable(role = Role.Button, onClick = onOpenTicket)
+            .padding(UthDimens.Spacing.Sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs, Alignment.CenterVertically),
+    ) {
+        Text(
+            text = stringResource(R.string.tickets_stub_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
+        if (BuildConfig.USE_SUPABASE) {
+            Box(
+                modifier = Modifier.size(UthDimens.Size.TicketStubQr),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant)
+            }
+        } else {
+            TicketQrPreview(payload = ticket.id, modifier = Modifier.size(UthDimens.Size.TicketStubQr))
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(colors.primary)
+                .padding(vertical = UthDimens.Spacing.Xs),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.tickets_stub_open),
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onPrimary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** QR mini có dữ liệu vé thật; mở chi tiết để quét ở kích thước đủ lớn. */
+@Composable
+private fun TicketQrPreview(payload: String, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val light = UthTheme.extendedColors.isLight
+    val paper = if (light) colors.surface else colors.onSurface
+    val ink = if (light) colors.onSurface else colors.surface
+    val matrix = remember(payload) { encodeTicketQr(payload) }
+    Box(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(paper)
+            .border(UthDimens.Size.Stroke, colors.outlineVariant, MaterialTheme.shapes.extraSmall)
+            .padding(UthDimens.Spacing.Xxs),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawQrMatrix(matrix, ink, paper)
+        }
+    }
+}
+
+internal fun encodeTicketQr(payload: String): BitMatrix = QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 0, 0)
+
+private fun DrawScope.drawQrMatrix(matrix: BitMatrix, ink: Color, paper: Color) {
+    drawRect(paper)
+    val cell = size.minDimension / matrix.width
+    val left = (size.width - matrix.width * cell) / 2f
+    val top = (size.height - matrix.height * cell) / 2f
+    for (row in 0 until matrix.height) {
+        for (column in 0 until matrix.width) {
+            if (matrix[column, row]) {
+                drawRect(ink, Offset(left + column * cell, top + row * cell), Size(cell, cell))
+            }
+        }
+    }
+}
+
+/** Màu dải nhận diện: Navy khi vé còn dùng được, xám khi đã qua, đỏ khi bị hủy. */
+@Composable
+private fun ticketStripeColor(status: TicketStatus): Color = when (status) {
+    TicketStatus.VALID -> MaterialTheme.colorScheme.primary
+    TicketStatus.CHECKED_IN -> MaterialTheme.colorScheme.outlineVariant
+    TicketStatus.CANCELLED -> MaterialTheme.colorScheme.error
+}
+
+@Composable
+private fun ticketStatusLabel(status: TicketStatus): String = when (status) {
+    TicketStatus.VALID -> stringResource(R.string.tickets_status_valid)
+    TicketStatus.CHECKED_IN -> stringResource(R.string.tickets_status_checked_in)
+    TicketStatus.CANCELLED -> stringResource(R.string.tickets_status_cancelled)
+}
+
+private fun ticketStatusTone(status: TicketStatus): BadgeTone = when (status) {
+    TicketStatus.VALID -> BadgeTone.Success
+    TicketStatus.CHECKED_IN -> BadgeTone.Info
+    TicketStatus.CANCELLED -> BadgeTone.Danger
+}
+
+/**
+ * Khoá item của danh sách vé — một chỗ duy nhất thay vì chuỗi rải trong Composable.
+ *
+ * Suppress `property-naming`: hằng trong object private nhóm theo vai trò, không phải hằng cấp file.
+ */
+@Suppress("ktlint:standard:property-naming")
+private object TicketsKey {
+    const val Intro = "tickets-intro"
+    const val Filters = "tickets-filters"
+    const val Loading = "tickets-loading"
+    const val Error = "tickets-error"
+    const val Empty = "tickets-empty"
+    const val FilterEmpty = "tickets-filter-empty"
+}
+
+/**
+ * Màn chi tiết vé dạng boarding pass: nửa trên là thông tin sự kiện + sinh viên, đường xé có
+ * khuyết tròn, nửa dưới là khung QR lớn kèm mã vé sao chép được.
+ *
+ * Screen **stateless**: chỉ render [Ticket] đang mở trong state, không tự gọi repository.
+ * Bản Supabase chỉ hiển thị QR ký bởi server; backend demo giữ QR minh họa.
+ */
+@Composable
+fun TicketQrScreen(
+    ticket: Ticket?,
+    studentName: String?,
+    secondsRemaining: Int,
+    onBack: () -> Unit,
+    onCopy: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        TicketDetailTopBar(onBack = onBack)
+
+        if (ticket == null) {
+            TicketMissing(onBack = onBack)
+            return@Column
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Lg),
+        ) {
+            TicketPassCard(
+                ticket = ticket,
+                studentName = studentName,
+                secondsRemaining = secondsRemaining,
+                onCopy = onCopy,
+                qrToken = qrToken,
+                qrError = qrError,
+            )
+            Spacer(Modifier.height(UthDimens.Spacing.Xl))
+        }
+    }
+}
+
+/** Top bar tối giản: chỉ nút quay lại và tiêu đề — màn chi tiết không có hành động phụ nào. */
+@Composable
+private fun TicketDetailTopBar(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.background),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(UthDimens.Size.TopBar)
+                .padding(horizontal = UthDimens.Spacing.Sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.common_back),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Xs))
+            Text(
+                text = stringResource(R.string.tickets_qr_title),
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        HorizontalDivider(color = colors.outlineVariant)
+    }
+}
+
+/** Vé không còn trong state (mở lại route sau khi state bị dọn) — vẫn phải có lối thoát. */
+@Composable
+private fun TicketMissing(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(UthDimens.Spacing.Xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.tickets_qr_missing),
+            style = MaterialTheme.typography.bodyMedium,
+            color = UthTheme.extendedColors.textSecondary,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Xl))
+        UthPrimaryButton(text = stringResource(R.string.common_back), onClick = onBack)
+    }
+}
+
+/**
+ * Thẻ vé hoàn chỉnh: khối thông tin ở trên, đường xé ở giữa, khối QR ở dưới — cùng một `UthCard`
+ * nên hai nửa không thể lệch viền.
+ */
+@Composable
+private fun TicketPassCard(
+    ticket: Ticket,
+    studentName: String?,
+    secondsRemaining: Int,
+    onCopy: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    qrToken: String? = null,
+    qrError: String? = null,
+) {
+    val copyLabel = stringResource(R.string.tickets_detail_copy)
+
+    UthCard(modifier = modifier.fillMaxWidth(), contentPadding = false) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(UthDimens.Spacing.Xl),
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Lg),
+            ) {
+                TicketDetailHeadline(ticket)
+                TicketDetailGrid(ticket = ticket, studentName = studentName)
+            }
+            TicketNotchDivider()
+            Column(
+                modifier = Modifier.padding(
+                    start = UthDimens.Spacing.Xl,
+                    end = UthDimens.Spacing.Xl,
+                    top = UthDimens.Spacing.Xs,
+                    bottom = UthDimens.Spacing.Xl,
+                ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+            ) {
+                if (BuildConfig.USE_SUPABASE) {
+                    if (!qrToken.isNullOrBlank()) {
+                        LiveTicketQrPanel(qrToken)
+                    } else {
+                        Box(
+                            Modifier.size(UthDimens.Size.QrMin)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = qrError ?: stringResource(R.string.tickets_qr_issuing),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                    Text(stringResource(R.string.tickets_qr_stable_notice), style = MaterialTheme.typography.bodySmall)
+                } else {
+                    TicketSecurityRibbon(secondsRemaining = secondsRemaining)
+                    TicketQrPanel(payload = ticket.id)
+                    ticket.fallbackCode.takeIf(String::isNotBlank)?.let { code ->
+                        TicketCodeRow(
+                            code = code,
+                            copyLabel = copyLabel,
+                            onCopy = { onCopy(code) },
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.tickets_qr_notice),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UthTheme.extendedColors.textSecondary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+/** Scannable ZXing matrix. No logo overlay: all QR modules remain readable. */
+@Composable
+private fun LiveTicketQrPanel(token: String, modifier: Modifier = Modifier) {
+    val qr = remember(token) {
+        QRCodeWriter().encode(
+            token,
+            BarcodeFormat.QR_CODE,
+            320,
+            320,
+            mapOf(EncodeHintType.MARGIN to 2),
+        )
+    }
+    Canvas(
+        modifier = modifier.size(UthDimens.Size.QrMin)
+            .semantics { contentDescription = "Mã QR điểm danh, tự cập nhật sau 60 giây" },
+    ) {
+        drawRect(Color.White)
+        val side = size.minDimension
+        val step = side / qr.width
+        for (y in 0 until qr.height) {
+            for (x in 0 until qr.width) {
+                if (qr.get(x, y)) {
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(x * step, y * step),
+                        size = Size(step + 0.1f, step + 0.1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Badge trạng thái, tên sự kiện và đơn vị tổ chức (dấu tick = đơn vị đã xác thực). */
+@Composable
+private fun TicketDetailHeadline(ticket: Ticket, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+        UthStatusBadge(text = ticketStatusLabel(ticket.status), tone = ticketStatusTone(ticket.status))
+        Text(
+            text = ticket.eventTitle,
+            style = MaterialTheme.typography.headlineSmall,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+        ticket.organizerName?.let { organizer ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Text(
+                    text = organizer,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Lưới thông tin 2 cột: thời gian · chỗ ngồi, rồi địa điểm và sinh viên chiếm trọn hàng —
+ * đúng thứ tự người soát vé đọc trên vé giấy.
+ */
+@Composable
+private fun TicketDetailGrid(
+    ticket: Ticket,
+    studentName: String?,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .background(UthTheme.extendedColors.surfaceSubtle)
+            .padding(UthDimens.Spacing.Lg),
+        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Lg),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md)) {
+            TicketDetailCell(
+                icon = Icons.Filled.DateRange,
+                label = stringResource(R.string.tickets_detail_time),
+                value = ticket.eventStartsAt,
+                modifier = Modifier.weight(1f),
+            )
+            ticket.seatLabel?.takeIf(String::isNotBlank)?.let { seatLabel ->
+                TicketDetailCell(
+                    icon = Icons.Filled.Place,
+                    label = stringResource(R.string.tickets_detail_seat),
+                    value = seatLabel,
+                    emphasize = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        TicketDetailCell(
+            icon = Icons.Filled.LocationOn,
+            label = stringResource(R.string.tickets_detail_location),
+            value = ticket.eventLocation,
+        )
+        HorizontalDivider(color = colors.outlineVariant)
+        TicketDetailCell(
+            icon = Icons.Filled.Person,
+            label = stringResource(R.string.tickets_detail_student),
+            value = studentName,
+            trailing = ticket.studentId.takeIf(String::isNotBlank)?.let {
+                stringResource(R.string.tickets_detail_student_id, it)
+            },
+        )
+    }
+}
+
+/** Một ô thông tin: nhãn nhỏ có icon, giá trị đậm và chip phụ tuỳ chọn bên phải. */
+@Composable
+private fun TicketDetailCell(
+    icon: ImageVector,
+    label: String,
+    value: String?,
+    modifier: Modifier = Modifier,
+    emphasize: Boolean = false,
+    trailing: String? = null,
+) {
+    val colors = MaterialTheme.colorScheme
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(UthDimens.Size.IconBadge),
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (value != null || trailing != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (value != null) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (emphasize) colors.primary else colors.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                if (trailing != null) {
+                    Spacer(Modifier.width(UthDimens.Spacing.Sm))
+                    Text(
+                        text = trailing,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.onPrimaryContainer,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .background(colors.primaryContainer)
+                            .padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xxs),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Đường xé giữa hai nửa vé: hai khuyết tròn khoét đúng màu nền màn hình và một nét đứt ở giữa —
+ * vẽ bằng [Canvas] nên không cần shape riêng cho khuyết.
+ */
+@Composable
+private fun TicketNotchDivider(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(UthDimens.Size.TicketNotchHeight),
+    ) {
+        val notch = UthDimens.Size.TicketNotchWidth.toPx()
+        val middle = size.height / 2f
+        drawCircle(color = colors.background, radius = notch, center = Offset(0f, middle))
+        drawCircle(color = colors.background, radius = notch, center = Offset(size.width, middle))
+        val gap = notch + UthDimens.Spacing.Sm.toPx()
+        drawLine(
+            color = colors.outlineVariant,
+            start = Offset(gap, middle),
+            end = Offset(size.width - gap, middle),
+            strokeWidth = UthDimens.Size.Stroke.toPx(),
+            pathEffect = PathEffect.dashPathEffect(
+                intervals = floatArrayOf(UthDimens.Spacing.Sm.toPx(), UthDimens.Spacing.Sm.toPx()),
+            ),
+        )
+    }
+}
+
+/** Nhắc thời hạn của mã: chấm xanh + câu đếm ngược, thay cho đồng hồ "bảo mật" của bản mockup. */
+@Composable
+private fun TicketSecurityRibbon(secondsRemaining: Int, modifier: Modifier = Modifier) {
+    val extended = UthTheme.extendedColors
+
+    Row(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(extended.surfaceSubtle)
+            .padding(horizontal = UthDimens.Spacing.Md, vertical = UthDimens.Spacing.Xs),
+        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(UthDimens.Size.IndicatorDot)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(extended.success),
+        )
+        Text(
+            text = stringResource(R.string.tickets_countdown, secondsRemaining),
+            style = MaterialTheme.typography.labelSmall,
+            color = extended.textSecondary,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Khung QR cỡ máy quét với quiet zone; không che ô mã ở giữa. */
+@Composable
+private fun TicketQrPanel(payload: String, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val light = UthTheme.extendedColors.isLight
+    val paper = if (light) colors.surface else colors.onSurface
+    val ink = if (light) colors.onSurface else colors.surface
+    val matrix = remember(payload) { encodeTicketQr(payload) }
+
+    Box(
+        modifier = modifier
+            .size(UthDimens.Size.QrMin)
+            .clip(MaterialTheme.shapes.medium)
+            .background(paper)
+            .border(UthDimens.Size.Stroke, colors.outlineVariant, MaterialTheme.shapes.medium),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawQrDesignators(
+                color = colors.primary,
+                inset = UthDimens.Spacing.Sm.toPx(),
+                arm = UthDimens.Size.QrDesignator.toPx(),
+                stroke = UthDimens.Size.StrokeFocused.toPx(),
+            )
+        }
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(UthDimens.Spacing.Xl),
+        ) {
+            drawQrMatrix(matrix, ink, paper)
+        }
+    }
+}
+
+/** Mã vé dạng monospace + nút sao chép cùng kích thước vùng chạm tối thiểu. */
+@Composable
+private fun TicketCodeRow(
+    code: String,
+    copyLabel: String,
+    onCopy: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val extended = UthTheme.extendedColors
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = code,
+            style = MaterialTheme.typography.titleMedium,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.small)
+                .background(extended.surfaceSubtle)
+                .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Md),
+        )
+        Box(
+            modifier = Modifier
+                .size(UthDimens.Size.MinTouchTarget)
+                .clip(MaterialTheme.shapes.small)
+                .background(extended.surfaceSubtle)
+                .clickable(role = Role.Button, onClick = onCopy),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_ticket_copy),
+                contentDescription = copyLabel,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(UthDimens.Size.Icon),
+            )
+        }
+    }
+}
+
+/** Bốn góc ngắm của khung QR — chỉ để mắt bám khung, không mang thông tin nên không có mô tả. */
+private fun DrawScope.drawQrDesignators(color: Color, inset: Float, arm: Float, stroke: Float) {
+    val corners = listOf(
+        Triple(Offset(inset, inset), 1f, 1f),
+        Triple(Offset(size.width - inset, inset), -1f, 1f),
+        Triple(Offset(inset, size.height - inset), 1f, -1f),
+        Triple(Offset(size.width - inset, size.height - inset), -1f, -1f),
+    )
+    corners.forEach { (origin, stepX, stepY) ->
+        drawLine(color, origin, Offset(origin.x + stepX * arm, origin.y), strokeWidth = stroke)
+        drawLine(color, origin, Offset(origin.x, origin.y + stepY * arm), strokeWidth = stroke)
+    }
+}
+
+private val PreviewTicket = Ticket(
+    id = "preview",
+    studentId = "2023040123",
+    eventId = "event",
+    eventTitle = "Hội thao Sinh viên UTH 2026",
+    eventLocation = "Sân vận động Cơ sở 2",
+    eventStartsAt = "12/11/2026 · 07:00",
+    status = TicketStatus.VALID,
+    fallbackCode = "482 917",
+    organizerName = "CLB Thể Thao UTH",
+    seatLabel = "Ghế A-14",
+)
+
+private val PreviewPastTicket = Ticket(
+    id = "preview-past",
+    studentId = "2023040123",
+    eventId = "event-past",
+    eventTitle = "Giao lưu CLB Ánh Sáng",
+    eventLocation = "Hội trường A.102",
+    eventStartsAt = "25/10/2026 · 18:30",
+    status = TicketStatus.CHECKED_IN,
+    fallbackCode = "105 638",
+    organizerName = "Đội CTXH Ánh Sáng",
+)
+
+private val PreviewTickets = listOf(PreviewTicket, PreviewPastTicket)
+
+/** Tên sinh viên mẫu cho mọi `@Preview` vé — giữ một chỗ để các preview đồng nhất. */
+private const val PREVIEW_STUDENT_NAME = "Nguyễn Minh Anh"
+
+@Preview(name = "Tickets upcoming light", showBackground = true)
+@Composable
+private fun TicketsPreview() = TicketsStatePreview(TicketsUiState(isLoading = false, tickets = PreviewTickets))
+
+@Preview(name = "Tickets upcoming dark", showBackground = true)
+@Composable
+private fun TicketsDarkPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false, tickets = PreviewTickets),
+    darkTheme = true,
+)
+
+@Preview(name = "Tickets past light", showBackground = true)
+@Composable
+private fun TicketsPastPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false, tickets = PreviewTickets, filter = TicketFilter.Past),
+)
+
+@Preview(name = "Tickets past dark", showBackground = true)
+@Composable
+private fun TicketsPastDarkPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false, tickets = PreviewTickets, filter = TicketFilter.Past),
+    darkTheme = true,
+)
+
+@Preview(name = "Tickets font scale 1.3", showBackground = true, fontScale = 1.3f)
+@Composable
+private fun TicketsFontScalePreview() = UthPreview {
+    TicketsScreen(TicketsUiState(isLoading = false, tickets = PreviewTickets), onAction = {})
+}
+
+@Preview(name = "Tickets loading light", showBackground = true)
+@Composable
+private fun TicketsLoadingPreview() = TicketsStatePreview(TicketsUiState())
+
+@Preview(name = "Tickets loading dark", showBackground = true)
+@Composable
+private fun TicketsLoadingDarkPreview() = TicketsStatePreview(TicketsUiState(), darkTheme = true)
+
+@Preview(name = "Tickets error light", showBackground = true)
+@Composable
+private fun TicketsErrorPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false, failure = TicketsFailure.LoadFailed),
+)
+
+@Preview(name = "Tickets error dark", showBackground = true)
+@Composable
+private fun TicketsErrorDarkPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false, failure = TicketsFailure.LoadFailed),
+    darkTheme = true,
+)
+
+@Preview(name = "Tickets empty light", showBackground = true)
+@Composable
+private fun TicketsEmptyPreview() = TicketsStatePreview(TicketsUiState(isLoading = false))
+
+@Preview(name = "Tickets empty dark", showBackground = true)
+@Composable
+private fun TicketsEmptyDarkPreview() = TicketsStatePreview(
+    TicketsUiState(isLoading = false),
+    darkTheme = true,
+)
+
+@Preview(name = "QR light", showBackground = true)
+@Composable
+private fun TicketQrPreview() = TicketQrStatePreview(PreviewTicket, 60)
+
+@Preview(name = "QR dark", showBackground = true)
+@Composable
+private fun TicketQrDarkPreview() = TicketQrStatePreview(PreviewTicket, 60, darkTheme = true)
+
+@Preview(name = "QR checked-in light", showBackground = true)
+@Composable
+private fun TicketQrCheckedInPreview() = TicketQrStatePreview(
+    PreviewTicket.copy(status = TicketStatus.CHECKED_IN),
+    60,
+)
+
+@Preview(name = "QR checked-in dark", showBackground = true)
+@Composable
+private fun TicketQrCheckedInDarkPreview() = TicketQrStatePreview(
+    PreviewTicket.copy(status = TicketStatus.CHECKED_IN),
+    60,
+    darkTheme = true,
+)
+
+@Preview(name = "QR expired light", showBackground = true)
+@Composable
+private fun TicketQrExpiredPreview() = TicketQrStatePreview(PreviewTicket, 0)
+
+@Preview(name = "QR expired dark", showBackground = true)
+@Composable
+private fun TicketQrExpiredDarkPreview() = TicketQrStatePreview(PreviewTicket, 0, darkTheme = true)
+
+@Preview(name = "QR font scale 1.3", showBackground = true, fontScale = 1.3f)
+@Composable
+private fun TicketQrFontScalePreview() = UthPreview {
+    TicketQrScreen(PreviewTicket, PREVIEW_STUDENT_NAME, 60, onBack = {}, onCopy = {})
+}
+
+@Preview(name = "QR missing light", showBackground = true)
+@Composable
+private fun TicketQrMissingPreview() = TicketQrStatePreview(null, 0)
+
+@Preview(name = "QR missing dark", showBackground = true)
+@Composable
+private fun TicketQrMissingDarkPreview() = TicketQrStatePreview(null, 0, darkTheme = true)
+
+@Composable
+private fun TicketsStatePreview(state: TicketsUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) { TicketsScreen(state, onAction = {}) }
+
+@Composable
+private fun TicketQrStatePreview(
+    ticket: Ticket?,
+    seconds: Int,
+    darkTheme: Boolean = false,
+) = UthPreview(darkTheme = darkTheme) {
+    TicketQrScreen(
+        ticket = ticket,
+        studentName = PREVIEW_STUDENT_NAME,
+        secondsRemaining = seconds,
+        onBack = {},
+        onCopy = {},
+    )
+}

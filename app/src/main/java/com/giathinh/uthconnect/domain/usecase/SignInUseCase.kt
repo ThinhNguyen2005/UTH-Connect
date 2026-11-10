@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.domain.usecase
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
 import com.giathinh.uthconnect.domain.validation.LoginValidator
 import javax.inject.Inject
@@ -22,13 +23,20 @@ class SignInUseCase @Inject constructor(
         }
         return auth.authenticate(identifier.trim(), password).fold(
             onSuccess = { student ->
-                if (student == null) SignInResult.InvalidCredentials
-                else {
+                if (student == null) {
+                    SignInResult.InvalidCredentials
+                } else {
                     session.start(student, remember)
                     SignInResult.Success(student)
                 }
             },
-            onFailure = { SignInResult.Failure },
+            onFailure = { error ->
+                if (error is StudentVerificationRequiredException) {
+                    SignInResult.VerificationRequired(error.email, error.displayName)
+                } else {
+                    SignInResult.Failure
+                }
+            },
         )
     }
 }
@@ -40,5 +48,6 @@ sealed interface SignInResult {
         val password: LoginFieldError?,
     ) : SignInResult
     data object InvalidCredentials : SignInResult
+    data class VerificationRequired(val email: String, val displayName: String) : SignInResult
     data object Failure : SignInResult
 }

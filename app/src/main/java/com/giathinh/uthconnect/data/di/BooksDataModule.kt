@@ -1,7 +1,7 @@
 package com.giathinh.uthconnect.data.di
 
 import com.giathinh.uthconnect.BuildConfig
-import com.giathinh.uthconnect.data.repository.FirebaseBookListingRepository
+import com.giathinh.uthconnect.data.repository.SupabaseBookListingRepository
 import com.giathinh.uthconnect.data.repository.UnavailableBookListingRepository
 import com.giathinh.uthconnect.domain.repository.BookListingRepository
 import dagger.Module
@@ -17,7 +17,7 @@ object BooksDataModule {
     @Provides
     @Singleton
     fun provideBookListingRepository(
-        firebase: Provider<FirebaseBookListingRepository>,
+        supabase: Provider<SupabaseBookListingRepository>,
         unavailable: Provider<UnavailableBookListingRepository>,
-    ): BookListingRepository = if (BuildConfig.USE_MOCK_DATA) unavailable.get() else firebase.get()
+    ): BookListingRepository = if (BuildConfig.USE_MOCK_DATA) unavailable.get() else supabase.get()
 }

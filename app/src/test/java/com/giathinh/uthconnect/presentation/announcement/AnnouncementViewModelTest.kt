@@ -7,7 +7,6 @@ import com.giathinh.uthconnect.domain.model.HomeFeed
 import com.giathinh.uthconnect.domain.repository.AnnouncementRepository
 import com.giathinh.uthconnect.domain.usecase.GetAnnouncementDetailUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
-import java.time.LocalDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,6 +14,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDateTime
 
 /**
  * Test dọc theo khung MVVM: ViewModel + UseCase + Repository giả (`docs/CODING_STANDARDS.md`
@@ -115,8 +115,7 @@ class AnnouncementViewModelTest {
         var result: Result<AnnouncementDetail?>,
     ) : AnnouncementRepository {
 
-        override suspend fun homeFeed(): Result<HomeFeed> =
-            Result.failure(UnsupportedOperationException("màn hình Chi tiết không dùng bảng tin"))
+        override suspend fun homeFeed(): Result<HomeFeed> = Result.failure(UnsupportedOperationException("màn hình Chi tiết không dùng bảng tin"))
 
         override suspend fun detail(id: String): Result<AnnouncementDetail?> = result
     }

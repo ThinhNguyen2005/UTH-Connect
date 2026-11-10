@@ -35,9 +35,11 @@ class LostFoundViewModel @Inject constructor(
             is LostFoundAction.SelectKind -> {
                 _uiState.update { it.copy(selectedKind = action.kind) }
             }
+
             is LostFoundAction.SelectCategory -> {
                 _uiState.update { it.copy(selectedCategory = action.category) }
             }
+
             LostFoundAction.OpenReportDialog -> {
                 _uiState.update {
                     it.copy(
@@ -46,48 +48,59 @@ class LostFoundViewModel @Inject constructor(
                     )
                 }
             }
+
             LostFoundAction.CloseReportDialog -> {
                 _uiState.update { it.copy(isReportDialogOpen = false) }
             }
+
             is LostFoundAction.UpdateReportTitle -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(title = action.title, titleError = null))
                 }
             }
+
             is LostFoundAction.UpdateReportDescription -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(description = action.description, descriptionError = null))
                 }
             }
+
             is LostFoundAction.UpdateReportKind -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(kind = action.kind))
                 }
             }
+
             is LostFoundAction.UpdateReportCategory -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(category = action.category))
                 }
             }
+
             is LostFoundAction.UpdateReportLocation -> {
                 _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(location = action.location))
+                    it.copy(reportForm = it.reportForm.copy(location = action.location, locationError = null))
                 }
             }
+
             is LostFoundAction.UpdateReportContactName -> {
                 _uiState.update {
                     it.copy(reportForm = it.reportForm.copy(contactName = action.contactName))
                 }
             }
+
             is LostFoundAction.UpdateReportContactPhone -> {
                 _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(contactPhone = action.contactPhone))
+                    it.copy(reportForm = it.reportForm.copy(contactPhone = action.contactPhone, phoneError = null))
                 }
             }
+
             LostFoundAction.SubmitReport -> submitReport()
+
             LostFoundAction.DismissMessage -> {
                 _uiState.update { it.copy(userMessage = null) }
             }
+
             LostFoundAction.Retry -> loadListings()
         }
     }
@@ -108,28 +121,41 @@ class LostFoundViewModel @Inject constructor(
 
     private fun submitReport() {
         val form = _uiState.value.reportForm
+        if (form.isSubmitting) return
 
         val titleError = if (form.title.isBlank()) FormValidationError.TitleRequired else null
         val currentDescLength = form.description.trim().length
         val descriptionError = if (currentDescLength < 20) {
             FormValidationError.DescriptionTooShort(currentDescLength)
-        } else null
+        } else {
+            null
+        }
 
-        if (titleError != null || descriptionError != null) {
+        val locationError = if (form.location.isBlank()) FormValidationError.LocationRequired else null
+        val phone = form.contactPhone.trim().replace(" ", "").replace("-", "")
+        val phoneError = when {
+            phone.isBlank() -> FormValidationError.PhoneRequired
+            !Regex("^(0[0-9]{9,10}|\\+84[0-9]{9,10})$").matches(phone) -> FormValidationError.PhoneInvalid
+            else -> null
+        }
+
+        if (titleError != null || descriptionError != null || locationError != null || phoneError != null) {
             _uiState.update {
                 it.copy(
                     reportForm = it.reportForm.copy(
                         titleError = titleError,
                         descriptionError = descriptionError,
+                        locationError = locationError,
+                        phoneError = phoneError,
                     ),
                 )
             }
             return
         }
 
+        // Mark submitting before scheduling the coroutine so repeated taps cannot enqueue two posts.
+        _uiState.update { it.copy(reportForm = it.reportForm.copy(isSubmitting = true)) }
         viewModelScope.launch {
-            _uiState.update { it.copy(reportForm = it.reportForm.copy(isSubmitting = true)) }
-
             val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
             val newListing = LostFoundListing(
                 title = form.title.trim(),
@@ -139,7 +165,7 @@ class LostFoundViewModel @Inject constructor(
                 location = form.location.trim(),
                 date = today,
                 contactName = form.contactName.trim(),
-                contactPhone = form.contactPhone.trim(),
+                contactPhone = phone,
             )
 
             reportItemUseCase(newListing).fold(

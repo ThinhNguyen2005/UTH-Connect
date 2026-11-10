@@ -10,4 +10,7 @@
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
 -->
+    <exclude domain="sharedpref" path="uth_auth_demo.xml" />
+    <exclude domain="sharedpref" path="uth_auth_demo_account.xml" />
+    <exclude domain="sharedpref" path="uth_secure_session.xml" />
 </full-backup-content>

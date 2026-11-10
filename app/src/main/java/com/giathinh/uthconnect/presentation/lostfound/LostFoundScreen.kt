@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,12 +13,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -56,7 +62,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
@@ -173,6 +184,7 @@ fun LostFoundScreen(
                         )
                     }
                 }
+
                 uiState.isError -> {
                     UthEmptyState(
                         title = stringResource(R.string.lostfound_load_error_title),
@@ -182,6 +194,7 @@ fun LostFoundScreen(
                         onAction = { onAction(LostFoundAction.Retry) },
                     )
                 }
+
                 uiState.filteredListings.isEmpty() -> {
                     UthEmptyState(
                         title = stringResource(R.string.lostfound_empty_list),
@@ -189,6 +202,7 @@ fun LostFoundScreen(
                         icon = Icons.Default.Search,
                     )
                 }
+
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -403,7 +417,7 @@ private fun ReportItemDialog(
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!form.isSubmitting) onDismiss() },
         title = {
             Text(
                 text = stringResource(R.string.lostfound_dialog_title),
@@ -415,43 +429,54 @@ private fun ReportItemDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
             ) {
                 // Kind selector: Lost or Found
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().selectableGroup(),
                     horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
                 ) {
-                    OutlinedButton(
-                        onClick = { onAction(LostFoundAction.UpdateReportKind(ListingKind.LOST)) },
-                        modifier = Modifier.weight(1f),
+                    Surface(
+                        modifier = Modifier.weight(1f)
+                            .heightIn(min = UthDimens.Size.MinTouchTarget)
+                            .selectable(
+                                selected = form.kind == ListingKind.LOST,
+                                role = Role.RadioButton,
+                                onClick = { onAction(LostFoundAction.UpdateReportKind(ListingKind.LOST)) },
+                            ),
                         shape = MaterialTheme.shapes.small,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (form.kind == ListingKind.LOST) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                        ),
+                        color = if (form.kind == ListingKind.LOST) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline),
                     ) {
                         Text(
                             text = stringResource(R.string.lostfound_kind_lost_btn),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (form.kind == ListingKind.LOST) FontWeight.Bold else FontWeight.Normal,
                             color = if (form.kind == ListingKind.LOST) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(UthDimens.Spacing.Md),
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = { onAction(LostFoundAction.UpdateReportKind(ListingKind.FOUND)) },
-                        modifier = Modifier.weight(1f),
+                    Surface(
+                        modifier = Modifier.weight(1f)
+                            .heightIn(min = UthDimens.Size.MinTouchTarget)
+                            .selectable(
+                                selected = form.kind == ListingKind.FOUND,
+                                role = Role.RadioButton,
+                                onClick = { onAction(LostFoundAction.UpdateReportKind(ListingKind.FOUND)) },
+                            ),
                         shape = MaterialTheme.shapes.small,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (form.kind == ListingKind.FOUND) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                        ),
+                        color = if (form.kind == ListingKind.FOUND) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outline),
                     ) {
                         Text(
                             text = stringResource(R.string.lostfound_kind_found_btn),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (form.kind == ListingKind.FOUND) FontWeight.Bold else FontWeight.Normal,
                             color = if (form.kind == ListingKind.FOUND) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(UthDimens.Spacing.Md),
                         )
                     }
                 }
@@ -465,7 +490,7 @@ private fun ReportItemDialog(
                     isError = form.titleError != null,
                     supportingText = {
                         form.titleError?.let { err ->
-                            Text(stringResource(err.messageRes), color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(err.messageRes), color = MaterialTheme.colorScheme.onErrorContainer)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -503,6 +528,8 @@ private fun ReportItemDialog(
                     onValueChange = { onAction(LostFoundAction.UpdateReportLocation(it)) },
                     label = { Text(stringResource(R.string.lostfound_field_location)) },
                     placeholder = { Text(stringResource(R.string.lostfound_field_location_hint)) },
+                    isError = form.locationError != null,
+                    supportingText = { form.locationError?.let { Text(stringResource(it.messageRes), color = MaterialTheme.colorScheme.onErrorContainer) } },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -523,6 +550,15 @@ private fun ReportItemDialog(
                     onValueChange = { onAction(LostFoundAction.UpdateReportContactPhone(it)) },
                     label = { Text(stringResource(R.string.lostfound_field_contact_phone)) },
                     placeholder = { Text(stringResource(R.string.lostfound_field_contact_phone_hint)) },
+                    isError = form.phoneError != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    supportingText = {
+                        Text(
+                            text = form.phoneError?.let { stringResource(it.messageRes) }
+                                ?: stringResource(R.string.lostfound_phone_public_notice),
+                            color = if (form.phoneError != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -541,7 +577,7 @@ private fun ReportItemDialog(
                                 is FormValidationError.DescriptionTooShort -> stringResource(error.messageRes, error.currentLength)
                                 else -> stringResource(error.messageRes)
                             }
-                            Text(errorText, color = MaterialTheme.colorScheme.error)
+                            Text(errorText, color = MaterialTheme.colorScheme.onErrorContainer)
                         } else {
                             Text(stringResource(R.string.lostfound_desc_counter, form.description.trim().length))
                         }
@@ -552,23 +588,27 @@ private fun ReportItemDialog(
             }
         },
         confirmButton = {
+            val loadingDescription = stringResource(R.string.common_loading)
             Button(
                 onClick = { onAction(LostFoundAction.SubmitReport) },
                 enabled = !form.isSubmitting,
+                modifier = Modifier.semantics {
+                    if (form.isSubmitting) stateDescription = loadingDescription
+                },
             ) {
                 if (form.isSubmitting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(UthDimens.Size.ProgressInline),
+                        modifier = Modifier.size(UthDimens.Size.ProgressInline).clearAndSetSemantics { },
                         strokeWidth = UthDimens.Size.ProgressInlineStroke,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
-                    Text(stringResource(R.string.lostfound_btn_submit))
+                    Spacer(Modifier.width(UthDimens.Spacing.Sm))
                 }
+                Text(stringResource(R.string.lostfound_btn_submit))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, enabled = !form.isSubmitting) {
                 Text(stringResource(R.string.lostfound_btn_cancel))
             }
         },

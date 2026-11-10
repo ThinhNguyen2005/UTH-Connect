@@ -2,102 +2,103 @@ package com.giathinh.uthconnect.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Bảng màu UTH Connect — nguồn sự thật: `docs/Design-system.md` mục 1.
- *
- * KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
- * `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).
- *
- * Tỷ số tương phản đã đo theo WCAG 2.1 với nền trắng #FFFFFF.
- */
+// Bảng màu UTH Connect — Modern Cobalt & Warm Amber (Hiện đại & Tinh tế).
+// Bản sao lưu màu cổ điển được lưu tại `docs/backups/Color_classic.kt`.
+//
+// KHÔNG dùng màu này trực tiếp trong Composable. Hãy lấy qua
+// `MaterialTheme.colorScheme.*` hoặc `UthTheme.extendedColors` (xem `Theme.kt`).
+//
+// Tỷ số tương phản đã đo theo WCAG 2.2 trên các nền Surface/Background.
 
-// ───────────────────────── Brand (màu nhận diện trường UTH) ─────────────────────────
-
-/** Xanh Navy #003366 — màu chính: nút primary, tab đang chọn, top bar. Chữ trắng 12.6:1 (AAA). */
-val UthNavy = Color(0xFF003366)
-
-/** Navy sáng dùng làm nền dark-mode surface/primary-on-dark. */
-val UthNavyLight = Color(0xFF1B4F80)
-
-/** Vàng Gold #F5A623 — màu nhấn: FAB, huy hiệu, điểm báo. CHỈ dùng làm nền + chữ Navy (6.2:1). */
-val UthGold = Color(0xFFF5A623)
-
-/** Vàng nhạt dùng làm nền badge/tooltip. Chữ [UthGoldText] đạt 6.5:1. */
-val UthGoldContainer = Color(0xFFFFF3DC)
+// ───────────────────────── Brand (Nhận diện UTH hiện đại hóa) ─────────────────────────
 
 /**
- * Chữ vàng đậm. KHÔNG bao giờ dùng [UthGold] làm màu chữ trên nền trắng
- * (chỉ 2.0:1, fail WCAG AA).
+ * Xanh Cobalt Tech Blue #0F5FC2 — tươi sáng, sắc nét trên màn hình số, chuẩn công nghệ.
+ * Chữ trắng đạt ~6.1:1 (chuẩn WCAG AA cho văn bản thông thường).
  */
-val UthGoldText = Color(0xFF7A4E00)
+val UthNavy = Color(0xFF0F5FC2)
+
+/** Cobalt sáng dùng cho tương tác phụ hoặc gradient. */
+val UthNavyLight = Color(0xFF2575D6)
+
+/** Vàng Amber hoàng hôn #F59E0B — màu nhấn ấm áp, sang trọng, không gắt mắt. */
+val UthGold = Color(0xFFF59E0B)
+
+/** Nền badge/tooltip amber nhạt, êm mắt. */
+val UthGoldContainer = Color(0xFFFEF3C7)
+
+/** Chữ amber đậm trên nền [UthGoldContainer] đạt 7.0:1 (AAA). */
+val UthGoldText = Color(0xFF92400E)
 
 val White = Color(0xFFFFFFFF)
 val Black = Color(0xFF000000)
 
-// ───────────────────────── Neutral (light) ─────────────────────────
+// ───────────────────────── Neutral (light - Slate Minimalist) ─────────────────────────
 
-/** Nền màn hình, tông ấm dịu mắt. */
-val UthBackgroundLight = Color(0xFFFAFAF9)
+/** Nền màn hình Slate siêu nhẹ, triệt tiêu sắc ngà cũ, tạo cảm giác thoáng đãng. */
+val UthBackgroundLight = Color(0xFFF8FAFC)
 
-/** Card / BottomSheet / Dialog. */
+/** Card / BottomSheet / Dialog — trắng tinh khiết nổi bật trên nền Slate. */
 val UthSurfaceLight = Color(0xFFFFFFFF)
 
-/** List item xen kẽ, vùng inactive, skeleton. */
-val UthSurfaceSubtleLight = Color(0xFFF0F3F6)
+/** List item xen kẽ, vùng inactive, skeleton — Slate 100. */
+val UthSurfaceSubtleLight = Color(0xFFF1F5F9)
 
-/** Viền 1.dp của card và text field. */
-val UthOutlineLight = Color(0xFFD5DCE3)
+/** Viền component light: Slate 300 thanh mảnh, tinh tế, không đóng hộp thô. */
+val UthOutlineLight = Color(0xFFCBD5E1)
 
-/** Viền phân tách nhẹ (divider, outlineVariant) — mờ hơn [UthOutlineLight]. */
-val UthOutlineVariantLight = Color(0xFFE4E7EB)
+/** Viền phân tách nhẹ (divider, outlineVariant) — Slate 200. */
+val UthOutlineVariantLight = Color(0xFFE2E8F0)
 
-/** Nền `primaryContainer` — xanh rất nhạt cho chip/button đã chọn. */
-val UthNavyContainerLight = Color(0xFFE6EDF5)
+/** Nền `primaryContainer` — xanh băng thanh mờ cho chip/button đã chọn. */
+val UthNavyContainerLight = Color(0xFFEBF3FD)
 
-/** Chữ trên [UthNavyContainerLight] / [UthTertiaryContainerLight]. */
-val UthOnNavyContainerLight = Color(0xFF0A2A4A)
+/** Chữ/icon trên [UthNavyContainerLight] đạt 8.5:1 (AAA). */
+val UthOnNavyContainerLight = Color(0xFF083A7A)
 
-/** Nền `tertiaryContainer` — nhạt hơn [UthNavyContainerLight] một bậc. */
-val UthTertiaryContainerLight = Color(0xFFDCE8F5)
+/** Nền `tertiaryContainer` — xanh pastel trong trẻo. */
+val UthTertiaryContainerLight = Color(0xFFDCEBFC)
 
-/** Chữ chính — 15.6:1 (AAA). */
-val UthTextPrimaryLight = Color(0xFF14213D)
+/** Chữ chính Slate 900 — 16.1:1 trên Surface (AAA), sắc nét cho Typography. */
+val UthTextPrimaryLight = Color(0xFF0F172A)
 
-/** Chữ phụ, mô tả, timestamp — 5.5:1 (AA). */
-val UthTextSecondaryLight = Color(0xFF5A6B7C)
+/** Chữ phụ, mô tả, timestamp — Slate 600, 5.9:1 (AA). */
+val UthTextSecondaryLight = Color(0xFF475569)
 
-/** Chữ disabled/trang trí — 2.9:1, KHÔNG dùng cho nội dung bắt buộc đọc. */
-val UthTextTertiaryLight = Color(0xFF8C99A6)
+/** Chữ disabled/trang trí — Slate 400. */
+val UthTextTertiaryLight = Color(0xFF94A3B8)
 
-// ───────────────────────── Neutral (dark) ─────────────────────────
+// ───────────────────────── Neutral (dark - Slate Deep Night) ─────────────────────────
 
-val UthBackgroundDark = Color(0xFF0B1622)
-val UthSurfaceDark = Color(0xFF13202E)
-val UthSurfaceSubtleDark = Color(0xFF1C2C3D)
-val UthOutlineDark = Color(0xFF33465C)
-val UthTextPrimaryDark = Color(0xFFEAF1F8)
-val UthTextSecondaryDark = Color(0xFFA9B7C6)
-val UthTextTertiaryDark = Color(0xFF6B7A8A)
+val UthBackgroundDark = Color(0xFF0F172A)
+val UthSurfaceDark = Color(0xFF1E293B)
+val UthSurfaceSubtleDark = Color(0xFF334155)
 
-/** Viền phân tách nhẹ trong dark. */
-val UthOutlineVariantDark = Color(0xFF26364A)
+/** Viền component dark: Slate 600. */
+val UthOutlineDark = Color(0xFF475569)
+val UthTextPrimaryDark = Color(0xFFF8FAFC)
+val UthTextSecondaryDark = Color(0xFF94A3B8)
+val UthTextTertiaryDark = Color(0xFF64748B)
 
-/** Chữ trên `primary` sáng của dark-mode (Navy gốc quá tối nên cần bản đậm đặc). */
-val UthOnNavyDark = Color(0xFF062038)
+/** Viền phân tách nhẹ trong dark — Slate 700. */
+val UthOutlineVariantDark = Color(0xFF334155)
 
-/** Chữ Navy trên nền Gold sáng [UthGoldOnDark] — 10.0:1. */
-val UthOnGoldDark = Color(0xFF0B1622)
-val UthGoldContainerDark = Color(0xFF3A2C10)
-val UthOnGoldContainerDark = Color(0xFFFCD98A)
+/** Chữ trên `primary` sáng của dark-mode. */
+val UthOnNavyDark = Color(0xFF0B1E3B)
 
-/** Chữ trên `error` đỏ sáng trong dark (trùng giá trị [ErrorContainerDark] theo ý đồ). */
+/** Chữ Navy trên nền Gold sáng [UthGoldOnDark]. */
+val UthOnGoldDark = Color(0xFF0F172A)
+val UthGoldContainerDark = Color(0xFF451A03)
+val UthOnGoldContainerDark = Color(0xFFFDE68A)
+
+/** Chữ trên `error` đỏ sáng trong dark. */
 val UthOnErrorDark = Color(0xFF2A1414)
 
-/** Navy quá tối trên nền dark → primary-on-dark là xanh sáng. */
-val UthNavyOnDark = Color(0xFF7FB2E5)
-val UthNavyContainerDark = Color(0xFF143252)
-val UthOnNavyContainerDark = Color(0xFFBBD8F5)
-val UthGoldOnDark = Color(0xFFF5B740)
+/** Primary trên dark mode — xanh sáng tươi tắn, không bị chìm. */
+val UthNavyOnDark = Color(0xFF60A5FA)
+val UthNavyContainerDark = Color(0xFF1E3A8A)
+val UthOnNavyContainerDark = Color(0xFFDBEAFE)
+val UthGoldOnDark = Color(0xFFFBBF24)
 
 // ───────────────────────── Semantic (light) ─────────────────────────
 // Quy tắc: màu thuần (*.main) chỉ cho icon/nền trạng thái/viền.

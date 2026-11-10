@@ -1,25 +1,43 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.spotless)
 }
 
-val useMockData = providers.gradleProperty("useMockData").orElse((!file("google-services.json").isFile).toString()).get().toBooleanStrict()
-val useFirebaseEmulator = providers.gradleProperty("useFirebaseEmulator").orElse("false").get().toBooleanStrict()
-val firebaseEmulatorHost = providers.gradleProperty("firebaseEmulatorHost").orElse("10.0.2.2").get()
-require(!(useMockData && useFirebaseEmulator)) { "Firebase Emulator requires -PuseMockData=false" }
-if (!useMockData && !useFirebaseEmulator) {
-    require(file("google-services.json").isFile) { "Firebase builds require app/google-services.json" }
-    apply(plugin = "com.google.gms.google-services")
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
+    }
+}
+
+val useMockData = providers.gradleProperty("useMockData").orElse("false").get().toBooleanStrict()
+val useSupabase = providers.gradleProperty("useSupabase").orElse("true").get().toBooleanStrict()
+val supabaseUrl = providers.gradleProperty("supabaseUrl").orElse("").get().trimEnd('/')
+val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").orElse("").get()
+/**
+ * OAuth **Web** client ID — the value Supabase matches against the `aud` claim of the
+ * Google ID token. It is a public identifier, not a secret, so it can live in BuildConfig.
+ */
+val googleWebClientId = providers.gradleProperty("googleWebClientId").orElse("").get()
+require(useSupabase && !useMockData) { "UTH Connect requires Supabase; demo/Firebase builds are disabled" }
+if (useSupabase) {
+    require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
+        "Supply -PsupabaseUrl=https://... -PsupabasePublishableKey=sb_publishable_..."
+    }
 }
 
 android {
     namespace = "com.giathinh.uthconnect"
-    compileSdk = 36
+    compileSdk {
+        version = release(36) { minorApiLevel = 1 }
+    }
 
     defaultConfig {
         applicationId = "com.giathinh.uthconnect"
@@ -28,10 +46,10 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("boolean", "USE_MOCK_DATA", useMockData.toString())
-        buildConfigField("boolean", "USE_FIREBASE_EMULATOR", useFirebaseEmulator.toString())
-        buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"$firebaseEmulatorHost\"")
-        buildConfigField("String", "FIREBASE_EMULATOR_PROJECT_ID", "\"demo-uthconnect\"")
-        manifestPlaceholders["allowCleartextForFirebaseEmulator"] = useFirebaseEmulator.toString()
+        buildConfigField("boolean", "USE_SUPABASE", useSupabase.toString())
+        buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabasePublishableKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -39,7 +57,7 @@ android {
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
@@ -51,8 +69,8 @@ android {
         compose = true
         buildConfig = true
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    lint {
+        disable += "OldTargetRuntime"
     }
 }
 
@@ -69,8 +87,29 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    // Route type-safe: @Serializable object cần runtime serialization (plugin đã bật ở trên).
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.zxing.core)
     implementation(libs.kotlinx.serialization.json)
+
+    // Supabase Auth SDK + Google Credential Manager.
+    // Declared unconditionally: the source set is shared, so SupabaseGoogleExchange must
+    // compile even in mock/Firebase builds. Runtime use is gated by BuildConfig.USE_SUPABASE.
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.credentials.core)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // Máy quét QR điểm danh: preview + phân tích frame liên tục trong app.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -79,11 +118,13 @@ dependencies {
     implementation(libs.firebase.storage)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.play.services)
-    // DI: Hilt runtime + hiltViewModel() cho Compose. Processor đi qua KSP, không qua kapt
-    // (kapt không tương thích built-in Kotlin của AGP 9).
+
+    // DI
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
+    ksp(libs.kotlin.metadata.jvm)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -92,6 +133,31 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    detektPlugins(libs.detekt.compose)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+}
+
+spotless {
+    kotlin {
+        target("**/*.kt")
+        targetExclude("**/build/**/*.kt")
+        ktlint().editorConfigOverride(
+            mapOf("ktlint_function_naming_ignore_when_annotated_with" to "Composable")
+        )
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.concurrent:concurrent-futures:1.2.0")
+    }
 }
 
 tasks.configureEach {

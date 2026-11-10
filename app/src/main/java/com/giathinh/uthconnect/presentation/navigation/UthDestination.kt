@@ -9,23 +9,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.giathinh.uthconnect.R
-import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
+import kotlin.reflect.KClass
 
 // 4 route cấp 1 — @Serializable object, không có tham số. Navigation dựng
 // đường dẫn từ tên class, không còn chuỗi route tự do (docs/Design.md mục 8.1).
 @Serializable object HomeDestination
+
 @Serializable object ScheduleDestination
+
 @Serializable object UtilitiesDestination
+
 @Serializable object ProfileDestination
 
 /**
  * 4 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
  *
- * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon.
+ * Con số 4 không phải tuỳ hứng: khuyến nghị của Google cho navigation bar là
+ * **3–5 điểm đến ngang hàng** (developer.android.com — Navigation bar). Vượt 5 thì
+ * thanh đáy vỡ chuẩn khoảng chạm, nên màn ngoài tab phải đi vào qua lưới Tiện ích
+ * hoặc tab Cá nhân, không cộng thêm entry vào enum này.
+ *
+ * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon **khác nhau** —
+ * ba tab từng cùng dùng `DateRange` khiến người dùng không phân biệt được bằng hình.
  * Thêm màn hình chi tiết trong một module thì khai báo ở `navigation/` của
- * feature đó (graph riêng + `<Module>Navigation.kt`), không cộng thêm entry
- * vào enum này.
+ * feature đó (graph riêng + `<Module>Navigation.kt`), không cộng thêm entry vào enum này.
  */
 enum class UthDestination(
     /** Thể hiện route để `navigate(...)`/`popUpTo(...)` — instance của @Serializable object. */
@@ -63,7 +71,6 @@ enum class UthDestination(
          * Tab chỉ được xác định bằng destination hiện tại của back stack, không bằng
          * biến state riêng. `hasRoute` so theo @Serializable class — không parse chuỗi.
          */
-        fun from(destination: NavDestination?): UthDestination? =
-            destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
+        fun from(destination: NavDestination?): UthDestination? = destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
     }
 }

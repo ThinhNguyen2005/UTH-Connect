@@ -1,8 +1,8 @@
 package com.giathinh.uthconnect.presentation.books
 
+import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookListingStatus
-import com.giathinh.uthconnect.domain.model.BookCondition
 
 sealed interface BooksAction {
     data object Retry : BooksAction

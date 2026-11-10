@@ -5,6 +5,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +16,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -56,6 +56,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -68,7 +69,6 @@ import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookListingStatus
-import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
 import java.util.UUID
@@ -81,19 +81,29 @@ fun BooksScreen(
     modifier: Modifier = Modifier,
 ) {
     var showForm by rememberSaveable { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<BookListing?>(null) }
+    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var newListingId by rememberSaveable { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<BookListing?>(null) }
     var pendingDelete by remember { mutableStateOf<BookListing?>(null) }
     var savePending by rememberSaveable { mutableStateOf(false) }
     var saveFailed by rememberSaveable { mutableStateOf(false) }
     var showContactError by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(savePending, uiState.isSaving, uiState.failure) {
+    val editingListing = remember(editingId, uiState.listings) {
+        editingId?.let { id -> uiState.listings.find { it.id == id } }
+    }
+
+    LaunchedEffect(uiState.lastSavedId, uiState.isSaving, uiState.saveFailure) {
         if (savePending && !uiState.isSaving) {
-            if (uiState.failure == null) {
+            val activeId = editingId ?: newListingId
+            if (uiState.saveFailure == null && uiState.lastSavedId == activeId) {
                 showForm = false
-                editing = null
-            } else saveFailed = true
+                editingId = null
+                newListingId = null
+                saveFailed = false
+            } else if (uiState.saveFailure != null) {
+                saveFailed = true
+            }
             savePending = false
         }
     }
@@ -110,8 +120,11 @@ fun BooksScreen(
                     }
                     Column {
                         Text(stringResource(R.string.books_title), style = MaterialTheme.typography.headlineSmall)
-                        Text(stringResource(R.string.books_header_subtitle), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.books_header_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 OutlinedTextField(
@@ -123,8 +136,11 @@ fun BooksScreen(
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                 )
-                Text(stringResource(R.string.books_deal_type), style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.books_deal_type),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
@@ -134,17 +150,24 @@ fun BooksScreen(
                             selected = uiState.filter == filter,
                             onClick = { onAction(BooksAction.SetFilter(filter)) },
                             label = {
-                                Text(stringResource(when (filter) {
-                                    BooksFilter.ALL -> R.string.books_filter_all
-                                    BooksFilter.SALE -> R.string.books_filter_sale
-                                    BooksFilter.EXCHANGE -> R.string.books_filter_exchange
-                                }))
+                                Text(
+                                    stringResource(
+                                        when (filter) {
+                                            BooksFilter.ALL -> R.string.books_filter_all
+                                            BooksFilter.SALE -> R.string.books_filter_sale
+                                            BooksFilter.EXCHANGE -> R.string.books_filter_exchange
+                                        },
+                                    ),
+                                )
                             },
                         )
                     }
                 }
-                Text(stringResource(R.string.books_condition), style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.books_condition),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
@@ -162,8 +185,11 @@ fun BooksScreen(
                         )
                     }
                 }
-                Text(stringResource(R.string.books_price_range), style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.books_price_range),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                     OutlinedTextField(
                         value = uiState.minimumPrice,
@@ -190,11 +216,17 @@ fun BooksScreen(
                         FilterChip(
                             selected = uiState.sort == sort,
                             onClick = { onAction(BooksAction.SetSort(sort)) },
-                            label = { Text(stringResource(when (sort) {
-                                BooksSort.NEWEST -> R.string.books_sort_newest
-                                BooksSort.PRICE_LOW -> R.string.books_sort_price_low
-                                BooksSort.PRICE_HIGH -> R.string.books_sort_price_high
-                            })) },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        when (sort) {
+                                            BooksSort.NEWEST -> R.string.books_sort_newest
+                                            BooksSort.PRICE_LOW -> R.string.books_sort_price_low
+                                            BooksSort.PRICE_HIGH -> R.string.books_sort_price_high
+                                        },
+                                    ),
+                                )
+                            },
                         )
                     }
                 }
@@ -213,59 +245,157 @@ fun BooksScreen(
                 }
                 UthPrimaryButton(
                     text = stringResource(R.string.books_create),
-                    onClick = { editing = null; saveFailed = false; showForm = true },
+                    onClick = {
+                        editingId = null
+                        newListingId = UUID.randomUUID().toString()
+                        saveFailed = false
+                        showForm = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = uiState.currentUserUid != null,
                 )
             }
         }
 
-        if (uiState.isLoading) item {
-            Row(Modifier.fillMaxWidth().padding(UthDimens.Spacing.Lg), horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
-                Text(stringResource(R.string.books_loading), modifier = Modifier.padding(start = UthDimens.Spacing.Sm),
-                    style = MaterialTheme.typography.bodyMedium)
+        if (uiState.isLoading) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(UthDimens.Spacing.Lg),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
+                    Text(
+                        stringResource(R.string.books_loading),
+                        modifier = Modifier.padding(start = UthDimens.Spacing.Sm),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        } else if (uiState.saveFailure != null && !showForm) {
+            item {
+                Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
             }
         }
-        else if (uiState.failure == BooksFailure.SAVE_FAILED && !showForm) item {
-            Text(stringResource(R.string.books_save_error), color = MaterialTheme.colorScheme.error)
-        }
-        if (!uiState.isLoading && uiState.failure == BooksFailure.LOAD_FAILED) item {
-            UthEmptyState(
-                title = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_title else R.string.books_error_title),
-                body = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_body else R.string.books_error_body),
-                icon = Icons.Filled.Warning,
-                actionLabel = if (uiState.currentUserUid == null) null else stringResource(R.string.common_retry),
-                onAction = if (uiState.currentUserUid == null) null else {{ onAction(BooksAction.Retry) }},
-            )
-        } else if (!uiState.isLoading && uiState.failure != BooksFailure.LOAD_FAILED && uiState.visibleListings.isEmpty()) item {
-            UthEmptyState(
-                title = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_title else R.string.books_no_results_title),
-                body = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_body else R.string.books_no_results_body),
-                actionLabel = if (uiState.listings.isEmpty()) null else stringResource(R.string.books_clear_filters),
-                onAction = if (uiState.listings.isEmpty()) null else {{ onAction(BooksAction.ResetFilters) }},
-            )
-        } else if (!uiState.isLoading && uiState.failure != BooksFailure.LOAD_FAILED) items(uiState.visibleListings, key = { it.id }) { listing ->
-            ListingCard(
-                listing = listing,
-                canManage = listing.ownerUid == uiState.currentUserUid,
-                onOpen = { details = listing },
-                onEdit = { editing = listing; saveFailed = false; showForm = true },
-                onDelete = { pendingDelete = listing },
-                onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
-            )
+
+        if (!uiState.isLoading && uiState.loadFailure != null) {
+            item {
+                UthEmptyState(
+                    title = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_title else R.string.books_error_title),
+                    body = stringResource(if (uiState.currentUserUid == null) R.string.books_auth_required_body else R.string.books_error_body),
+                    icon = Icons.Filled.Warning,
+                    actionLabel = if (uiState.currentUserUid == null) null else stringResource(R.string.common_retry),
+                    onAction = if (uiState.currentUserUid == null) {
+                        null
+                    } else {
+                        { onAction(BooksAction.Retry) }
+                    },
+                )
+            }
+        } else if (!uiState.isLoading && uiState.loadFailure == null && uiState.visibleListings.isEmpty()) {
+            item {
+                UthEmptyState(
+                    title = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_title else R.string.books_no_results_title),
+                    body = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_body else R.string.books_no_results_body),
+                    actionLabel = if (uiState.listings.isEmpty()) null else stringResource(R.string.books_clear_filters),
+                    onAction = if (uiState.listings.isEmpty()) {
+                        null
+                    } else {
+                        { onAction(BooksAction.ResetFilters) }
+                    },
+                )
+            }
+        } else if (!uiState.isLoading && uiState.loadFailure == null) {
+            items(uiState.visibleListings, key = { it.id }) { listing ->
+                ListingCard(
+                    listing = listing,
+                    canManage = listing.ownerUid == uiState.currentUserUid,
+                    isMutating = listing.id in uiState.mutatingIds,
+                    onOpen = { details = listing },
+                    onEdit = {
+                        editingId = listing.id
+                        newListingId = null
+                        saveFailed = false
+                        showForm = true
+                    },
+                    onDelete = { pendingDelete = listing },
+                    onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
+                )
+            }
         }
         item { Spacer(Modifier.height(UthDimens.Spacing.Xl)) }
     }
 
-    if (showForm) ListingFormDialog(
-        initial = editing,
-        saving = uiState.isSaving,
-        saveFailed = saveFailed,
-        onDismiss = { showForm = false; editing = null; savePending = false; saveFailed = false },
-        onSave = { listing -> savePending = true; saveFailed = false; onAction(BooksAction.Save(listing)) },
-    )
+    if (showForm) {
+        if (editingId != null && editingListing == null && uiState.isLoading) {
+            AlertDialog(
+                onDismissRequest = {
+                    showForm = false
+                    editingId = null
+                    newListingId = null
+                },
+                title = { Text(stringResource(R.string.books_loading)) },
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(UthDimens.Spacing.Md),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = {
+                        showForm = false
+                        editingId = null
+                        newListingId = null
+                    }) {
+                        Text(stringResource(R.string.books_cancel))
+                    }
+                },
+            )
+        } else if (editingId != null && editingListing == null && !uiState.isLoading) {
+            AlertDialog(
+                onDismissRequest = {
+                    showForm = false
+                    editingId = null
+                    newListingId = null
+                },
+                title = { Text(stringResource(R.string.books_error_title)) },
+                text = { Text(stringResource(R.string.books_no_results_title)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showForm = false
+                        editingId = null
+                        newListingId = null
+                    }) {
+                        Text(stringResource(R.string.books_close))
+                    }
+                },
+            )
+        } else {
+            val stableFormId = editingId ?: (newListingId ?: rememberSaveable { UUID.randomUUID().toString() }.also { newListingId = it })
+            ListingFormDialog(
+                initial = editingListing,
+                formListingId = stableFormId,
+                saving = uiState.isSaving,
+                saveFailed = saveFailed,
+                onDismiss = {
+                    showForm = false
+                    editingId = null
+                    newListingId = null
+                    savePending = false
+                    saveFailed = false
+                },
+                onSave = { listing ->
+                    savePending = true
+                    saveFailed = false
+                    onAction(BooksAction.Save(listing))
+                },
+            )
+        }
+    }
+
     details?.let { listing ->
         val uriHandler = LocalUriHandler.current
         AlertDialog(
@@ -277,10 +407,16 @@ fun BooksScreen(
                         AsyncImage(it, listing.title, modifier = Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
                     }
                     Text(listing.subject, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
-                        style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Text(listing.description)
                     Text(stringResource(R.string.books_seller_format, listing.sellerName))
                     SelectionContainer { Text(listing.contact, style = MaterialTheme.typography.bodyMedium) }
@@ -297,20 +433,29 @@ fun BooksScreen(
             dismissButton = { TextButton(onClick = { details = null }) { Text(stringResource(R.string.books_close)) } },
         )
     }
-    if (showContactError) AlertDialog(
-        onDismissRequest = { showContactError = false },
-        title = { Text(stringResource(R.string.books_contact_failed_title)) },
-        text = { Text(stringResource(R.string.books_contact_failed_body)) },
-        confirmButton = { TextButton(onClick = { showContactError = false }) { Text(stringResource(R.string.books_close)) } },
-    )
+
+    if (showContactError) {
+        AlertDialog(
+            onDismissRequest = { showContactError = false },
+            title = { Text(stringResource(R.string.books_contact_failed_title)) },
+            text = { Text(stringResource(R.string.books_contact_failed_body)) },
+            confirmButton = { TextButton(onClick = { showContactError = false }) { Text(stringResource(R.string.books_close)) } },
+        )
+    }
+
     pendingDelete?.let { listing ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text(stringResource(R.string.books_delete_title)) },
             text = { Text(stringResource(R.string.books_delete_body)) },
-            confirmButton = { TextButton(onClick = { onAction(BooksAction.Delete(listing.id)); pendingDelete = null }) {
-                Text(stringResource(R.string.books_delete))
-            } },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAction(BooksAction.Delete(listing.id))
+                    pendingDelete = null
+                }) {
+                    Text(stringResource(R.string.books_delete))
+                }
+            },
             dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.books_cancel)) } },
         )
     }
@@ -320,6 +465,7 @@ fun BooksScreen(
 private fun ListingCard(
     listing: BookListing,
     canManage: Boolean,
+    isMutating: Boolean,
     onOpen: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -327,8 +473,12 @@ private fun ListingCard(
 ) {
     UthCard(modifier = Modifier.fillMaxWidth(), onClick = onOpen) {
         if (listing.photoUrl != null) {
-            AsyncImage(listing.photoUrl, contentDescription = listing.title,
-                modifier = Modifier.fillMaxWidth().height(176.dp), contentScale = ContentScale.Crop)
+            AsyncImage(
+                listing.photoUrl,
+                contentDescription = listing.title,
+                modifier = Modifier.fillMaxWidth().height(176.dp),
+                contentScale = ContentScale.Crop,
+            )
         } else {
             Surface(
                 modifier = Modifier.fillMaxWidth().height(112.dp),
@@ -336,8 +486,11 @@ private fun ListingCard(
                 shape = MaterialTheme.shapes.small,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("UTH", style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "UTH",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -345,33 +498,53 @@ private fun ListingCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(listing.title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(listing.subject, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listing.subject,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            if (canManage) {
-                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit)) }
-                IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete)) }
-            }
+            UthStatusBadge(
+                text = stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_available else R.string.books_sold),
+                tone = if (listing.status == BookListingStatus.AVAILABLE) BadgeTone.Success else BadgeTone.Neutral,
+            )
         }
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
         Text(
             if (listing.dealType == BookDealType.SALE) priceText(listing.priceVnd) else stringResource(R.string.books_exchange),
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleLarge,
         )
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
-            UthStatusBadge(stringResource(listing.condition.label), BadgeTone.Info)
-            UthStatusBadge(
-                stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_available else R.string.books_sold),
-                if (listing.status == BookListingStatus.AVAILABLE) BadgeTone.Success else BadgeTone.Neutral,
-            )
-        }
+        Text(
+            stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (canManage) {
-            TextButton(onClick = {
-                onSetStatus(if (listing.status == BookListingStatus.AVAILABLE) BookListingStatus.SOLD else BookListingStatus.AVAILABLE)
-            }) {
-                Text(stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_mark_sold else R.string.books_mark_available))
+            Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+                TextButton(
+                    enabled = !isMutating,
+                    onClick = {
+                        val target = if (listing.status == BookListingStatus.AVAILABLE) BookListingStatus.SOLD else BookListingStatus.AVAILABLE
+                        onSetStatus(target)
+                    },
+                ) {
+                    Text(stringResource(if (listing.status == BookListingStatus.AVAILABLE) R.string.books_mark_sold else R.string.books_mark_available))
+                }
+                IconButton(
+                    enabled = !isMutating,
+                    onClick = onEdit,
+                ) {
+                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit))
+                }
+                IconButton(
+                    enabled = !isMutating,
+                    onClick = onDelete,
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete))
+                }
             }
         }
     }
@@ -380,13 +553,12 @@ private fun ListingCard(
 @Composable
 private fun ListingFormDialog(
     initial: BookListing?,
+    formListingId: String,
     saving: Boolean,
     saveFailed: Boolean,
     onDismiss: () -> Unit,
     onSave: (BookListing) -> Unit,
 ) {
-    val context = LocalContext.current
-    var photoUri by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
     var title by rememberSaveable(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
     var subject by rememberSaveable(initial?.id) { mutableStateOf(initial?.subject.orEmpty()) }
     var condition by rememberSaveable(initial?.id) { mutableStateOf(initial?.condition ?: BookCondition.GOOD) }
@@ -395,27 +567,24 @@ private fun ListingFormDialog(
     var description by rememberSaveable(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }
     var seller by rememberSaveable(initial?.id) { mutableStateOf(initial?.sellerName.orEmpty()) }
     var contact by rememberSaveable(initial?.id) { mutableStateOf(initial?.contact.orEmpty()) }
-    var photoTooLarge by rememberSaveable(initial?.id) { mutableStateOf(false) }
-    val priceValue = price.toLongOrNull()
-    val normalizedContact = contact.trim()
-    val contactValid = normalizedContact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
-        (normalizedContact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && normalizedContact.filter(Char::isDigit).length >= 8)
-    val valid = title.isNotBlank() && title.length <= 160 && subject.isNotBlank() && subject.length <= 100 &&
-        seller.isNotBlank() && seller.length <= 100 && description.length <= 2000 &&
-        normalizedContact.length <= 254 && contactValid && !photoTooLarge &&
-        (dealType == BookDealType.EXCHANGE || (priceValue != null && priceValue > 0))
+    var photoUri by rememberSaveable(initial?.id) { mutableStateOf(initial?.photoUri) }
+    var photoTooLarge by rememberSaveable { mutableStateOf(false) }
+
+    val context = LocalContext.current
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            val size = runCatching {
-                context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) cursor.getLong(0) else null
-                }
-            }.getOrNull()
+            val size = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (cursor.moveToFirst() && sizeIndex != -1) cursor.getLong(sizeIndex) else null
+            }
             photoTooLarge = size != null && size >= MAX_BOOK_PHOTO_BYTES
             if (!photoTooLarge) photoUri = uri.toString()
         }
     }
+
+    val priceValue = price.toLongOrNull()
+    val valid = title.isNotBlank() && subject.isNotBlank() && seller.isNotBlank() &&
+        contact.isNotBlank() && (dealType != BookDealType.SALE || (priceValue != null && priceValue > 0))
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
@@ -464,21 +633,37 @@ private fun ListingFormDialog(
                 if (!valid) Text(stringResource(R.string.books_form_invalid), color = MaterialTheme.colorScheme.error)
             }
         },
-        confirmButton = { TextButton(enabled = valid && !saving, onClick = {
-            onSave(BookListing(
-                id = initial?.id ?: UUID.randomUUID().toString(),
-                title = title.trim(), subject = subject.trim(), condition = condition, dealType = dealType,
-                priceVnd = if (dealType == BookDealType.SALE) priceValue else null,
-                description = description.trim(), sellerName = seller.trim(), contact = contact.trim(),
-                photoUrl = initial?.photoUrl,
-                photoUri = photoUri,
-                status = initial?.status ?: BookListingStatus.AVAILABLE,
-                createdAt = initial?.createdAt ?: System.currentTimeMillis(),
-            ))
-        }) {
-            if (saving) CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
-            else Text(stringResource(R.string.books_save))
-        } },
+        confirmButton = {
+            TextButton(
+                enabled = valid && !saving,
+                onClick = {
+                    onSave(
+                        BookListing(
+                            id = initial?.id ?: formListingId,
+                            title = title.trim(),
+                            subject = subject.trim(),
+                            condition = condition,
+                            dealType = dealType,
+                            priceVnd = if (dealType == BookDealType.SALE) priceValue else null,
+                            description = description.trim(),
+                            sellerName = seller.trim(),
+                            contact = contact.trim(),
+                            photoUrl = initial?.photoUrl,
+                            photoUri = photoUri,
+                            status = initial?.status ?: BookListingStatus.AVAILABLE,
+                            createdAt = initial?.createdAt ?: System.currentTimeMillis(),
+                            imagePath = initial?.imagePath,
+                        ),
+                    )
+                },
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
+                } else {
+                    Text(stringResource(R.string.books_save))
+                }
+            }
+        },
         dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text(stringResource(R.string.books_cancel)) } },
     )
 }

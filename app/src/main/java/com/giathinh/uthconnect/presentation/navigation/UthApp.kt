@@ -3,7 +3,10 @@ package com.giathinh.uthconnect.presentation.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -14,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -24,14 +28,20 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
+import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.books.navigation.BooksDestination
 import com.giathinh.uthconnect.presentation.books.navigation.booksGraph
+import com.giathinh.uthconnect.presentation.events.EventsDestination
+import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
-import com.giathinh.uthconnect.presentation.schedule.ScheduleScreen
+import com.giathinh.uthconnect.presentation.scanner.scannerGraph
+import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
+import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
+import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
@@ -113,19 +123,27 @@ private fun UthNavHost(
                 },
             )
         }
-        composable<ScheduleDestination> { ScheduleScreen() }
+        composable<ScheduleDestination> { ScheduleRoute() }
         composable<UtilitiesDestination> {
             UtilitiesRoute(
                 onOpenModule = { module ->
                     when (module) {
                         UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
+                        UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
                         UtilityModuleId.BOOKS -> navController.navigate(BooksDestination)
-                        else -> Unit // Các graph khác được nối khi module hoàn tất review.
+                        else -> Unit
                     }
                 },
             )
         }
-        composable<ProfileDestination> { ProfileRoute() }
+        composable<ProfileDestination> {
+            // Vé chuyển từ tab đáy vào tab Cá nhân (docs/Design.md mục 8.2) để thanh nav giữ 4 điểm đến.
+            ProfileRoute(onOpenTickets = { navController.navigate(TicketsDestination) })
+        }
+        attendanceGraph(navController)
+        ticketsGraph(navController)
+        scannerGraph(navController)
+        eventsGraph(navController)
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
@@ -140,18 +158,28 @@ private fun UthBottomBar(
     selected: UthDestination?,
     onSelect: (UthDestination) -> Unit,
 ) {
+    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
+    val destinations = UthDestination.entries
+    val scrollState = rememberScrollState()
     NavigationBar(
+        modifier = if (largeText) {
+            Modifier
+                .horizontalScroll(scrollState)
+                .width(UthDimens.Layout.LargeTextNavigationItemWidth * destinations.size)
+        } else {
+            Modifier
+        },
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = UthDimens.Elevation.BottomBar,
     ) {
-        UthDestination.entries.forEach { destination ->
+        destinations.forEach { destination ->
             NavigationBarItem(
                 selected = destination == selected,
                 onClick = { onSelect(destination) },
                 icon = {
                     Icon(
                         imageVector = destination.icon,
-                        contentDescription = stringResource(destination.labelRes),
+                        contentDescription = null, // NavigationBarItem đã có label cho TalkBack.
                     )
                 },
                 label = { Text(stringResource(destination.labelRes)) },

@@ -1,29 +1,43 @@
-# KAN-88 Firebase Emulator setup
+# KAN-88 Book Market — Backend Architecture and Verification Guide
 
-This QA setup uses Firebase Emulator Suite only. The project ID is `demo-uthconnect`; it is a Firebase demo project ID, so the emulator refuses non-emulated service calls. No `google-services.json` or production credentials are used.
+## 1. Backend Migration Overview
 
-## Start local services
+In accordance with UTH Connect's architectural standard, the Book Market (Chợ sách cũ) feature has been fully migrated from Firebase to **Supabase** (PostgreSQL, Row Level Security, Supabase Auth, and Supabase Storage):
 
-From the feature worktree, start Auth, Firestore, and Storage:
+- **Identity**: Supabase GoTrue Auth is the single identity provider. `owner_user_id` references `public.profiles(id)` via a foreign key constraint.
+- **Data Layer**: Listings are persisted in `public.book_listings` via PostgREST through `SupabaseRestClient.kt` and `SupabaseBookListingRepository.kt`.
+- **Media**: Cover photos are stored in the Supabase Storage bucket `book_listings` using path `${userId}/${listingId}/${uuid}.jpg`. Photos are validated by magic bytes (JPEG/PNG/WebP, ≤ 5 MB).
+- **Access Control (RLS)**: Row Level Security restricts INSERT, UPDATE, and DELETE operations to the verified listing owner (`owner_user_id = auth.uid()`).
+- **Atomic Status Updates**: Status toggles (`AVAILABLE` ↔ `SOLD`) are executed via PATCH requests exclusively affecting the `status` and `updated_at` columns, avoiding lost updates and preventing overwrite of book details or photos.
 
+## 2. Test Classification
+
+To ensure test evidence integrity, tests in this repository are categorized as follows:
+
+| Test Type | Scope & Environment | Backend Used |
+| :--- | :--- | :--- |
+| **Unit Tests** | Domain models, use cases, mappers, input validation, ViewModel state machines, dialer fallbacks. Fast, hermetic, run via `./gradlew testDebugUnitTest`. | Mock / Fake repositories / Memory |
+| **Compose UI Tests** | Component rendering, state restoration across configuration changes/process recreation, contact picker fallbacks. | Compose Test Rule / Test Dispatcher |
+| **Firebase Emulator Tests (Legacy)** | The 51 unit tests and 3 connected tests in prior QA reports verified the initial Firebase prototype against `firebase-tools` emulators. They are superseded by Supabase tests. | Local Firebase Emulator (9099, 8080, 9199) |
+| **Supabase Integration Tests** | Catalog contract verification (`supabase/tests/security_contract.sql`), REST and Storage policies verification on disposable staging projects. | Supabase Staging Project (`useSupabase=true`) |
+
+## 3. Staging and Local Verification
+
+### Running Android Unit Tests
 ```powershell
-npx --yes firebase-tools emulators:start --only auth,firestore,storage --project demo-uthconnect
+.\gradlew.bat testDebugUnitTest
 ```
 
-The checked-in `firebase.json` configures the existing Firestore and Storage rules and local ports 9099, 8080, and 9199. Emulator UI runs at `http://127.0.0.1:4000`.
-
-## Build for the Android emulator
-
-In a second terminal:
-
+### Building with Supabase Configuration
+Builds require Supabase configuration flags:
 ```powershell
-.\gradlew.bat -PuseMockData=false -PuseFirebaseEmulator=true assembleDebug
+.\gradlew.bat -PuseSupabase=true -PuseMockData=false -PsupabaseUrl="https://<project-ref>.supabase.co" -PsupabasePublishableKey="sb_publishable_..." assembleDebug
 ```
+> [!IMPORTANT]
+> Never commit `service_role` or secret keys. Only `sb_publishable_...` keys belong in client configurations.
 
-This build initializes Firebase with emulator-only options and connects Android's `10.0.2.2` host alias to the local services. Cleartext HTTP is enabled only when `useFirebaseEmulator=true`. The default build remains in mock mode. For a real Firebase QA project, omit the emulator flag and provide the approved `app/google-services.json` locally; do not commit it.
+### Database Migration
+The Book Market migration script is located at:
+- `supabase/migrations/20261110000000_book_market.sql`
 
-## Test accounts and data
-
-Create disposable email/password accounts in the Auth Emulator UI or with its local Auth REST API. The app currently accepts UTH-style email addresses ending in `@ut.edu.vn`; for example, `kan88.qa.owner@ut.edu.vn` and `kan88.qa.other@ut.edu.vn`. Use generated passwords and keep them in a local password manager or encrypted temporary storage. Emulator accounts and test listings are disposable and are removed when the emulator data is reset.
-
-Do not upload local account passwords, ID tokens, emulator auth tokens, or private configuration into Jira, reports, logs, or commits. Do not use a production project for this task.
+Apply in sequential order to your disposable staging project via the Supabase CLI or SQL Editor.

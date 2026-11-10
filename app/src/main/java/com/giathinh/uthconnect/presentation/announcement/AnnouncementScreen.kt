@@ -2,7 +2,6 @@ package com.giathinh.uthconnect.presentation.announcement
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +31,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -163,7 +163,7 @@ private fun AnnouncementTopBar(
     }
 }
 
-/** Nút icon-only đạt vùng chạm 48dp; nhãn nằm ở `contentDescription`, không phải text ẩn. */
+/** Hành động icon-only dùng IconButton Material 3 và nhãn đọc từ `contentDescription`. */
 @Composable
 private fun TopBarAction(
     icon: ImageVector,
@@ -171,13 +171,7 @@ private fun TopBarAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .size(UthDimens.Size.MinTouchTarget)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(
             imageVector = icon,
             contentDescription = label,
@@ -343,7 +337,7 @@ private fun AnnouncementCover(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(CoverAspectRatio)
+            .aspectRatio(UthDimens.Layout.CoverAspectRatio)
             .clip(MaterialTheme.shapes.medium)
             .background(
                 Brush.linearGradient(
@@ -369,7 +363,7 @@ private fun AnnouncementCover(
                     .align(Alignment.BottomStart)
                     .padding(UthDimens.Spacing.Md)
                     .background(
-                        color = colors.surface.copy(alpha = CoverChipAlpha),
+                        color = colors.surface.copy(alpha = UthDimens.Opacity.CoverLabelSurface),
                         shape = MaterialTheme.shapes.extraSmall,
                     )
                     .padding(
@@ -627,12 +621,6 @@ private fun AttachmentRow(attachment: AnnouncementAttachment, modifier: Modifier
                 color = extended.textSecondary,
             )
         }
-        Icon(
-            painter = painterResource(R.drawable.ic_announcement_download),
-            contentDescription = null,
-            tint = extended.textSecondary,
-            modifier = Modifier.size(UthDimens.Size.IconInline),
-        )
     }
 }
 
@@ -711,7 +699,13 @@ private fun CenteredState(modifier: Modifier = Modifier, content: @Composable ()
     }
 }
 
-/** Khoá item của `LazyColumn` — không rải chuỗi thô trong code. */
+/**
+ * Khoá item của `LazyColumn` — không rải chuỗi thô trong code.
+ *
+ * Tên const theo dạng `Header`/`Cover` (không phải SCREAMING_SNAKE) vì chúng là hằng nhóm
+ * trong một object private, đọc như tên field; ktlint `property-naming` chỉ nhắm biến toàn cục.
+ */
+@Suppress("ktlint:standard:property-naming")
 private object AnnouncementKey {
     const val Header = "announcement_header"
     const val Cover = "announcement_cover"
@@ -721,12 +715,6 @@ private object AnnouncementKey {
     /** Tiền tố key cho từng khối nội dung; số thứ tự nối vào sau. */
     const val BlockPrefix = "announcement_block_"
 }
-
-/** Ảnh bìa 16:9 theo mục 3.3. */
-private const val CoverAspectRatio = 16f / 9f
-
-/** Chip trên ảnh bìa gần đặc để không phụ thuộc độ sáng của ảnh nền. */
-private const val CoverChipAlpha = 0.92f
 
 /** Định dạng ngày theo locale trường: `dd/MM/yyyy` (mục 8). */
 private val DetailDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -820,8 +808,7 @@ private fun AnnouncementStatePreview(
 
 @Preview(name = "content light", showBackground = true)
 @Composable
-private fun AnnouncementContentPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
@@ -833,8 +820,7 @@ private fun AnnouncementContentDarkPreview() = AnnouncementStatePreview(
 /** Bài ngắn: đúng dữ liệu thật của bảng tin (chỉ tóm tắt), không thêm mục rỗng. */
 @Preview(name = "short content", showBackground = true)
 @Composable
-private fun AnnouncementShortContentPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewShortDetail))
+private fun AnnouncementShortContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewShortDetail))
 
 @Preview(name = "loading light", showBackground = true)
 @Composable
@@ -842,8 +828,7 @@ private fun AnnouncementLoadingPreview() = AnnouncementStatePreview(Announcement
 
 @Preview(name = "loading dark", showBackground = true)
 @Composable
-private fun AnnouncementLoadingDarkPreview() =
-    AnnouncementStatePreview(AnnouncementUiState(), darkTheme = true)
+private fun AnnouncementLoadingDarkPreview() = AnnouncementStatePreview(AnnouncementUiState(), darkTheme = true)
 
 @Preview(name = "error light", showBackground = true)
 @Composable
@@ -872,5 +857,4 @@ private fun AnnouncementMissingDarkPreview() = AnnouncementStatePreview(
 /** Font scale 130 % — kiểm tra tiêu đề dài và dòng meta không bị cắt (`Design-system` mục 8). */
 @Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f)
 @Composable
-private fun AnnouncementContentFontScalePreview() =
-    AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentFontScalePreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))

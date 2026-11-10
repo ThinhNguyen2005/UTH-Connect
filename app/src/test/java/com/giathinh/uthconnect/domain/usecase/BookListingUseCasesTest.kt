@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.domain.usecase
 import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
+import com.giathinh.uthconnect.domain.model.BookListingStatus
 import com.giathinh.uthconnect.domain.repository.BookListingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -57,6 +58,15 @@ class BookListingUseCasesTest {
         assertFalse(repository.saved)
     }
 
+    @Test
+    fun `updateStatus delegates to repository with only id and status`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).updateStatus("book-1", BookListingStatus.SOLD)
+
+        assertTrue(result.isSuccess)
+        assertTrue(repository.updatedStatus)
+    }
+
     private fun listing(
         dealType: BookDealType = BookDealType.SALE,
         price: Long? = 1000,
@@ -75,12 +85,18 @@ class BookListingUseCasesTest {
 
     private class FakeBookListingRepository : BookListingRepository {
         var saved = false
+        var updatedStatus = false
         override fun currentUserId() = "test-user"
         override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
         override suspend fun saveListing(listing: BookListing): Result<Unit> {
             saved = true
             return Result.success(Unit)
         }
+        override suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> {
+            updatedStatus = true
+            return Result.success(Unit)
+        }
         override suspend fun deleteListing(id: String): Result<Unit> = Result.success(Unit)
+        override fun refresh() = Unit
     }
 }
