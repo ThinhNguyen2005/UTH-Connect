@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -18,7 +19,11 @@ import javax.inject.Singleton
 @Singleton
 class FirestoreEventRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val firebaseAuth: FirebaseAuth,
 ) : EventRepository {
+
+    /** Returns the Firebase UID used to key this user's event registration documents. */
+    override fun currentUserId(): String? = firebaseAuth.currentUser?.uid
 
     override fun getEvents(campus: String?): Flow<List<Event>> = callbackFlow {
         var query: Query = firestore.collection(EVENTS_COLLECTION)

@@ -2,17 +2,22 @@ package com.giathinh.uthconnect.presentation.schedule
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.BuildConfig
+import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -20,94 +25,218 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Named
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
-    private val eventsRepository: EventRepository,
+    private val eventRepository: EventRepository,
+    private val ticketRepository: TicketRepository,
+    private val sessionRepository: SessionRepository,
     @param:Named("timetable") private val clock: Clock,
 ) : ViewModel() {
+    private var loadedEvents: List<Event> = emptyList()
+    private var registeredEventIds: Set<String> = emptySet()
+    private var ticketQrJob: Job? = null
+
     private val initialNow = LocalDateTime.now(clock)
-    private val state = MutableStateFlow(ScheduleUiState(now = initialNow, selectedDate = initialNow.toLocalDate()))
+    private val initialDate = initialNow.toLocalDate()
+
+    private val state = MutableStateFlow(
+        ScheduleUiState(
+            now = initialNow,
+            selectedDate = initialDate,
+        ),
+    )
     val uiState = state.asStateFlow()
-    private var eventsJob: Job? = null
+
+    /** Refreshes displayed events and closes a selected ticket if it is no longer eligible. */
+    private fun syncDisplayedEvents() {
+        val updatedEvents = loadedEvents.mapNotNull(::toScheduleEvent)
+        var shouldCloseTicket = false
+        state.update { current ->
+            val selectedEvent = current.selectedEvent?.let { selected ->
+                updatedEvents.firstOrNull { it.id == selected.id }
+                    ?.takeIf { it.canOpenTicketAt(LocalDateTime.now(clock)) }
+            }
+            shouldCloseTicket = current.selectedEvent != null && selectedEvent == null
+            current.copy(
+                events = updatedEvents,
+                selectedEvent = selectedEvent,
+                ticketQrToken = if (selectedEvent == null) null else current.ticketQrToken,
+                ticketQrFailed = if (selectedEvent == null) false else current.ticketQrFailed,
+            )
+        }
+        if (shouldCloseTicket) {
+            ticketQrJob?.cancel()
+            ticketQrJob = null
+        }
+    }
 
     init {
+        viewModelScope.launch {
+            sessionRepository.session.collect { session ->
+                state.update {
+                    it.copy(
+                        studentId = session.profile?.studentId,
+                        studentName = session.profile?.displayName,
+                    )
+                }
+            }
+        }
         viewModelScope.launch {
             useCase.timetable.collect { value ->
                 state.update { it.copy(timetable = value, isLoading = false) }
             }
         }
-        loadEvents()
+        viewModelScope.launch {
+            eventRepository.getEvents().retryWhen { cause, _ ->
+                if (cause is CancellationException) throw cause
+                state.update { it.copy(isEventsLoading = false, eventsLoadFailed = true) }
+                delay(60_000)
+                true
+            }.collect { events ->
+                loadedEvents = events
+                state.update {
+                    it.copy(
+                        isEventsLoading = false,
+                        eventsLoadFailed = false,
+                    )
+                }
+                syncDisplayedEvents()
+            }
+        }
+        viewModelScope.launch {
+            eventRepository.currentUserRegistrations().retryWhen { cause, _ ->
+                if (cause is CancellationException) throw cause
+                state.update {
+                    it.copy(
+                        isRegistrationsLoading = false,
+                        registrationsLoadFailed = true,
+                    )
+                }
+                delay(60_000)
+                true
+            }
+                .collect { ids ->
+                    registeredEventIds = ids
+                    state.update { current ->
+                        current.copy(
+                            registrationsLoadFailed = false,
+                            isRegistrationsLoading = false,
+                        )
+                    }
+                    syncDisplayedEvents()
+                }
+        }
         viewModelScope.launch {
             while (true) {
                 delay(60_000)
-                state.update { it.copy(now = LocalDateTime.now(clock)) }
+                val currentNow = LocalDateTime.now(clock)
+                state.update { it.copy(now = currentNow) }
+                syncDisplayedEvents()
+                eventRepository.refresh()
             }
         }
     }
 
-    private fun loadEvents() {
-        eventsJob?.cancel()
-        state.update { it.copy(isLoadingEvents = true, eventError = null) }
-        eventsJob = viewModelScope.launch {
-            combine(eventsRepository.getEvents(), eventsRepository.currentUserRegistrations()) { events, registeredIds ->
-                events.filter { it.status != EventStatus.DRAFT && it.status != EventStatus.CANCELLED }
-                    .map { event ->
-                        val start = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.startAt), clock.zone)
-                        val end = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.endAt), clock.zone)
-                        ScheduleEvent(
-                            id = event.id,
-                            title = event.title,
-                            organizer = event.orgName,
-                            location = event.location,
-                            startAt = start,
-                            endAt = end,
-                            registration = if (event.id in registeredIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
-                            accent = if (event.id in registeredIds) EventAccent.PRIMARY else EventAccent.WARNING,
-                            session = when (SchedulePeriod.fromHour(start.hour)) {
-                                SchedulePeriod.MORNING -> "Morning"
-                                SchedulePeriod.AFTERNOON -> "Afternoon"
-                                else -> "Evening"
-                            },
-                        )
-                    }
-            }.catch { error ->
-                if (error is CancellationException) throw error
-                state.update { it.copy(isLoadingEvents = false, eventError = "Không thể tải sự kiện. Vui lòng thử lại.") }
-            }.collect { events ->
-                state.update { it.copy(events = events, isLoadingEvents = false, eventError = null) }
-            }
-        }
-    }
-
+    /** Applies a user action to the schedule and coordinates related repository operations. */
     fun onAction(action: ScheduleAction) {
         when (action) {
-            is ScheduleAction.SelectDate -> state.update { it.copy(selectedDate = action.value) }
+            is ScheduleAction.SelectDate -> state.update {
+                it.copy(selectedDate = action.value)
+            }
 
-            ScheduleAction.JumpToToday -> state.update { it.copy(selectedDate = it.now.toLocalDate()) }
+            ScheduleAction.JumpToToday -> {
+                val today = state.value.now.toLocalDate()
+                state.update {
+                    it.copy(selectedDate = today)
+                }
+            }
 
             is ScheduleAction.SelectPeriod -> state.update { it.copy(period = action.value) }
 
             is ScheduleAction.SelectTab -> state.update { it.copy(tab = action.value) }
 
-            ScheduleAction.RetryEvents -> loadEvents()
-
             is ScheduleAction.RegisterEvent -> {
-                if (state.value.registeringEventId != null) return
-                state.update { it.copy(registeringEventId = action.id, eventError = null) }
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                val now = LocalDateTime.now(clock)
+                if (
+                    state.value.isRegistrationsLoading || state.value.registrationsLoadFailed ||
+                    event.status != EventStatus.PUBLISHED || now >= event.startAt || now >= event.endAt
+                ) return
+                state.update { it.copy(registrationError = null, registrationErrorCode = null) }
                 viewModelScope.launch {
                     try {
-                        eventsRepository.registerCurrentUser(action.id).getOrThrow()
-                        eventsRepository.refresh()
+                        val result = if (BuildConfig.USE_SUPABASE) {
+                            eventRepository.registerCurrentUser(action.id)
+                        } else {
+                            val profile = sessionRepository.session.value.profile
+                            val uid = eventRepository.currentUserId()
+                            if (profile == null || uid.isNullOrBlank()) {
+                                Result.failure(IllegalStateException(ServerErrorCode.AuthRequired.token))
+                            } else {
+                                eventRepository.registerEvent(action.id, uid, profile.studentId, profile.displayName)
+                            }
+                        }
+                        result.getOrThrow()
+                        registeredEventIds = registeredEventIds + action.id
+                        state.update { current -> current.copy(events = loadedEvents.mapNotNull(::toScheduleEvent)) }
+                        eventRepository.refresh()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
                     } catch (error: Exception) {
-                        if (error is CancellationException) throw error
-                        state.update { it.copy(eventError = "Đăng ký thất bại. Kiểm tra kết nối hoặc điều kiện tham gia.") }
-                    } finally {
-                        state.update { it.copy(registeringEventId = null) }
+                        state.update {
+                            it.copy(
+                                registrationError = error.message,
+                                registrationErrorCode = ServerErrorCode.of(error),
+                            )
+                        }
                     }
+                }
+            }
+
+            is ScheduleAction.OpenEventDetails -> {
+                val event = state.value.events.firstOrNull { it.id == action.id } ?: return
+                if (event.id !in registeredEventIds || !event.canOpenTicketAt(LocalDateTime.now(clock))) return
+                ticketQrJob?.cancel()
+                state.update {
+                    it.copy(selectedEvent = event, ticketQrToken = null, ticketQrFailed = false)
+                }
+                if (BuildConfig.USE_SUPABASE) {
+                    ticketQrJob = viewModelScope.launch {
+                        val result = ticketRepository.issueCheckInToken(action.id)
+                        coroutineContext.ensureActive()
+                        result.fold(
+                            onSuccess = { token ->
+                                state.update { current ->
+                                    if (current.selectedEvent?.id == action.id) {
+                                        current.copy(ticketQrToken = token, ticketQrFailed = false)
+                                    } else {
+                                        current
+                                    }
+                                }
+                            },
+                            onFailure = {
+                                state.update { current ->
+                                    if (current.selectedEvent?.id == action.id) {
+                                        current.copy(ticketQrToken = null, ticketQrFailed = true)
+                                    } else {
+                                        current
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            ScheduleAction.CloseEventDetails -> {
+                ticketQrJob?.cancel()
+                state.update {
+                    it.copy(selectedEvent = null, ticketQrToken = null, ticketQrFailed = false)
                 }
             }
 
@@ -143,4 +272,22 @@ class ScheduleViewModel @Inject constructor(
             }
         }
     }
+
+    /** Converts a repository event to its schedule UI model, omitting events with invalid timestamps. */
+    private fun toScheduleEvent(event: Event): ScheduleEvent? = runCatching {
+        val startAt = Instant.ofEpochMilli(event.startAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()
+        val endAt = Instant.ofEpochMilli(event.endAt).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDateTime()
+        ScheduleEvent(
+            id = event.id,
+            title = event.title,
+            organizer = event.orgName.ifBlank { event.orgId },
+            location = event.location,
+            startAt = startAt,
+            endAt = endAt,
+            registration = if (event.id in registeredEventIds) EventRegistration.REGISTERED else EventRegistration.NOT_REGISTERED,
+            accent = if (event.id in registeredEventIds) EventAccent.PRIMARY else EventAccent.WARNING,
+            status = event.status,
+            session = SchedulePeriod.fromHour(startAt.hour),
+        )
+    }.getOrNull()
 }

@@ -129,8 +129,9 @@ internal fun JsonObject.toDomainTicket(
             eventId in attendedEventIds -> TicketStatus.CHECKED_IN
             else -> TicketStatus.VALID
         },
-        fallbackCode = eventId.replace("-", "").take(8).uppercase(),
+        fallbackCode = string("fallback_code").orEmpty(),
         organizerName = event.string("organizer_name"),
+        seatLabel = event.string("seat_label"),
     )
 }
 

@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.presentation.schedule
 
 import com.giathinh.uthconnect.domain.model.Course
+import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.Timetable
 import com.giathinh.uthconnect.domain.usecase.TimetableUseCase
 import java.time.LocalDate
@@ -10,9 +12,17 @@ data class ScheduleUiState(
     val timetable: Timetable = Timetable(),
     val now: LocalDateTime = LocalDateTime.MIN,
     val isLoading: Boolean = true,
-    val isLoadingEvents: Boolean = true,
-    val eventError: String? = null,
-    val registeringEventId: String? = null,
+    val isEventsLoading: Boolean = true,
+    val eventsLoadFailed: Boolean = false,
+    val registrationsLoadFailed: Boolean = false,
+    val isRegistrationsLoading: Boolean = true,
+    val studentId: String? = null,
+    val studentName: String? = null,
+    val registrationError: String? = null,
+    val registrationErrorCode: ServerErrorCode? = null,
+    val ticketQrToken: String? = null,
+    val ticketQrFailed: Boolean = false,
+    val selectedEvent: ScheduleEvent? = null,
     val selectedDate: LocalDate = now.toLocalDate(),
     val period: SchedulePeriod = SchedulePeriod.ALL,
     val tab: ScheduleTab = ScheduleTab.EVENTS,
@@ -48,9 +58,18 @@ data class ScheduleEvent(
     val endAt: LocalDateTime,
     val registration: EventRegistration,
     val accent: EventAccent,
+    val status: EventStatus = EventStatus.PUBLISHED,
     val trainingPoints: String = "",
-    val session: String = "",
+    val session: SchedulePeriod = SchedulePeriod.MORNING,
 )
+
+/** Returns true while a registered ticket can be opened, including the 30-minute check-in grace period. */
+fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean =
+    registration != EventRegistration.NOT_REGISTERED &&
+        (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
+        !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
+
+private const val TICKET_CHECK_IN_GRACE_MINUTES = 30L
 
 enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
 enum class EventAccent { SUCCESS, PRIMARY, WARNING }
@@ -63,6 +82,7 @@ enum class SchedulePeriod {
     ;
 
     companion object {
+        /** Maps a 24-hour clock value to its schedule period. */
         fun fromHour(hour: Int) = when {
             hour < 12 -> MORNING
             hour < 18 -> AFTERNOON

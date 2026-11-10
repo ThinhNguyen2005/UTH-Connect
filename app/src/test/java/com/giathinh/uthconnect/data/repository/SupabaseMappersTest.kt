@@ -17,6 +17,7 @@ import org.junit.Test
 import java.time.Instant
 
 class SupabaseMappersTest {
+    /** Verifies Supabase event status and timestamps map to the domain model. */
     @Test fun eventStatusAndTimestampMatchAndroidDomain() {
         for (status in EventStatus.entries) {
             val event = objectFromJson(
@@ -42,6 +43,7 @@ class SupabaseMappersTest {
         }
     }
 
+    /** Verifies a valid profile maps its role and student fields. */
     @Test fun verifiedProfileMapsRolesAndStudentData() {
         for ((remote, expected) in listOf(
             "student" to UserRole.STUDENT,
@@ -68,6 +70,7 @@ class SupabaseMappersTest {
         }
     }
 
+    /** Rejects profiles without verified student identity data. */
     @Test fun unverifiedOrMissingStudentIdCannotBecomeAuthenticatedProfile() {
         for (input in listOf(
             """{"student_id":"23510001","student_id_verified":false,"role":"admin"}""",
@@ -80,6 +83,7 @@ class SupabaseMappersTest {
         }
     }
 
+    /** Verifies ticket mapping includes its embedded event details. */
     @Test fun toDomainTicketMapsEmbeddedEventCorrectly() {
         val raw = """
             {
@@ -90,7 +94,8 @@ class SupabaseMappersTest {
                 "title": "Hội thảo AI 2026",
                 "location": "Hội trường A",
                 "start_at": "2026-11-03T12:30:00+07:00",
-                "organizer_name": "Đoàn Thanh niên"
+                "organizer_name": "Đoàn Thanh niên",
+                "seat_label": "Ghế B-12"
               }
             }
         """
@@ -106,9 +111,11 @@ class SupabaseMappersTest {
         assertEquals("Hội trường A", ticket?.eventLocation)
         assertEquals("Đoàn Thanh niên", ticket?.organizerName)
         assertEquals(TicketStatus.VALID, ticket?.status)
-        assertEquals("33333333", ticket?.fallbackCode)
+        assertEquals("", ticket?.fallbackCode)
+        assertEquals("Ghế B-12", ticket?.seatLabel)
     }
 
+    /** Verifies backend ticket statuses map to their distinct domain values. */
     @Test fun toDomainTicketDistinguishesStatuses() {
         val base = """
             {
@@ -122,6 +129,7 @@ class SupabaseMappersTest {
         val cancelled = objectFromJson("""{"event_id":"$eventId","status":"CANCELLED","events":{"title":"T"}}""")
             .toDomainTicket("23510001", "uid-1", emptySet())
         assertEquals(TicketStatus.CANCELLED, cancelled?.status)
+        assertEquals("", cancelled?.fallbackCode)
 
         // Checked in
         val checkedIn = objectFromJson("""{"event_id":"$eventId","status":"REGISTERED","events":{"title":"T"}}""")
@@ -202,5 +210,6 @@ class SupabaseMappersTest {
     /**
      * Parses a JSON string literal into a [JsonObject] instance.
      */
+    /** Parses a JSON object fixture for mapper tests. */
     private fun objectFromJson(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
 }
