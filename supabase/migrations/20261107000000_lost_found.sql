@@ -91,12 +91,20 @@ create policy "lost_found_storage_insert"
     on storage.objects
     for insert
     to authenticated
-    with check (bucket_id = 'lost-found');
+    with check (
+        bucket_id = 'lost-found'
+        and (storage.foldername(name))[1] = 'items'
+        and (storage.foldername(name))[2] = (select auth.uid())::text
+    );
 
--- Policy xóa ảnh từ bucket lost-found (chỉ chủ sở hữu ảnh)
+-- Policy xa ?nh t? bucket lost-found (ch? ch? s? h?u ?nh)
 drop policy if exists "lost_found_storage_delete" on storage.objects;
 create policy "lost_found_storage_delete"
     on storage.objects
     for delete
     to authenticated
-    using (bucket_id = 'lost-found' and owner_id = (select auth.uid())::text);
+    using (
+        bucket_id = 'lost-found'
+        and (storage.foldername(name))[1] = 'items'
+        and (storage.foldername(name))[2] = (select auth.uid())::text
+    );

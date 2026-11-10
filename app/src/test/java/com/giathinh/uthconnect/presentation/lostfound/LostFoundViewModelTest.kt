@@ -539,4 +539,25 @@ class LostFoundViewModelTest {
         assertFalse("isError phải là false sau khi retry thành công", state.isError)
         assertEquals("Phải nạp lại đầy đủ 8 tin", 8, state.listings.size)
     }
+
+    /**
+     * Verifies that triggering [LostFoundAction.ShowDialerUnavailable] properly sets
+     * [UserMessage.DialerUnavailable] so the UI surfaces a user-facing explanation.
+     */
+    @Test
+    fun `showDialerUnavailable_setsUserMessageDialerUnavailable`() {
+        val viewModel = createViewModel()
+        assertNull("userMessage ban đầu phải là null", viewModel.uiState.value.userMessage)
+
+        viewModel.onAction(LostFoundAction.ShowDialerUnavailable)
+
+        assertEquals(
+            "userMessage phải là DialerUnavailable",
+            UserMessage.DialerUnavailable,
+            viewModel.uiState.value.userMessage,
+        )
+
+        viewModel.onAction(LostFoundAction.DismissMessage)
+        assertNull("userMessage sau khi dismiss phải là null", viewModel.uiState.value.userMessage)
+    }
 }

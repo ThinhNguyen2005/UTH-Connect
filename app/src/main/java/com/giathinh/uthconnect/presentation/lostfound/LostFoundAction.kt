@@ -46,5 +46,6 @@ sealed interface LostFoundAction {
     data object RemoveReportImage : LostFoundAction
     data object SubmitReport : LostFoundAction
     data object DismissMessage : LostFoundAction
+    data object ShowDialerUnavailable : LostFoundAction
     data object Retry : LostFoundAction
 }

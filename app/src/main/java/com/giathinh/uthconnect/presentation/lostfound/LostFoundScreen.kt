@@ -95,22 +95,6 @@ import java.net.URL
 private const val TIMEOUT_MILLIS = 10_000
 
 /**
- * Triggers a phone call intent with the given contact number.
- *
- * @param context Android context for launching the dialer intent.
- * @param phoneNumber Phone number string to dial.
- */
-private fun dialPhoneNumber(context: Context, phoneNumber: String) {
-    val cleanNumber = phoneNumber.replace(" ", "").trim()
-    if (cleanNumber.isNotBlank()) {
-        val intent = Intent(Intent.ACTION_DIAL).apply {
-            data = Uri.parse("tel:$cleanNumber")
-        }
-        context.startActivity(intent)
-    }
-}
-
-/**
  * Root Composable for the Lost & Found screen with Scaffold, TopAppBar, FAB, and BottomSheet.
  *
  * @param uiState Current Lost & Found UI state.
@@ -125,8 +109,8 @@ fun LostFoundScreen(
     onAction: (LostFoundAction) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onCallClick: (String) -> Unit = {},
 ) {
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val messageText = uiState.userMessage?.let { stringResource(it.messageRes) }
@@ -200,7 +184,7 @@ fun LostFoundScreen(
             LostFoundContentBody(
                 uiState = uiState,
                 onAction = onAction,
-                onCallClick = { phone -> dialPhoneNumber(context, phone) },
+                onCallClick = onCallClick,
             )
         }
     }

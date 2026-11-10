@@ -60,6 +60,10 @@ sealed interface UserMessage {
     data object UpdateStatusFailed : UserMessage {
         override val messageRes: Int = R.string.lostfound_msg_update_status_failed
     }
+
+    data object DialerUnavailable : UserMessage {
+        override val messageRes: Int = R.string.lostfound_msg_dialer_unavailable
+    }
 }
 
 /**

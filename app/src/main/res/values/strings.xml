@@ -527,6 +527,7 @@
     <string name="common_loading">Đang xử lý</string>
     <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
+    <string name="lostfound_msg_dialer_unavailable">Thiết bị không hỗ trợ ứng dụng gọi điện</string>
     <string name="nav_back">Quay lại</string>
     <string name="attendance_open">Danh sách điểm danh</string>
     <string name="attendance_title">Điểm danh sự kiện</string>

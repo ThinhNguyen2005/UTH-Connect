@@ -492,6 +492,7 @@
     <string name="lostfound_err_desc_min_length">Description must be at least 20 characters (currently: %1$d)</string>
     <string name="lostfound_msg_post_success">Item posted successfully!</string>
     <string name="lostfound_msg_post_failed">Failed to post item</string>
+    <string name="lostfound_msg_dialer_unavailable">No dialer app available on this device</string>
     <string name="nav_back">Back</string>
     <string name="attendance_open">Attendance list</string>
     <string name="attendance_title">Event attendance</string>

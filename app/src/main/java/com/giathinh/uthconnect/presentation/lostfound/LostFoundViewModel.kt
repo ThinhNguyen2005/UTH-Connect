@@ -189,6 +189,10 @@ class LostFoundViewModel @Inject constructor(
                 _uiState.update { it.copy(userMessage = null) }
             }
 
+            LostFoundAction.ShowDialerUnavailable -> {
+                _uiState.update { it.copy(userMessage = UserMessage.DialerUnavailable) }
+            }
+
             LostFoundAction.Retry -> loadListings()
         }
     }
