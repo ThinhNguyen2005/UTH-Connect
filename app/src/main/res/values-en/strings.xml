@@ -158,9 +158,6 @@
     <string name="campuses_list_header">Campus locations</string>
     <string name="campuses_departments_header">Support departments</string>
     <string name="campuses_call_action">Call</string>
-    <string name="campuses_call_unavailable">No phone app is available to place a call.</string>
-    <string name="campuses_directions_action">Directions</string>
-    <string name="campuses_directions_unavailable">No map app is available to open directions.</string>
     <string name="campuses_email_action">Email</string>
 
     <!-- Settings -->
@@ -578,4 +575,7 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <string name="campuses_maps_unavailable">No map application found on your device.</string>
+    <string name="campuses_call_unavailable">No phone application found on your device.</string>
+    <string name="campuses_directions_action">Directions</string>
 </resources>

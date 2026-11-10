@@ -163,9 +163,6 @@
     <string name="campuses_list_header">Các cơ sở đào tạo</string>
     <string name="campuses_departments_header">Danh bạ phòng ban hỗ trợ</string>
     <string name="campuses_call_action">Gọi ngay</string>
-    <string name="campuses_call_unavailable">Không tìm thấy ứng dụng điện thoại để thực hiện cuộc gọi.</string>
-    <string name="campuses_directions_action">Chỉ đường</string>
-    <string name="campuses_directions_unavailable">Không tìm thấy ứng dụng bản đồ để mở chỉ đường.</string>
     <string name="campuses_email_action">Gửi email</string>
 
     <!-- Cài đặt -->
@@ -593,4 +590,7 @@
     <string name="common_error_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
+    <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
+    <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
+    <string name="campuses_directions_action">Chỉ đường</string>
 </resources>
