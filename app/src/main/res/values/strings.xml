@@ -456,6 +456,24 @@
     <string name="scanner_scan_again">Quét mã khác</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_search_hint_lost">Tìm đồ thất lạc (ví, thẻ sinh viên...)</string>
+    <string name="lostfound_search_hint_found">Tìm đồ nhặt được...</string>
+    <string name="lostfound_search_desc">Tìm kiếm</string>
+    <string name="lostfound_clear_search">Xóa tìm kiếm</string>
+    <string name="lostfound_no_results_title">Không tìm thấy kết quả</string>
+    <string name="lostfound_no_results_desc">Không có tin nào khớp với "%1$s". Hãy thử từ khóa khác.</string>
+    <string name="lostfound_status_resolved_lost">Đã nhận lại</string>
+    <string name="lostfound_status_resolved_found">Đã trao trả</string>
+    <string name="lostfound_action_mark_lost">Đánh dấu đã tìm thấy</string>
+    <string name="lostfound_action_mark_found">Đánh dấu đã trả đồ</string>
+    <string name="lostfound_bottomsheet_subtitle">Điền thông tin để cộng đồng UTH cùng hỗ trợ tìm kiếm</string>
+    <string name="lostfound_btn_close">Đóng</string>
+    <string name="lostfound_image_attached_desc">Ảnh đính kèm</string>
+    <string name="lostfound_poster_prefix">Người đăng: %1$s</string>
+    <string name="lostfound_image_too_large">Kích thước ảnh vượt quá giới hạn 5MB</string>
+    <string name="lostfound_image_read_error">Không thể đọc hoặc xử lý tệp ảnh này</string>
+    <string name="lostfound_msg_update_status_failed">Cập nhật trạng thái bài đăng thất bại</string>
+
     <string name="lostfound_tab_lost">Cần tìm đồ (%1$d)</string>
     <string name="lostfound_tab_found">Nhặt được đồ (%1$d)</string>
     <string name="lostfound_badge_lost">CẦN TÌM</string>
@@ -476,9 +494,9 @@
     <string name="lostfound_kind_found_btn">Tôi nhặt được đồ</string>
     <string name="lostfound_field_title">Tiêu đề tin đăng *</string>
     <string name="lostfound_field_title_hint">Ví dụ: Rơi ví da màu đen tại CS1</string>
-    <string name="lostfound_field_desc">Mô tả chi tiết (tối thiểu 20 ký tự) *</string>
-    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, thời gian, hoàn cảnh thất lạc...</string>
-    <string name="lostfound_desc_counter">%1$d/20 ký tự tối thiểu</string>
+    <string name="lostfound_field_desc">Mô tả chi tiết (không bắt buộc)</string>
+    <string name="lostfound_field_desc_hint">Đặc điểm nhận dạng, màu sắc, thời gian thất lạc...</string>
+    <string name="lostfound_desc_counter">%1$d ký tự</string>
     <string name="lostfound_field_kind">Loại tin</string>
     <string name="lostfound_field_category">Danh mục</string>
     <string name="lostfound_field_location">Địa điểm (Cơ sở / Phòng)</string>
@@ -497,6 +515,11 @@
     <string name="lostfound_err_phone_invalid">Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.</string>
     <string name="lostfound_phone_public_notice">Số điện thoại sẽ hiển thị công khai trên bài đăng để người khác liên hệ.</string>
     <string name="lostfound_contact_unnamed">Chưa cung cấp tên liên hệ</string>
+    <string name="lostfound_field_image">Hình ảnh minh chứng</string>
+    <string name="lostfound_btn_pick_image">Chọn ảnh từ thư viện</string>
+    <string name="lostfound_btn_change_image">Đổi ảnh khác</string>
+    <string name="lostfound_btn_remove_image">Xóa ảnh</string>
+    <string name="lostfound_image_desc">Ảnh chụp đồ vật thất lạc hoặc nhặt được (không bắt buộc)</string>
     <string name="auth_profile_retry">Tải lại hồ sơ</string>
     <string name="timetable_title_required">Vui lòng nhập tên công việc.</string>
     <string name="timetable_date_invalid">Ngày không hợp lệ. Hãy chọn lại ngày.</string>
@@ -504,6 +527,7 @@
     <string name="common_loading">Đang xử lý</string>
     <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
+    <string name="lostfound_msg_dialer_unavailable">Thiết bị không hỗ trợ ứng dụng gọi điện</string>
     <string name="nav_back">Quay lại</string>
     <string name="attendance_open">Danh sách điểm danh</string>
     <string name="attendance_title">Điểm danh sự kiện</string>

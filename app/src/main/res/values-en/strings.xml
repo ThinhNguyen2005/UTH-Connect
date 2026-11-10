@@ -436,6 +436,24 @@
     <string name="auth_login_retry">Retry sign-in</string>
     <!-- Lost & Found -->
     <string name="lostfound_title">Lost &amp; Found</string>
+    <string name="lostfound_search_hint_lost">Search lost items (wallet, student card...)</string>
+    <string name="lostfound_search_hint_found">Search found items...</string>
+    <string name="lostfound_search_desc">Search</string>
+    <string name="lostfound_clear_search">Clear search</string>
+    <string name="lostfound_no_results_title">No results found</string>
+    <string name="lostfound_no_results_desc">No listings matching "%1$s". Try another keyword.</string>
+    <string name="lostfound_status_resolved_lost">Reclaimed</string>
+    <string name="lostfound_status_resolved_found">Returned</string>
+    <string name="lostfound_action_mark_lost">Mark as reclaimed</string>
+    <string name="lostfound_action_mark_found">Mark as returned</string>
+    <string name="lostfound_bottomsheet_subtitle">Fill in details for the UTH community to help find</string>
+    <string name="lostfound_btn_close">Close</string>
+    <string name="lostfound_image_attached_desc">Attached photo</string>
+    <string name="lostfound_poster_prefix">Posted by: %1$s</string>
+    <string name="lostfound_image_too_large">Image size exceeds 5MB limit</string>
+    <string name="lostfound_image_read_error">Failed to read or process this image file</string>
+    <string name="lostfound_msg_update_status_failed">Failed to update listing status</string>
+
     <string name="lostfound_tab_lost">Lost Items (%1$d)</string>
     <string name="lostfound_tab_found">Found Items (%1$d)</string>
     <string name="lostfound_badge_lost">LOST</string>
@@ -456,9 +474,9 @@
     <string name="lostfound_kind_found_btn">I found an item</string>
     <string name="lostfound_field_title">Listing Title *</string>
     <string name="lostfound_field_title_hint">e.g. Lost black leather wallet at CS1</string>
-    <string name="lostfound_field_desc">Detailed description (min 20 chars) *</string>
+    <string name="lostfound_field_desc">Detailed description (optional)</string>
     <string name="lostfound_field_desc_hint">Identifying features, time, circumstances...</string>
-    <string name="lostfound_desc_counter">%1$d/20 characters minimum</string>
+    <string name="lostfound_desc_counter">%1$d characters</string>
     <string name="lostfound_field_kind">Type</string>
     <string name="lostfound_field_category">Category</string>
     <string name="lostfound_field_location">Location (Campus / Room)</string>
@@ -474,6 +492,7 @@
     <string name="lostfound_err_desc_min_length">Description must be at least 20 characters (currently: %1$d)</string>
     <string name="lostfound_msg_post_success">Item posted successfully!</string>
     <string name="lostfound_msg_post_failed">Failed to post item</string>
+    <string name="lostfound_msg_dialer_unavailable">No dialer app available on this device</string>
     <string name="nav_back">Back</string>
     <string name="attendance_open">Attendance list</string>
     <string name="attendance_title">Event attendance</string>

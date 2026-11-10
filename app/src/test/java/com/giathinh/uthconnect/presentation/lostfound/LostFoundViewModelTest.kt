@@ -7,6 +7,7 @@ import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.repository.LostFoundRepository
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
+import com.giathinh.uthconnect.domain.usecase.ToggleResolveListingUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,13 +25,20 @@ class LostFoundViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    /**
+     * Verifies `createViewModel` behavior and invariants.
+     */
     private fun createViewModel(
         repository: LostFoundRepository = InMemoryLostFoundRepository(),
     ): LostFoundViewModel = LostFoundViewModel(
         getListingsUseCase = GetLostFoundListingsUseCase(repository),
         reportItemUseCase = ReportLostFoundItemUseCase(repository),
+        toggleResolveListingUseCase = ToggleResolveListingUseCase(repository),
     )
 
+    /**
+     * Verifies `initialState_loadsListingsSuccessfully` behavior and invariants.
+     */
     @Test
     fun `initialState_loadsListingsSuccessfully`() {
         val viewModel = createViewModel()
@@ -47,6 +55,9 @@ class LostFoundViewModelTest {
         assertTrue(state.filteredListings.all { it.kind == ListingKind.LOST })
     }
 
+    /**
+     * Verifies `selectKindAndCategory_filtersListingsCorrectly` behavior and invariants.
+     */
     @Test
     fun `selectKindAndCategory_filtersListingsCorrectly`() {
         val viewModel = createViewModel()
@@ -61,48 +72,272 @@ class LostFoundViewModelTest {
         viewModel.onAction(LostFoundAction.SelectCategory(ItemCategory.ELECTRONICS))
         assertEquals(ItemCategory.ELECTRONICS, viewModel.uiState.value.selectedCategory)
         assertEquals(1, viewModel.uiState.value.filteredListings.size)
-        assertEquals("Nhặt được tai nghe AirPods Pro trong hộp màu xanh", viewModel.uiState.value.filteredListings.first().title)
+        val firstTitle = viewModel.uiState.value.filteredListings.first().title
+        assertEquals("Nhặt được tai nghe AirPods Pro trong hộp màu xanh", firstTitle)
 
         // Reset về tất cả danh mục
         viewModel.onAction(LostFoundAction.SelectCategory(ItemCategory.ALL))
         assertEquals(4, viewModel.uiState.value.filteredListings.size)
     }
 
+    /**
+     * Verifies `updateSearchQuery_filtersListingsCorrectly` behavior and invariants.
+     */
+    @Test
+    fun `updateSearchQuery_filtersListingsCorrectly`() {
+        val viewModel = createViewModel(InMemoryLostFoundRepository())
+
+        // Mặc định tab LOST (có 4 bài)
+        assertEquals(4, viewModel.uiState.value.filteredListings.size)
+
+        // Tìm từ khóa "MacBook"
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("MacBook"))
+        assertEquals("MacBook", viewModel.uiState.value.searchQuery)
+        assertEquals(1, viewModel.uiState.value.filteredListings.size)
+        assertTrue(viewModel.uiState.value.filteredListings.first().title.contains("MacBook"))
+
+        // Tìm theo địa điểm "Võ Oanh"
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("Võ Oanh"))
+        assertEquals(1, viewModel.uiState.value.filteredListings.size)
+        assertTrue(viewModel.uiState.value.filteredListings.first().location.contains("Võ Oanh"))
+
+        // Tìm từ khóa không tồn tại
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery("xe dap the thao 999"))
+        assertEquals(0, viewModel.uiState.value.filteredListings.size)
+
+        // Xóa tìm kiếm -> quay về đủ 4 bài
+        viewModel.onAction(LostFoundAction.UpdateSearchQuery(""))
+        assertEquals(4, viewModel.uiState.value.filteredListings.size)
+    }
+
+    /**
+     * Verifies `toggleResolveListing_switchesResolvedStatus` behavior and invariants.
+     */
+    @Test
+    fun `toggleResolveListing_switchesResolvedStatus`() {
+        val viewModel = createViewModel(InMemoryLostFoundRepository())
+        val firstItem = viewModel.uiState.value.listings.first()
+        val firstId = firstItem.id
+        assertFalse("Ban đầu chưa được resolve", firstItem.isResolved)
+
+        // Bấm đánh dấu đã nhận lại
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+        val resolvedItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertTrue("Sau khi toggle, isResolved phải là true", resolvedItem.isResolved)
+
+        // Bấm toggle lại để hủy đánh dấu
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+        val revertedItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Toggle lần 2 quay lại false", revertedItem.isResolved)
+    }
+
+    /**
+     * Verifies `toggleResolveListing_unauthorized_revertsOptimisticUpdateAndSetsAuthRequired` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_unauthorized_revertsOptimisticUpdateAndSetsAuthRequired`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(
+                com.giathinh.uthconnect.data.repository.SupabaseHttpException(
+                    java.net.HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "Unauthorized",
+                ),
+            )
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on 401 error", currentItem.isResolved)
+        assertEquals(UserMessage.AuthRequired, viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `toggleResolveListing_forbidden_revertsOptimisticUpdateAndSetsForbidden` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_forbidden_revertsOptimisticUpdateAndSetsForbidden`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(
+                com.giathinh.uthconnect.data.repository.SupabaseHttpException(
+                    java.net.HttpURLConnection.HTTP_FORBIDDEN,
+                    "Forbidden",
+                ),
+            )
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on 403 error", currentItem.isResolved)
+        assertEquals(UserMessage.Forbidden, viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `toggleResolveListing_genericError_revertsOptimisticUpdateAndSetsUpdateStatusFailed` behavior.
+     */
+    @Test
+    fun `toggleResolveListing_genericError_revertsOptimisticUpdateAndSetsUpdateStatusFailed`() {
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            /**
+             * Verifies `getListings` behavior.
+             */
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            /**
+             * Verifies `reportItem` behavior.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = Result.failure(java.io.IOException("Network unavailable"))
+        }
+        val viewModel = createViewModel(repository)
+        val firstId = viewModel.uiState.value.listings.first().id
+        assertFalse(viewModel.uiState.value.listings.first().isResolved)
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(firstId))
+
+        val currentItem = viewModel.uiState.value.listings.first { it.id == firstId }
+        assertFalse("Optimistic update must be reverted on network failure", currentItem.isResolved)
+        assertEquals(UserMessage.UpdateStatusFailed, viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `updateAndRemoveReportImage_modifiesFormStateCorrectly` behavior and invariants.
+     */
+    @Test
+    fun `updateAndRemoveReportImage_modifiesFormStateCorrectly`() {
+        val viewModel = createViewModel()
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+
+        val sampleBytes = byteArrayOf(1, 2, 3, 4)
+        val sampleMime = "image/png"
+        val sampleUri = "content://media/external/images/123"
+
+        viewModel.onAction(LostFoundAction.UpdateReportImage(sampleBytes, sampleMime, sampleUri))
+        val state = viewModel.uiState.value.reportForm
+        assertEquals(sampleMime, state.imageMimeType)
+        assertEquals(sampleUri, state.imagePreviewUri)
+        assertNotNull(state.imageBytes)
+        assertTrue(sampleBytes.contentEquals(state.imageBytes))
+
+        // Xóa ảnh
+        viewModel.onAction(LostFoundAction.RemoveReportImage)
+        val clearedState = viewModel.uiState.value.reportForm
+        assertNull(clearedState.imageBytes)
+        assertNull(clearedState.imageMimeType)
+        assertNull(clearedState.imagePreviewUri)
+    }
+
+    /**
+     * Verifies `submitReport_withEmptyTitle_setsTitleErrorAndDoesNotSubmit` behavior and invariants.
+     */
     @Test
     fun `submitReport_withEmptyTitle_setsTitleErrorAndDoesNotSubmit`() {
         val viewModel = createViewModel()
         viewModel.onAction(LostFoundAction.OpenReportDialog)
         assertTrue(viewModel.uiState.value.isReportDialogOpen)
 
-        viewModel.onAction(LostFoundAction.UpdateReportDescription("Đây là mô tả dài hơn hai mươi ký tự để pass kiểm tra"))
+        val longDescription = "Đây là mô tả dài hơn hai mươi ký tự để pass kiểm tra"
+        viewModel.onAction(LostFoundAction.UpdateReportDescription(longDescription))
         viewModel.onAction(LostFoundAction.SubmitReport)
 
         val state = viewModel.uiState.value
-        assertEquals("titleError phải là FormValidationError.TitleRequired", FormValidationError.TitleRequired, state.reportForm.titleError)
+        assertEquals(
+            "titleError phải là FormValidationError.TitleRequired",
+            FormValidationError.TitleRequired,
+            state.reportForm.titleError,
+        )
         assertNull("descriptionError không được có lỗi", state.reportForm.descriptionError)
         assertEquals("Số lượng tin không được thay đổi", 8, state.listings.size)
         assertTrue("Dialog vẫn phải mở", state.isReportDialogOpen)
     }
 
+    /**
+     * Verifies `submitReport_withEmptyDescription_succeedsBecauseDescriptionIsOptional` behavior and invariants.
+     */
     @Test
-    fun `submitReport_withShortDescription_setsDescriptionErrorAndDoesNotSubmit`() {
+    fun `submitReport_withEmptyDescription_succeedsBecauseDescriptionIsOptional`() {
         val viewModel = createViewModel()
         viewModel.onAction(LostFoundAction.OpenReportDialog)
 
-        val shortDesc = "Mô tả ngắn"
         viewModel.onAction(LostFoundAction.UpdateReportTitle("Rơi ví tiền cá nhân"))
-        viewModel.onAction(LostFoundAction.UpdateReportDescription(shortDesc))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription(""))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Căn tin CS1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
         viewModel.onAction(LostFoundAction.SubmitReport)
 
         val state = viewModel.uiState.value
         assertNull("titleError không được có lỗi", state.reportForm.titleError)
-        assertTrue("descriptionError phải là DescriptionTooShort", state.reportForm.descriptionError is FormValidationError.DescriptionTooShort)
-        val err = state.reportForm.descriptionError as FormValidationError.DescriptionTooShort
-        assertEquals(shortDesc.length, err.currentLength)
-        assertEquals("Số lượng tin không được thay đổi", 8, state.listings.size)
-        assertTrue("Dialog vẫn phải mở", state.isReportDialogOpen)
+        assertNull("descriptionError không được có lỗi vì mô tả là tùy chọn", state.reportForm.descriptionError)
+        assertEquals("Số lượng tin phải tăng lên 9", 9, state.listings.size)
+        assertEquals("Rơi ví tiền cá nhân", state.listings.first().title)
+        assertEquals("", state.listings.first().description)
+        assertFalse("Dialog phải đóng sau khi submit thành công", state.isReportDialogOpen)
     }
 
+    /**
+     * Verifies `submitReport_withValidData_addsItemToTopResetsCategoryAndForm` behavior and invariants.
+     */
     @Test
     fun `submitReport_withValidData_addsItemToTopResetsCategoryAndForm`() {
         val viewModel = createViewModel()
@@ -148,6 +383,9 @@ class LostFoundViewModelTest {
         assertEquals(UserMessage.PostSuccess, state.userMessage)
     }
 
+    /**
+     * Verifies `dismissMessage_clearsUserMessage` behavior and invariants.
+     */
     @Test
     fun `dismissMessage_clearsUserMessage`() {
         val viewModel = createViewModel()
@@ -163,6 +401,9 @@ class LostFoundViewModelTest {
         assertNull(viewModel.uiState.value.userMessage)
     }
 
+    /**
+     * Verifies `submitReport_requiresLocationAndPhone_andClearsEachErrorWhenEdited` behavior and invariants.
+     */
     @Test
     fun `submitReport_requiresLocationAndPhone_andClearsEachErrorWhenEdited`() {
         val viewModel = createViewModel()
@@ -192,18 +433,41 @@ class LostFoundViewModelTest {
         assertEquals("", viewModel.uiState.value.listings.first().contactName)
     }
 
+    /**
+     * Verifies `submitReport_preventsDuplicatePostsWhilePending` behavior and invariants.
+     */
     @Test
     fun `submitReport_preventsDuplicatePostsWhilePending`() {
         val release = CompletableDeferred<Unit>()
         var submissions = 0
         val repository = object : LostFoundRepository {
             private val delegate = InMemoryLostFoundRepository()
+
+            /**
+             * Verifies `getListings` behavior and invariants.
+             */
             override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
-            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> {
+
+            /**
+             * Verifies `reportItem` behavior and invariants.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> {
                 submissions++
                 release.await()
-                return delegate.reportItem(item)
+                return delegate.reportItem(item, imageBytes, imageMimeType)
             }
+
+            /**
+             * Verifies `toggleResolved` behavior and invariants.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = delegate.toggleResolved(id, isResolved)
         }
         val viewModel = createViewModel(repository)
         viewModel.onAction(LostFoundAction.OpenReportDialog)
@@ -223,19 +487,40 @@ class LostFoundViewModelTest {
         assertFalse(viewModel.uiState.value.isReportDialogOpen)
     }
 
+    /**
+     * Verifies `repositoryFailure_setsErrorState_andRetryReloadsListings` behavior and invariants.
+     */
     @Test
     fun `repositoryFailure_setsErrorState_andRetryReloadsListings`() {
         var shouldFail = true
         val mockRepo = object : LostFoundRepository {
             private val delegate = InMemoryLostFoundRepository()
 
+            /**
+             * Verifies `getListings` behavior and invariants.
+             */
             override suspend fun getListings(): Result<List<LostFoundListing>> = if (shouldFail) {
                 Result.failure(RuntimeException("Lỗi kết nối cơ sở dữ liệu"))
             } else {
                 delegate.getListings()
             }
 
-            override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = delegate.reportItem(item)
+            /**
+             * Verifies `reportItem` behavior and invariants.
+             */
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            /**
+             * Verifies `toggleResolved` behavior and invariants.
+             */
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = delegate.toggleResolved(id, isResolved)
         }
 
         val viewModel = createViewModel(mockRepo)
@@ -253,5 +538,26 @@ class LostFoundViewModelTest {
         assertFalse("isLoading phải là false sau khi retry", state.isLoading)
         assertFalse("isError phải là false sau khi retry thành công", state.isError)
         assertEquals("Phải nạp lại đầy đủ 8 tin", 8, state.listings.size)
+    }
+
+    /**
+     * Verifies that triggering [LostFoundAction.ShowDialerUnavailable] properly sets
+     * [UserMessage.DialerUnavailable] so the UI surfaces a user-facing explanation.
+     */
+    @Test
+    fun `showDialerUnavailable_setsUserMessageDialerUnavailable`() {
+        val viewModel = createViewModel()
+        assertNull("userMessage ban đầu phải là null", viewModel.uiState.value.userMessage)
+
+        viewModel.onAction(LostFoundAction.ShowDialerUnavailable)
+
+        assertEquals(
+            "userMessage phải là DialerUnavailable",
+            UserMessage.DialerUnavailable,
+            viewModel.uiState.value.userMessage,
+        )
+
+        viewModel.onAction(LostFoundAction.DismissMessage)
+        assertNull("userMessage sau khi dismiss phải là null", viewModel.uiState.value.userMessage)
     }
 }
