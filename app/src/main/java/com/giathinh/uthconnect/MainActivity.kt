@@ -10,11 +10,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -22,11 +22,11 @@ import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
 import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
-import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.EntryPointAccessors
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -83,8 +83,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             UTHConnectTheme(darkTheme = themeMode.resolveDarkTheme(isSystemInDarkTheme())) {
                 when (val state = appAvailability) {
-                    null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    null -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+
                     AppAvailability.AVAILABLE -> UthApp()
+
                     else -> AvailabilityScreen(state)
                 }
             }
@@ -101,10 +108,24 @@ class MainActivity : ComponentActivity() {
                 }
                 try {
                     val config = FirebaseRemoteConfig.getInstance()
-                    config.setConfigSettingsAsync(FirebaseRemoteConfigSettings.Builder().setMinimumFetchIntervalInSeconds(0).build()).await()
-                    config.setDefaultsAsync(mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false)).await()
+                    val settings = FirebaseRemoteConfigSettings.Builder()
+                        .setMinimumFetchIntervalInSeconds(0)
+                        .build()
+                    config.setConfigSettingsAsync(settings).await()
+                    config.setDefaultsAsync(
+                        mapOf(
+                            "force_update_min_version" to "1.0.0",
+                            "maintenance_mode" to false,
+                        ),
+                    ).await()
                     refreshAvailability(
-                        read = { availability(config.getBoolean("maintenance_mode"), BuildConfig.VERSION_NAME, config.getString("force_update_min_version")) },
+                        read = {
+                            availability(
+                                maintenance = config.getBoolean("maintenance_mode"),
+                                current = BuildConfig.VERSION_NAME,
+                                minimum = config.getString("force_update_min_version"),
+                            )
+                        },
                         fetchAndActivate = { config.fetchAndActivate().await() },
                         publish = { appAvailability = it },
                     )

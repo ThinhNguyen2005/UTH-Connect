@@ -25,28 +25,56 @@ internal suspend fun refreshAvailability(
     publish(read())
 }
 
+private fun parseVersion(version: String): List<Int>? {
+    val items = version.split('.')
+    val parsed = items.mapNotNull { it.toIntOrNull() }
+    return if (version.matches(Regex("[0-9]+(\\.[0-9]+)*")) && parsed.size == items.size) parsed else null
+}
+
 internal fun availability(maintenance: Boolean, current: String, minimum: String): AppAvailability {
-    if (maintenance) return AppAvailability.MAINTENANCE
-    fun parts(version: String): List<Int>? {
-        if (!version.matches(Regex("[0-9]+(\\.[0-9]+)*"))) return null
-        return version.split('.').map { it.toIntOrNull() ?: return null }
+    val actual = parseVersion(current)
+    val required = parseVersion(minimum)
+    val maxLen = if (actual != null && required != null) maxOf(actual.size, required.size) else 0
+    val diff = (0 until maxLen)
+        .map { i -> (actual?.getOrElse(i) { 0 } ?: 0) - (required?.getOrElse(i) { 0 } ?: 0) }
+        .firstOrNull { it != 0 } ?: 0
+
+    return when {
+        maintenance -> AppAvailability.MAINTENANCE
+        actual == null || required == null -> AppAvailability.AVAILABLE
+        diff < 0 -> AppAvailability.UPDATE_REQUIRED
+        else -> AppAvailability.AVAILABLE
     }
-    val actual = parts(current) ?: return AppAvailability.AVAILABLE
-    val required = parts(minimum) ?: return AppAvailability.AVAILABLE
-    for (i in 0 until maxOf(actual.size, required.size)) {
-        val comparison = actual.getOrElse(i) { 0 }.compareTo(required.getOrElse(i) { 0 })
-        if (comparison < 0) return AppAvailability.UPDATE_REQUIRED
-        if (comparison > 0) break
-    }
-    return AppAvailability.AVAILABLE
 }
 
 @Composable
 internal fun AvailabilityScreen(state: AppAvailability) {
-    val title = if (state == AppAvailability.MAINTENANCE) R.string.maintenance_title else R.string.update_required_title
-    val message = if (state == AppAvailability.MAINTENANCE) R.string.maintenance_message else R.string.update_required_message
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-        Text(stringResource(message), modifier = Modifier.padding(top = 12.dp), textAlign = TextAlign.Center)
+    val title = if (state == AppAvailability.MAINTENANCE) {
+        R.string.maintenance_title
+    } else {
+        R.string.update_required_title
+    }
+    val message = if (state == AppAvailability.MAINTENANCE) {
+        R.string.maintenance_message
+    } else {
+        R.string.update_required_message
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(title),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(message),
+            modifier = Modifier.padding(top = 12.dp),
+            textAlign = TextAlign.Center,
+        )
     }
 }

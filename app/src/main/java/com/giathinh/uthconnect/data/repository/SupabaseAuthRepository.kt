@@ -56,8 +56,10 @@ class SupabaseAuthRepository @Inject constructor(
         }
     }
 
-    private suspend fun ownProfile(): StudentProfile = (ownProfileRow()?.toDomainProfile()
-        ?: error("Không tìm thấy hồ sơ người dùng đã xác minh"))
+    private suspend fun ownProfile(): StudentProfile = (
+        ownProfileRow()?.toDomainProfile()
+            ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
+        )
         .also { CrashIdentity.set(client.userId, it.role.name) }
 
     /** Never trust a remembered student ID: verify identity and MSSV against Supabase. */

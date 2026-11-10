@@ -1,20 +1,29 @@
 package com.giathinh.uthconnect
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import kotlinx.coroutines.test.runTest
 
 class AppAvailabilityTest {
-    @Test fun maintenanceTakesPriority() = assertEquals(AppAvailability.MAINTENANCE, availability(true, "1.0", "2.0"))
-    @Test fun versionComponentsCompareNumerically() {
+    @Test
+    fun maintenanceTakesPriority() {
+        assertEquals(AppAvailability.MAINTENANCE, availability(true, "1.0", "2.0"))
+    }
+
+    @Test
+    fun versionComponentsCompareNumerically() {
         assertEquals(AppAvailability.AVAILABLE, availability(false, "1.0", "1.0.0"))
         assertEquals(AppAvailability.UPDATE_REQUIRED, availability(false, "1.9.0", "1.10.0"))
         assertEquals(AppAvailability.AVAILABLE, availability(false, "2.0.0", "1.10.0"))
     }
-    @Test fun malformedRemoteVersionDoesNotBlockUsers() =
-        assertEquals(AppAvailability.AVAILABLE, availability(false, "1.0", "invalid"))
 
-    @Test fun newlyActivatedConfigurationChangesTheAppGate() = runTest {
+    @Test
+    fun malformedRemoteVersionDoesNotBlockUsers() {
+        assertEquals(AppAvailability.AVAILABLE, availability(false, "1.0", "invalid"))
+    }
+
+    @Test
+    fun newlyActivatedConfigurationChangesTheAppGate() = runTest {
         var maintenance = false
         val published = mutableListOf<AppAvailability>()
         refreshAvailability(
@@ -25,7 +34,8 @@ class AppAvailabilityTest {
         assertEquals(listOf(AppAvailability.AVAILABLE, AppAvailability.MAINTENANCE), published)
     }
 
-    @Test fun failedFetchPreservesPreviouslyActivatedGate() = runTest {
+    @Test
+    fun failedFetchPreservesPreviouslyActivatedGate() = runTest {
         val published = mutableListOf<AppAvailability>()
         try {
             refreshAvailability(
