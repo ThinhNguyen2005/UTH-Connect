@@ -114,6 +114,35 @@ class HousingUiStateTest {
     }
 
     @Test
+    fun `loc khoang cach - tin chua gan vi tri khong bi tinh la gan`() {
+        val listings = listOf(
+            listing("near", distanceToCampusM = 400),
+            listing("no-location", distanceToCampusM = 0),
+        )
+
+        val filtered = HousingUiState(isLoading = false, listings = listings, maxDistanceM = 1_000)
+        assertEquals(listOf("near"), filtered.filteredListings.map { it.id })
+
+        val unfiltered = HousingUiState(isLoading = false, listings = listings)
+        assertEquals(listOf("near", "no-location"), unfiltered.filteredListings.map { it.id })
+    }
+
+    @Test
+    fun `sort NEAREST_CAMPUS - tin chua vi tri xuong cuoi chu khong dung dau`() {
+        val state = HousingUiState(
+            isLoading = false,
+            listings = listOf(
+                listing("no-location", distanceToCampusM = 0),
+                listing("far", distanceToCampusM = 2_000),
+                listing("near", distanceToCampusM = 300),
+            ),
+            sort = HousingSort.NEAREST_CAMPUS,
+        )
+
+        assertEquals(listOf("near", "far", "no-location"), state.filteredListings.map { it.id })
+    }
+
+    @Test
     fun `rong do loc khac rong vi chua ai dang`() {
         val filtered = HousingUiState(
             isLoading = false,

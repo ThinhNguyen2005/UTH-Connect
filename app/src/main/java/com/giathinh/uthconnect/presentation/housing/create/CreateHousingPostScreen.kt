@@ -129,11 +129,9 @@ fun CreateHousingPostScreen(
                 LocationTitleCard(
                     title = uiState.title,
                     address = uiState.address,
-                    distance = uiState.distanceInput,
                     area = uiState.areaInput,
                     onTitleChange = { onAction(CreateHousingPostAction.ChangeTitle(it)) },
                     onAddressChange = { onAction(CreateHousingPostAction.ChangeAddress(it)) },
-                    onDistanceChange = { onAction(CreateHousingPostAction.ChangeDistance(it)) },
                     onAreaChange = { onAction(CreateHousingPostAction.ChangeArea(it)) },
                 )
             }
@@ -370,16 +368,18 @@ private fun TypeAndCampusCard(
     }
 }
 
-/** Cụm 2: Thông tin vị trí, Tiêu đề, Khoảng cách & Diện tích. */
+/**
+ * Cụm 2: Thông tin vị trí, Tiêu đề & Diện tích.
+ * Không có ô "khoảng cách tới trường": khoảng cách thật chỉ tính được từ tọa độ,
+ * nhập tay sẽ bị ghi đè và hiển thị sai ở màn chi tiết.
+ */
 @Composable
 private fun LocationTitleCard(
     title: String,
     address: String,
-    distance: String,
     area: String,
     onTitleChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
-    onDistanceChange: (String) -> Unit,
     onAreaChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -429,47 +429,24 @@ private fun LocationTitleCard(
             singleLine = true,
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
-        Row(
+        OutlinedTextField(
+            value = area,
+            onValueChange = onAreaChange,
+            label = { Text(stringResource(R.string.housing_create_area_label)) },
+            placeholder = { Text("25") },
+            trailingIcon = {
+                Text(
+                    text = "m²",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
-        ) {
-            OutlinedTextField(
-                value = distance,
-                onValueChange = onDistanceChange,
-                label = { Text(stringResource(R.string.housing_create_distance_label)) },
-                placeholder = { Text("0.8") },
-                trailingIcon = {
-                    Text(
-                        text = "km",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.small,
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = area,
-                onValueChange = onAreaChange,
-                label = { Text(stringResource(R.string.housing_create_area_label)) },
-                placeholder = { Text("25") },
-                trailingIcon = {
-                    Text(
-                        text = "m²",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.small,
-                singleLine = true,
-            )
-        }
+            shape = MaterialTheme.shapes.small,
+            singleLine = true,
+        )
     }
 }
 

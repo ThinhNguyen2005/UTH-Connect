@@ -43,6 +43,26 @@ object CampusReference {
     }
 
     /**
+     * Điểm chuẩn cũ trước 11/11/2026 (CS1 khi đó đặt nhầm ở Gò Vấp, cách Võ Oanh
+     * thật ~8 km). Tin đăng trước lúc sửa tọa độ được repository tự điền các điểm
+     * này — giữ lại để nhận diện tin "chưa gắn vị trí" đời cũ.
+     */
+    private val LegacyReferencePoints = listOf(
+        10.8332 to 106.6533,
+        10.8698 to 106.7176,
+        10.8738 to 106.6369,
+    )
+
+    /**
+     * True nếu tọa độ trùng một điểm chuẩn (hiện tại hoặc cũ) — tức điểm do
+     * repository tự điền khi tin chưa gắn vị trí, không phải người đăng tự chọn.
+     */
+    fun isReferencePoint(latitude: Double, longitude: Double): Boolean {
+        val point = latitude to longitude
+        return UthCampus.entries.any { of(it) == point } || point in LegacyReferencePoints
+    }
+
+    /**
      * Khoảng cách đường chim bay (mét, làm tròn) từ một điểm tới cơ sở.
      * Trả `0` khi tọa độ ngoài khoảng hợp lệ, để UI hiển thị "ngay cơ sở" thay vì
      * một con số rác — thà nhầm nhẹ còn hơn in "cách ? m".

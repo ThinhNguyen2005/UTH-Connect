@@ -25,7 +25,6 @@ data class CreateHousingPostUiState(
     val depositInput: String = "",
     val utilitiesIncluded: Boolean = false,
     val address: String = "",
-    val distanceInput: String = "",
     val areaInput: String = "",
     val slots: Int = 1,
     val genderPreference: GenderPreference = GenderPreference.ANY,

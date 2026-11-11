@@ -44,8 +44,9 @@ import javax.inject.Singleton
  * được upload lên bucket [IMAGE_BUCKET] trước khi insert; insert thất bại thì
  * ảnh vừa upload bị dọn để không mồ côi trong Storage.
  *
- * `distanceToCampusM` luôn tính lại từ tọa độ qua [CampusReference]; tin chưa
- * gắn tọa độ nhận điểm chuẩn của cơ sở thay vì số 0 vô nghĩa.
+ * `distanceToCampusM` luôn tính lại từ tọa độ thật qua [CampusReference]; tin
+ * chưa gắn vị trí (kể cả tin đời cũ lưu điểm chuẩn cũ) trả khoảng cách 0 và
+ * tọa độ (0,0) để UI không bịa số km.
  */
 @Singleton
 class SupabaseHousingRepository @Inject constructor(
@@ -133,7 +134,10 @@ class SupabaseHousingRepository @Inject constructor(
      * bitmap là việc chặn luồng (để trên Main sẽ đơ UI), còn upload tuần tự bắt
      * người đăng tin chờ cộng dồn thời gian của từng ảnh.
      */
-    private suspend fun resolveImages(images: List<String>, uploadedPaths: MutableList<String>): List<String> = coroutineScope {
+    private suspend fun resolveImages(
+        images: List<String>,
+        uploadedPaths: MutableList<String>,
+    ): List<String> = coroutineScope {
         val gate = Semaphore(MAX_PARALLEL_UPLOADS)
         val uploads = images.map { image ->
             async(Dispatchers.IO) {
@@ -224,6 +228,11 @@ class SupabaseHousingRepository @Inject constructor(
         val campus = UthCampus.valueOf(requireNotNull(string("campus")))
         val latitude = (get("latitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
         val longitude = (get("longitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
+        // Điểm chuẩn do repository tự điền (kể cả điểm cũ trước 11/11) không phải
+        // vị trí thật của phòng — đưa về (0,0) để UI báo "chưa gắn vị trí" và
+        // deep-link bản đồ tìm theo địa chỉ thay vì dẫn tới điểm placeholder.
+        val hasRealLocation = (latitude != 0.0 || longitude != 0.0) &&
+            !CampusReference.isReferencePoint(latitude, longitude)
         return HousingListing(
             id = requireNotNull(string("id")),
             type = HousingListingType.valueOf(requireNotNull(string("type"))),
@@ -243,9 +252,9 @@ class SupabaseHousingRepository @Inject constructor(
             scheduleNote = string("schedule_note").orEmpty(),
             amenities = get("amenities")?.jsonArray?.map { RoomAmenity.valueOf(it.jsonPrimitive.content) }.orEmpty(),
             addressLabel = string("address_label").orEmpty(),
-            latitude = latitude,
-            longitude = longitude,
-            distanceToCampusM = CampusReference.distanceMeters(campus, latitude, longitude),
+            latitude = if (hasRealLocation) latitude else 0.0,
+            longitude = if (hasRealLocation) longitude else 0.0,
+            distanceToCampusM = if (hasRealLocation) CampusReference.distanceMeters(campus, latitude, longitude) else 0,
             status = HousingListingStatus.valueOf(string("status") ?: "OPEN"),
             verified = bool("verified"),
             verificationMethod = string("verification_method")?.let { HostVerificationMethod.valueOf(it) },

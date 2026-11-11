@@ -570,11 +570,16 @@ private fun HousingListingCard(
                     color = MaterialTheme.colorScheme.outline,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.housing_card_distance,
-                        stringResource(listing.campus.labelRes()),
-                        distanceText(listing.distanceToCampusM),
-                    ),
+                    // distanceToCampusM == 0 nghĩa là tin chưa gắn vị trí thật — đừng bịa số km.
+                    text = if (listing.distanceToCampusM > 0) {
+                        stringResource(
+                            R.string.housing_card_distance,
+                            stringResource(listing.campus.labelRes()),
+                            distanceText(listing.distanceToCampusM),
+                        )
+                    } else {
+                        stringResource(listing.campus.labelRes())
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,

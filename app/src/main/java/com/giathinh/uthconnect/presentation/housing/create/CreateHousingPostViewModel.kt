@@ -46,7 +46,6 @@ class CreateHousingPostViewModel @Inject constructor(
             is CreateHousingPostAction.ChangeRent,
             is CreateHousingPostAction.ChangeDeposit,
             is CreateHousingPostAction.ChangeAddress,
-            is CreateHousingPostAction.ChangeDistance,
             is CreateHousingPostAction.ChangeArea,
             is CreateHousingPostAction.ChangeScheduleNote,
             is CreateHousingPostAction.ChangeContactPhone,
@@ -91,9 +90,6 @@ class CreateHousingPostViewModel @Inject constructor(
 
             is CreateHousingPostAction.ChangeAddress ->
                 _uiState.update { it.copy(address = action.address, validationError = null) }
-
-            is CreateHousingPostAction.ChangeDistance ->
-                _uiState.update { it.copy(distanceInput = action.distance) }
 
             is CreateHousingPostAction.ChangeArea ->
                 _uiState.update { it.copy(areaInput = action.area) }
@@ -226,7 +222,6 @@ class CreateHousingPostViewModel @Inject constructor(
         scheduleNote = state.scheduleNote.trim(),
         amenities = state.selectedAmenities.toList(),
         addressLabel = state.address.trim(),
-        distanceToCampusM = (state.distanceInput.replace(',', '.').toFloatOrNull()?.times(METERS_PER_KM))?.toInt() ?: 0,
         areaM2 = state.areaInput.filter { it.isDigit() }.toIntOrNull(),
         latitude = 0.0,
         longitude = 0.0,
@@ -237,9 +232,4 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Chỉ nhận chữ số, bỏ dấu phân cách người dùng gõ — `null` khi không phải số dương. */
     private fun parseAmount(input: String): Int? = input.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
-
-    private companion object {
-        /** Ô khoảng cách nhập theo km, model lưu mét. */
-        const val METERS_PER_KM = 1000
-    }
 }
