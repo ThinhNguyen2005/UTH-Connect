@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect
 
 import android.app.Application
+import com.giathinh.uthconnect.data.repository.CrashIdentity
 import dagger.hilt.android.HiltAndroidApp
 
 /**
@@ -14,4 +15,9 @@ import dagger.hilt.android.HiltAndroidApp
  * nghiệp vụ vào đây — binding của module nào nằm trong `data/di/` của module đó.
  */
 @HiltAndroidApp
-class UTHConnectApplication : Application()
+class UTHConnectApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        CrashIdentity.clear()
+    }
+}

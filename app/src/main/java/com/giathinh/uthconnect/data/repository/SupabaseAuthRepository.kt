@@ -49,15 +49,18 @@ class SupabaseAuthRepository @Inject constructor(
         }
 
         try {
-            row.toDomainProfile()
+            row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
         } catch (e: Exception) {
             client.signOut()
             throw e
         }
     }
 
-    private suspend fun ownProfile(): StudentProfile = ownProfileRow()?.toDomainProfile()
-        ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
+    private suspend fun ownProfile(): StudentProfile = (
+        ownProfileRow()?.toDomainProfile()
+            ?: error("Không tìm thấy hồ sơ người dùng đã xác minh")
+        )
+        .also { CrashIdentity.set(client.userId, it.role.name) }
 
     /** Never trust a remembered student ID: verify identity and MSSV against Supabase. */
     suspend fun currentVerifiedProfile(): StudentProfile {
@@ -65,7 +68,7 @@ class SupabaseAuthRepository @Inject constructor(
         check(row?.bool("student_id_verified") == true && !row.string("student_id").isNullOrBlank()) {
             "Tài khoản chưa được xác minh MSSV"
         }
-        return row.toDomainProfile()
+        return row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
     }
 
     private suspend fun ownProfileRow(): JsonObject? = client.table(
@@ -87,7 +90,7 @@ class SupabaseAuthRepository @Inject constructor(
             throw StudentVerificationRequiredException(email = email, displayName = displayName)
         }
         try {
-            row.toDomainProfile()
+            row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
         } catch (error: Exception) {
             client.signOut()
             throw error
@@ -100,12 +103,33 @@ class SupabaseAuthRepository @Inject constructor(
         displayName: String,
         faculty: String,
     ): Result<SignUpResult> = suspendResult {
-        val response = client.signUp(email, password, displayName, faculty)
-        val hasSession = response.containsKey("access_token")
-        val userObj = response["user"]?.jsonObject
-        val confirmedAt = userObj?.get("confirmed_at")?.jsonPrimitive?.content
-        val needsConfirmation = !hasSession && confirmedAt.isNullOrBlank()
-        SignUpResult(needsEmailConfirmation = needsConfirmation, email = email)
+        try {
+            val response = client.signUp(email, password, displayName, faculty)
+            val hasSession = response.containsKey("access_token")
+            val userObj = response["user"]?.jsonObject
+            val confirmedAt = userObj?.get("confirmed_at")?.jsonPrimitive?.content
+            val needsConfirmation = !hasSession && confirmedAt.isNullOrBlank()
+
+            if (hasSession) {
+                try {
+                    val row = ownProfileRow()
+                    if (row != null) {
+                        row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
+                    } else {
+                        CrashIdentity.clear()
+                    }
+                } catch (_: Exception) {
+                    CrashIdentity.clear()
+                }
+            } else {
+                CrashIdentity.clear()
+            }
+
+            SignUpResult(needsEmailConfirmation = needsConfirmation, email = email)
+        } catch (error: Exception) {
+            CrashIdentity.clear()
+            throw error
+        }
     }
 
     override suspend fun sendPasswordReset(email: String): Result<Unit> = suspendResult {
