@@ -16,6 +16,12 @@ import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -121,16 +127,24 @@ class SupabaseHousingRepository @Inject constructor(
         Unit
     }
 
-    /** Giữ URL có sẵn; URI cục bộ thì đọc bytes, upload và trả public URL. */
-    private suspend fun resolveImages(images: List<String>, uploadedPaths: MutableList<String>): List<String> {
-        val resolved = images.map { image ->
-            if (image.startsWith("http://") || image.startsWith("https://")) {
-                image
-            } else {
-                uploadLocalImage(image, uploadedPaths)
+    /**
+     * Giữ URL có sẵn; URI cục bộ thì đọc bytes, upload và trả public URL.
+     * Chạy song song tối đa [MAX_PARALLEL_UPLOADS] ảnh trên IO: đọc file + giải mã
+     * bitmap là việc chặn luồng (để trên Main sẽ đơ UI), còn upload tuần tự bắt
+     * người đăng tin chờ cộng dồn thời gian của từng ảnh.
+     */
+    private suspend fun resolveImages(images: List<String>, uploadedPaths: MutableList<String>): List<String> = coroutineScope {
+        val gate = Semaphore(MAX_PARALLEL_UPLOADS)
+        val uploads = images.map { image ->
+            async(Dispatchers.IO) {
+                if (image.startsWith("http://") || image.startsWith("https://")) {
+                    image
+                } else {
+                    gate.withPermit { uploadLocalImage(image, uploadedPaths) }
+                }
             }
         }
-        return resolved
+        uploads.awaitAll()
     }
 
     private suspend fun uploadLocalImage(uriString: String, uploadedPaths: MutableList<String>): String {
@@ -140,11 +154,11 @@ class SupabaseHousingRepository @Inject constructor(
             ?: throw IllegalArgumentException("Không đọc được ảnh: $uriString")
         require(original.size <= MAX_IMAGE_BYTES) { "Ảnh vượt quá dung lượng cho phép" }
         // Ảnh điện thoại gốc vài MB kéo chậm cả upload lẫn tải feed; thu nhỏ còn
-        // cạnh dài tối đa 1600px và nén JPEG là đủ nét cho card phòng.
+        // cạnh dài tối đa 1280px và nén JPEG là đủ nét cho card phòng.
         val bytes = downscaleJpeg(original)
         val path = "${client.userId}/${UUID.randomUUID()}.jpg"
         client.uploadStorageObject(IMAGE_BUCKET, path, bytes, "image/jpeg")
-        uploadedPaths += path
+        synchronized(uploadedPaths) { uploadedPaths += path }
         return "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$IMAGE_BUCKET/$path"
     }
 
@@ -246,8 +260,11 @@ class SupabaseHousingRepository @Inject constructor(
         const val MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
         /** Cạnh dài tối đa sau thu nhỏ (px) — đủ nét cho carousel, nhẹ cho feed. */
-        const val MAX_IMAGE_DIMENSION_PX = 1600
+        const val MAX_IMAGE_DIMENSION_PX = 1280
 
-        const val JPEG_QUALITY = 85
+        const val JPEG_QUALITY = 80
+
+        /** Số ảnh upload cùng lúc — giới hạn bộ nhớ đỉnh khi giải mã nhiều ảnh. */
+        const val MAX_PARALLEL_UPLOADS = 3
     }
 }
