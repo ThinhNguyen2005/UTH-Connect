@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
      * Tải trạng thái gate đã lưu bền vững, sau đó thực thi fetch & activate Remote Config
      * trên luồng I/O ([Dispatchers.IO]) để tránh chặn UI Thread.
      *
-     * Khi fetch thất bại hoặc trả về giá trị mặc định, trạng thái gate đã lưu được ưu tiên giữ nguyên
+     * Khi fetch thất bại, trạng thái gate đã lưu được ưu tiên giữ nguyên
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
     private fun observeRemoteConfig() {
@@ -116,7 +116,13 @@ class MainActivity : ComponentActivity() {
                     return@repeatOnLifecycle
                 }
                 val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
-                val (initialState, _) = resolveGate(saved, null, null, BuildConfig.VERSION_NAME)
+                val (initialState, _) = resolveGate(
+                    saved = saved,
+                    fetchSucceeded = false,
+                    remoteMaintenance = false,
+                    remoteMinVersion = "1.0.0",
+                    currentVersion = BuildConfig.VERSION_NAME,
+                )
                 appAvailability = initialState
 
                 try {
@@ -151,22 +157,12 @@ class MainActivity : ComponentActivity() {
 
         config.fetchAndActivate().await()
 
-        val maintVal = config.getValue("maintenance_mode")
-        val minVerVal = config.getValue("force_update_min_version")
-
-        val remoteMaint = if (maintVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-            maintVal.asBoolean()
-        } else {
-            null
-        }
-        val remoteMinVer = if (minVerVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-            minVerVal.asString()
-        } else {
-            null
-        }
+        val remoteMaint = config.getBoolean("maintenance_mode")
+        val remoteMinVer = config.getString("force_update_min_version")
 
         val (newState, newSaved) = resolveGate(
             saved = saved,
+            fetchSucceeded = true,
             remoteMaintenance = remoteMaint,
             remoteMinVersion = remoteMinVer,
             currentVersion = BuildConfig.VERSION_NAME,

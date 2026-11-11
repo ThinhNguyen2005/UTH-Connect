@@ -56,18 +56,33 @@ internal fun saveGate(context: Context, gate: SavedGate) {
 /**
  * Kết hợp trạng thái gate đã lưu và giá trị remote mới thu thập được.
  *
- * Nếu giá trị remote trả về null (do dùng giá trị mặc định hoặc chưa tải được),
- * trạng thái đã lưu được ưu tiên giữ nguyên để ngăn việc mở ứng dụng (fail-open)
- * khi người dùng đang bị chặn bảo trì hoặc yêu cầu cập nhật.
+ * Khi [fetchSucceeded] là true, sử dụng giá trị remote thu thập được (bất kể từ nguồn
+ * REMOTE hay DEFAULT) và cập nhật lại [SavedGate].
+ * Khi [fetchSucceeded] là false (do lỗi mạng hoặc throttle), ưu tiên giữ trạng thái đã lưu
+ * [SavedGate] để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
  */
 internal fun resolveGate(
     saved: SavedGate,
-    remoteMaintenance: Boolean?,
-    remoteMinVersion: String?,
+    fetchSucceeded: Boolean,
+    remoteMaintenance: Boolean,
+    remoteMinVersion: String,
     currentVersion: String,
 ): Pair<AppAvailability, SavedGate> {
-    val maintenance = remoteMaintenance ?: if (saved.hasSavedState) saved.maintenanceMode else false
-    val minVersion = remoteMinVersion ?: if (saved.hasSavedState) saved.forceUpdateMinVersion else "1.0.0"
+    val maintenance = if (fetchSucceeded) {
+        remoteMaintenance
+    } else if (saved.hasSavedState) {
+        saved.maintenanceMode
+    } else {
+        false
+    }
+
+    val minVersion = if (fetchSucceeded) {
+        remoteMinVersion
+    } else if (saved.hasSavedState) {
+        saved.forceUpdateMinVersion
+    } else {
+        "1.0.0"
+    }
 
     val state = availability(maintenance, currentVersion, minVersion)
     val newSaved = SavedGate(
