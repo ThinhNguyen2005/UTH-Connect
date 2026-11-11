@@ -17,9 +17,12 @@ class EventEditorTimeTest {
     private val zone = ZoneId.of("Asia/Ho_Chi_Minh")
 
     @Test
-    fun `mac dinh su kien moi bat dau hom nay chu khong phai ngay mai`() {
+    fun `mac dinh su kien moi bat dau sau khoang 1 gio chu khong phai 24 gio`() {
         val (start, end) = defaultEventWindow(zone)
-        assertEquals(LocalDateTime.now(zone).toLocalDate(), start.toLocalDate())
+        // Không so ngày "hôm nay": chạy sau 23h thì now+60 phút vắt sang ngày mai
+        // là hợp lệ — điều cần chặn là mặc định +24 giờ của bug cũ.
+        val leadMinutes = Duration.between(LocalDateTime.now(zone), start).toMinutes()
+        assertTrue("start phải cách hiện tại ~1 giờ, thực tế $leadMinutes phút", leadMinutes in 55L..65L)
         assertEquals(120L, Duration.between(start, end).toMinutes())
     }
 
