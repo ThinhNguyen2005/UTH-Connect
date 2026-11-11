@@ -33,6 +33,8 @@ import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
+import com.giathinh.uthconnect.presentation.housing.HousingDestination
+import com.giathinh.uthconnect.presentation.housing.housingGraph
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
@@ -130,6 +132,8 @@ private fun UthNavHost(
 
                         UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
 
+                        UtilityModuleId.HOUSING -> navController.navigate(HousingDestination)
+
                         // Module chưa có graph riêng thì ở lại lưới Tiện ích với badge giai đoạn;
                         // graph của nó do branch feature của module đó thêm (docs/GIT_WORKFLOW.md mục 4).
                         else -> Unit
@@ -150,6 +154,7 @@ private fun UthNavHost(
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
         announcementGraph(navController)
         lostFoundGraph(navController)
+        housingGraph(navController)
     }
 }
 

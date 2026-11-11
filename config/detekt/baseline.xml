@@ -2,12 +2,12 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:AuthScreen.kt$failure == AuthFailure.InvalidCredentials || failure == AuthFailure.Unexpected || failure == AuthFailure.SessionRestore || failure == AuthFailure.NetworkError</ID>
     <ID>ComplexCondition:EventsScreen.kt$validationError == null &amp;&amp; start != null &amp;&amp; end != null &amp;&amp; count != null</ID>
     <ID>ComplexCondition:LostFoundViewModel.kt$LostFoundViewModel$titleError != null || descriptionError != null || locationError != null || phoneError != null</ID>
     <ID>ComplexCondition:SignUpUseCase.kt$SignUpUseCase$nameError != null || emailError != null || passwordError != null || confirmError != null</ID>
     <ID>CyclomaticComplexMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
     <ID>CyclomaticComplexMethod:CompletePasswordResetUseCase.kt$CompletePasswordResetUseCase$suspend operator fun invoke(email: String, otp: String, password: String, confirmPassword: String): CompletePasswordResetOutcome</ID>
+    <ID>CyclomaticComplexMethod:CreateHousingPostViewModel.kt$CreateHousingPostViewModel$private fun handleFieldChange(action: CreateHousingPostAction)</ID>
     <ID>CyclomaticComplexMethod:FirestoreEventRepository.kt$FirestoreEventRepository$private fun DocumentSnapshot.toEvent(): Event?</ID>
     <ID>CyclomaticComplexMethod:LostFoundViewModel.kt$LostFoundViewModel$fun onAction(action: LostFoundAction)</ID>
     <ID>CyclomaticComplexMethod:PasswordChangeValidator.kt$PasswordChangeValidator$fun validate(old: String, updated: String, confirmation: String): PasswordValidation</ID>
@@ -161,6 +161,7 @@
     <ID>MaxLineLength:AuthViewModel.kt$AuthViewModel.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
     <ID>MaxLineLength:AuthViewModelTest.kt$AuthViewModelTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:AuthViewModelTest.kt$AuthViewModelTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
+    <ID>MaxLineLength:CampusReference.kt$CampusReference$private</ID>
     <ID>MaxLineLength:CampusesScreen.kt$Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))</ID>
     <ID>MaxLineLength:CampusesScreen.kt$Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))</ID>
     <ID>MaxLineLength:CampusesUiState.kt$CampusesUiState$DepartmentInfo("Trung tâm Thông tin - Thư viện", "028 3899 1373", "thuvien@ut.edu.vn", "Tòa nhà Thư viện - CS1")</ID>
@@ -169,6 +170,7 @@
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun authenticate(identifier: String, password: String): Result&lt;StudentProfile?&gt;</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result&lt;Unit&gt;</ID>
+    <ID>MaxLineLength:CreateHousingPostScreen.kt$private</ID>
     <ID>MaxLineLength:DemoAccountStore.kt$SharedPreferencesDemoAccountStore$override fun putAll(values: Map&lt;String, String&gt;): Boolean</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$override suspend</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$private</ID>
@@ -205,6 +207,11 @@
     <ID>MaxLineLength:GoogleNonce.kt$internal</ID>
     <ID>MaxLineLength:HomeScreen.kt$private</ID>
     <ID>MaxLineLength:HomeViewModelTest.kt$HomeViewModelTest.FakeRepository$override suspend fun homeFeed(): Result&lt;HomeFeed&gt;</ID>
+    <ID>MaxLineLength:HousingDetailScreen.kt$private</ID>
+    <ID>MaxLineLength:HousingScreen.kt$private</ID>
+    <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest$private</ID>
+    <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest.FakeHousingRepository$override suspend fun getListings(): Result&lt;List&lt;HousingListing&gt;&gt;</ID>
+    <ID>MaxLineLength:InMemoryHousingRepository.kt$InMemoryHousingRepository$description</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bên trong có CCCD mang tên Phạm Quốc Hưng, một ít tiền mặt và thẻ ATM Vietcombank. Ai nhặt được liên hệ giúp mình, xin cảm ơn và hậu tạ."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bóp viết vải màu xám bên trong có 3 cây bút bi, 1 bút chì và 1 thẻ sinh viên tên Đặng Ngọc Ánh. Mình đang giữ tại phòng CTSV."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Chùm chìa khóa xe máy có gắn móc khóa gấu bông màu nâu và thẻ chung cư, rơi dọc đoạn đường từ nhà xe sinh viên ra cổng số 2 CS2 Thủ Đức."</ID>
@@ -243,6 +250,7 @@
     <ID>MaxLineLength:ProfileViewModel.kt$ProfileViewModel$it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), notice = ProfileNotice.PasswordChanged)</ID>
     <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String)</ID>
     <ID>MaxLineLength:ProfileViewModelTest.kt$ProfileViewModelTest.FakeAuth$override suspend fun updateContact(studentId: String, phone: String, personalEmail: String, currentAddress: String)</ID>
+    <ID>MaxLineLength:ReportHousingListingUseCase.kt$ReportHousingListingUseCase$suspend operator fun invoke(listingId: String, reason: String): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:ScannerRoute.kt$ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED</ID>
     <ID>MaxLineLength:ScannerScreen.kt$TextButton(onClick = { onAction(ScannerAction.ClearScan) }) { Text(stringResource(R.string.scanner_scan_again)) }</ID>
     <ID>MaxLineLength:ScannerViewModel.kt$ScannerViewModel$is ScannerAction.CameraPermissionChanged -&gt; state.update { it.copy(cameraPermissionGranted = action.granted, cameraError = false) }</ID>
@@ -327,18 +335,23 @@
     <ID>TooGenericExceptionCaught:SupabaseAuthRepository.kt$SupabaseAuthRepository$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseAuthRepository.kt$SupabaseAuthRepository$error: Exception</ID>
     <ID>TooGenericExceptionCaught:SupabaseGoogleExchange.kt$SupabaseGoogleExchange$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:SupabaseHousingRepository.kt$SupabaseHousingRepository$error: Exception</ID>
     <ID>TooGenericExceptionCaught:SuspendResults.kt$error: Exception</ID>
     <ID>TooManyFunctions:AnnouncementScreen.kt$com.giathinh.uthconnect.presentation.announcement.AnnouncementScreen.kt</ID>
     <ID>TooManyFunctions:AuthScreen.kt$com.giathinh.uthconnect.presentation.auth.AuthScreen.kt</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:CreateHousingPostScreen.kt$com.giathinh.uthconnect.presentation.housing.create.CreateHousingPostScreen.kt</ID>
     <ID>TooManyFunctions:DemoAuthRepository.kt$DemoAuthRepository : AuthRepositoryStudentContactRepository</ID>
     <ID>TooManyFunctions:EventRepository.kt$EventRepository</ID>
     <ID>TooManyFunctions:HomeScreen.kt$com.giathinh.uthconnect.presentation.home.HomeScreen.kt</ID>
+    <ID>TooManyFunctions:HousingDetailScreen.kt$com.giathinh.uthconnect.presentation.housing.detail.HousingDetailScreen.kt</ID>
+    <ID>TooManyFunctions:HousingScreen.kt$com.giathinh.uthconnect.presentation.housing.HousingScreen.kt</ID>
     <ID>TooManyFunctions:ProfileScreen.kt$com.giathinh.uthconnect.presentation.profile.ProfileScreen.kt</ID>
     <ID>TooManyFunctions:QrScannerScreen.kt$com.giathinh.uthconnect.presentation.scanner.QrScannerScreen.kt</ID>
     <ID>TooManyFunctions:ScheduleScreen.kt$com.giathinh.uthconnect.presentation.schedule.ScheduleScreen.kt</ID>
     <ID>TooManyFunctions:SupabaseAuthRepository.kt$SupabaseAuthRepository : AuthRepositoryStudentContactRepository</ID>
     <ID>TooManyFunctions:SupabaseEventRepository.kt$SupabaseEventRepository : EventRepository</ID>
+    <ID>TooManyFunctions:SupabaseHousingRepository.kt$SupabaseHousingRepository : HousingRepository</ID>
     <ID>TooManyFunctions:SupabaseRestClient.kt$SupabaseRestClient</ID>
     <ID>TooManyFunctions:TicketsScreen.kt$com.giathinh.uthconnect.presentation.tickets.TicketsScreen.kt</ID>
     <ID>TooManyFunctions:UtilitiesScreen.kt$com.giathinh.uthconnect.presentation.utilities.UtilitiesScreen.kt</ID>
@@ -358,6 +371,15 @@
     <ID>UnusedPrivateMember:AuthScreen.kt$@Preview(name = "Light Mode - Password (Hello Again)", showBackground = true) @Composable private fun PreviewAuthLightPassword()</ID>
     <ID>UnusedPrivateMember:CampusesScreen.kt$@Preview(name = "CampusesScreen Dark", showBackground = true) @Composable private fun CampusesScreenDarkPreview()</ID>
     <ID>UnusedPrivateMember:CampusesScreen.kt$@Preview(name = "CampusesScreen Light", showBackground = true) @Composable private fun CampusesScreenPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun CreateContentDarkPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "content large text", showBackground = true, fontScale = 1.5f) @Composable private fun CreateLargeTextPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "content light", showBackground = true) @Composable private fun CreateContentPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "empty dark", showBackground = true) @Composable private fun CreateEmptyDarkPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "empty light", showBackground = true) @Composable private fun CreateEmptyPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "error dark", showBackground = true) @Composable private fun CreateErrorDarkPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "error light", showBackground = true) @Composable private fun CreateErrorPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "submitting dark", showBackground = true) @Composable private fun CreateSubmittingDarkPreview()</ID>
+    <ID>UnusedPrivateMember:CreateHousingPostScreen.kt$@Preview(name = "submitting light", showBackground = true) @Composable private fun CreateSubmittingPreview()</ID>
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun HomeContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f) @Composable private fun HomeContentFontScalePreview()</ID>
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "content light", showBackground = true) @Composable private fun HomeContentPreview()</ID>
@@ -367,6 +389,28 @@
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "error light", showBackground = true) @Composable private fun HomeErrorPreview()</ID>
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "loading dark", showBackground = true) @Composable private fun HomeLoadingDarkPreview()</ID>
     <ID>UnusedPrivateMember:HomeScreen.kt$@Preview(name = "loading light", showBackground = true) @Composable private fun HomeLoadingPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail content dark", showBackground = true) @Composable private fun DetailContentDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail content light", showBackground = true) @Composable private fun DetailContentLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail error dark", showBackground = true) @Composable private fun DetailErrorDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail error light", showBackground = true) @Composable private fun DetailErrorLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail large text", fontScale = 1.5f, showBackground = true) @Composable private fun DetailLargeTextPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail loading dark", showBackground = true) @Composable private fun DetailLoadingDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail loading light", showBackground = true) @Composable private fun DetailLoadingLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found dark", showBackground = true) @Composable private fun DetailNotFoundDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found light", showBackground = true) @Composable private fun DetailNotFoundLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview @Composable private fun HousingScreenContentPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun HousingContentDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content large text", showBackground = true, fontScale = 1.5f) @Composable private fun HousingLargeTextPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content light", showBackground = true) @Composable private fun HousingContentPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "empty by filters", showBackground = true) @Composable private fun HousingFilteredEmptyPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "empty dark", showBackground = true) @Composable private fun HousingEmptyDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "empty light", showBackground = true) @Composable private fun HousingEmptyPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "error dark", showBackground = true) @Composable private fun HousingErrorDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "error light", showBackground = true) @Composable private fun HousingErrorPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "filter dialog", showBackground = true) @Composable private fun HousingFilterDialogPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "loading dark", showBackground = true) @Composable private fun HousingLoadingDarkPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "loading light", showBackground = true) @Composable private fun HousingLoadingPreview()</ID>
+    <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "report dialog", showBackground = true) @Composable private fun HousingReportDialogPreview()</ID>
     <ID>UnusedPrivateMember:ProfileScreen.kt$@Preview(name = "Profile contact dark", showBackground = true) @Composable private fun ProfileContactDark()</ID>
     <ID>UnusedPrivateMember:ProfileScreen.kt$@Preview(name = "Profile contact light", showBackground = true) @Composable private fun ProfileContactLight()</ID>
     <ID>UnusedPrivateMember:ProfileScreen.kt$@Preview(name = "Profile content dark", showBackground = true) @Composable private fun ProfileContentDark()</ID>
