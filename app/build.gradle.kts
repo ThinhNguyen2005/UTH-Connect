@@ -121,6 +121,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.coil.compose)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)

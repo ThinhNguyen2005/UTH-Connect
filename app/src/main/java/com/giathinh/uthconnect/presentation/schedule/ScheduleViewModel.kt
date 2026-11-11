@@ -166,7 +166,9 @@ class ScheduleViewModel @Inject constructor(
                 if (
                     state.value.isRegistrationsLoading || state.value.registrationsLoadFailed ||
                     event.status != EventStatus.PUBLISHED || now >= event.startAt || now >= event.endAt
-                ) return
+                ) {
+                    return
+                }
                 state.update { it.copy(registrationError = null, registrationErrorCode = null) }
                 viewModelScope.launch {
                     try {
