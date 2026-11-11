@@ -64,8 +64,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
@@ -498,7 +502,7 @@ private fun CostRequirementsCard(
         ) {
             OutlinedTextField(
                 value = rentInput,
-                onValueChange = onRentChange,
+                onValueChange = { onRentChange(it.filter(Char::isDigit)) },
                 label = { Text(stringResource(R.string.housing_create_rent_label)) },
                 trailingIcon = {
                     Text(
@@ -510,6 +514,7 @@ private fun CostRequirementsCard(
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                visualTransformation = MoneyVisualTransformation(),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.small,
@@ -517,7 +522,7 @@ private fun CostRequirementsCard(
             )
             OutlinedTextField(
                 value = depositInput,
-                onValueChange = onDepositChange,
+                onValueChange = { onDepositChange(it.filter(Char::isDigit)) },
                 label = { Text(stringResource(R.string.housing_create_deposit_label)) },
                 trailingIcon = {
                     Text(
@@ -528,6 +533,7 @@ private fun CostRequirementsCard(
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                visualTransformation = MoneyVisualTransformation(),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.small,
@@ -1180,4 +1186,34 @@ private fun UthCampus.labelRes(): Int = when (this) {
     UthCampus.CS1_QUANG_TRUNG -> R.string.housing_campus_cs1
     UthCampus.CS2_THU_DUC -> R.string.housing_campus_cs2
     UthCampus.CS3_TO_KY -> R.string.housing_campus_cs3
+}
+
+/**
+ * Nhóm 3 chữ số bằng dấu chấm ngay trong ô nhập (`1500000` → `1.500.000`);
+ * UiState vẫn giữ chuỗi chữ số thô nên `parseAmount` bên ViewModel không đổi.
+ */
+private class MoneyVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text
+        val grouped = buildString {
+            digits.forEachIndexed { index, char ->
+                append(char)
+                val remaining = digits.length - index - 1
+                if (remaining > 0 && remaining % GROUP_SIZE == 0) append('.')
+            }
+        }
+        // Ranh giới đặt dấu chấm tính từ phải sang: sau 1, 4, 7… chữ số (với "1500000").
+        val boundaries = (digits.length - GROUP_SIZE downTo 1 step GROUP_SIZE).sorted()
+        val dotOffsets = boundaries.mapIndexed { index, boundary -> boundary + index }
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = offset + boundaries.count { it < offset }
+            override fun transformedToOriginal(offset: Int): Int = offset - dotOffsets.count { it < offset }
+        }
+        return TransformedText(AnnotatedString(grouped), mapping)
+    }
+
+    private companion object {
+        /** Kiểu nhóm chữ số Việt Nam: mỗi 3 chữ số một dấu chấm. */
+        const val GROUP_SIZE = 3
+    }
 }
