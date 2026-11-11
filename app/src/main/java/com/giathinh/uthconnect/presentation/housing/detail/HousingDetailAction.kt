@@ -6,4 +6,5 @@ sealed interface HousingDetailAction {
     data object OpenZalo : HousingDetailAction
     data object OpenMap : HousingDetailAction
     data object MarkFulfilled : HousingDetailAction
+    data object Delete : HousingDetailAction
 }

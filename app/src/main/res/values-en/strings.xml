@@ -649,6 +649,12 @@
     <string name="housing_detail_open_zalo">Open Zalo Chat</string>
     <string name="housing_detail_mark_fulfilled">Mark as Fulfilled</string>
     <string name="housing_detail_fulfilled_success">Listing marked as full/closed.</string>
+    <string name="housing_detail_manage_title">Manage your listing</string>
+    <string name="housing_detail_delete">Delete listing</string>
+    <string name="housing_detail_delete_dialog_title">Delete this listing?</string>
+    <string name="housing_detail_delete_dialog_message">The listing and its photos will be permanently deleted and cannot be recovered. Your listing slot will be freed for a new post.</string>
+    <string name="housing_detail_delete_confirm">Delete permanently</string>
+    <string name="housing_detail_proximity_unknown">This listing has no map location yet</string>
     <string name="housing_detail_no_phone">No phone number available</string>
     <string name="housing_detail_no_images">No photos available</string>
     <string name="housing_detail_photo_count">%1$d/%2$d photos</string>

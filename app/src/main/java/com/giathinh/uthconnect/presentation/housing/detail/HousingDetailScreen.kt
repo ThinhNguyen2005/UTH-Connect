@@ -26,21 +26,32 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -148,7 +159,11 @@ fun HousingDetailScreen(
             listing != null -> {
                 HousingDetailContent(
                     listing = listing,
+                    isOwner = uiState.isOwner,
+                    isActionLoading = uiState.isActionLoading,
                     onOpenMap = { onAction(HousingDetailAction.OpenMap) },
+                    onMarkFulfilled = { onAction(HousingDetailAction.MarkFulfilled) },
+                    onDelete = { onAction(HousingDetailAction.Delete) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -240,7 +255,11 @@ private fun HousingDetailHeader(
 @Composable
 private fun HousingDetailContent(
     listing: HousingListing,
+    isOwner: Boolean,
+    isActionLoading: Boolean,
     onOpenMap: () -> Unit,
+    onMarkFulfilled: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -292,6 +311,103 @@ private fun HousingDetailContent(
         item {
             MapCard(listing = listing, onOpenMap = onOpenMap)
         }
+
+        if (isOwner) {
+            item {
+                OwnerActionsCard(
+                    listing = listing,
+                    isActionLoading = isActionLoading,
+                    onMarkFulfilled = onMarkFulfilled,
+                    onDelete = onDelete,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Khối quản lý chỉ hiện với chủ tin: đánh dấu hết phòng để nhả suất đăng (backend
+ * giới hạn 2 tin mở) và xóa tin vĩnh viễn. Trước đây action MarkFulfilled đã có
+ * nhưng không nút nào gọi — chủ tin kẹt ở trần 2 tin không lối thoát.
+ */
+@Composable
+private fun OwnerActionsCard(
+    listing: HousingListing,
+    isActionLoading: Boolean,
+    onMarkFulfilled: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    UthCard(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.housing_detail_manage_title).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = UthTheme.extendedColors.textSecondary,
+        )
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+        if (listing.status == HousingListingStatus.OPEN) {
+            FilledTonalButton(
+                onClick = onMarkFulfilled,
+                enabled = !isActionLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = UthDimens.Size.ButtonHeight),
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconInline),
+                )
+                Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                Text(stringResource(R.string.housing_detail_mark_fulfilled))
+            }
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        }
+        OutlinedButton(
+            onClick = { showDeleteDialog = true },
+            enabled = !isActionLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = UthDimens.Size.ButtonHeight),
+            shape = MaterialTheme.shapes.small,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = null,
+                modifier = Modifier.size(UthDimens.Size.IconInline),
+            )
+            Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+            Text(stringResource(R.string.housing_detail_delete))
+        }
+    }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.housing_detail_delete_dialog_title)) },
+            text = { Text(stringResource(R.string.housing_detail_delete_dialog_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.housing_detail_delete_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.housing_report_cancel))
+                }
+            },
+        )
     }
 }
 
@@ -596,21 +712,31 @@ private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(
-                        R.string.housing_detail_proximity,
-                        stringResource(listing.campus.labelRes()),
-                        distanceText(listing.distanceToCampusM),
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(R.string.housing_detail_proximity_sub),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (listing.distanceToCampusM > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.housing_detail_proximity,
+                            stringResource(listing.campus.labelRes()),
+                            distanceText(listing.distanceToCampusM),
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    // Tin chưa gắn tọa độ: chỉ nêu cơ sở, không bịa khoảng cách 0 m.
+                    Text(
+                        text = stringResource(listing.campus.labelRes()),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(R.string.housing_detail_proximity_unknown),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

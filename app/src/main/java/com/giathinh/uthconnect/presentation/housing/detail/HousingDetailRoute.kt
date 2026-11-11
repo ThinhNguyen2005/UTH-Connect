@@ -57,6 +57,8 @@ fun HousingDetailRoute(
                     snackbars.showSnackbar(context.getString(R.string.housing_detail_fulfilled_success))
                 }
 
+                HousingDetailEvent.Deleted -> onNavigateBack()
+
                 HousingDetailEvent.ActionFailed -> {
                     snackbars.showSnackbar(context.getString(R.string.housing_load_error_title))
                 }

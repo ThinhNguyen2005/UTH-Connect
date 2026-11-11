@@ -662,6 +662,12 @@
     <string name="housing_detail_open_zalo">Mở chat Zalo</string>
     <string name="housing_detail_mark_fulfilled">Đánh dấu hết phòng</string>
     <string name="housing_detail_fulfilled_success">Đã cập nhật tin thành hết phòng.</string>
+    <string name="housing_detail_manage_title">Quản lý tin của bạn</string>
+    <string name="housing_detail_delete">Xóa tin</string>
+    <string name="housing_detail_delete_dialog_title">Xóa tin đăng?</string>
+    <string name="housing_detail_delete_dialog_message">Tin và ảnh phòng sẽ bị xóa vĩnh viễn, không khôi phục được. Suất đăng tin sẽ được nhả để bạn đăng tin mới.</string>
+    <string name="housing_detail_delete_confirm">Xóa vĩnh viễn</string>
+    <string name="housing_detail_proximity_unknown">Tin chưa gắn vị trí trên bản đồ</string>
     <string name="housing_detail_no_phone">Chưa có số điện thoại</string>
     <string name="housing_detail_no_images">Chưa có ảnh phòng</string>
     <string name="housing_detail_photo_count">%1$d/%2$d ảnh</string>

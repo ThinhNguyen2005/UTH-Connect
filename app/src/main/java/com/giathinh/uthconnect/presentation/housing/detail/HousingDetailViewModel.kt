@@ -3,6 +3,8 @@ package com.giathinh.uthconnect.presentation.housing.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
+import com.giathinh.uthconnect.domain.usecase.DeleteHousingListingUseCase
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingDetailUseCase
 import com.giathinh.uthconnect.domain.usecase.MarkHousingListingFulfilledUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +22,7 @@ sealed interface HousingDetailEvent {
     data class OpenZalo(val url: String) : HousingDetailEvent
     data class OpenMap(val latitude: Double, val longitude: Double, val addressLabel: String) : HousingDetailEvent
     data object MarkFulfilledSuccess : HousingDetailEvent
+    data object Deleted : HousingDetailEvent
     data object ActionFailed : HousingDetailEvent
 }
 
@@ -28,6 +31,8 @@ class HousingDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getListingDetail: GetHousingListingDetailUseCase,
     private val markFulfilled: MarkHousingListingFulfilledUseCase,
+    private val deleteListing: DeleteHousingListingUseCase,
+    private val sessions: AccessStudentSessionUseCase,
 ) : ViewModel() {
 
     private val listingId: String = checkNotNull(savedStateHandle["listingId"])
@@ -86,6 +91,19 @@ class HousingDetailViewModel @Inject constructor(
                     }
                 }
             }
+
+            HousingDetailAction.Delete -> {
+                viewModelScope.launch {
+                    _uiState.update { it.copy(isActionLoading = true) }
+                    val result = deleteListing(listingId)
+                    if (result.isSuccess) {
+                        _events.send(HousingDetailEvent.Deleted)
+                    } else {
+                        _events.send(HousingDetailEvent.ActionFailed)
+                        _uiState.update { it.copy(isActionLoading = false) }
+                    }
+                }
+            }
         }
     }
 
@@ -102,7 +120,10 @@ class HousingDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, failure = null) }
             val result = getListingDetail(listingId)
             result.onSuccess { listing ->
-                _uiState.update { it.copy(isLoading = false, listing = listing, failure = null) }
+                val profile = sessions.observe().value.profile
+                val isOwner = profile != null && listing.hostStudentId.isNotBlank() &&
+                    listing.hostStudentId == profile.studentId
+                _uiState.update { it.copy(isLoading = false, listing = listing, isOwner = isOwner, failure = null) }
             }.onFailure { error ->
                 // Repository trả NoSuchElementException khi id không tồn tại → trạng thái "không tìm thấy"
                 // khác với lỗi mạng để Screen chọn đúng thông điệp + lối thoát (Quay lại vs Thử lại).

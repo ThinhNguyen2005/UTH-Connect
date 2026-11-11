@@ -5,12 +5,19 @@ import com.giathinh.uthconnect.domain.model.GenderPreference
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.HousingListingType
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentSession
+import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
+import com.giathinh.uthconnect.domain.usecase.DeleteHousingListingUseCase
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingDetailUseCase
 import com.giathinh.uthconnect.domain.usecase.MarkHousingListingFulfilledUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -51,12 +58,15 @@ class HousingDetailViewModelTest {
     private fun createViewModel(
         repository: FakeHousingDetailRepository = FakeHousingDetailRepository(sampleListing),
         listingId: String = "HS-001",
+        sessionStudentId: String? = "2251010001",
     ): HousingDetailViewModel {
         val savedStateHandle = SavedStateHandle(mapOf("listingId" to listingId))
         return HousingDetailViewModel(
             savedStateHandle = savedStateHandle,
             getListingDetail = GetHousingListingDetailUseCase(repository),
             markFulfilled = MarkHousingListingFulfilledUseCase(repository),
+            deleteListing = DeleteHousingListingUseCase(repository),
+            sessions = AccessStudentSessionUseCase(FakeSessionRepository(sessionStudentId)),
         )
     }
 
@@ -159,10 +169,93 @@ class HousingDetailViewModelTest {
         assertEquals("HS-001", state.listing?.id)
     }
 
+    @Test
+    fun `chu tin - MSSV trung phien dang nhap thi isOwner true`() {
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.uiState.value.isOwner)
+    }
+
+    @Test
+    fun `nguoi xem - MSSV khac thi isOwner false`() {
+        val viewModel = createViewModel(sessionStudentId = "2251099999")
+
+        assertFalse(viewModel.uiState.value.isOwner)
+    }
+
+    @Test
+    fun `tin khong co MSSV chu - isOwner false du dang nhap`() {
+        val repository = FakeHousingDetailRepository(sampleListing.copy(hostStudentId = ""))
+        val viewModel = createViewModel(repository)
+
+        assertFalse(viewModel.uiState.value.isOwner)
+    }
+
+    @Test
+    fun `chua dang nhap - isOwner false`() {
+        val viewModel = createViewModel(sessionStudentId = null)
+
+        assertFalse(viewModel.uiState.value.isOwner)
+    }
+
+    @Test
+    fun `xoa tin - phat event Deleted va goi dung id`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing)
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.Delete)
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingDetailEvent.Deleted)
+        assertEquals("HS-001", repository.deletedId)
+    }
+
+    @Test
+    fun `xoa tin that bai - ActionFailed va nut mo lai`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing, deleteFailure = IllegalStateException("mat mang"))
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.Delete)
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingDetailEvent.ActionFailed)
+        assertFalse(viewModel.uiState.value.isActionLoading)
+        assertNull(repository.deletedId)
+    }
+
+    private class FakeSessionRepository(studentId: String?) : SessionRepository {
+        override val session: StateFlow<StudentSession> = MutableStateFlow(
+            StudentSession(
+                isRestoring = false,
+                profile = studentId?.let {
+                    StudentProfile(
+                        studentId = it,
+                        email = "student@ut.edu.vn",
+                        displayName = "Sinh viên kiểm thử",
+                        className = "22DTH",
+                        major = "CNTT",
+                        faculty = "Công nghệ thông tin",
+                        uthVerified = true,
+                    )
+                },
+            ),
+        )
+
+        override suspend fun restore() = Unit
+        override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+        override suspend fun updateProfile(profile: StudentProfile) = Unit
+        override suspend fun enableBiometric(studentId: String) = Unit
+        override suspend fun disableBiometric() = Unit
+        override suspend fun signOut() = Unit
+    }
+
     private class FakeHousingDetailRepository(
         var listing: HousingListing,
         var loadFailure: Throwable? = null,
+        var deleteFailure: Throwable? = null,
     ) : HousingRepository {
+        var deletedId: String? = null
+
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(listOf(listing))
 
         override suspend fun getListingById(id: String): Result<HousingListing> {
@@ -179,7 +272,12 @@ class HousingDetailViewModelTest {
             return Result.success(Unit)
         }
 
-        override suspend fun deleteListing(id: String): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteListing(id: String): Result<Unit> {
+            val error = deleteFailure
+            if (error != null) return Result.failure(error)
+            deletedId = id
+            return Result.success(Unit)
+        }
 
         override suspend fun reportListing(listingId: String, reason: String): Result<Unit> = Result.success(Unit)
     }
