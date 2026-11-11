@@ -1115,7 +1115,7 @@ private val PreviewListing = HousingListing(
     id = "HS-001",
     type = HousingListingType.ROOM_FOR_RENT,
     campus = UthCampus.CS1_QUANG_TRUNG,
-    title = "Phòng 20m² mặt tiền Quang Trung, ở được ngay",
+    title = "Phòng 20m² mặt tiền Võ Oanh, ở được ngay",
     description = "Phòng riêng trong nhà nguyên căn, cửa sổ hướng đông, gần cổng sau cơ sở 1 đi bộ 5 phút. " +
         "Khu sinh viên an ninh, yên tĩnh, hàng quán ăn uống sát bên cạnh.",
     hostName = "Trần Minh Thư",
@@ -1135,9 +1135,9 @@ private val PreviewListing = HousingListing(
         RoomAmenity.MEZZANINE,
         RoomAmenity.FREE_HOURS,
     ),
-    addressLabel = "138 Quang Trung, Gò Vấp",
-    latitude = 10.8313,
-    longitude = 106.6553,
+    addressLabel = "138 Võ Oanh, Bình Thạnh",
+    latitude = 10.8025,
+    longitude = 106.7150,
     distanceToCampusM = 320,
 )
 

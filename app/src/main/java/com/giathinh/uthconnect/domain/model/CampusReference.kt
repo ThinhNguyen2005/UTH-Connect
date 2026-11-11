@@ -27,14 +27,18 @@ object CampusReference {
     private const val MAX_LATITUDE = 90.0
     private const val MAX_LONGITUDE = 180.0
 
-    /** Tọa độ chuẩn từng cơ sở (điểm dễ nhận, không phải địa chỉ dẫn đường chi tiết). */
-    private val Cs1QuangTrung = 10.8332 to 106.6533
-    private val Cs2ThuDuc = 10.8698 to 106.7176
-    private val Cs3ToKy = 10.8738 to 106.6369
+    /**
+     * Tọa độ chuẩn từng cơ sở (điểm dễ nhận, không phải địa chỉ dẫn đường chi tiết).
+     * Theo node OpenStreetMap của từng cơ sở (11/2026): CS1 Võ Oanh (Bình Thạnh),
+     * CS2 đường số 12 (An Khánh, Thủ Đức cũ), CS3 Tô Ký (Quận 12).
+     */
+    private val Cs1VoOanh = 10.8049 to 106.7168
+    private val Cs2AnKhanh = 10.7921 to 106.7317
+    private val Cs3ToKy = 10.8657 to 106.6187
 
     fun of(campus: UthCampus): Pair<Double, Double> = when (campus) {
-        UthCampus.CS1_QUANG_TRUNG -> Cs1QuangTrung
-        UthCampus.CS2_THU_DUC -> Cs2ThuDuc
+        UthCampus.CS1_QUANG_TRUNG -> Cs1VoOanh
+        UthCampus.CS2_THU_DUC -> Cs2AnKhanh
         UthCampus.CS3_TO_KY -> Cs3ToKy
     }
 

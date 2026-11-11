@@ -600,7 +600,7 @@
     <string name="housing_type_room_for_rent">Cho thuê phòng</string>
     <string name="housing_type_looking_for_roommate">Tìm người ở ghép</string>
     <string name="housing_type_looking_for_room">Tìm phòng</string>
-    <string name="housing_campus_cs1">CS1 Quang Trung</string>
+    <string name="housing_campus_cs1">CS1 Võ Oanh</string>
     <string name="housing_campus_cs2">CS2 Thủ Đức</string>
     <string name="housing_campus_cs3">CS3 Tô Ký</string>
     <string name="housing_filter_dialog_title">Lọc tin trọ</string>
@@ -675,7 +675,7 @@
     <string name="housing_create_rent_label">Giá thuê mỗi tháng (VND)</string>
     <string name="housing_create_deposit_label">Tiền cọc (VND)</string>
     <string name="housing_create_address_label">Địa chỉ phòng</string>
-    <string name="housing_create_address_hint">VD: 138 Quang Trung, Gò Vấp</string>
+    <string name="housing_create_address_hint">VD: 138 Võ Oanh, Bình Thạnh</string>
     <string name="housing_create_slots_label">Số chỗ còn trống</string>
     <string name="housing_create_gender_label">Yêu cầu giới tính bạn ghép</string>
     <string name="housing_create_schedule_label">Lưu ý giờ giấc / Lối sống</string>

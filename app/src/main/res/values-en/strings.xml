@@ -586,7 +586,7 @@
     <string name="housing_type_room_for_rent">Room for rent</string>
     <string name="housing_type_looking_for_roommate">Seeking roommate</string>
     <string name="housing_type_looking_for_room">Seeking room</string>
-    <string name="housing_campus_cs1">CS1 Quang Trung</string>
+    <string name="housing_campus_cs1">CS1 Vo Oanh</string>
     <string name="housing_campus_cs2">CS2 Thu Duc</string>
     <string name="housing_campus_cs3">CS3 To Ky</string>
     <string name="housing_filter_dialog_title">Filter listings</string>
@@ -662,7 +662,7 @@
     <string name="housing_create_rent_label">Monthly Rent (VND)</string>
     <string name="housing_create_deposit_label">Deposit (VND)</string>
     <string name="housing_create_address_label">Room Address</string>
-    <string name="housing_create_address_hint">Ex: 138 Quang Trung, Go Vap</string>
+    <string name="housing_create_address_hint">Ex: 138 Vo Oanh, Binh Thanh</string>
     <string name="housing_create_slots_label">Available Slots</string>
     <string name="housing_create_gender_label">Roommate Gender Preference</string>
     <string name="housing_create_schedule_label">House Rules / Schedule</string>

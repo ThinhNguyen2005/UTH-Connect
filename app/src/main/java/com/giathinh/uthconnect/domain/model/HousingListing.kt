@@ -5,9 +5,9 @@ package com.giathinh.uthconnect.domain.model
  * tới cơ sở và nhu cầu bạn ở ghép.
  *
  * Tọa độ là dữ liệu, không phải chuỗi: `latitude`/`longitude` nuôi bộ lọc
- * "khoảng cách tới cơ sở" còn `addressLabel` chỉ để hiển thị. Địa chỉ chính xác
- * và thông tin liên hệ **không** nằm ở đây — spec buộc "liên hệ trong app, không lộ
- * SĐT" nên PII chỉ đi ra qua luồng contact request (phase sau).
+ * "khoảng cách tới cơ sở" còn `addressLabel` chỉ để hiển thị. Từ 11/11/2026 địa chỉ
+ * và SĐT/Zalo hiển thị công khai cho người đã đăng nhập — bước duyệt liên hệ đã bỏ
+ * (quyết định sản phẩm: app chỉ nhận sinh viên UTH đã xác thực).
  */
 
 /** Ba ý định khác nhau trong cùng module — gộp lại thành một là nhầm luồng (README 3.2). */
@@ -22,7 +22,11 @@ enum class HousingListingType {
     LOOKING_FOR_ROOM,
 }
 
-/** Cơ sở UTH dùng làm gốc tính khoảng cách — trùng nhãn với `events.campus`. */
+/**
+ * Cơ sở UTH dùng làm gốc tính khoảng cách. Tên enum là giá trị lịch sử trong cột
+ * `campus` của DB (CS1 từng bị gọi nhầm "Quang Trung") — giữ nguyên để không phải
+ * migration dữ liệu; nhãn hiển thị đúng nằm ở `housing_campus_cs*` (strings.xml).
+ */
 enum class UthCampus {
     CS1_QUANG_TRUNG,
     CS2_THU_DUC,
