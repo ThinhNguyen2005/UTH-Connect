@@ -13,8 +13,8 @@ sealed interface CreateHousingPostAction {
     data class ChangeRent(val rent: String) : CreateHousingPostAction
     data class ChangeDeposit(val deposit: String) : CreateHousingPostAction
     data class ChangeUtilitiesIncluded(val included: Boolean) : CreateHousingPostAction
-    data class ChangeAddress(val address: String) : CreateHousingPostAction
-    data class ChangeDistance(val distance: String) : CreateHousingPostAction
+    data class ChangeAreaLabel(val areaLabel: String) : CreateHousingPostAction
+    data class ChangeExactAddress(val exactAddress: String) : CreateHousingPostAction
     data class ChangeArea(val area: String) : CreateHousingPostAction
     data class ChangeSlots(val slots: Int) : CreateHousingPostAction
     data class ChangeGender(val gender: GenderPreference) : CreateHousingPostAction

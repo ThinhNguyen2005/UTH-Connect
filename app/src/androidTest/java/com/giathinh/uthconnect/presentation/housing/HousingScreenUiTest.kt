@@ -39,8 +39,8 @@ class HousingScreenUiTest {
         genderPreference = GenderPreference.ANY,
         scheduleNote = "",
         addressLabel = "Quang Trung",
-        latitude = 10.8313,
-        longitude = 106.6553,
+        approxLatitude = 10.8313,
+        approxLongitude = 106.6553,
         distanceToCampusM = 300,
         verified = true,
     )

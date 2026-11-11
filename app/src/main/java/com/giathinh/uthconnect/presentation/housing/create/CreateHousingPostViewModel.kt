@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.HostVerificationMethod
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
+import com.giathinh.uthconnect.domain.model.HousingPrivateDetails
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
@@ -45,8 +46,8 @@ class CreateHousingPostViewModel @Inject constructor(
             is CreateHousingPostAction.ChangeDescription,
             is CreateHousingPostAction.ChangeRent,
             is CreateHousingPostAction.ChangeDeposit,
-            is CreateHousingPostAction.ChangeAddress,
-            is CreateHousingPostAction.ChangeDistance,
+            is CreateHousingPostAction.ChangeAreaLabel,
+            is CreateHousingPostAction.ChangeExactAddress,
             is CreateHousingPostAction.ChangeArea,
             is CreateHousingPostAction.ChangeScheduleNote,
             is CreateHousingPostAction.ChangeContactPhone,
@@ -89,11 +90,11 @@ class CreateHousingPostViewModel @Inject constructor(
             is CreateHousingPostAction.ChangeDeposit ->
                 _uiState.update { it.copy(depositInput = action.deposit) }
 
-            is CreateHousingPostAction.ChangeAddress ->
-                _uiState.update { it.copy(address = action.address, validationError = null) }
+            is CreateHousingPostAction.ChangeAreaLabel ->
+                _uiState.update { it.copy(areaLabel = action.areaLabel, validationError = null) }
 
-            is CreateHousingPostAction.ChangeDistance ->
-                _uiState.update { it.copy(distanceInput = action.distance) }
+            is CreateHousingPostAction.ChangeExactAddress ->
+                _uiState.update { it.copy(exactAddress = action.exactAddress, validationError = null) }
 
             is CreateHousingPostAction.ChangeArea ->
                 _uiState.update { it.copy(areaInput = action.area) }
@@ -175,7 +176,7 @@ class CreateHousingPostViewModel @Inject constructor(
         val deposit = parseAmount(state.depositInput) ?: 0
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            val result = createListing(buildListing(state, host, rent, deposit))
+            val result = createListing(buildListing(state, host, rent, deposit), buildPrivateDetails(state))
             result.fold(
                 onSuccess = { _events.send(CreateHousingPostEvent.PostCreated) },
                 onFailure = { error ->
@@ -194,7 +195,8 @@ class CreateHousingPostViewModel @Inject constructor(
         profile == null -> CreateHousingPostError.SIGN_IN_REQUIRED
         state.title.isBlank() -> CreateHousingPostError.EMPTY_TITLE
         parseAmount(state.rentInput) == null -> CreateHousingPostError.INVALID_RENT
-        state.address.isBlank() -> CreateHousingPostError.EMPTY_ADDRESS
+        state.areaLabel.isBlank() -> CreateHousingPostError.EMPTY_AREA
+        state.exactAddress.isBlank() -> CreateHousingPostError.EMPTY_EXACT_ADDRESS
         state.contactPhone.isBlank() -> CreateHousingPostError.EMPTY_PHONE
         else -> null
     }
@@ -211,12 +213,6 @@ class CreateHousingPostViewModel @Inject constructor(
         description = state.description.trim(),
         hostName = host.displayName,
         hostStudentId = host.studentId,
-        contactPhone = state.contactPhone.trim(),
-        contactZaloUrl = if (state.allowZalo) {
-            state.contactZalo.trim().ifBlank { "https://zalo.me/${state.contactPhone.trim()}" }
-        } else {
-            ""
-        },
         images = state.photos,
         monthlyRentVnd = rent,
         depositVnd = deposit,
@@ -225,21 +221,24 @@ class CreateHousingPostViewModel @Inject constructor(
         genderPreference = state.genderPreference,
         scheduleNote = state.scheduleNote.trim(),
         amenities = state.selectedAmenities.toList(),
-        addressLabel = state.address.trim(),
-        distanceToCampusM = (state.distanceInput.replace(',', '.').toFloatOrNull()?.times(METERS_PER_KM))?.toInt() ?: 0,
+        addressLabel = state.areaLabel.trim(),
         areaM2 = state.areaInput.filter { it.isDigit() }.toIntOrNull(),
-        latitude = 0.0,
-        longitude = 0.0,
         status = HousingListingStatus.OPEN,
         verified = host.uthVerified,
         verificationMethod = if (host.uthVerified) HostVerificationMethod.EMAIL_UTH else null,
     )
 
+    /** PII đi riêng vào bảng private; dòng public của feed không nhận các trường này. */
+    private fun buildPrivateDetails(state: CreateHousingPostUiState): HousingPrivateDetails = HousingPrivateDetails(
+        exactAddress = state.exactAddress.trim(),
+        contactPhone = state.contactPhone.trim(),
+        contactZaloUrl = if (state.allowZalo) {
+            state.contactZalo.trim().ifBlank { "https://zalo.me/${state.contactPhone.trim()}" }
+        } else {
+            ""
+        },
+    )
+
     /** Chỉ nhận chữ số, bỏ dấu phân cách người dùng gõ — `null` khi không phải số dương. */
     private fun parseAmount(input: String): Int? = input.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
-
-    private companion object {
-        /** Ô khoảng cách nhập theo km, model lưu mét. */
-        const val METERS_PER_KM = 1000
-    }
 }

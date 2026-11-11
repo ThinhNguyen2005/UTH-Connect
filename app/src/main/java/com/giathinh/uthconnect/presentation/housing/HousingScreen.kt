@@ -557,28 +557,30 @@ private fun HousingListingCard(
                 )
                 Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
                 Text(
-                    text = listing.addressLabel,
+                    text = listing.addressLabel.ifBlank { stringResource(listing.campus.labelRes()) },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Text(
-                    text = " · ",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.housing_card_distance,
-                        stringResource(listing.campus.labelRes()),
-                        distanceText(listing.distanceToCampusM),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                if (listing.hasLocation) {
+                    Text(
+                        text = " · ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.housing_card_distance,
+                            stringResource(listing.campus.labelRes()),
+                            distanceText(listing.distanceToCampusM),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
             VerificationLabel(listing = listing)
@@ -1194,9 +1196,9 @@ private fun HousingScreenContentPreview() {
                         availableSlots = 1,
                         genderPreference = GenderPreference.MALE,
                         scheduleNote = "Giờ giấc tự do, có máy lạnh, nấu ăn riêng.",
-                        addressLabel = "Đường D2 (Nguyễn Gia Trí)",
-                        latitude = 10.8,
-                        longitude = 106.6,
+                        addressLabel = "Khu vực Đường D2 (Nguyễn Gia Trí)",
+                        approxLatitude = 10.8,
+                        approxLongitude = 106.6,
                         distanceToCampusM = 1_200,
                         verified = true,
                         areaM2 = 22,

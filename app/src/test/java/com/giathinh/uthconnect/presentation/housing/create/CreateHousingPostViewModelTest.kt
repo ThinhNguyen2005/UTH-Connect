@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
+import com.giathinh.uthconnect.domain.model.HousingContactRequest
 import com.giathinh.uthconnect.domain.model.HousingListing
+import com.giathinh.uthconnect.domain.model.HousingPrivateDetails
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingRepository
@@ -30,24 +32,44 @@ class CreateHousingPostViewModelTest {
 
     private class FakeCreateHousingRepository : HousingRepository {
         var createdListing: HousingListing? = null
+        var createdPrivateDetails: HousingPrivateDetails? = null
         private val notFound: Result<HousingListing> = Result.failure(NoSuchElementException())
 
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(emptyList())
 
         override suspend fun getListingById(id: String): Result<HousingListing> = notFound
 
-        override suspend fun createListing(listing: HousingListing): Result<HousingListing> {
+        override suspend fun createListing(
+            listing: HousingListing,
+            privateDetails: HousingPrivateDetails,
+        ): Result<HousingListing> {
             createdListing = listing
+            createdPrivateDetails = privateDetails
             return Result.success(listing)
         }
 
-        override suspend fun updateListing(listing: HousingListing): Result<HousingListing> = Result.success(listing)
+        override suspend fun updateListing(
+            listing: HousingListing,
+            privateDetails: HousingPrivateDetails,
+        ): Result<HousingListing> = Result.success(listing)
 
         override suspend fun markListingFulfilled(id: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun deleteListing(id: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun reportListing(listingId: String, reason: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun requestContact(listingId: String, message: String): Result<String> = Result.success("RQ-1")
+
+        override suspend fun respondContact(requestId: String, accept: Boolean): Result<Unit> = Result.success(Unit)
+
+        override suspend fun cancelContact(requestId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun getContactRequests(listingId: String): Result<List<HousingContactRequest>> = Result.success(emptyList())
+
+        override suspend fun getMyContactRequest(listingId: String): Result<HousingContactRequest?> = Result.success(null)
+
+        override suspend fun revealPrivateDetails(listingId: String): Result<HousingPrivateDetails> = Result.failure(NoSuchElementException(listingId))
     }
 
     private class FakeSessionRepository : SessionRepository {
@@ -108,7 +130,8 @@ class CreateHousingPostViewModelTest {
 
         viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng gác lửng gần CS1"))
         viewModel.onAction(CreateHousingPostAction.ChangeRent("2500000"))
-        viewModel.onAction(CreateHousingPostAction.ChangeAddress("138 Quang Trung, Gò Vấp"))
+        viewModel.onAction(CreateHousingPostAction.ChangeAreaLabel("Khu vực Quang Trung, Gò Vấp"))
+        viewModel.onAction(CreateHousingPostAction.ChangeExactAddress("138 Quang Trung, Gò Vấp"))
         viewModel.onAction(CreateHousingPostAction.ChangeContactPhone("0901234567"))
         viewModel.onAction(CreateHousingPostAction.ChangeCampus(UthCampus.CS1_QUANG_TRUNG))
 
@@ -119,7 +142,9 @@ class CreateHousingPostViewModelTest {
         assertNotNull(repo.createdListing)
         assertEquals("Phòng gác lửng gần CS1", repo.createdListing?.title)
         assertEquals(2_500_000, repo.createdListing?.monthlyRentVnd)
-        assertEquals("0901234567", repo.createdListing?.contactPhone)
+        assertEquals("Khu vực Quang Trung, Gò Vấp", repo.createdListing?.addressLabel)
+        assertEquals("0901234567", repo.createdPrivateDetails?.contactPhone)
+        assertEquals("138 Quang Trung, Gò Vấp", repo.createdPrivateDetails?.exactAddress)
         assertEquals("2251001234", repo.createdListing?.hostStudentId)
         assertEquals("Sinh viên kiểm thử", repo.createdListing?.hostName)
         assertTrue(repo.createdListing?.verified == true)
@@ -148,7 +173,7 @@ class CreateHousingPostViewModelTest {
         viewModel.onAction(CreateHousingPostAction.Submit)
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
-        assertEquals("", repo.createdListing?.contactZaloUrl)
+        assertEquals("", repo.createdPrivateDetails?.contactZaloUrl)
     }
 
     @Test
@@ -160,7 +185,7 @@ class CreateHousingPostViewModelTest {
         viewModel.onAction(CreateHousingPostAction.Submit)
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
-        assertEquals("https://zalo.me/0901234567", repo.createdListing?.contactZaloUrl)
+        assertEquals("https://zalo.me/0901234567", repo.createdPrivateDetails?.contactZaloUrl)
     }
 
     @Test
@@ -202,7 +227,8 @@ class CreateHousingPostViewModelTest {
     private fun fillValidForm(viewModel: CreateHousingPostViewModel) {
         viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng gác lửng gần CS1"))
         viewModel.onAction(CreateHousingPostAction.ChangeRent("2500000"))
-        viewModel.onAction(CreateHousingPostAction.ChangeAddress("138 Quang Trung, Gò Vấp"))
+        viewModel.onAction(CreateHousingPostAction.ChangeAreaLabel("Khu vực Quang Trung, Gò Vấp"))
+        viewModel.onAction(CreateHousingPostAction.ChangeExactAddress("138 Quang Trung, Gò Vấp"))
         viewModel.onAction(CreateHousingPostAction.ChangeContactPhone("0901234567"))
     }
 }

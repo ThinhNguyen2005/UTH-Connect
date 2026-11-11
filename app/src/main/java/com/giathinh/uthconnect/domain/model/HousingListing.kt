@@ -4,10 +4,10 @@ package com.giathinh.uthconnect.domain.model
  * Mô hình Ghép trọ theo `README.md` mục 3.2: tin phòng/ở ghép kèm giá, khoảng cách
  * tới cơ sở và nhu cầu bạn ở ghép.
  *
- * Tọa độ là dữ liệu, không phải chuỗi: `latitude`/`longitude` nuôi bộ lọc
- * "khoảng cách tới cơ sở" còn `addressLabel` chỉ để hiển thị. Địa chỉ chính xác
- * và thông tin liên hệ **không** nằm ở đây — spec buộc "liên hệ trong app, không lộ
- * SĐT" nên PII chỉ đi ra qua luồng contact request (phase sau).
+ * Dòng public chỉ mang tọa độ xấp xỉ (`approxLatitude`/`approxLongitude`, server
+ * làm tròn ≈ lưới 1km) nuôi bộ lọc "khoảng cách tới cơ sở"; `addressLabel` là khu
+ * vực công khai. Tọa độ chính xác, địa chỉ đầy đủ và SĐT/Zalo nằm ở
+ * [HousingPrivateDetails], chỉ mở sau contact request ACCEPTED.
  */
 
 /** Ba ý định khác nhau trong cùng module — gộp lại thành một là nhầm luồng (README 3.2). */
@@ -101,10 +101,6 @@ data class HousingListing(
     val hostName: String,
     /** MSSV chủ tin để hiển thị trên detail card chống lừa đảo (Jira). */
     val hostStudentId: String = "",
-    /** Số điện thoại gọi trực tiếp (Jira). */
-    val contactPhone: String = "",
-    /** Đường dẫn Zalo (zalo.me/...) mở trực tiếp (Jira). */
-    val contactZaloUrl: String = "",
     /** Danh sách đường dẫn ảnh phòng (Carousel). */
     val images: List<String> = emptyList(),
     /** Giá thuê một tháng, đơn vị VND (Design-system mục 2: `1.500.000đ`). */
@@ -119,8 +115,9 @@ data class HousingListing(
     val scheduleNote: String,
     val amenities: List<RoomAmenity> = emptyList(),
     val addressLabel: String,
-    val latitude: Double,
-    val longitude: Double,
+    /** Tọa độ xấp xỉ server làm tròn; 0/0 = tin chưa gắn vị trí. */
+    val approxLatitude: Double = 0.0,
+    val approxLongitude: Double = 0.0,
     /**
      * Mét tính từ tọa độ chuẩn của `campus`; 0 = trùng chỗ đặt chân cơ sở.
      * Mặc định 0 để chỗ dựng tin (repository/mock) tự tính qua [CampusReference],
@@ -131,8 +128,14 @@ data class HousingListing(
     val verified: Boolean = false,
     val verificationMethod: HostVerificationMethod? = null,
     val areaM2: Int? = null,
+    /** Viewer-relative: repository đặt true khi người đọc là chủ tin. */
+    val isOwner: Boolean = false,
 ) {
     /** Tin chỉ hiện trên feed khi còn phòng và chưa bị kiểm duyệt ẩn. */
     val isPublishable: Boolean
         get() = status == HousingListingStatus.OPEN && availableSlots > 0
+
+    /** Đã gắn vị trí khác 0/0 — feed/detail ẩn chip khoảng cách khi chưa gắn. */
+    val hasLocation: Boolean
+        get() = approxLatitude != 0.0 || approxLongitude != 0.0
 }

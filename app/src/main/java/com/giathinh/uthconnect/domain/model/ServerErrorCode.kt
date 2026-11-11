@@ -43,6 +43,14 @@ enum class ServerErrorCode(val token: String) {
     HousingNotFound("HOUSING_NOT_FOUND"),
     HousingStatusRpcOnly("HOUSING_STATUS_RPC_ONLY"),
     HousingReportReasonRequired("HOUSING_REPORT_REASON_REQUIRED"),
+    HousingContactSelfRequest("HOUSING_CONTACT_SELF_REQUEST"),
+    HousingContactAlreadyAccepted("HOUSING_CONTACT_ALREADY_ACCEPTED"),
+    HousingContactListingClosed("HOUSING_CONTACT_LISTING_CLOSED"),
+    HousingContactNotFound("HOUSING_CONTACT_NOT_FOUND"),
+    HousingContactForbidden("HOUSING_CONTACT_FORBIDDEN"),
+    HousingContactNotPending("HOUSING_CONTACT_NOT_PENDING"),
+    HousingLocationNotRevealed("HOUSING_LOCATION_NOT_REVEALED"),
+    HousingContactPhoneRequired("HOUSING_CONTACT_PHONE_REQUIRED"),
 
     /** Không có mã nào của server trong lỗi — rơi về hai giá trị dưới. */
     Network(""),

@@ -22,9 +22,6 @@ import javax.inject.Inject
 sealed interface HousingEvent {
     data object ReportAccepted : HousingEvent
     data object ReportRejected : HousingEvent
-
-    /** Gọi nhanh chủ tin từ feed — Route mở trình quay số, Screen không chạm Context. */
-    data class CallPhone(val phoneNumber: String) : HousingEvent
 }
 
 @HiltViewModel
@@ -51,7 +48,6 @@ class HousingViewModel @Inject constructor(
         when (action) {
             is HousingAction.Search,
             is HousingAction.ToggleSaved,
-            is HousingAction.CallHost,
             -> handleQuickAction(action)
 
             is HousingAction.SelectType -> _uiState.update { it.copy(selectedType = action.type) }
@@ -97,7 +93,7 @@ class HousingViewModel @Inject constructor(
         }
     }
 
-    /** Gom nhóm action nhanh của feed (tìm kiếm, lưu tim, gọi) để [onAction] không vượt ngưỡng phức tạp. */
+    /** Gom nhóm action nhanh của feed (tìm kiếm, lưu tim) để [onAction] không vượt ngưỡng phức tạp. */
     private fun handleQuickAction(action: HousingAction) {
         when (action) {
             is HousingAction.Search -> _uiState.update { it.copy(searchQuery = action.query) }
@@ -111,18 +107,8 @@ class HousingViewModel @Inject constructor(
                 state.copy(savedListingIds = saved)
             }
 
-            is HousingAction.CallHost -> callHost(action.listingId)
-
             // Các action còn lại đã xử ở onAction, không rơi vào đây.
             else -> Unit
-        }
-    }
-
-    /** Chỉ phát event khi tin có số điện thoại — Route mở trình quay số, không lộ SĐT trên UI feed. */
-    private fun callHost(listingId: String) {
-        val phone = _uiState.value.listings.find { it.id == listingId }?.contactPhone
-        if (!phone.isNullOrBlank()) {
-            viewModelScope.launch { _events.send(HousingEvent.CallPhone(phone)) }
         }
     }
 

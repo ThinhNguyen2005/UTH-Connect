@@ -171,6 +171,9 @@
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:CompletePasswordResetUseCaseTest.kt$CompletePasswordResetUseCaseTest.&lt;no name provided&gt;$override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result&lt;Unit&gt;</ID>
     <ID>MaxLineLength:CreateHousingPostScreen.kt$private</ID>
+    <ID>MaxLineLength:CreateHousingPostViewModelTest.kt$CreateHousingPostViewModelTest.FakeCreateHousingRepository$override suspend fun getContactRequests(listingId: String): Result&lt;List&lt;HousingContactRequest&gt;&gt;</ID>
+    <ID>MaxLineLength:CreateHousingPostViewModelTest.kt$CreateHousingPostViewModelTest.FakeCreateHousingRepository$override suspend fun getMyContactRequest(listingId: String): Result&lt;HousingContactRequest?&gt;</ID>
+    <ID>MaxLineLength:CreateHousingPostViewModelTest.kt$CreateHousingPostViewModelTest.FakeCreateHousingRepository$override suspend fun revealPrivateDetails(listingId: String): Result&lt;HousingPrivateDetails&gt;</ID>
     <ID>MaxLineLength:DemoAccountStore.kt$SharedPreferencesDemoAccountStore$override fun putAll(values: Map&lt;String, String&gt;): Boolean</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$override suspend</ID>
     <ID>MaxLineLength:DemoAuthRepository.kt$DemoAuthRepository$private</ID>
@@ -208,9 +211,14 @@
     <ID>MaxLineLength:HomeScreen.kt$private</ID>
     <ID>MaxLineLength:HomeViewModelTest.kt$HomeViewModelTest.FakeRepository$override suspend fun homeFeed(): Result&lt;HomeFeed&gt;</ID>
     <ID>MaxLineLength:HousingDetailScreen.kt$private</ID>
+    <ID>MaxLineLength:HousingDetailViewModelTest.kt$HousingDetailViewModelTest.FakeHousingDetailRepository$override suspend fun getContactRequests(listingId: String): Result&lt;List&lt;HousingContactRequest&gt;&gt;</ID>
+    <ID>MaxLineLength:HousingDetailViewModelTest.kt$HousingDetailViewModelTest.FakeHousingDetailRepository$override suspend fun getMyContactRequest(listingId: String): Result&lt;HousingContactRequest?&gt;</ID>
     <ID>MaxLineLength:HousingScreen.kt$private</ID>
     <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest$private</ID>
+    <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest.FakeHousingRepository$override suspend fun getContactRequests(listingId: String): Result&lt;List&lt;HousingContactRequest&gt;&gt;</ID>
     <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest.FakeHousingRepository$override suspend fun getListings(): Result&lt;List&lt;HousingListing&gt;&gt;</ID>
+    <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest.FakeHousingRepository$override suspend fun getMyContactRequest(listingId: String): Result&lt;HousingContactRequest?&gt;</ID>
+    <ID>MaxLineLength:HousingViewModelTest.kt$HousingViewModelTest.FakeHousingRepository$override suspend fun revealPrivateDetails(listingId: String): Result&lt;HousingPrivateDetails&gt;</ID>
     <ID>MaxLineLength:InMemoryHousingRepository.kt$InMemoryHousingRepository$description</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bên trong có CCCD mang tên Phạm Quốc Hưng, một ít tiền mặt và thẻ ATM Vietcombank. Ai nhặt được liên hệ giúp mình, xin cảm ơn và hậu tạ."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Bóp viết vải màu xám bên trong có 3 cây bút bi, 1 bút chì và 1 thẻ sinh viên tên Đặng Ngọc Ánh. Mình đang giữ tại phòng CTSV."</ID>
@@ -345,6 +353,7 @@
     <ID>TooManyFunctions:EventRepository.kt$EventRepository</ID>
     <ID>TooManyFunctions:HomeScreen.kt$com.giathinh.uthconnect.presentation.home.HomeScreen.kt</ID>
     <ID>TooManyFunctions:HousingDetailScreen.kt$com.giathinh.uthconnect.presentation.housing.detail.HousingDetailScreen.kt</ID>
+    <ID>TooManyFunctions:HousingRepository.kt$HousingRepository</ID>
     <ID>TooManyFunctions:HousingScreen.kt$com.giathinh.uthconnect.presentation.housing.HousingScreen.kt</ID>
     <ID>TooManyFunctions:ProfileScreen.kt$com.giathinh.uthconnect.presentation.profile.ProfileScreen.kt</ID>
     <ID>TooManyFunctions:QrScannerScreen.kt$com.giathinh.uthconnect.presentation.scanner.QrScannerScreen.kt</ID>
@@ -398,6 +407,9 @@
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail loading light", showBackground = true) @Composable private fun DetailLoadingLightPreview()</ID>
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found dark", showBackground = true) @Composable private fun DetailNotFoundDarkPreview()</ID>
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found light", showBackground = true) @Composable private fun DetailNotFoundLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail owner requests", showBackground = true) @Composable private fun DetailOwnerPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail request pending", showBackground = true) @Composable private fun DetailRequestPendingPreview()</ID>
+    <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail revealed", showBackground = true) @Composable private fun DetailRevealedPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview @Composable private fun HousingScreenContentPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun HousingContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content large text", showBackground = true, fontScale = 1.5f) @Composable private fun HousingLargeTextPreview()</ID>
