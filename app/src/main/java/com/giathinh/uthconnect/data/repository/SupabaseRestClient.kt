@@ -80,6 +80,7 @@ class SupabaseRestClient @Inject constructor() {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
         credentials = null
+        CrashIdentity.clear()
         rememberSession = false
         sessionStore?.clear()
         val data = send(
@@ -184,6 +185,7 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun signOut() {
         val old = credentials
         credentials = null
+        CrashIdentity.clear()
         rememberSession = false
         sessionStore?.clear()
         if (old != null) {
@@ -328,6 +330,7 @@ class SupabaseRestClient @Inject constructor() {
             } catch (error: SupabaseHttpException) {
                 if (error.status == 400 || error.status == 401) {
                     credentials = null
+                    CrashIdentity.clear()
                     rememberSession = false
                     sessionStore?.clear()
                 }

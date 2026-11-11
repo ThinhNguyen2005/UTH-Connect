@@ -1,4 +1,8 @@
 <resources>
+    <string name="maintenance_title">App under maintenance</string>
+    <string name="maintenance_message">Please try again later.</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_message">Please update UTH Connect to continue.</string>
     <!-- Bản dịch tiếng Anh. Mặc định của app là tiếng Việt (values/strings.xml). -->
 
     <string name="app_name">UTH Connect</string>
@@ -647,4 +651,7 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <string name="campuses_maps_unavailable">No map application found on your device.</string>
+    <string name="campuses_call_unavailable">No phone application found on your device.</string>
+    <string name="campuses_directions_action">Directions</string>
 </resources>
