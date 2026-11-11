@@ -72,11 +72,7 @@ data class HousingUiState(
             val kept = listings.filter { it.matches(this) && it.matchesQuery(searchQuery) }
             return when (sort) {
                 HousingSort.NEWEST -> kept
-
-                HousingSort.NEAREST_CAMPUS -> kept.sortedWith(
-                    compareBy({ !it.hasLocation }, { it.distanceToCampusM }),
-                )
-
+                HousingSort.NEAREST_CAMPUS -> kept.sortedBy { it.distanceToCampusM }
                 HousingSort.CHEAPEST -> kept.sortedBy { it.monthlyRentVnd }
             }
         }
@@ -108,7 +104,7 @@ private fun HousingListing.matches(state: HousingUiState): Boolean = isPublishab
     (state.selectedCampus == null || campus == state.selectedCampus) &&
     (state.priceRange == HousingPriceRange.ALL || state.priceRange.matches(monthlyRentVnd)) &&
     (state.maxRentVnd == null || monthlyRentVnd <= state.maxRentVnd) &&
-    (state.maxDistanceM == null || (hasLocation && distanceToCampusM <= state.maxDistanceM)) &&
+    (state.maxDistanceM == null || distanceToCampusM <= state.maxDistanceM) &&
     compatibleWith(genderPreference, state.genderPreference)
 
 /** Tìm nhanh không phân biệt hoa thường trên tiêu đề và địa chỉ — khớp ô search của feed. */

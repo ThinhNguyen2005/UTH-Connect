@@ -40,7 +40,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,12 +70,9 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.GenderPreference
-import com.giathinh.uthconnect.domain.model.HousingContactRequest
-import com.giathinh.uthconnect.domain.model.HousingContactStatus
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.HousingListingType
-import com.giathinh.uthconnect.domain.model.HousingPrivateDetails
 import com.giathinh.uthconnect.domain.model.RoomAmenity
 import com.giathinh.uthconnect.domain.model.UthCampus
 import java.text.NumberFormat
@@ -106,7 +102,11 @@ fun HousingDetailScreen(
         },
         bottomBar = {
             if (listing != null) {
-                DetailBottomBar(uiState = uiState, onAction = onAction)
+                DetailBottomBar(
+                    listing = listing,
+                    onCall = { onAction(HousingDetailAction.CallHost) },
+                    onZalo = { onAction(HousingDetailAction.OpenZalo) },
+                )
             }
         },
     ) { innerPadding ->
@@ -147,8 +147,8 @@ fun HousingDetailScreen(
 
             listing != null -> {
                 HousingDetailContent(
-                    uiState = uiState,
-                    onAction = onAction,
+                    listing = listing,
+                    onOpenMap = { onAction(HousingDetailAction.OpenMap) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -239,11 +239,10 @@ private fun HousingDetailHeader(
 
 @Composable
 private fun HousingDetailContent(
-    uiState: HousingDetailUiState,
-    onAction: (HousingDetailAction) -> Unit,
+    listing: HousingListing,
+    onOpenMap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listing = uiState.listing ?: return
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
@@ -264,18 +263,6 @@ private fun HousingDetailContent(
 
         item {
             HostCard(listing = listing)
-        }
-
-        if (uiState.isOwner && uiState.contactRequests.isNotEmpty()) {
-            item {
-                ContactRequestsCard(
-                    requests = uiState.contactRequests,
-                    isActionLoading = uiState.isActionLoading,
-                    onRespond = { requestId, accept ->
-                        onAction(HousingDetailAction.RespondContact(requestId, accept))
-                    },
-                )
-            }
         }
 
         if (listing.amenities.isNotEmpty()) {
@@ -303,11 +290,7 @@ private fun HousingDetailContent(
         }
 
         item {
-            MapCard(
-                listing = listing,
-                privateDetails = uiState.privateDetails,
-                onOpenMap = { onAction(HousingDetailAction.OpenMap) },
-            )
+            MapCard(listing = listing, onOpenMap = onOpenMap)
         }
     }
 }
@@ -585,18 +568,9 @@ private fun PrimaryInfoCard(listing: HousingListing, modifier: Modifier = Modifi
     }
 }
 
-/** Ô nhấn khoảng cách tới cơ sở — dữ liệu thật từ `distanceToCampusM` (tọa độ xấp xỉ). */
+/** Ô nhấn khoảng cách tới cơ sở — dữ liệu thật từ `distanceToCampusM`. */
 @Composable
 private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier) {
-    val proximityText = if (listing.hasLocation) {
-        stringResource(
-            R.string.housing_detail_proximity,
-            stringResource(listing.campus.labelRes()),
-            distanceText(listing.distanceToCampusM),
-        )
-    } else {
-        stringResource(R.string.housing_detail_no_location)
-    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -623,7 +597,11 @@ private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = proximityText,
+                    text = stringResource(
+                        R.string.housing_detail_proximity,
+                        stringResource(listing.campus.labelRes()),
+                        distanceText(listing.distanceToCampusM),
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -830,19 +808,10 @@ private fun HousingSectionCard(
     }
 }
 
-/** Khung vị trí: trước mở khóa chỉ hiện khu vực xấp xỉ, sau ACCEPTED hiện địa chỉ đầy đủ. */
+/** Khung vị trí tương quan và nút chỉ đường đến cơ sở. */
 @Composable
-private fun MapCard(
-    listing: HousingListing,
-    privateDetails: HousingPrivateDetails?,
-    onOpenMap: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun MapCard(listing: HousingListing, onOpenMap: () -> Unit, modifier: Modifier = Modifier) {
     val mapPreviewDescription = stringResource(R.string.housing_detail_map_preview)
-    val campusLabel = stringResource(listing.campus.labelRes())
-    val locationLabel = privateDetails?.exactAddress?.takeIf { it.isNotBlank() }
-        ?: listing.addressLabel.ifBlank { campusLabel }
-    val canOpenMap = listing.hasLocation || privateDetails != null
     UthCard(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.housing_detail_map_heading),
@@ -880,49 +849,37 @@ private fun MapCard(
                     modifier = Modifier.size(UthDimens.Size.Icon),
                 )
                 Text(
-                    text = locationLabel,
+                    text = listing.addressLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = UthTheme.extendedColors.textSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
-                if (privateDetails == null) {
-                    Text(
-                        text = stringResource(R.string.housing_detail_reveal_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
-            if (canOpenMap) {
-                val directionsLabel = if (privateDetails != null) {
-                    stringResource(R.string.housing_detail_directions_exact)
-                } else {
-                    stringResource(R.string.housing_detail_directions_approx, campusLabel)
-                }
-                UthPrimaryButton(
-                    text = directionsLabel,
-                    onClick = onOpenMap,
-                    leadingIcon = Icons.Filled.Place,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(UthDimens.Spacing.Sm),
-                )
-            }
+            UthPrimaryButton(
+                text = stringResource(
+                    R.string.housing_detail_directions_to_campus,
+                    stringResource(listing.campus.labelRes()),
+                ),
+                onClick = onOpenMap,
+                leadingIcon = Icons.Filled.Place,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(UthDimens.Spacing.Sm),
+            )
         }
     }
 }
 
-/** Thanh hành động cố định theo trạng thái mở khóa: chủ tin / đã ACCEPTED / đang chờ / chưa hỏi. */
+/** Thanh liên hệ cố định: Gọi điện (nút cong pill) + Nhắn Zalo (primary pill) và cam kết an toàn. */
 @Composable
 private fun DetailBottomBar(
-    uiState: HousingDetailUiState,
-    onAction: (HousingDetailAction) -> Unit,
+    listing: HousingListing,
+    onCall: () -> Unit,
+    onZalo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listing = uiState.listing ?: return
     Surface(
         modifier = modifier.fillMaxWidth(),
         shadowElevation = UthDimens.Elevation.BottomBar,
@@ -936,53 +893,69 @@ private fun DetailBottomBar(
             verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            when {
-                uiState.isOwner -> {
-                    UthPrimaryButton(
-                        text = stringResource(R.string.housing_detail_mark_fulfilled),
-                        onClick = { onAction(HousingDetailAction.MarkFulfilled) },
-                        enabled = listing.status == HousingListingStatus.OPEN,
-                        loading = uiState.isActionLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                uiState.isRevealed -> {
-                    ContactPills(
-                        onCall = { onAction(HousingDetailAction.CallHost) },
-                        onZalo = { onAction(HousingDetailAction.OpenZalo) },
-                    )
-                }
-
-                uiState.myRequest?.status == HousingContactStatus.PENDING -> {
-                    UthStatusBadge(
-                        text = stringResource(R.string.housing_detail_request_pending),
-                        tone = BadgeTone.Warning,
-                    )
-                    TextButton(
-                        onClick = { onAction(HousingDetailAction.CancelContact) },
-                        enabled = !uiState.isActionLoading,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    onClick = onCall,
+                    enabled = listing.contactPhone.isNotBlank(),
+                    shape = CircleShape,
+                    color = UthTheme.extendedColors.surfaceSubtle,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(UthDimens.Size.ButtonHeight),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(text = stringResource(R.string.housing_detail_cancel_request))
-                    }
-                }
-
-                else -> {
-                    if (uiState.myRequest?.status == HousingContactStatus.REJECTED) {
+                        Icon(
+                            imageVector = Icons.Filled.Phone,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(UthDimens.Size.IconInline),
+                        )
+                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
                         Text(
-                            text = stringResource(R.string.housing_detail_request_rejected),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
+                            text = stringResource(R.string.housing_detail_call_now),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                    UthPrimaryButton(
-                        text = stringResource(R.string.housing_detail_request_contact),
-                        onClick = { onAction(HousingDetailAction.RequestContact) },
-                        enabled = listing.status == HousingListingStatus.OPEN,
-                        loading = uiState.isActionLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                }
+
+                Surface(
+                    onClick = onZalo,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(UthDimens.Size.ButtonHeight),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_housing_notes),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(UthDimens.Size.IconInline),
+                        )
+                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                        Text(
+                            text = stringResource(R.string.housing_detail_message_zalo),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
 
@@ -1002,191 +975,6 @@ private fun DetailBottomBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-            }
-        }
-    }
-}
-
-/** Cặp nút Gọi điện + Nhắn Zalo, chỉ hiện sau khi chủ tin chấp nhận yêu cầu liên hệ. */
-@Composable
-private fun ContactPills(
-    onCall: () -> Unit,
-    onZalo: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            onClick = onCall,
-            shape = CircleShape,
-            color = UthTheme.extendedColors.surfaceSubtle,
-            modifier = Modifier
-                .weight(1f)
-                .height(UthDimens.Size.ButtonHeight),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Phone,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(UthDimens.Size.IconInline),
-                )
-                Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                Text(
-                    text = stringResource(R.string.housing_detail_call_now),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
-        Surface(
-            onClick = onZalo,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .weight(1f)
-                .height(UthDimens.Size.ButtonHeight),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_housing_notes),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(UthDimens.Size.IconInline),
-                )
-                Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                Text(
-                    text = stringResource(R.string.housing_detail_message_zalo),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        }
-    }
-}
-
-/** Phía chủ tin: danh sách yêu cầu liên hệ, chấp nhận/từ chối ngay trên tin. */
-@Composable
-private fun ContactRequestsCard(
-    requests: List<HousingContactRequest>,
-    isActionLoading: Boolean,
-    onRespond: (String, Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    UthCard(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.housing_detail_requests_heading),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
-        Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
-            requests.forEach { request ->
-                ContactRequestRow(
-                    request = request,
-                    isActionLoading = isActionLoading,
-                    onRespond = onRespond,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ContactRequestRow(
-    request: HousingContactRequest,
-    isActionLoading: Boolean,
-    onRespond: (String, Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val unknownRequester = stringResource(R.string.housing_detail_requester_unknown)
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = UthTheme.extendedColors.surfaceSubtle,
-    ) {
-        Row(
-            modifier = Modifier.padding(UthDimens.Spacing.Md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(UthDimens.Size.Icon),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = request.requesterName.ifBlank { unknownRequester },
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (request.message.isNotBlank()) {
-                    Text(
-                        text = request.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            when (request.status) {
-                HousingContactStatus.PENDING -> {
-                    TextButton(
-                        onClick = { onRespond(request.id, false) },
-                        enabled = !isActionLoading,
-                    ) {
-                        Text(text = stringResource(R.string.housing_detail_reject))
-                    }
-                    TextButton(
-                        onClick = { onRespond(request.id, true) },
-                        enabled = !isActionLoading,
-                    ) {
-                        Text(text = stringResource(R.string.housing_detail_accept))
-                    }
-                }
-
-                HousingContactStatus.ACCEPTED -> {
-                    UthStatusBadge(
-                        text = stringResource(R.string.housing_detail_request_accepted),
-                        tone = BadgeTone.Success,
-                    )
-                }
-
-                HousingContactStatus.REJECTED -> {
-                    UthStatusBadge(
-                        text = stringResource(R.string.housing_detail_status_rejected),
-                        tone = BadgeTone.Danger,
-                    )
-                }
-
-                HousingContactStatus.CANCELLED -> {
-                    UthStatusBadge(
-                        text = stringResource(R.string.housing_detail_request_cancelled),
-                        tone = BadgeTone.Neutral,
-                    )
-                }
             }
         }
     }
@@ -1332,6 +1120,8 @@ private val PreviewListing = HousingListing(
         "Khu sinh viên an ninh, yên tĩnh, hàng quán ăn uống sát bên cạnh.",
     hostName = "Trần Minh Thư",
     hostStudentId = "2251010042",
+    contactPhone = "0908123456",
+    contactZaloUrl = "https://zalo.me/0908123456",
     images = listOf("mock1", "mock2", "mock3"),
     monthlyRentVnd = 2_800_000,
     depositVnd = 2_000_000,
@@ -1345,28 +1135,10 @@ private val PreviewListing = HousingListing(
         RoomAmenity.MEZZANINE,
         RoomAmenity.FREE_HOURS,
     ),
-    addressLabel = "Khu vực Quang Trung, Gò Vấp",
-    approxLatitude = 10.83,
-    approxLongitude = 106.66,
-    distanceToCampusM = 320,
-)
-
-private val PreviewPrivateDetails = HousingPrivateDetails(
+    addressLabel = "138 Quang Trung, Gò Vấp",
     latitude = 10.8313,
     longitude = 106.6553,
-    exactAddress = "138 Quang Trung, Phường 10, Gò Vấp",
-    contactPhone = "0908123456",
-    contactZaloUrl = "https://zalo.me/0908123456",
-)
-
-private val PreviewRequest = HousingContactRequest(
-    id = "RQ-001",
-    listingId = "HS-001",
-    requesterId = "SV-002",
-    requesterName = "Nguyễn Văn An",
-    status = HousingContactStatus.PENDING,
-    message = "Mình muốn xem phòng cuối tuần này.",
-    createdAtMillis = 0L,
+    distanceToCampusM = 320,
 )
 
 @Composable
@@ -1385,32 +1157,4 @@ private fun DetailContentLightPreview() = DetailStatePreview(
 private fun DetailContentDarkPreview() = DetailStatePreview(
     HousingDetailUiState(isLoading = false, listing = PreviewListing),
     darkTheme = true,
-)
-
-@Preview(name = "detail request pending", showBackground = true)
-@Composable
-private fun DetailRequestPendingPreview() = DetailStatePreview(
-    HousingDetailUiState(isLoading = false, listing = PreviewListing, myRequest = PreviewRequest),
-)
-
-@Preview(name = "detail revealed", showBackground = true)
-@Composable
-private fun DetailRevealedPreview() = DetailStatePreview(
-    HousingDetailUiState(
-        isLoading = false,
-        listing = PreviewListing,
-        myRequest = PreviewRequest.copy(status = HousingContactStatus.ACCEPTED),
-        privateDetails = PreviewPrivateDetails,
-    ),
-)
-
-@Preview(name = "detail owner requests", showBackground = true)
-@Composable
-private fun DetailOwnerPreview() = DetailStatePreview(
-    HousingDetailUiState(
-        isLoading = false,
-        listing = PreviewListing.copy(isOwner = true),
-        contactRequests = listOf(PreviewRequest),
-        privateDetails = PreviewPrivateDetails,
-    ),
 )

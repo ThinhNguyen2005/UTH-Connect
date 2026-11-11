@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.R
-import com.giathinh.uthconnect.domain.model.ServerErrorCode
-import com.giathinh.uthconnect.presentation.common.messageText
 
 @Composable
 fun HousingDetailRoute(
@@ -28,8 +26,6 @@ fun HousingDetailRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbars = remember { SnackbarHostState() }
-    // messageText cần Composition nên dịch sẵn trong composable, collect chỉ tra bảng.
-    val errorMessages = ServerErrorCode.entries.associateWith { it.messageText() }
 
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
@@ -59,16 +55,6 @@ fun HousingDetailRoute(
 
                 HousingDetailEvent.MarkFulfilledSuccess -> {
                     snackbars.showSnackbar(context.getString(R.string.housing_detail_fulfilled_success))
-                }
-
-                HousingDetailEvent.ContactRequestSent -> {
-                    snackbars.showSnackbar(context.getString(R.string.housing_detail_request_sent))
-                }
-
-                is HousingDetailEvent.ContactActionFailed -> {
-                    snackbars.showSnackbar(
-                        errorMessages[event.code] ?: context.getString(R.string.housing_load_error_title),
-                    )
                 }
 
                 HousingDetailEvent.ActionFailed -> {

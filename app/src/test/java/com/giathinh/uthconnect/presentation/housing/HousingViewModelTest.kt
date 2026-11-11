@@ -1,10 +1,8 @@
 package com.giathinh.uthconnect.presentation.housing
 
 import com.giathinh.uthconnect.domain.model.GenderPreference
-import com.giathinh.uthconnect.domain.model.HousingContactRequest
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingType
-import com.giathinh.uthconnect.domain.model.HousingPrivateDetails
 import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingsUseCase
@@ -42,8 +40,9 @@ class HousingViewModelTest {
             genderPreference = GenderPreference.ANY,
             scheduleNote = "",
             addressLabel = "Quang Trung",
-            approxLatitude = 10.8313,
-            approxLongitude = 106.6553,
+            contactPhone = "0901234567",
+            latitude = 10.8313,
+            longitude = 106.6553,
             distanceToCampusM = 300,
         ),
     )
@@ -230,6 +229,26 @@ class HousingViewModelTest {
         assertEquals(setOf("HS-2"), viewModel.uiState.value.savedListingIds)
     }
 
+    @Test
+    fun `CallHost - phat CallPhone voi so cua tin trong feed`() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.onAction(HousingAction.CallHost("HS-1"))
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingEvent.CallPhone)
+        assertEquals("0901234567", (event as HousingEvent.CallPhone).phoneNumber)
+    }
+
+    @Test
+    fun `CallHost - tin khong ton tai hoac thieu so thi khong phat event`() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.onAction(HousingAction.CallHost("HS-khong-ton-tai"))
+
+        assertNull(withTimeoutOrNull(1_000) { viewModel.events.first() })
+    }
+
     private class FakeHousingRepository(
         private val listings: List<HousingListing>,
         var failLoad: Boolean = false,
@@ -244,15 +263,9 @@ class HousingViewModelTest {
             return if (item != null) Result.success(item) else Result.failure(NoSuchElementException(id))
         }
 
-        override suspend fun createListing(
-            listing: HousingListing,
-            privateDetails: HousingPrivateDetails,
-        ): Result<HousingListing> = Result.success(listing)
+        override suspend fun createListing(listing: HousingListing): Result<HousingListing> = Result.success(listing)
 
-        override suspend fun updateListing(
-            listing: HousingListing,
-            privateDetails: HousingPrivateDetails,
-        ): Result<HousingListing> = Result.success(listing)
+        override suspend fun updateListing(listing: HousingListing): Result<HousingListing> = Result.success(listing)
 
         override suspend fun markListingFulfilled(id: String): Result<Unit> = Result.success(Unit)
 
@@ -262,17 +275,5 @@ class HousingViewModelTest {
             reportCalls += listingId to reason
             return if (failReport) Result.failure(IllegalStateException("mat mang")) else Result.success(Unit)
         }
-
-        override suspend fun requestContact(listingId: String, message: String): Result<String> = Result.success("RQ-1")
-
-        override suspend fun respondContact(requestId: String, accept: Boolean): Result<Unit> = Result.success(Unit)
-
-        override suspend fun cancelContact(requestId: String): Result<Unit> = Result.success(Unit)
-
-        override suspend fun getContactRequests(listingId: String): Result<List<HousingContactRequest>> = Result.success(emptyList())
-
-        override suspend fun getMyContactRequest(listingId: String): Result<HousingContactRequest?> = Result.success(null)
-
-        override suspend fun revealPrivateDetails(listingId: String): Result<HousingPrivateDetails> = Result.failure(NoSuchElementException(listingId))
     }
 }

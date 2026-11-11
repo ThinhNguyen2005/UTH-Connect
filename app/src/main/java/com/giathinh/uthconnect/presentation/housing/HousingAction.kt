@@ -13,6 +13,9 @@ sealed interface HousingAction {
     /** Lưu / bỏ lưu tin bằng tim — toggle in-memory trong phiên. */
     data class ToggleSaved(val id: String) : HousingAction
 
+    /** Gọi nhanh chủ tin từ card feed — Route nhận event rồi mở trình quay số. */
+    data class CallHost(val listingId: String) : HousingAction
+
     /** `null` = "Tất cả", nên tham số để nullable chứ không thêm giá trị giả vào enum. */
     data class SelectType(val type: HousingListingType?) : HousingAction
 

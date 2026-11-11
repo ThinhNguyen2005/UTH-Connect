@@ -8,12 +8,9 @@ import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.CampusReference
 import com.giathinh.uthconnect.domain.model.GenderPreference
 import com.giathinh.uthconnect.domain.model.HostVerificationMethod
-import com.giathinh.uthconnect.domain.model.HousingContactRequest
-import com.giathinh.uthconnect.domain.model.HousingContactStatus
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.HousingListingType
-import com.giathinh.uthconnect.domain.model.HousingPrivateDetails
 import com.giathinh.uthconnect.domain.model.RoomAmenity
 import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingRepository
@@ -31,7 +28,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
-import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,13 +35,11 @@ import javax.inject.Singleton
 /**
  * Nguồn dữ liệu thật của Ghép trọ trên `housing_posts` (RLS giữ quyền sở hữu,
  * giới hạn 2 tin mở và ngưỡng báo cáo ở backend). Ảnh cục bộ (`content://`)
- * được upload lên bucket [IMAGE_BUCKET] trước khi gọi RPC create/update; RPC
- * thất bại thì ảnh vừa upload bị dọn để không mồ côi trong Storage.
+ * được upload lên bucket [IMAGE_BUCKET] trước khi insert; insert thất bại thì
+ * ảnh vừa upload bị dọn để không mồ côi trong Storage.
  *
- * Tọa độ chính xác + liên hệ đi kèm [HousingPrivateDetails] vào bảng private
- * qua RPC; dòng public chỉ nhận tọa độ xấp xỉ server tự làm tròn.
- * `distanceToCampusM` tính lại từ tọa độ xấp xỉ qua [CampusReference]; tin chưa
- * gắn vị trí nhận 0 và `hasLocation = false` để UI ẩn chip khoảng cách.
+ * `distanceToCampusM` luôn tính lại từ tọa độ qua [CampusReference]; tin chưa
+ * gắn tọa độ nhận điểm chuẩn của cơ sở thay vì số 0 vô nghĩa.
  */
 @Singleton
 class SupabaseHousingRepository @Inject constructor(
@@ -64,16 +58,12 @@ class SupabaseHousingRepository @Inject constructor(
             ?: throw NoSuchElementException("Không tìm thấy tin: $id")
     }
 
-    override suspend fun createListing(
-        listing: HousingListing,
-        privateDetails: HousingPrivateDetails,
-    ): Result<HousingListing> = suspendResult {
+    override suspend fun createListing(listing: HousingListing): Result<HousingListing> = suspendResult {
         val uploadedPaths = mutableListOf<String>()
         try {
             val images = resolveImages(listing.images, uploadedPaths)
-            val payload = listing.toPayload(images, privateDetails)
-            client.rpc("create_housing_post", buildJsonObject { put("p_payload", payload) })
-                .jsonArray.single().jsonObject.toHousingListing()
+            val payload = listing.toPayload(images, includeAuthor = true)
+            client.insertTable("housing_posts?select=*", payload).jsonArray.single().jsonObject.toHousingListing()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -82,10 +72,7 @@ class SupabaseHousingRepository @Inject constructor(
         }
     }
 
-    override suspend fun updateListing(
-        listing: HousingListing,
-        privateDetails: HousingPrivateDetails,
-    ): Result<HousingListing> = suspendResult {
+    override suspend fun updateListing(listing: HousingListing): Result<HousingListing> = suspendResult {
         val authorFilter = "id=eq.${urlEncode(listing.id)}&author_id=eq.${urlEncode(client.userId)}"
         val previousImages = client.table("housing_posts?select=images&$authorFilter")
             .jsonArray.singleOrNull()?.jsonObject
@@ -94,14 +81,9 @@ class SupabaseHousingRepository @Inject constructor(
         try {
             val images = resolveImages(listing.images, uploadedPaths)
             // status/report_count không gửi kèm: trigger backend chỉ cho đổi qua RPC.
-            val payload = listing.toPayload(images, privateDetails)
-            val updated = client.rpc(
-                "update_housing_post",
-                buildJsonObject {
-                    put("p_listing_id", uuid(listing.id))
-                    put("p_payload", payload)
-                },
-            ).jsonArray.singleOrNull()?.jsonObject?.toHousingListing()
+            val payload = listing.toPayload(images, includeAuthor = false)
+            val updated = client.patchTable("housing_posts?$authorFilter&select=*", payload)
+                .jsonArray.singleOrNull()?.jsonObject?.toHousingListing()
                 ?: throw NoSuchElementException("Không tìm thấy tin để cập nhật: ${listing.id}")
             deleteObjects(previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) })
             updated
@@ -137,52 +119,6 @@ class SupabaseHousingRepository @Inject constructor(
             },
         )
         Unit
-    }
-
-    override suspend fun requestContact(listingId: String, message: String): Result<String> = suspendResult {
-        client.rpc(
-            "request_housing_contact",
-            buildJsonObject {
-                put("p_listing_id", uuid(listingId))
-                put("p_message", message)
-            },
-        ).jsonPrimitive.content
-    }
-
-    override suspend fun respondContact(requestId: String, accept: Boolean): Result<Unit> = suspendResult {
-        client.rpc(
-            "respond_housing_contact",
-            buildJsonObject {
-                put("p_request_id", uuid(requestId))
-                put("p_accept", accept)
-            },
-        )
-        Unit
-    }
-
-    override suspend fun cancelContact(requestId: String): Result<Unit> = suspendResult {
-        client.rpc("cancel_housing_contact", buildJsonObject { put("p_request_id", uuid(requestId)) })
-        Unit
-    }
-
-    override suspend fun getContactRequests(listingId: String): Result<List<HousingContactRequest>> = suspendResult {
-        client.table(
-            "housing_contact_requests?select=*,profiles:requester_id(display_name)" +
-                "&listing_id=eq.${urlEncode(listingId)}&order=created_at.desc",
-        ).jsonArray.map { it.jsonObject.toContactRequest() }
-    }
-
-    override suspend fun getMyContactRequest(listingId: String): Result<HousingContactRequest?> = suspendResult {
-        client.table(
-            "housing_contact_requests?listing_id=eq.${urlEncode(listingId)}" +
-                "&requester_id=eq.${urlEncode(client.userId)}&order=created_at.desc&limit=1",
-        ).jsonArray.singleOrNull()?.jsonObject?.toContactRequest()
-    }
-
-    override suspend fun revealPrivateDetails(listingId: String): Result<HousingPrivateDetails> = suspendResult {
-        client.rpc("reveal_housing_private_details", buildJsonObject { put("p_listing_id", uuid(listingId)) })
-            .jsonArray.singleOrNull()?.jsonObject?.toPrivateDetails()
-            ?: throw NoSuchElementException("Không tìm thấy dữ liệu riêng tư của tin: $listingId")
     }
 
     /** Giữ URL có sẵn; URI cục bộ thì đọc bytes, upload và trả public URL. */
@@ -243,16 +179,16 @@ class SupabaseHousingRepository @Inject constructor(
         }
     }
 
-    private fun HousingListing.toPayload(
-        images: List<String>,
-        privateDetails: HousingPrivateDetails,
-    ): JsonObject = buildJsonObject {
+    private fun HousingListing.toPayload(images: List<String>, includeAuthor: Boolean): JsonObject = buildJsonObject {
+        if (includeAuthor) put("author_id", uuid(client.userId))
         put("type", type.name)
         put("campus", campus.name)
         put("title", title)
         put("description", description)
         put("host_name", hostName)
         put("host_student_id", hostStudentId)
+        put("contact_phone", contactPhone)
+        put("contact_zalo_url", contactZaloUrl)
         put("images", JsonArray(images.map { JsonPrimitive(it) }))
         put("monthly_rent_vnd", monthlyRentVnd)
         put("deposit_vnd", depositVnd)
@@ -262,19 +198,18 @@ class SupabaseHousingRepository @Inject constructor(
         put("schedule_note", scheduleNote)
         put("amenities", JsonArray(amenities.map { JsonPrimitive(it.name) }))
         put("address_label", addressLabel)
+        val (lat, lng) = if (latitude == 0.0 && longitude == 0.0) CampusReference.of(campus) else latitude to longitude
+        put("latitude", lat)
+        put("longitude", lng)
         put("area_m2", areaM2?.let { JsonPrimitive(it) } ?: JsonNull)
-        put("latitude", privateDetails.latitude)
-        put("longitude", privateDetails.longitude)
-        put("exact_address", privateDetails.exactAddress)
-        put("contact_phone", privateDetails.contactPhone)
-        put("contact_zalo_url", privateDetails.contactZaloUrl)
+        put("verified", verified)
+        put("verification_method", verificationMethod?.name?.let { JsonPrimitive(it) } ?: JsonNull)
     }
 
     private fun JsonObject.toHousingListing(): HousingListing {
         val campus = UthCampus.valueOf(requireNotNull(string("campus")))
-        val approxLatitude = (get("approx_latitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
-        val approxLongitude = (get("approx_longitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
-        val hasLocation = approxLatitude != 0.0 || approxLongitude != 0.0
+        val latitude = (get("latitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
+        val longitude = (get("longitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0
         return HousingListing(
             id = requireNotNull(string("id")),
             type = HousingListingType.valueOf(requireNotNull(string("type"))),
@@ -283,6 +218,8 @@ class SupabaseHousingRepository @Inject constructor(
             description = string("description").orEmpty(),
             hostName = string("host_name").orEmpty(),
             hostStudentId = string("host_student_id").orEmpty(),
+            contactPhone = string("contact_phone").orEmpty(),
+            contactZaloUrl = string("contact_zalo_url").orEmpty(),
             images = get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
             monthlyRentVnd = int("monthly_rent_vnd"),
             depositVnd = int("deposit_vnd"),
@@ -292,40 +229,15 @@ class SupabaseHousingRepository @Inject constructor(
             scheduleNote = string("schedule_note").orEmpty(),
             amenities = get("amenities")?.jsonArray?.map { RoomAmenity.valueOf(it.jsonPrimitive.content) }.orEmpty(),
             addressLabel = string("address_label").orEmpty(),
-            approxLatitude = approxLatitude,
-            approxLongitude = approxLongitude,
-            distanceToCampusM = if (hasLocation) {
-                CampusReference.distanceMeters(campus, approxLatitude, approxLongitude)
-            } else {
-                0
-            },
-            isOwner = string("author_id") == client.userId,
+            latitude = latitude,
+            longitude = longitude,
+            distanceToCampusM = CampusReference.distanceMeters(campus, latitude, longitude),
             status = HousingListingStatus.valueOf(string("status") ?: "OPEN"),
             verified = bool("verified"),
             verificationMethod = string("verification_method")?.let { HostVerificationMethod.valueOf(it) },
             areaM2 = (get("area_m2") as? JsonPrimitive)?.intOrNull,
         )
     }
-
-    private fun JsonObject.toContactRequest(): HousingContactRequest = HousingContactRequest(
-        id = requireNotNull(string("id")),
-        listingId = string("listing_id").orEmpty(),
-        requesterId = string("requester_id").orEmpty(),
-        requesterName = (get("profiles") as? JsonObject)?.string("display_name").orEmpty(),
-        status = HousingContactStatus.valueOf(string("status") ?: "PENDING"),
-        message = string("message").orEmpty(),
-        createdAtMillis = string("created_at")?.let { raw ->
-            runCatching { Instant.parse(raw).toEpochMilli() }.getOrNull()
-        } ?: 0L,
-    )
-
-    private fun JsonObject.toPrivateDetails(): HousingPrivateDetails = HousingPrivateDetails(
-        latitude = (get("latitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0,
-        longitude = (get("longitude") as? JsonPrimitive)?.doubleOrNull ?: 0.0,
-        exactAddress = string("exact_address").orEmpty(),
-        contactPhone = string("contact_phone").orEmpty(),
-        contactZaloUrl = string("contact_zalo_url").orEmpty(),
-    )
 
     private companion object {
         const val IMAGE_BUCKET = "housing-images"

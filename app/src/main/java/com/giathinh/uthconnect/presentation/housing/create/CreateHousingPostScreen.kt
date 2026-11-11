@@ -124,12 +124,12 @@ fun CreateHousingPostScreen(
             item {
                 LocationTitleCard(
                     title = uiState.title,
-                    areaLabel = uiState.areaLabel,
-                    exactAddress = uiState.exactAddress,
+                    address = uiState.address,
+                    distance = uiState.distanceInput,
                     area = uiState.areaInput,
                     onTitleChange = { onAction(CreateHousingPostAction.ChangeTitle(it)) },
-                    onAreaLabelChange = { onAction(CreateHousingPostAction.ChangeAreaLabel(it)) },
-                    onExactAddressChange = { onAction(CreateHousingPostAction.ChangeExactAddress(it)) },
+                    onAddressChange = { onAction(CreateHousingPostAction.ChangeAddress(it)) },
+                    onDistanceChange = { onAction(CreateHousingPostAction.ChangeDistance(it)) },
                     onAreaChange = { onAction(CreateHousingPostAction.ChangeArea(it)) },
                 )
             }
@@ -370,12 +370,12 @@ private fun TypeAndCampusCard(
 @Composable
 private fun LocationTitleCard(
     title: String,
-    areaLabel: String,
-    exactAddress: String,
+    address: String,
+    distance: String,
     area: String,
     onTitleChange: (String) -> Unit,
-    onAreaLabelChange: (String) -> Unit,
-    onExactAddressChange: (String) -> Unit,
+    onAddressChange: (String) -> Unit,
+    onDistanceChange: (String) -> Unit,
     onAreaChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -409,10 +409,10 @@ private fun LocationTitleCard(
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
         OutlinedTextField(
-            value = areaLabel,
-            onValueChange = onAreaLabelChange,
-            label = { Text(stringResource(R.string.housing_create_zone_label)) },
-            placeholder = { Text(stringResource(R.string.housing_create_zone_hint)) },
+            value = address,
+            onValueChange = onAddressChange,
+            label = { Text(stringResource(R.string.housing_create_address_label)) },
+            placeholder = { Text(stringResource(R.string.housing_create_address_hint)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Filled.LocationOn,
@@ -425,35 +425,47 @@ private fun LocationTitleCard(
             singleLine = true,
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
-        OutlinedTextField(
-            value = exactAddress,
-            onValueChange = onExactAddressChange,
-            label = { Text(stringResource(R.string.housing_create_exact_address_label)) },
-            placeholder = { Text(stringResource(R.string.housing_create_exact_address_hint)) },
-            supportingText = { Text(stringResource(R.string.housing_create_exact_address_note)) },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.small,
-            minLines = 2,
-        )
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
-        OutlinedTextField(
-            value = area,
-            onValueChange = onAreaChange,
-            label = { Text(stringResource(R.string.housing_create_area_label)) },
-            placeholder = { Text("25") },
-            trailingIcon = {
-                Text(
-                    text = "m²",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.small,
-            singleLine = true,
-        )
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            OutlinedTextField(
+                value = distance,
+                onValueChange = onDistanceChange,
+                label = { Text(stringResource(R.string.housing_create_distance_label)) },
+                placeholder = { Text("0.8") },
+                trailingIcon = {
+                    Text(
+                        text = "km",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = area,
+                onValueChange = onAreaChange,
+                label = { Text(stringResource(R.string.housing_create_area_label)) },
+                placeholder = { Text("25") },
+                trailingIcon = {
+                    Text(
+                        text = "m²",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = UthDimens.Spacing.Sm),
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
+                singleLine = true,
+            )
+        }
     }
 }
 
@@ -1060,8 +1072,7 @@ private fun ValidationErrorBanner(error: CreateHousingPostError, modifier: Modif
     val messageRes = when (error) {
         CreateHousingPostError.EMPTY_TITLE -> R.string.housing_create_error_title
         CreateHousingPostError.INVALID_RENT -> R.string.housing_create_error_rent
-        CreateHousingPostError.EMPTY_AREA -> R.string.housing_create_error_zone
-        CreateHousingPostError.EMPTY_EXACT_ADDRESS -> R.string.housing_create_error_exact_address
+        CreateHousingPostError.EMPTY_ADDRESS -> R.string.housing_create_error_address
         CreateHousingPostError.EMPTY_PHONE -> R.string.housing_create_error_phone
         CreateHousingPostError.SIGN_IN_REQUIRED -> R.string.housing_create_sign_in_required
     }

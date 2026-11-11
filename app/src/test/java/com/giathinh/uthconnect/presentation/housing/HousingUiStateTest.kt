@@ -238,8 +238,8 @@ class HousingUiStateTest {
         genderPreference = genderPreference,
         scheduleNote = "",
         addressLabel = addressLabel,
-        approxLatitude = 10.83,
-        approxLongitude = 106.65,
+        latitude = 10.83,
+        longitude = 106.65,
         distanceToCampusM = distanceToCampusM,
         status = status,
     )

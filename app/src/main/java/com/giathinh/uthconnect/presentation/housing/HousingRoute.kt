@@ -1,5 +1,7 @@
 package com.giathinh.uthconnect.presentation.housing
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHost
@@ -38,6 +40,11 @@ fun HousingRoute(
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
             when (event) {
+                is HousingEvent.CallPhone -> {
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${event.phoneNumber}"))
+                    context.startActivity(intent)
+                }
+
                 HousingEvent.ReportAccepted ->
                     snackbars.showSnackbar(context.getString(R.string.housing_report_accepted))
 

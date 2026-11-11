@@ -8,8 +8,7 @@ import com.giathinh.uthconnect.domain.model.UthCampus
 enum class CreateHousingPostError {
     EMPTY_TITLE,
     INVALID_RENT,
-    EMPTY_AREA,
-    EMPTY_EXACT_ADDRESS,
+    EMPTY_ADDRESS,
     EMPTY_PHONE,
     SIGN_IN_REQUIRED,
 }
@@ -25,10 +24,8 @@ data class CreateHousingPostUiState(
     val rentInput: String = "",
     val depositInput: String = "",
     val utilitiesIncluded: Boolean = false,
-    /** Khu vực công khai (phường/quận) — hiển thị feed trước khi reveal. */
-    val areaLabel: String = "",
-    /** Địa chỉ đầy đủ — chỉ vào bảng private, mở sau contact request ACCEPTED. */
-    val exactAddress: String = "",
+    val address: String = "",
+    val distanceInput: String = "",
     val areaInput: String = "",
     val slots: Int = 1,
     val genderPreference: GenderPreference = GenderPreference.ANY,
