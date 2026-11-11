@@ -188,6 +188,9 @@ object UthDimens {
 
         /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
         val IndicatorBar: Dp = 20.dp
+
+        /** Khung xem trước bản đồ ở màn chi tiết Ghép trọ (deep-link Chỉ đường, không embed map). */
+        val MapPreviewHeight: Dp = 160.dp
     }
 
     /**
@@ -227,6 +230,9 @@ object UthDimens {
         const val HomeHeaderAccentRing = 0.10f
         const val CoverPlaceholder = 0.28f
         const val CoverLabelSurface = 0.92f
+
+        /** Lớp phủ tối đáy ảnh bìa phòng trọ để chữ giá nổi trên cả ảnh sáng lẫn tối. */
+        const val HousingCoverScrim = 0.62f
         const val ShimmerHighlight = 0.70f
         const val TicketHeaderRing = 0.14f
         const val TicketSelectedCount = 0.24f
@@ -310,6 +316,16 @@ object UthDimens {
         const val HomeSkeletonTitleFraction = 0.62f
         const val HomeSkeletonMetadataFraction = 0.38f
         const val ShimmerBandFraction = 0.60f
+
+        /** Lưới ảnh phòng ở form đăng tin Ghép trọ (3 cột, ô vuông co theo bề ngang). */
+        const val HousingPhotoGridColumns = 3
+
+        /** Lưới ô tiện ích ở màn chi tiết Ghép trọ (2 cột: icon + nhãn, theo mockup detail). */
+        const val HousingAmenityGridColumns = 2
+
+        /** Skeleton feed Ghép trọ: bề ngang khối tiêu đề / khối nội dung so với khổ card. */
+        const val HousingSkeletonTitleFraction = 0.62f
+        const val HousingSkeletonBodyFraction = 0.9f
     }
 }
 
