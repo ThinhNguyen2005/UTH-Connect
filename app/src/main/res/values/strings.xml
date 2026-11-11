@@ -1,4 +1,8 @@
 <resources>
+    <string name="maintenance_title">Ứng dụng đang bảo trì</string>
+    <string name="maintenance_message">Vui lòng quay lại sau.</string>
+    <string name="update_required_title">Cần cập nhật ứng dụng</string>
+    <string name="update_required_message">Vui lòng cập nhật UTH Connect để tiếp tục.</string>
     <string name="app_name">UTH Connect</string>
 
     <!-- Chuỗi dùng chung cho mọi module -->
@@ -593,4 +597,7 @@
     <string name="common_error_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
+    <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
+    <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
+    <string name="campuses_directions_action">Chỉ đường</string>
 </resources>
