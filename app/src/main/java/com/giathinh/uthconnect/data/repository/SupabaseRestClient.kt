@@ -38,6 +38,7 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore = store
     }
 
+    /** Restores a persisted session, clearing it only when the refresh token is rejected. */
     suspend fun restoreSavedSession(): Boolean = withContext(Dispatchers.IO) {
         refreshMutex.withLock {
             val saved = sessionStore?.load() ?: return@withLock false
@@ -63,6 +64,7 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /** Updates whether the current refresh token should be persisted across launches. */
     fun setRememberSession(remember: Boolean) {
         rememberSession = remember
         if (remember) {
@@ -73,6 +75,7 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /** Authenticates with Supabase and replaces any prior in-memory session. */
     suspend fun signIn(email: String, password: String) {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
@@ -107,6 +110,7 @@ class SupabaseRestClient @Inject constructor() {
         return parseCredentials(response).userId == currentUserId
     }
 
+    /** Creates an account and returns the authentication response. */
     suspend fun signUp(
         email: String,
         password: String,
@@ -133,6 +137,7 @@ class SupabaseRestClient @Inject constructor() {
         return response
     }
 
+    /** Requests a password recovery message for the supplied email. */
     suspend fun recoverPassword(email: String) {
         val payload = buildJsonObject { put("email", email) }
         send("/auth/v1/recover", "POST", payload, bearer = null)
@@ -176,6 +181,7 @@ class SupabaseRestClient @Inject constructor() {
         )
     }
 
+    /** Clears the active credentials and any persisted refresh token. */
     suspend fun signOut() {
         val old = credentials
         credentials = null
@@ -216,24 +222,98 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore?.clear()
     }
 
+    /** Reads a PostgREST table or view using the authenticated session. */
     suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
 
+    /** Updates matching rows through PostgREST. */
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
 
+    /** Inserts a row through PostgREST and returns the server response. */
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
+    /** Deletes matching rows through PostgREST. */
+    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
+
+    /** Uploads binary data to Supabase Storage using the authenticated session. */
+    suspend fun uploadStorage(
+        bucket: String,
+        path: String,
+        mimeType: String,
+        data: ByteArray,
+    ): String = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val accessToken = freshToken()
+        val cleanPath = path.trimStart('/')
+        val endpoint = "/storage/v1/object/$bucket/$cleanPath"
+        val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 15_000
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            connection.setRequestProperty("Content-Type", mimeType)
+            connection.doOutput = true
+            connection.outputStream.use { it.write(data) }
+            val status = connection.responseCode
+            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching {
+                    val error = json.parseToJsonElement(response).jsonObject
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase Storage HTTP $status"
+                throw SupabaseHttpException(status, message)
+            }
+            cleanPath
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /** Deletes an object from Supabase Storage. */
+    suspend fun deleteStorage(bucket: String, path: String): Unit = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val accessToken = freshToken()
+        val cleanPath = path.trimStart('/')
+        val endpoint = "/storage/v1/object/$bucket/$cleanPath"
+        val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = "DELETE"
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 15_000
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            val status = connection.responseCode
+            if (status !in 200..299 && status != 404) {
+                val response = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val message = runCatching {
+                    val error = json.parseToJsonElement(response).jsonObject
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase Storage delete HTTP $status"
+                throw SupabaseHttpException(status, message)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /** Invokes an authenticated Postgres RPC function. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
+    /** Updates the password for the currently authenticated user. */
     suspend fun updatePassword(password: String): JsonElement {
         val token = freshToken()
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
+    /** Sends an authenticated request after obtaining a valid access token. */
     private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
         val accessToken = freshToken()
         return send(path, method, body, accessToken)
     }
 
+    /** Returns the current access token, refreshing it when it is close to expiration. */
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
@@ -259,6 +339,7 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
+    /** Rotates a refresh token and rejects a response for a different authenticated user. */
     private suspend fun refreshSession(expectedUserId: String, refreshToken: String): Credentials {
         val updated = parseCredentials(
             send(
@@ -272,6 +353,7 @@ class SupabaseRestClient @Inject constructor() {
         return updated
     }
 
+    /** Parses the session fields returned by the Supabase Auth API. */
     private fun parseCredentials(payload: JsonObject): Credentials {
         val id = payload["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content
             ?: error("Auth response missing user ID")
@@ -283,6 +365,7 @@ class SupabaseRestClient @Inject constructor() {
         return Credentials(id, access, refresh, System.currentTimeMillis() + expiresIn * 1000L)
     }
 
+    /** Performs one HTTP request and converts non-success responses to [SupabaseHttpException]. */
     private suspend fun send(
         path: String,
         method: String,
