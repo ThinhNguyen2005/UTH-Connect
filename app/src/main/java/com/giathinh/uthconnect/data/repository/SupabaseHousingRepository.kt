@@ -24,6 +24,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -37,6 +38,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -83,15 +85,21 @@ class SupabaseHousingRepository @Inject constructor(
 
     override suspend fun createListing(listing: HousingListing): Result<HousingListing> = suspendResult {
         val uploadedPaths = mutableListOf<String>()
-        try {
-            val images = resolveImages(listing.images, uploadedPaths)
-            val payload = listing.toPayload(images, includeAuthor = true)
-            client.insertTable("housing_posts?select=*", payload).jsonArray.single().jsonObject.toHousingListing()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
+        val images = try {
+            resolveImages(listing.images, uploadedPaths)
         } catch (error: Exception) {
+            // Lỗi trước khi ghi DB (ảnh quá cỡ, decode hỏng…) chắc chắn chưa commit → dọn ảnh đã upload.
             deleteObjects(uploadedPaths)
             throw error
+        }
+        try {
+            val payload = listing.toPayload(images, includeAuthor = true)
+            client.insertTable("housing_posts?select=*", payload).jsonArray.single().jsonObject.toHousingListing()
+        } catch (rejected: SupabaseHttpException) {
+            // Chỉ dọn ảnh khi server chắc chắn từ chối; timeout/lỗi mapping có thể
+            // xảy ra sau khi DB đã commit — xóa ảnh sẽ làm tin tham chiếu ảnh đã mất.
+            deleteObjects(uploadedPaths)
+            throw rejected
         }
     }
 
@@ -101,8 +109,13 @@ class SupabaseHousingRepository @Inject constructor(
             .jsonArray.singleOrNull()?.jsonObject
             ?.get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
         val uploadedPaths = mutableListOf<String>()
+        val images = try {
+            resolveImages(listing.images, uploadedPaths)
+        } catch (error: Exception) {
+            deleteObjects(uploadedPaths)
+            throw error
+        }
         try {
-            val images = resolveImages(listing.images, uploadedPaths)
             // status/report_count không gửi kèm: trigger backend chỉ cho đổi qua RPC.
             val payload = listing.toPayload(images, includeAuthor = false)
             val updated = client.patchTable("housing_posts?$authorFilter&select=*", payload)
@@ -110,11 +123,13 @@ class SupabaseHousingRepository @Inject constructor(
                 ?: throw NoSuchElementException("Không tìm thấy tin để cập nhật: ${listing.id}")
             deleteObjects(previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) })
             updated
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
+        } catch (rejected: SupabaseHttpException) {
             deleteObjects(uploadedPaths)
-            throw error
+            throw rejected
+        } catch (missing: NoSuchElementException) {
+            // Không dòng nào khớp (tin đã bị xóa) = chắc chắn chưa commit → dọn ảnh mới upload.
+            deleteObjects(uploadedPaths)
+            throw missing
         }
     }
 
@@ -148,8 +163,14 @@ class SupabaseHousingRepository @Inject constructor(
      * Đường đi thật cho tin đã gắn vị trí; song song có trần để feed không
      * dội request lên OSRM, cache theo tọa độ làm tròn ~11m để lần nạp sau
      * không gọi lại. Tin chưa vị trí giữ 0.
+     *
+     * Trần thời gian cả feed: worker nằm TRONG scope timeout để hết ngân sách
+     * là bị hủy thay vì giữ feed chờ; request đang chặn tự kết thúc theo
+     * timeout 8s của kết nối. Hết ngân sách giữ khoảng cách fallback.
      */
-    private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> = coroutineScope {
+    private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> = withTimeoutOrNull(ROAD_BUDGET_MS) { parallelRoadDistances(listings) } ?: listings
+
+    private suspend fun parallelRoadDistances(listings: List<HousingListing>): List<HousingListing> = coroutineScope {
         val gate = Semaphore(MAX_PARALLEL_ROUTES)
         listings.map { listing ->
             async { gate.withPermit { listing.copy(distanceToCampusM = roadDistanceMeters(listing)) } }
@@ -221,10 +242,22 @@ class SupabaseHousingRepository @Inject constructor(
         uploads.awaitAll()
     }
 
+    /** Đọc tối đa MAX_IMAGE_BYTES + 1 byte để stream khổng lồ không kịp ngốn heap trước khi bị chặn. */
+    private fun readBounded(stream: InputStream): ByteArray {
+        val buffer = ByteArrayOutputStream()
+        val chunk = ByteArray(READ_CHUNK_BYTES)
+        while (buffer.size() <= MAX_IMAGE_BYTES) {
+            val read = stream.read(chunk)
+            if (read < 0) break
+            buffer.write(chunk, 0, read)
+        }
+        return buffer.toByteArray()
+    }
+
     private suspend fun uploadLocalImage(uriString: String, uploadedPaths: MutableList<String>): String {
         val uri = Uri.parse(uriString)
         val resolver = context.contentResolver
-        val original = resolver.openInputStream(uri)?.use { it.readBytes() }
+        val original = resolver.openInputStream(uri)?.use { readBounded(it) }
             ?: throw IllegalArgumentException("Không đọc được ảnh: $uriString")
         require(original.size <= MAX_IMAGE_BYTES) { "Ảnh vượt quá dung lượng cho phép" }
         // Ảnh điện thoại gốc vài MB kéo chậm cả upload lẫn tải feed; thu nhỏ còn
@@ -345,6 +378,11 @@ class SupabaseHousingRepository @Inject constructor(
         const val OSRM_USER_AGENT = "UTH-Connect/1.0 (student housing app)"
 
         const val OSRM_TIMEOUT_MS = 8_000
+
+        /** Ngân sách OSRM cho cả feed — quá hạn thì trả feed với khoảng cách fallback. */
+        const val ROAD_BUDGET_MS = 10_000L
+
+        const val READ_CHUNK_BYTES = 8192
 
         const val MAX_PARALLEL_ROUTES = 4
 
