@@ -1,8 +1,10 @@
 package com.giathinh.uthconnect.data.di
 
 import com.giathinh.uthconnect.data.repository.DataStoreHousingDraftStore
+import com.giathinh.uthconnect.data.repository.DataStoreHousingImageCleanupStore
 import com.giathinh.uthconnect.data.repository.SupabaseHousingRepository
 import com.giathinh.uthconnect.domain.repository.HousingDraftStore
+import com.giathinh.uthconnect.domain.repository.HousingImageCleanupStore
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import dagger.Binds
 import dagger.Module
@@ -25,4 +27,10 @@ abstract class HousingDataModule {
     abstract fun bindHousingDraftStore(
         impl: DataStoreHousingDraftStore,
     ): HousingDraftStore
+
+    @Binds
+    @Singleton
+    abstract fun bindHousingImageCleanupStore(
+        impl: DataStoreHousingImageCleanupStore,
+    ): HousingImageCleanupStore
 }

@@ -14,10 +14,13 @@ import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.HousingListingType
 import com.giathinh.uthconnect.domain.model.RoomAmenity
 import com.giathinh.uthconnect.domain.model.UthCampus
+import com.giathinh.uthconnect.domain.repository.HousingImageCleanupStore
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -38,7 +41,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
+import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -46,13 +51,17 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 
 /**
  * Nguồn dữ liệu thật của Ghép trọ trên `housing_posts` (RLS giữ quyền sở hữu,
  * giới hạn 2 tin mở và ngưỡng báo cáo ở backend). Ảnh cục bộ (`content://`)
- * được upload lên bucket [IMAGE_BUCKET] trước khi insert; insert thất bại thì
- * ảnh vừa upload bị dọn để không mồ côi trong Storage.
+ * được upload lên bucket [IMAGE_BUCKET] trước khi insert; server từ chối rõ
+ * ràng (4xx) thì ảnh vừa upload bị dọn, lỗi chưa xác định (5xx/timeout) thì
+ * đối chiếu DB trước để không xóa ảnh của tin đã commit. Xóa tin mà Storage
+ * chưa dọn được ảnh thì path vào hàng đợi [HousingImageCleanupStore], thử lại
+ * ở lần nạp feed/xóa tin kế tiếp.
  *
  * `distanceToCampusM` ưu tiên khoảng cách ĐƯỜNG ĐI thật qua OSRM (cùng dữ liệu
  * OpenStreetMap với picker, không key/billing) để khớp số km người dùng tra trên
@@ -63,6 +72,7 @@ import kotlin.math.roundToInt
 @Singleton
 class SupabaseHousingRepository @Inject constructor(
     private val client: SupabaseRestClient,
+    private val cleanupStore: HousingImageCleanupStore,
     @ApplicationContext private val context: Context,
 ) : HousingRepository {
 
@@ -70,6 +80,7 @@ class SupabaseHousingRepository @Inject constructor(
     private val roadDistanceCache = ConcurrentHashMap<String, Int>()
 
     override suspend fun getListings(): Result<List<HousingListing>> = suspendResult {
+        retryPendingImageCleanup()
         val listings = client.table(
             "housing_posts?select=*&status=eq.OPEN&available_slots=gt.0&order=created_at.desc&limit=100",
         ).jsonArray.map { it.jsonObject.toHousingListing() }
@@ -87,19 +98,24 @@ class SupabaseHousingRepository @Inject constructor(
         val uploadedPaths = mutableListOf<String>()
         val images = try {
             resolveImages(listing.images, uploadedPaths)
+        } catch (cancelled: CancellationException) {
+            withContext(NonCancellable) { deleteObjects(uploadedPaths) }
+            throw cancelled
         } catch (error: Exception) {
             // Lỗi trước khi ghi DB (ảnh quá cỡ, decode hỏng…) chắc chắn chưa commit → dọn ảnh đã upload.
-            deleteObjects(uploadedPaths)
+            withContext(NonCancellable) { deleteObjects(uploadedPaths) }
             throw error
         }
         try {
             val payload = listing.toPayload(images, includeAuthor = true)
             client.insertTable("housing_posts?select=*", payload).jsonArray.single().jsonObject.toHousingListing()
         } catch (rejected: SupabaseHttpException) {
-            // Chỉ dọn ảnh khi server chắc chắn từ chối; timeout/lỗi mapping có thể
-            // xảy ra sau khi DB đã commit — xóa ảnh sẽ làm tin tham chiếu ảnh đã mất.
-            deleteObjects(uploadedPaths)
+            cleanupUploads(uploadedPaths, rejected.status, listingId = null)
             throw rejected
+        } catch (error: Exception) {
+            // Timeout/lỗi mạng không biết DB đã commit chưa — đối chiếu trước khi dọn.
+            cleanupUploads(uploadedPaths, status = null, listingId = null)
+            throw error
         }
     }
 
@@ -111,8 +127,11 @@ class SupabaseHousingRepository @Inject constructor(
         val uploadedPaths = mutableListOf<String>()
         val images = try {
             resolveImages(listing.images, uploadedPaths)
+        } catch (cancelled: CancellationException) {
+            withContext(NonCancellable) { deleteObjects(uploadedPaths) }
+            throw cancelled
         } catch (error: Exception) {
-            deleteObjects(uploadedPaths)
+            withContext(NonCancellable) { deleteObjects(uploadedPaths) }
             throw error
         }
         try {
@@ -124,12 +143,13 @@ class SupabaseHousingRepository @Inject constructor(
             deleteObjects(previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) })
             updated
         } catch (rejected: SupabaseHttpException) {
-            deleteObjects(uploadedPaths)
+            cleanupUploads(uploadedPaths, rejected.status, listing.id)
             throw rejected
-        } catch (missing: NoSuchElementException) {
-            // Không dòng nào khớp (tin đã bị xóa) = chắc chắn chưa commit → dọn ảnh mới upload.
-            deleteObjects(uploadedPaths)
-            throw missing
+        } catch (error: Exception) {
+            // Kể cả NoSuchElementException (tin đã bị xóa): đối chiếu lại cho chắc,
+            // vì lỗi mapping sau khi patch commit cũng rơi vào nhánh này.
+            cleanupUploads(uploadedPaths, status = null, listingId = listing.id)
+            throw error
         }
     }
 
@@ -144,7 +164,9 @@ class SupabaseHousingRepository @Inject constructor(
             .jsonArray.singleOrNull()?.jsonObject
             ?.get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
         client.deleteTable("housing_posts?$authorFilter")
-        deleteObjects(images.mapNotNull { storagePathOf(it) })
+        // Bản ghi đã xóa: ảnh dọn chưa được thì ghi hàng đợi bền vững để lần sau thử lại.
+        val failed = deleteObjects(images.mapNotNull { storagePathOf(it) })
+        enqueueImageCleanup(failed)
         Unit
     }
 
@@ -165,8 +187,8 @@ class SupabaseHousingRepository @Inject constructor(
      * không gọi lại. Tin chưa vị trí giữ 0.
      *
      * Trần thời gian cả feed: worker nằm TRONG scope timeout để hết ngân sách
-     * là bị hủy thay vì giữ feed chờ; request đang chặn tự kết thúc theo
-     * timeout 8s của kết nối. Hết ngân sách giữ khoảng cách fallback.
+     * là bị hủy; hủy coroutine đóng socket ngay nên request đang chặn không
+     * giữ feed chờ hết timeout kết nối. Hết ngân sách giữ khoảng cách fallback.
      */
     private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> {
         val routed = withTimeoutOrNull(ROAD_BUDGET_MS) { parallelRoadDistances(listings) }
@@ -185,48 +207,56 @@ class SupabaseHousingRepository @Inject constructor(
         if (fallback == 0) return 0
         val key = listing.campus.name + ":" +
             String.format(Locale.US, "%.4f:%.4f", listing.latitude, listing.longitude)
-        val meters = roadDistanceCache[key] ?: withContext(Dispatchers.IO) {
-            try {
-                fetchOsrmDistanceM(listing.latitude, listing.longitude, listing.campus)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Log.w(LOG_TAG, "OSRM lỗi, giữ khoảng cách đường thẳng", error)
-                null
-            }
-        }?.also { roadDistanceCache[key] = it }
+        val meters = roadDistanceCache[key] ?: fetchRoadDistanceOrNull(listing)?.also { roadDistanceCache[key] = it }
         return meters ?: fallback
     }
 
-    private fun fetchOsrmDistanceM(latitude: Double, longitude: Double, campus: UthCampus): Int? {
-        val (campusLat, campusLng) = CampusReference.of(campus)
-        val connection = URL(
-            "$OSRM_BASE_URL/route/v1/driving/$longitude,$latitude;$campusLng,$campusLat?overview=false",
-        ).openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = OSRM_TIMEOUT_MS
-            connection.readTimeout = OSRM_TIMEOUT_MS
-            connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", OSRM_USER_AGENT)
-            if (connection.responseCode !in HTTP_OK_MIN..HTTP_OK_MAX) {
-                Log.w(LOG_TAG, "OSRM HTTP ${connection.responseCode}")
-                return null
+    private suspend fun fetchRoadDistanceOrNull(listing: HousingListing): Int? = try {
+        fetchOsrmDistanceM(listing.latitude, listing.longitude, listing.campus)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Log.w(LOG_TAG, "OSRM lỗi, giữ khoảng cách đường thẳng", error)
+        null
+    }
+
+    private suspend fun fetchOsrmDistanceM(latitude: Double, longitude: Double, campus: UthCampus): Int? {
+        return withContext(Dispatchers.IO) {
+            val (campusLat, campusLng) = CampusReference.of(campus)
+            val connection = URL(
+                "$OSRM_BASE_URL/route/v1/driving/$longitude,$latitude;$campusLng,$campusLat?overview=false",
+            ).openConnection() as HttpURLConnection
+            // Hủy coroutine là đóng socket ngay để lần read/connect đang chặn thoát tức thì.
+            val onFinished = coroutineContext[Job]?.invokeOnCompletion { connection.disconnect() }
+            try {
+                connection.connectTimeout = OSRM_TIMEOUT_MS
+                connection.readTimeout = OSRM_TIMEOUT_MS
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("User-Agent", OSRM_USER_AGENT)
+                if (connection.responseCode !in HTTP_OK_MIN..HTTP_OK_MAX) {
+                    Log.w(LOG_TAG, "OSRM HTTP ${connection.responseCode}")
+                    return@withContext null
+                }
+                val body = connection.inputStream.bufferedReader().use {
+                    readBodyWithinBudget(it, OSRM_TIMEOUT_MS.toLong()) { System.nanoTime() / NANOS_PER_MS }
+                }
+                val route = json.parseToJsonElement(body).jsonObject["routes"]?.jsonArray?.firstOrNull()?.jsonObject
+                val meters = (route?.get("distance") as? JsonPrimitive)?.doubleOrNull?.roundToInt()
+                Log.i(LOG_TAG, "OSRM khoảng cách đường đi m=$meters")
+                meters
+            } finally {
+                onFinished?.dispose()
+                connection.disconnect()
             }
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            val route = json.parseToJsonElement(body).jsonObject["routes"]?.jsonArray?.firstOrNull()?.jsonObject
-            val meters = (route?.get("distance") as? JsonPrimitive)?.doubleOrNull?.roundToInt()
-            Log.i(LOG_TAG, "OSRM khoảng cách đường đi m=$meters")
-            return meters
-        } finally {
-            connection.disconnect()
         }
     }
 
     /**
-     * Giữ URL có sẵn; URI cục bộ thì đọc bytes, upload và trả public URL.
-     * Chạy song song tối đa [MAX_PARALLEL_UPLOADS] ảnh trên IO: đọc file + giải mã
-     * bitmap là việc chặn luồng (để trên Main sẽ đơ UI), còn upload tuần tự bắt
-     * người đăng tin chờ cộng dồn thời gian của từng ảnh.
+     * Giữ URL có sẵn thuộc đúng bucket của module (kể cả dữ liệu cũ); URL ngoài
+     * bucket bị từ chối để tin không tham chiếu ảnh lạ. URI cục bộ thì đọc bytes,
+     * upload và trả public URL. Chạy song song tối đa [MAX_PARALLEL_UPLOADS] ảnh
+     * trên IO: đọc file + giải mã bitmap là việc chặn luồng (để trên Main sẽ đơ UI),
+     * còn upload tuần tự bắt người đăng tin chờ cộng dồn thời gian của từng ảnh.
      */
     private suspend fun resolveImages(
         images: List<String>,
@@ -236,6 +266,7 @@ class SupabaseHousingRepository @Inject constructor(
         val uploads = images.map { image ->
             async(Dispatchers.IO) {
                 if (image.startsWith("http://") || image.startsWith("https://")) {
+                    require(storagePathOf(image) != null) { "Ảnh ngoài bucket $IMAGE_BUCKET: $image" }
                     image
                 } else {
                     gate.withPermit { uploadLocalImage(image, uploadedPaths) }
@@ -267,8 +298,10 @@ class SupabaseHousingRepository @Inject constructor(
         // cạnh dài tối đa 1280px và nén JPEG là đủ nét cho card phòng.
         val bytes = downscaleJpeg(original)
         val path = "${client.userId}/${UUID.randomUUID()}.jpg"
-        client.uploadStorageObject(IMAGE_BUCKET, path, bytes, "image/jpeg")
+        // Ghi path trước khi upload: Storage đã lưu mà coroutine bị hủy giữa chừng
+        // thì danh sách dọn vẫn còn path; xóa object không tồn tại chỉ là no-op.
         synchronized(uploadedPaths) { uploadedPaths += path }
+        client.uploadStorageObject(IMAGE_BUCKET, path, bytes, "image/jpeg")
         return "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$IMAGE_BUCKET/$path"
     }
 
@@ -297,10 +330,89 @@ class SupabaseHousingRepository @Inject constructor(
         return url.takeIf { it.startsWith(prefix) }?.removePrefix(prefix)
     }
 
-    private suspend fun deleteObjects(paths: List<String>) {
-        paths.forEach { path ->
-            runCatching { client.deleteStorageObject(IMAGE_BUCKET, path) }
+    /** Xóa ảnh trong bucket; trả về path thất bại để hàng đợi dọn lại thử lần sau. */
+    private suspend fun deleteObjects(paths: List<String>): List<String> {
+        val failed = mutableListOf<String>()
+        for (path in paths) {
+            try {
+                client.deleteStorageObject(IMAGE_BUCKET, path)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(LOG_TAG, "Xóa ảnh Storage thất bại: $path", error)
+                failed += path
+            }
         }
+        return failed
+    }
+
+    /** Ghi hàng đợi bền vững là việc phụ: lỗi đĩa không được làm hỏng thao tác xóa tin chính. */
+    private suspend fun enqueueImageCleanup(paths: List<String>) {
+        if (paths.isEmpty()) return
+        try {
+            cleanupStore.enqueue(paths)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: IOException) {
+            Log.w(LOG_TAG, "Không lưu được hàng đợi dọn ảnh", error)
+        }
+    }
+
+    /** Thử lại ảnh mồ côi của lần xóa trước; chỉ bỏ khỏi hàng đợi những path đã xóa được. */
+    private suspend fun retryPendingImageCleanup() {
+        val pending = try {
+            cleanupStore.pending()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: IOException) {
+            Log.w(LOG_TAG, "Không đọc được hàng đợi dọn ảnh", error)
+            return
+        }
+        if (pending.isEmpty()) return
+        val failed = deleteObjects(pending).toSet()
+        try {
+            cleanupStore.dequeue(pending.filter { it !in failed })
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: IOException) {
+            Log.w(LOG_TAG, "Không cập nhật được hàng đợi dọn ảnh", error)
+        }
+    }
+
+    /**
+     * 4xx = server chắc chắn từ chối, chưa commit → dọn ảnh mới upload.
+     * 5xx/timeout chưa biết commit hay chưa → đối chiếu tin của chủ sở hữu, chỉ
+     * xóa ảnh không còn được tham chiếu; không đối chiếu được thì giữ ảnh (thà
+     * mồ côi trong Storage còn hơn làm tin thật mất ảnh). NonCancellable để lệnh
+     * hủy giữa chừng không bỏ dở việc dọn.
+     */
+    private suspend fun cleanupUploads(uploadedPaths: List<String>, status: Int?, listingId: String?) {
+        if (uploadedPaths.isEmpty()) return
+        withContext(NonCancellable) {
+            val confirmedRejection = status != null && status in HTTP_CLIENT_ERROR_MIN..HTTP_CLIENT_ERROR_MAX
+            if (confirmedRejection) {
+                deleteObjects(uploadedPaths)
+            } else {
+                deleteObjects(unreferencedUploads(uploadedPaths, listingId))
+            }
+        }
+    }
+
+    private suspend fun unreferencedUploads(uploadedPaths: List<String>, listingId: String?): List<String> {
+        val idFilter = listingId?.let { "&id=eq.${urlEncode(it)}" }.orEmpty()
+        val referenced = try {
+            client.table("housing_posts?select=images&author_id=eq.${urlEncode(client.userId)}$idFilter")
+                .jsonArray
+                .flatMap { it.jsonObject["images"]?.jsonArray.orEmpty() }
+                .mapNotNull { storagePathOf(it.jsonPrimitive.content) }
+                .toSet()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(LOG_TAG, "Không đối chiếu được tin sau lỗi chưa xác định — giữ ảnh", error)
+            return emptyList()
+        }
+        return uploadedPaths.filter { it !in referenced }
     }
 
     private fun HousingListing.toPayload(images: List<String>, includeAuthor: Boolean): JsonObject = buildJsonObject {
@@ -392,6 +504,10 @@ class SupabaseHousingRepository @Inject constructor(
         const val HTTP_OK_MIN = 200
         const val HTTP_OK_MAX = 299
 
+        /** 4xx = server đã từ chối rõ ràng (chưa commit); ngoài dải này là chưa xác định. */
+        const val HTTP_CLIENT_ERROR_MIN = 400
+        const val HTTP_CLIENT_ERROR_MAX = 499
+
         /** Trần dung lượng mỗi ảnh đọc vào — chặn OOM trước khi giải mã. */
         const val MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
@@ -402,5 +518,25 @@ class SupabaseHousingRepository @Inject constructor(
 
         /** Số ảnh upload cùng lúc — giới hạn bộ nhớ đỉnh khi giải mã nhiều ảnh. */
         const val MAX_PARALLEL_UPLOADS = 3
+    }
+}
+
+private const val NANOS_PER_MS = 1_000_000L
+private const val OSRM_BODY_CHUNK_CHARS = 4096
+
+/**
+ * Đọc trọn response nhưng giới hạn TỔNG thời gian đọc chứ không chỉ từng lần
+ * read (server nhỏ giọt vẫn bị chặn); quá ngân sách ném IOException để caller
+ * giữ khoảng cách fallback. Clock truyền vào được để test giả lập thời gian.
+ */
+internal fun readBodyWithinBudget(reader: Reader, budgetMs: Long, elapsedMs: () -> Long): String {
+    val deadline = elapsedMs() + budgetMs
+    val body = StringBuilder()
+    val chunk = CharArray(OSRM_BODY_CHUNK_CHARS)
+    while (true) {
+        if (elapsedMs() >= deadline) throw IOException("OSRM response vượt tổng thời gian đọc")
+        val read = reader.read(chunk)
+        if (read == -1) return body.toString()
+        body.append(chunk, 0, read)
     }
 }
