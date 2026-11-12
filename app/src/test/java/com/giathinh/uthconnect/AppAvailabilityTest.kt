@@ -35,10 +35,13 @@ class AppAvailabilityTest {
     @Test
     fun isValidUpdateUrlValidatesHttpsAndMarket() {
         assertTrue(isValidUpdateUrl("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
+        assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertTrue(isValidUpdateUrl("https://ut.edu.vn/download/app.apk"))
         assertTrue(isValidUpdateUrl("market://details?id=com.giathinh.uthconnect"))
         assertFalse(isValidUpdateUrl(""))
         assertFalse(isValidUpdateUrl("   "))
         assertFalse(isValidUpdateUrl("http://insecure.site/app.apk"))
+        assertFalse(isValidUpdateUrl("https://unapproved-phishing-domain.com/app.apk"))
         assertFalse(isValidUpdateUrl("ftp://invalid.scheme"))
     }
 
@@ -202,6 +205,36 @@ class AppAvailabilityTest {
         assertFalse(loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
         assertEquals("", loaded.updateUrl)
+    }
+
+    @Test
+    fun corruptedMinVersionPreservesValidMaintenanceMode() {
+        val fake = FakeSharedPreferences()
+        fake.edit()
+            .putBoolean("has_saved_state", true)
+            .putBoolean("maintenance_mode", true)
+            .putInt("force_update_min_version", 999)
+            .apply()
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertTrue("Maintenance mode preserved even if min_version type is corrupted", loaded.maintenanceMode)
+        assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+    }
+
+    @Test
+    fun corruptedMaintenanceModePreservesValidMinVersion() {
+        val fake = FakeSharedPreferences()
+        fake.edit()
+            .putBoolean("has_saved_state", true)
+            .putString("maintenance_mode", "invalid_string_type")
+            .putString("force_update_min_version", "2.0.0")
+            .apply()
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertFalse("Maintenance mode falls back to false on ClassCastException", loaded.maintenanceMode)
+        assertEquals("2.0.0", loaded.forceUpdateMinVersion)
     }
 
     private class FakeSharedPreferences : SharedPreferences {
