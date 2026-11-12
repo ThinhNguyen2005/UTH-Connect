@@ -51,11 +51,15 @@ private const val UPDATE_URL = ""
  */
 internal fun loadSavedGate(prefs: SharedPreferences): SavedGate {
     if (!prefs.contains("has_saved_state")) return SavedGate()
-    return SavedGate(
-        maintenanceMode = prefs.getBoolean("maintenance_mode", false),
-        forceUpdateMinVersion = prefs.getString("force_update_min_version", "1.0.0") ?: "1.0.0",
-        hasSavedState = true,
-    )
+    return try {
+        SavedGate(
+            maintenanceMode = prefs.getBoolean("maintenance_mode", false),
+            forceUpdateMinVersion = prefs.getString("force_update_min_version", "1.0.0") ?: "1.0.0",
+            hasSavedState = true,
+        )
+    } catch (_: Exception) {
+        SavedGate(hasSavedState = false)
+    }
 }
 
 internal fun loadSavedGate(context: Context): SavedGate {

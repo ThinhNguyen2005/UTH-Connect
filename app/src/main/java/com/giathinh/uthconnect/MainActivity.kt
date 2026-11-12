@@ -24,7 +24,6 @@ import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigFetchThrottledException
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
@@ -131,27 +130,26 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
             isCheckingAvailability = true
-            val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
-            val (initialState, _) = resolveGate(
-                saved = saved,
-                fetchSucceeded = false,
-                remoteMaintenance = false,
-                remoteMinVersion = "1.0.0",
-                currentVersion = BuildConfig.VERSION_NAME,
-            )
-            appAvailability = initialState
-
+            var initialState = AppAvailability.AVAILABLE
             try {
+                val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
+                val (resolvedInitial, _) = resolveGate(
+                    saved = saved,
+                    fetchSucceeded = false,
+                    remoteMaintenance = false,
+                    remoteMinVersion = "1.0.0",
+                    currentVersion = BuildConfig.VERSION_NAME,
+                )
+                initialState = resolvedInitial
+                appAvailability = initialState
+
                 withContext(Dispatchers.IO) {
                     updateRemoteConfigGate(saved)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: FirebaseRemoteConfigFetchThrottledException) {
-                if (appAvailability == null) {
-                    appAvailability = initialState
-                }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.w("MainActivity", "Remote Config check failed: ${e.message}")
                 if (appAvailability == null) {
                     appAvailability = initialState
                 }
