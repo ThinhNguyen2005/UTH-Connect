@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
@@ -48,6 +49,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -95,6 +97,7 @@ fun CreateHousingPostScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     onPickPhotos: () -> Unit = {},
+    onPickLocation: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -130,9 +133,11 @@ fun CreateHousingPostScreen(
                     title = uiState.title,
                     address = uiState.address,
                     area = uiState.areaInput,
+                    hasLocation = uiState.hasLocation,
                     onTitleChange = { onAction(CreateHousingPostAction.ChangeTitle(it)) },
                     onAddressChange = { onAction(CreateHousingPostAction.ChangeAddress(it)) },
                     onAreaChange = { onAction(CreateHousingPostAction.ChangeArea(it)) },
+                    onPickLocation = onPickLocation,
                 )
             }
             item {
@@ -378,9 +383,11 @@ private fun LocationTitleCard(
     title: String,
     address: String,
     area: String,
+    hasLocation: Boolean,
     onTitleChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
     onAreaChange: (String) -> Unit,
+    onPickLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     UthCard(modifier = modifier.fillMaxWidth()) {
@@ -428,6 +435,39 @@ private fun LocationTitleCard(
             shape = MaterialTheme.shapes.small,
             singleLine = true,
         )
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        OutlinedButton(
+            onClick = onPickLocation,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = UthDimens.Size.ButtonHeight),
+            shape = MaterialTheme.shapes.small,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Place,
+                contentDescription = null,
+                modifier = Modifier.size(UthDimens.Size.IconInline),
+            )
+            Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+            Text(stringResource(R.string.housing_location_pick_button))
+        }
+        if (hasLocation) {
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
+                Text(
+                    text = stringResource(R.string.housing_location_picked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = UthTheme.extendedColors.textSecondary,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
         OutlinedTextField(
             value = area,
@@ -1054,7 +1094,9 @@ private fun GuidelinesNotice(modifier: Modifier = Modifier) {
 private fun ValidationErrorBanner(error: CreateHousingPostError, modifier: Modifier = Modifier) {
     val messageRes = when (error) {
         CreateHousingPostError.EMPTY_TITLE -> R.string.housing_create_error_title
+        CreateHousingPostError.INVALID_TITLE_LENGTH -> R.string.housing_create_error_title_length
         CreateHousingPostError.INVALID_RENT -> R.string.housing_create_error_rent
+        CreateHousingPostError.INVALID_AREA -> R.string.housing_create_error_area
         CreateHousingPostError.EMPTY_ADDRESS -> R.string.housing_create_error_address
         CreateHousingPostError.EMPTY_PHONE -> R.string.housing_create_error_phone
         CreateHousingPostError.SIGN_IN_REQUIRED -> R.string.housing_create_sign_in_required

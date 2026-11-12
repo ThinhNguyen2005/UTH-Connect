@@ -694,6 +694,8 @@
     <string name="housing_create_submit">Publish Listing</string>
     <string name="housing_create_success">Housing listing published successfully!</string>
     <string name="housing_create_error_title">Please enter a post title</string>
+    <string name="housing_create_error_title_length">Title must be 5 to 150 characters</string>
+    <string name="housing_create_error_area">Area must be a number greater than 0</string>
     <string name="housing_create_error_rent">Please enter a valid monthly rent</string>
     <string name="housing_create_error_phone">Please enter a contact phone number</string>
     <string name="housing_create_sign_in_required">Sign in to publish a listing with your student profile</string>

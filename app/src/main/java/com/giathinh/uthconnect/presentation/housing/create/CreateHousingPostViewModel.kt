@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.HostVerificationMethod
@@ -21,9 +22,15 @@ import javax.inject.Inject
 
 sealed interface CreateHousingPostEvent {
     data object PostCreated : CreateHousingPostEvent
-    data class SubmitFailed(val code: ServerErrorCode) : CreateHousingPostEvent
+    data class SubmitFailed(val code: ServerErrorCode, val detail: String? = null) : CreateHousingPostEvent
     data object DraftSaved : CreateHousingPostEvent
 }
+
+/** Khớp check constraint housing_posts_title_check / area_m2 của backend. */
+private const val MIN_TITLE_LENGTH = 5
+private const val MAX_TITLE_LENGTH = 150
+
+private const val LOG_TAG = "HousingCreate"
 
 @HiltViewModel
 class CreateHousingPostViewModel @Inject constructor(
@@ -46,6 +53,7 @@ class CreateHousingPostViewModel @Inject constructor(
             is CreateHousingPostAction.ChangeRent,
             is CreateHousingPostAction.ChangeDeposit,
             is CreateHousingPostAction.ChangeAddress,
+            is CreateHousingPostAction.ChangeLocation,
             is CreateHousingPostAction.ChangeArea,
             is CreateHousingPostAction.ChangeScheduleNote,
             is CreateHousingPostAction.ChangeContactPhone,
@@ -90,6 +98,15 @@ class CreateHousingPostViewModel @Inject constructor(
 
             is CreateHousingPostAction.ChangeAddress ->
                 _uiState.update { it.copy(address = action.address, validationError = null) }
+
+            is CreateHousingPostAction.ChangeLocation -> _uiState.update {
+                it.copy(
+                    latitude = action.latitude,
+                    longitude = action.longitude,
+                    address = action.address.ifBlank { it.address },
+                    validationError = null,
+                )
+            }
 
             is CreateHousingPostAction.ChangeArea ->
                 _uiState.update { it.copy(areaInput = action.area) }
@@ -175,8 +192,9 @@ class CreateHousingPostViewModel @Inject constructor(
             result.fold(
                 onSuccess = { _events.send(CreateHousingPostEvent.PostCreated) },
                 onFailure = { error ->
+                    Log.e(LOG_TAG, "Create housing listing failed", error)
                     _uiState.update { it.copy(isSubmitting = false) }
-                    _events.send(CreateHousingPostEvent.SubmitFailed(ServerErrorCode.of(error)))
+                    _events.send(CreateHousingPostEvent.SubmitFailed(ServerErrorCode.of(error), error.message))
                 },
             )
         }
@@ -188,10 +206,20 @@ class CreateHousingPostViewModel @Inject constructor(
         profile: StudentProfile?,
     ): CreateHousingPostError? = when {
         profile == null -> CreateHousingPostError.SIGN_IN_REQUIRED
+
         state.title.isBlank() -> CreateHousingPostError.EMPTY_TITLE
+
+        state.title.trim().length !in MIN_TITLE_LENGTH..MAX_TITLE_LENGTH ->
+            CreateHousingPostError.INVALID_TITLE_LENGTH
+
         parseAmount(state.rentInput) == null -> CreateHousingPostError.INVALID_RENT
+
+        state.areaInput.isNotBlank() && parseAmount(state.areaInput) == null -> CreateHousingPostError.INVALID_AREA
+
         state.address.isBlank() -> CreateHousingPostError.EMPTY_ADDRESS
+
         state.contactPhone.isBlank() -> CreateHousingPostError.EMPTY_PHONE
+
         else -> null
     }
 
@@ -222,9 +250,9 @@ class CreateHousingPostViewModel @Inject constructor(
         scheduleNote = state.scheduleNote.trim(),
         amenities = state.selectedAmenities.toList(),
         addressLabel = state.address.trim(),
-        areaM2 = state.areaInput.filter { it.isDigit() }.toIntOrNull(),
-        latitude = 0.0,
-        longitude = 0.0,
+        areaM2 = parseAmount(state.areaInput),
+        latitude = state.latitude,
+        longitude = state.longitude,
         status = HousingListingStatus.OPEN,
         verified = host.uthVerified,
         verificationMethod = if (host.uthVerified) HostVerificationMethod.EMAIL_UTH else null,

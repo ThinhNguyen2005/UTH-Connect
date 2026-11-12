@@ -102,6 +102,32 @@ class CreateHousingPostViewModelTest {
     }
 
     @Test
+    fun `validate - tieu de duoi 5 ky tu bao loi INVALID_TITLE_LENGTH`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("test"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_TITLE_LENGTH, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `validate - dien tich 0 bao loi INVALID_AREA`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng trọ gần CS1"))
+        viewModel.onAction(CreateHousingPostAction.ChangeRent("1500000"))
+        viewModel.onAction(CreateHousingPostAction.ChangeArea("0"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_AREA, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
     fun `submit hop le - goi repository va phat event PostCreated`() = runTest {
         val repo = FakeCreateHousingRepository()
         val viewModel = viewModel(repo)
@@ -197,6 +223,35 @@ class CreateHousingPostViewModelTest {
         viewModel.onAction(CreateHousingPostAction.RemovePhoto(0))
 
         assertEquals(listOf("content://photo/1"), viewModel.uiState.value.photos)
+    }
+
+    @Test
+    fun `ChangeLocation - luu toa do that va dia chi picker khi dang tin`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeLocation(10.8051, 106.7170, "138 Võ Oanh, Bình Thạnh"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        val listing = requireNotNull(repo.createdListing)
+        assertEquals(10.8051, listing.latitude, 0.0)
+        assertEquals(106.7170, listing.longitude, 0.0)
+        assertEquals("138 Võ Oanh, Bình Thạnh", listing.addressLabel)
+        assertTrue(viewModel.uiState.value.hasLocation)
+    }
+
+    @Test
+    fun `ChangeLocation - dia chi rong thi giu dia chi da nhap tay`() {
+        val viewModel = viewModel(FakeCreateHousingRepository())
+        viewModel.onAction(CreateHousingPostAction.ChangeAddress("138 Quang Trung, Gò Vấp"))
+
+        viewModel.onAction(CreateHousingPostAction.ChangeLocation(10.8051, 106.7170, ""))
+
+        assertEquals("138 Quang Trung, Gò Vấp", viewModel.uiState.value.address)
+        assertEquals(10.8051, viewModel.uiState.value.latitude, 0.0)
+        assertTrue(viewModel.uiState.value.hasLocation)
     }
 
     private fun fillValidForm(viewModel: CreateHousingPostViewModel) {

@@ -7,7 +7,9 @@ import com.giathinh.uthconnect.domain.model.UthCampus
 
 enum class CreateHousingPostError {
     EMPTY_TITLE,
+    INVALID_TITLE_LENGTH,
     INVALID_RENT,
+    INVALID_AREA,
     EMPTY_ADDRESS,
     EMPTY_PHONE,
     SIGN_IN_REQUIRED,
@@ -25,6 +27,9 @@ data class CreateHousingPostUiState(
     val depositInput: String = "",
     val utilitiesIncluded: Boolean = false,
     val address: String = "",
+    /** Tọa độ thật lấy từ picker bản đồ; (0,0) = chưa chấm pin, repository tự điền điểm cơ sở. */
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val areaInput: String = "",
     val slots: Int = 1,
     val genderPreference: GenderPreference = GenderPreference.ANY,
@@ -37,4 +42,7 @@ data class CreateHousingPostUiState(
     val photos: List<String> = emptyList(),
     val isSubmitting: Boolean = false,
     val validationError: CreateHousingPostError? = null,
-)
+) {
+    /** Đã chấm pin thật trên bản đồ — hiện tóm tắt "đã chọn vị trí" thay vì chỉ ô địa chỉ tay. */
+    val hasLocation: Boolean get() = latitude != 0.0 || longitude != 0.0
+}

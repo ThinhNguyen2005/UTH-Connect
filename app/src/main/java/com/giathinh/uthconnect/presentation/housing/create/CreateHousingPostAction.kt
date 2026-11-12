@@ -14,6 +14,13 @@ sealed interface CreateHousingPostAction {
     data class ChangeDeposit(val deposit: String) : CreateHousingPostAction
     data class ChangeUtilitiesIncluded(val included: Boolean) : CreateHousingPostAction
     data class ChangeAddress(val address: String) : CreateHousingPostAction
+
+    /** Kết quả picker bản đồ trả về: tọa độ thật + địa chỉ Geocoder (rỗng thì giữ địa chỉ đã nhập). */
+    data class ChangeLocation(
+        val latitude: Double,
+        val longitude: Double,
+        val address: String,
+    ) : CreateHousingPostAction
     data class ChangeArea(val area: String) : CreateHousingPostAction
     data class ChangeSlots(val slots: Int) : CreateHousingPostAction
     data class ChangeGender(val gender: GenderPreference) : CreateHousingPostAction
