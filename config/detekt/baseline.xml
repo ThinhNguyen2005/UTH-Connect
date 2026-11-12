@@ -398,6 +398,7 @@
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail loading light", showBackground = true) @Composable private fun DetailLoadingLightPreview()</ID>
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found dark", showBackground = true) @Composable private fun DetailNotFoundDarkPreview()</ID>
     <ID>UnusedPrivateMember:HousingDetailScreen.kt$@Preview(name = "detail not found light", showBackground = true) @Composable private fun DetailNotFoundLightPreview()</ID>
+    <ID>UnusedPrivateMember:HousingLocationPickerScreen.kt$@Preview @Composable private fun PickerBottomPanelPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview @Composable private fun HousingScreenContentPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content dark", showBackground = true) @Composable private fun HousingContentDarkPreview()</ID>
     <ID>UnusedPrivateMember:HousingScreen.kt$@Preview(name = "content large text", showBackground = true, fontScale = 1.5f) @Composable private fun HousingLargeTextPreview()</ID>

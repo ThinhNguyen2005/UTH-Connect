@@ -11,6 +11,11 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+    <!-- Chọn vị trí phòng trọ: GPS chỉ dùng khi chủ tin bấm "Vị trí hiện tại";
+         từ chối quyền vẫn chấm pin tay trên bản đồ được. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
         android:name=".UTHConnectApplication"

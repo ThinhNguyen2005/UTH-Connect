@@ -112,6 +112,10 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
+    // Ghép trọ: bản đồ OpenStreetMap chấm pin khi đăng tin (không key/billing) + GPS vị trí hiện tại.
+    implementation(libs.osmdroid.android)
+    implementation(libs.play.services.location)
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
