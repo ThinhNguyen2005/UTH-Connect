@@ -13,6 +13,10 @@
 --     sinh viên UTH đã xác thực (email trường + MSSV) nên siết thêm ở tầng DB:
 --     OPEN chỉ đọc được khi profiles.student_id_verified = true, chủ tin vẫn
 --     đọc tin của mình ở mọi trạng thái.
+--   * Dọn dữ liệu cũ trước khi bật trigger: tin đời cũ lỡ lưu URL ảnh ngoài
+--     bucket / Zalo ngoài miền sẽ bị trigger chặn MỌI lần update sau này
+--     (kể cả RPC đánh dấu hết phòng / ẩn tin). Lọc ảnh hợp lệ, xóa URL Zalo
+--     hỏng về rỗng để tin cũ sửa/đánh dấu được bình thường.
 -- Idempotent: create or replace + drop/create trigger/policy, chạy lại được.
 -- ============================================================================
 
@@ -39,12 +43,39 @@ begin
 end;
 $$;
 
+-- 2. Dọn URL hỏng của tin cũ trước khi trigger có hiệu lực -------------------
+-- Một lệnh duy nhất dọn cả ảnh lẫn Zalo để lần chạy lại (trigger đã bật) không
+-- bị chính trigger chặn giữa chừng khi hàng vi phạm cả hai; chỉ đụng hàng lỗi.
+update public.housing_posts
+set
+    images = coalesce(
+        (
+            select array_agg(img)
+            from unnest(images) as img
+            where img ~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/'
+        ),
+        '{}'
+    ),
+    contact_zalo_url = case
+        when coalesce(contact_zalo_url, '') <> ''
+            and contact_zalo_url !~* '^https://zalo\.me(/|$)' then ''
+        else contact_zalo_url
+    end
+where exists (
+    select 1 from unnest(images) as img
+    where img !~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/'
+)
+    or (
+        coalesce(contact_zalo_url, '') <> ''
+        and contact_zalo_url !~* '^https://zalo\.me(/|$)'
+    );
+
 drop trigger if exists housing_url_guards on public.housing_posts;
 create trigger housing_url_guards
     before insert or update on public.housing_posts
     for each row execute function public.trg_housing_url_guards();
 
--- 2. Tin OPEN chỉ cho hồ sơ đã xác thực MSSV đọc ------------------------------
+-- 3. Tin OPEN chỉ cho hồ sơ đã xác thực MSSV đọc ------------------------------
 -- Exists chéo sang profiles (không self-table) để né recursion 42P17.
 drop policy if exists housing_posts_select on public.housing_posts;
 create policy housing_posts_select on public.housing_posts
