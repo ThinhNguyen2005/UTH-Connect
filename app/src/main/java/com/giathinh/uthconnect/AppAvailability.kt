@@ -56,22 +56,36 @@ internal fun remoteConfigFetchIntervalSeconds(
 internal fun isValidUpdateUrl(url: String): Boolean {
     if (url.isBlank()) return false
     val trimmed = url.trim()
+    if (trimmed.any { it.isWhitespace() || it.isISOControl() }) return false
+
     if (trimmed.startsWith("market://", ignoreCase = true)) {
-        return trimmed.length > "market://".length
+        val target = trimmed.substring("market://".length)
+        if (target.isBlank()) return false
+        return target.startsWith("details?", ignoreCase = true) || target.startsWith("search?", ignoreCase = true)
     }
+
     if (trimmed.startsWith("https://", ignoreCase = true)) {
-        val hostAndPath = trimmed.substring("https://".length)
-        val host = hostAndPath.substringBefore('/').substringBefore(':').lowercase()
-        return host.isNotEmpty() && (
-            host == "play.google.com" ||
-                host == "github.com" ||
-                host.endsWith(".github.com") ||
-                host == "ut.edu.vn" ||
-                host.endsWith(".ut.edu.vn") ||
-                host == "uth.edu.vn" ||
-                host.endsWith(".uth.edu.vn")
-            )
+        val authorityAndPath = trimmed.substring("https://".length)
+        val authority = authorityAndPath.substringBefore('/').substringBefore('?').substringBefore('#')
+
+        if ('@' in authority) return false
+        if (':' in authority) {
+            val portString = authority.substringAfter(':')
+            if (portString != "443") return false
+        }
+
+        val host = authority.substringBefore(':').lowercase()
+        if (host.isEmpty()) return false
+
+        return host == "play.google.com" ||
+            host == "github.com" ||
+            host.endsWith(".github.com") ||
+            host == "ut.edu.vn" ||
+            host.endsWith(".ut.edu.vn") ||
+            host == "uth.edu.vn" ||
+            host.endsWith(".uth.edu.vn")
     }
+
     return false
 }
 
