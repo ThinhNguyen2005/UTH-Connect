@@ -1,5 +1,7 @@
 package com.giathinh.uthconnect.presentation.housing.detail
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
@@ -32,12 +34,16 @@ fun HousingDetailRoute(
             when (event) {
                 is HousingDetailEvent.CallPhone -> {
                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${event.phoneNumber}"))
-                    context.startActivity(intent)
+                    openExternal(context, intent, snackbars)
                 }
 
                 is HousingDetailEvent.OpenZalo -> {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(event.url))
-                    context.startActivity(intent)
+                    openExternal(context, intent, snackbars)
+                }
+
+                HousingDetailEvent.InvalidZaloLink -> {
+                    snackbars.showSnackbar(context.getString(R.string.housing_detail_zalo_invalid))
                 }
 
                 is HousingDetailEvent.OpenMap -> {
@@ -50,7 +56,7 @@ fun HousingDetailRoute(
                     }
                     val url = "https://www.google.com/maps/dir/?api=1&destination=" +
                         Uri.encode(destination)
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    openExternal(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)), snackbars)
                 }
 
                 HousingDetailEvent.MarkFulfilledSuccess -> {
@@ -74,5 +80,14 @@ fun HousingDetailRoute(
             modifier = Modifier.fillMaxSize(),
         )
         SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+/** Máy không có app xử lý intent thì báo snackbar thay vì để ngoại lệ làm sập màn hình. */
+private suspend fun openExternal(context: Context, intent: Intent, snackbars: SnackbarHostState) {
+    try {
+        context.startActivity(intent)
+    } catch (ignored: ActivityNotFoundException) {
+        snackbars.showSnackbar(context.getString(R.string.housing_no_app_to_open))
     }
 }

@@ -1,6 +1,5 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.HostVerificationMethod
@@ -8,10 +7,12 @@ import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.StudentProfile
+import com.giathinh.uthconnect.domain.model.ZaloLink
 import com.giathinh.uthconnect.domain.repository.HousingDraftStore
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.domain.usecase.CreateHousingListingUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,22 +20,30 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 
 sealed interface CreateHousingPostEvent {
     data object PostCreated : CreateHousingPostEvent
     data class SubmitFailed(val code: ServerErrorCode, val detail: String? = null) : CreateHousingPostEvent
     data object DraftSaved : CreateHousingPostEvent
+    data object DraftSaveFailed : CreateHousingPostEvent
     data object DraftRestored : CreateHousingPostEvent
 }
+
+/** Nháp gắn mã sinh viên sở hữu để tài khoản khác trên cùng máy không đọc được nháp của nhau. */
+@Serializable
+internal data class HousingDraftEnvelope(
+    val ownerStudentId: String,
+    val state: CreateHousingPostUiState,
+)
 
 /** Khớp check constraint housing_posts_title_check / area_m2 của backend. */
 private const val MIN_TITLE_LENGTH = 5
 private const val MAX_TITLE_LENGTH = 150
-
-private const val LOG_TAG = "HousingCreate"
 
 @HiltViewModel
 class CreateHousingPostViewModel @Inject constructor(
@@ -54,11 +63,11 @@ class CreateHousingPostViewModel @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private var draftRestore: Job? = null
+
     init {
-        viewModelScope.launch {
-            val draft = draftStore.read()?.let { payload ->
-                runCatching { json.decodeFromString<CreateHousingPostUiState>(payload) }.getOrNull()
-            }
+        draftRestore = viewModelScope.launch {
+            val draft = readDraft()
             if (draft != null && !formTouched) {
                 _uiState.update { draft }
                 _events.send(CreateHousingPostEvent.DraftRestored)
@@ -66,8 +75,16 @@ class CreateHousingPostViewModel @Inject constructor(
         }
     }
 
+    /** Chỉ khôi phục nháp đúng chủ tài khoản hiện tại; đọc lỗi thì vẫn mở form bình thường. */
+    private suspend fun readDraft(): CreateHousingPostUiState? = try {
+        draftStore.read()?.let { payload ->
+            runCatching { json.decodeFromString<HousingDraftEnvelope>(payload) }.getOrNull()
+        }?.takeIf { it.ownerStudentId == sessions.observe().value.profile?.studentId }?.state
+    } catch (ignored: IOException) {
+        null
+    }
+
     fun onAction(action: CreateHousingPostAction) {
-        formTouched = true
         when (action) {
             is CreateHousingPostAction.ChangeType,
             is CreateHousingPostAction.ChangeCampus,
@@ -102,6 +119,7 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Gom nhóm ô nhập liệu để [onAction] không vượt ngưỡng phức tạp (docs/CODING_STANDARDS.md mục 4). */
     private fun handleFieldChange(action: CreateHousingPostAction) {
+        formTouched = true
         when (action) {
             is CreateHousingPostAction.ChangeType -> _uiState.update { it.copy(type = action.type) }
 
@@ -120,7 +138,10 @@ class CreateHousingPostViewModel @Inject constructor(
                 _uiState.update { it.copy(depositInput = action.deposit) }
 
             is CreateHousingPostAction.ChangeAddress ->
-                _uiState.update { it.copy(address = action.address, validationError = null) }
+                // Sửa địa chỉ tay thì pin cũ không còn khớp — xóa tọa độ để khỏi gửi vị trí sai.
+                _uiState.update {
+                    it.copy(address = action.address, latitude = 0.0, longitude = 0.0, validationError = null)
+                }
 
             is CreateHousingPostAction.ChangeLocation -> _uiState.update {
                 it.copy(
@@ -141,16 +162,17 @@ class CreateHousingPostViewModel @Inject constructor(
                 _uiState.update { it.copy(contactPhone = action.phone, validationError = null) }
 
             is CreateHousingPostAction.ChangeContactZalo ->
-                _uiState.update { it.copy(contactZalo = action.zalo) }
+                _uiState.update { it.copy(contactZalo = action.zalo, validationError = null) }
 
             is CreateHousingPostAction.ChangeAllowZalo ->
-                _uiState.update { it.copy(allowZalo = action.allowed) }
+                _uiState.update { it.copy(allowZalo = action.allowed, validationError = null) }
 
             else -> Unit
         }
     }
 
     private fun handlePreferenceChange(action: CreateHousingPostAction) {
+        formTouched = true
         when (action) {
             is CreateHousingPostAction.ChangeUtilitiesIncluded ->
                 _uiState.update { it.copy(utilitiesIncluded = action.included) }
@@ -175,6 +197,7 @@ class CreateHousingPostViewModel @Inject constructor(
     }
 
     private fun handlePhotoChange(action: CreateHousingPostAction) {
+        formTouched = true
         when (action) {
             is CreateHousingPostAction.AddPhoto -> _uiState.update { state ->
                 // Chặn vượt trần ảnh để lưới ảnh và ô "Tối đa 6" không bị vỡ.
@@ -195,10 +218,24 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Lưu nháp xuống bộ nhớ máy để tắt app mở lại vẫn còn; đăng thành công thì xóa. */
     private fun saveDraft() {
-        val payload = json.encodeToString(_uiState.value)
         viewModelScope.launch {
-            draftStore.write(payload)
-            _events.send(CreateHousingPostEvent.DraftSaved)
+            // Chờ khôi phục xong để lệnh lưu không ghi đè nháp cũ khi DataStore đọc chậm.
+            draftRestore?.join()
+            val owner = sessions.observe().value.profile?.studentId ?: return@launch
+            try {
+                draftStore.write(json.encodeToString(HousingDraftEnvelope(owner, _uiState.value)))
+                _events.send(CreateHousingPostEvent.DraftSaved)
+            } catch (ignored: IOException) {
+                _events.send(CreateHousingPostEvent.DraftSaveFailed)
+            }
+        }
+    }
+
+    /** Lỗi xóa nháp không được biến thao tác đăng tin thành công thành thất bại. */
+    private suspend fun clearDraftQuietly() {
+        try {
+            draftStore.clear()
+        } catch (ignored: IOException) {
         }
     }
 
@@ -208,7 +245,7 @@ class CreateHousingPostViewModel @Inject constructor(
         val profile = sessions.observe().value.profile
         val error = validationError(state, profile)
         if (error != null) {
-            _uiState.update { it.copy(validationError = error) }
+            _uiState.update { it.copy(validationError = error, validationNonce = it.validationNonce + 1) }
             return
         }
         val host = requireNotNull(profile) { "profile đã được validationError kiểm tra" }
@@ -219,11 +256,11 @@ class CreateHousingPostViewModel @Inject constructor(
             val result = createListing(buildListing(state, host, rent, deposit))
             result.fold(
                 onSuccess = {
-                    draftStore.clear()
+                    clearDraftQuietly()
+                    _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(CreateHousingPostEvent.PostCreated)
                 },
                 onFailure = { error ->
-                    Log.e(LOG_TAG, "Create housing listing failed", error)
                     _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(CreateHousingPostEvent.SubmitFailed(ServerErrorCode.of(error), error.message))
                 },
@@ -245,11 +282,13 @@ class CreateHousingPostViewModel @Inject constructor(
 
         parseAmount(state.rentInput) == null -> CreateHousingPostError.INVALID_RENT
 
-        state.areaInput.isNotBlank() && parseAmount(state.areaInput) == null -> CreateHousingPostError.INVALID_AREA
+        state.areaInput.isNotBlank() && parseArea(state.areaInput) == null -> CreateHousingPostError.INVALID_AREA
 
         state.address.isBlank() -> CreateHousingPostError.EMPTY_ADDRESS
 
         state.contactPhone.isBlank() -> CreateHousingPostError.EMPTY_PHONE
+
+        state.allowZalo && !ZaloLink.isValid(zaloUrlOf(state)) -> CreateHousingPostError.INVALID_ZALO
 
         else -> null
     }
@@ -267,11 +306,7 @@ class CreateHousingPostViewModel @Inject constructor(
         hostName = host.displayName,
         hostStudentId = host.studentId,
         contactPhone = state.contactPhone.trim(),
-        contactZaloUrl = if (state.allowZalo) {
-            state.contactZalo.trim().ifBlank { "https://zalo.me/${state.contactPhone.trim()}" }
-        } else {
-            ""
-        },
+        contactZaloUrl = if (state.allowZalo) zaloUrlOf(state) else "",
         images = state.photos,
         monthlyRentVnd = rent,
         depositVnd = deposit,
@@ -281,7 +316,7 @@ class CreateHousingPostViewModel @Inject constructor(
         scheduleNote = state.scheduleNote.trim(),
         amenities = state.selectedAmenities.toList(),
         addressLabel = state.address.trim(),
-        areaM2 = parseAmount(state.areaInput),
+        areaM2 = parseArea(state.areaInput),
         latitude = state.latitude,
         longitude = state.longitude,
         status = HousingListingStatus.OPEN,
@@ -291,4 +326,23 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Chỉ nhận chữ số, bỏ dấu phân cách người dùng gõ — `null` khi không phải số dương. */
     private fun parseAmount(input: String): Int? = input.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
+
+    /**
+     * Ô Zalo nhận link HTTPS zalo.me hoặc SĐT thuần (ô nhập ghi "Link Zalo hoặc
+     * SĐT Zalo"); SĐT được ghép thành link đúng quy tắc fallback của module.
+     */
+    private fun zaloUrlOf(state: CreateHousingPostUiState): String {
+        val input = state.contactZalo.trim()
+        return when {
+            input.isBlank() -> ZaloLink.forPhone(state.contactPhone)
+            input.all(Char::isDigit) -> ZaloLink.forPhone(input)
+            else -> input
+        }
+    }
+
+    /** Cột area_m2 là số nguyên: từ chối "25.5"/"25,5" thay vì nối chữ số như [parseAmount]. */
+    private fun parseArea(input: String): Int? {
+        val trimmed = input.trim()
+        return trimmed.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.toIntOrNull()?.takeIf { it > 0 }
+    }
 }

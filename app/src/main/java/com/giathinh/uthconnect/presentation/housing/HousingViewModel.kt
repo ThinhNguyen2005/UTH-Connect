@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.model.HousingPriceRange
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportHousingListingUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,9 @@ import javax.inject.Inject
 sealed interface HousingEvent {
     data object ReportAccepted : HousingEvent
     data object ReportRejected : HousingEvent
+
+    /** Tải lại nền thất bại khi feed đã có dữ liệu — báo riêng, không thay feed bằng màn lỗi. */
+    data object RefreshFailed : HousingEvent
 
     /** Gọi nhanh chủ tin từ feed — Route mở trình quay số, Screen không chạm Context. */
     data class CallPhone(val phoneNumber: String) : HousingEvent
@@ -42,6 +46,9 @@ class HousingViewModel @Inject constructor(
 
     /** Event một lần, thu trong `HousingRoute` — docs/CODING_STANDARDS.md mục 6. */
     val events = _events.receiveAsFlow()
+
+    private var loadJob: Job? = null
+    private var reportJob: Job? = null
 
     init {
         loadListings()
@@ -150,28 +157,38 @@ class HousingViewModel @Inject constructor(
 
     /** `showLoading = false` khi nạp lại sau báo tin — feed không được nháy spinner giữa lúc đọc. */
     private fun loadListings(showLoading: Boolean = true) {
-        viewModelScope.launch {
+        // Hủy yêu cầu cũ để kết quả về chậm không ghi đè feed của lần tải mới hơn.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = if (showLoading) true else it.isLoading, failure = null) }
             getListings().fold(
                 onSuccess = { items ->
                     _uiState.update { it.copy(isLoading = false, listings = items, failure = null) }
                 },
-                onFailure = {
-                    _uiState.update {
-                        it.copy(isLoading = false, listings = emptyList(), failure = HousingFailure.LoadFailed)
-                    }
-                },
+                onFailure = { onLoadFailed() },
             )
         }
     }
 
+    /** Chỉ chặn màn hình khi chưa có dữ liệu; đã có feed thì giữ nguyên và báo lỗi tải lại riêng. */
+    private suspend fun onLoadFailed() {
+        if (_uiState.value.listings.isEmpty()) {
+            _uiState.update { it.copy(isLoading = false, failure = HousingFailure.LoadFailed) }
+        } else {
+            _uiState.update { it.copy(isLoading = false) }
+            _events.send(HousingEvent.RefreshFailed)
+        }
+    }
+
     private fun reportSelectedListing() {
+        if (reportJob?.isActive == true) return
         val snapshot = _uiState.value
-        val listingId = snapshot.reportingListingId ?: return
+        val listingId = snapshot.reportingListingId
         // Lý do do người dùng chọn trong dialog; gửi bừa một lý do mặc định sẽ khiến
         // backend xử phạt nhầm chủ tin.
-        val reason = snapshot.reportingReason ?: return
-        viewModelScope.launch {
+        val reason = snapshot.reportingReason
+        if (listingId == null || reason == null) return
+        reportJob = viewModelScope.launch {
             reportListing(listingId = listingId, reason = reason.name).fold(
                 onSuccess = {
                     _uiState.update { it.copy(reportingListingId = null, reportingReason = null) }

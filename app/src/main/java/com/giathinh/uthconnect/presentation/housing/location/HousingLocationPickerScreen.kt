@@ -239,7 +239,8 @@ private fun PickerBottomPanel(
                 UthPrimaryButton(
                     text = stringResource(R.string.housing_location_confirm),
                     onClick = { onAction(HousingLocationPickerAction.Confirm) },
-                    enabled = uiState.hasPickedLocation && !uiState.isLocating && !uiState.isGeocoding,
+                    enabled = uiState.hasPickedLocation && !uiState.isLocating && !uiState.isGeocoding &&
+                        uiState.address.isNotBlank(),
                     modifier = Modifier.weight(1f),
                 )
             }

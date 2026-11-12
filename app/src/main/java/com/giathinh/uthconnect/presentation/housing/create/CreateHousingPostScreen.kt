@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -56,6 +57,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +68,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -110,7 +114,14 @@ fun CreateHousingPostScreen(
             )
         },
     ) { innerPadding ->
+        val listState = rememberLazyListState()
+        LaunchedEffect(uiState.validationNonce) {
+            if (uiState.validationError != null) {
+                listState.animateScrollToItem(0)
+            }
+        }
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -325,13 +336,26 @@ private fun TypeAndCampusCard(
                     label = stringResource(R.string.housing_create_type_entire),
                     icon = Icons.Filled.Home,
                 ),
+                SegmentedItem(
+                    label = stringResource(R.string.housing_type_looking_for_room),
+                    icon = Icons.Filled.Place,
+                ),
             ),
-            selectedIndex = if (type == HousingListingType.LOOKING_FOR_ROOMMATE) 0 else 1,
+            selectedIndex = when (type) {
+                HousingListingType.LOOKING_FOR_ROOMMATE -> 0
+                HousingListingType.ROOM_FOR_RENT -> 1
+                HousingListingType.LOOKING_FOR_ROOM -> 2
+            },
             onSelect = { index ->
                 onTypeChange(
-                    if (index == 0) HousingListingType.LOOKING_FOR_ROOMMATE else HousingListingType.ROOM_FOR_RENT,
+                    when (index) {
+                        0 -> HousingListingType.LOOKING_FOR_ROOMMATE
+                        1 -> HousingListingType.ROOM_FOR_RENT
+                        else -> HousingListingType.LOOKING_FOR_ROOM
+                    },
                 )
             },
+            labelMaxLines = 2,
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Lg))
         Text(
@@ -632,6 +656,7 @@ private fun SegmentedControlWithIcons(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    labelMaxLines: Int = 1,
 ) {
     Row(
         modifier = modifier
@@ -684,7 +709,7 @@ private fun SegmentedControlWithIcons(
                         style = MaterialTheme.typography.labelMedium,
                         textAlign = TextAlign.Center,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
+                        maxLines = labelMaxLines,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -717,13 +742,15 @@ private fun SlotsStepper(slots: Int, onChange: (Int) -> Unit, modifier: Modifier
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
         ) {
+            val decreaseLabel = stringResource(R.string.housing_create_slots_decrease)
             IconButton(
                 onClick = { onChange(slots - 1) },
                 enabled = slots > 1,
                 modifier = Modifier
                     .size(UthDimens.Size.MinTouchTarget)
                     .clip(MaterialTheme.shapes.small)
-                    .background(UthTheme.extendedColors.surfaceSubtle),
+                    .background(UthTheme.extendedColors.surfaceSubtle)
+                    .semantics { contentDescription = decreaseLabel },
             ) {
                 Box(
                     modifier = Modifier
@@ -1099,6 +1126,7 @@ private fun ValidationErrorBanner(error: CreateHousingPostError, modifier: Modif
         CreateHousingPostError.INVALID_AREA -> R.string.housing_create_error_area
         CreateHousingPostError.EMPTY_ADDRESS -> R.string.housing_create_error_address
         CreateHousingPostError.EMPTY_PHONE -> R.string.housing_create_error_phone
+        CreateHousingPostError.INVALID_ZALO -> R.string.housing_create_error_zalo
         CreateHousingPostError.SIGN_IN_REQUIRED -> R.string.housing_create_sign_in_required
     }
     Surface(

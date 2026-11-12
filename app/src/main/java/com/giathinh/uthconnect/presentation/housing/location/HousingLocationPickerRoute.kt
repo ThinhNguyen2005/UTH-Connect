@@ -118,27 +118,32 @@ fun HousingLocationPickerRoute(
         }
     }
 
+    // Android 12+ cho chọn "vị trí gần đúng": xin cả FINE lẫn COARSE, chỉ cần một trong hai được cấp.
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results ->
+        if (results.values.any { it }) {
             fetchWithLocationSettings()
         } else {
             viewModel.onAction(HousingLocationPickerAction.CurrentLocationFailed)
         }
     }
 
+    fun hasLocationPermission(): Boolean {
+        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+        return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
+    }
+
     val handleAction: (HousingLocationPickerAction) -> Unit = { action ->
         viewModel.onAction(action)
         if (action is HousingLocationPickerAction.UseCurrentLocation) {
-            val granted = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED
-            if (granted) {
+            if (hasLocationPermission()) {
                 fetchWithLocationSettings()
             } else {
-                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                permissionLauncher.launch(
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                )
             }
         }
     }

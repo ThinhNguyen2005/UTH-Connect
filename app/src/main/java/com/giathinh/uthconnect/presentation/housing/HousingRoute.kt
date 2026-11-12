@@ -50,6 +50,9 @@ fun HousingRoute(
 
                 HousingEvent.ReportRejected ->
                     snackbars.showSnackbar(context.getString(R.string.housing_report_rejected))
+
+                HousingEvent.RefreshFailed ->
+                    snackbars.showSnackbar(context.getString(R.string.housing_refresh_error))
             }
         }
     }

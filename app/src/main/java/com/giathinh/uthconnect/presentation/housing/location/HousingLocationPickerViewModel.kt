@@ -29,56 +29,90 @@ class HousingLocationPickerViewModel @Inject constructor() : ViewModel() {
     private val _events = Channel<HousingLocationPickerEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
+    /** GPS chỉ áp dụng khi yêu cầu còn hiệu lực — kéo pin giữa chừng hủy kết quả GPS đến muộn. */
+    private var gpsRequestPending = false
+
+    /** Người dùng sửa địa chỉ tay trong lúc geocode chạy thì kết quả geocode không được đè lên. */
+    private var addressEditedManually = false
+
     fun onAction(action: HousingLocationPickerAction) {
         when (action) {
-            is HousingLocationPickerAction.PinMoved -> _uiState.update {
-                it.copy(
-                    latitude = action.latitude,
-                    longitude = action.longitude,
-                    hasPickedLocation = true,
-                    isGeocoding = true,
-                    address = "",
-                    failure = null,
-                )
+            is HousingLocationPickerAction.PinMoved -> {
+                gpsRequestPending = false
+                addressEditedManually = false
+                _uiState.update {
+                    it.copy(
+                        latitude = action.latitude,
+                        longitude = action.longitude,
+                        hasPickedLocation = true,
+                        isGeocoding = true,
+                        isLocating = false,
+                        address = "",
+                        failure = null,
+                    )
+                }
             }
 
-            HousingLocationPickerAction.UseCurrentLocation ->
+            HousingLocationPickerAction.UseCurrentLocation -> {
+                gpsRequestPending = true
                 _uiState.update { it.copy(isLocating = true, failure = null) }
-
-            is HousingLocationPickerAction.CurrentLocationResult -> _uiState.update {
-                it.copy(
-                    latitude = action.latitude,
-                    longitude = action.longitude,
-                    isLocating = false,
-                    hasPickedLocation = true,
-                    isGeocoding = true,
-                    address = "",
-                    gpsFixCount = it.gpsFixCount + 1,
-                    failure = null,
-                )
             }
 
-            HousingLocationPickerAction.CurrentLocationFailed -> _uiState.update {
-                it.copy(isLocating = false, failure = HousingLocationPickerFailure.LocationUnavailable)
-            }
+            is HousingLocationPickerAction.CurrentLocationResult -> applyCurrentLocation(action)
 
-            is HousingLocationPickerAction.AddressGeocoded ->
-                _uiState.update { it.copy(address = action.address, isGeocoding = false) }
+            HousingLocationPickerAction.CurrentLocationFailed -> applyLocationFailure()
+
+            is HousingLocationPickerAction.AddressGeocoded -> {
+                val keepManualAddress = addressEditedManually
+                _uiState.update {
+                    if (keepManualAddress) {
+                        it.copy(isGeocoding = false)
+                    } else {
+                        it.copy(address = action.address, isGeocoding = false)
+                    }
+                }
+            }
 
             HousingLocationPickerAction.GeocodeFailed ->
                 _uiState.update { it.copy(isGeocoding = false, failure = HousingLocationPickerFailure.GeocodeFailed) }
 
-            is HousingLocationPickerAction.ChangeAddress ->
+            is HousingLocationPickerAction.ChangeAddress -> {
+                addressEditedManually = true
                 _uiState.update { it.copy(address = action.address) }
+            }
 
             HousingLocationPickerAction.Confirm -> confirm()
         }
     }
 
-    /** Chỉ chốt khi đã có vị trí thật và địa chỉ dịch xong — tránh gửi tọa độ mới kèm địa chỉ cũ. */
+    private fun applyCurrentLocation(action: HousingLocationPickerAction.CurrentLocationResult) {
+        if (!gpsRequestPending) return
+        gpsRequestPending = false
+        addressEditedManually = false
+        _uiState.update {
+            it.copy(
+                latitude = action.latitude,
+                longitude = action.longitude,
+                isLocating = false,
+                hasPickedLocation = true,
+                isGeocoding = true,
+                address = "",
+                gpsFixCount = it.gpsFixCount + 1,
+                failure = null,
+            )
+        }
+    }
+
+    private fun applyLocationFailure() {
+        if (!gpsRequestPending) return
+        gpsRequestPending = false
+        _uiState.update { it.copy(isLocating = false, failure = HousingLocationPickerFailure.LocationUnavailable) }
+    }
+
+    /** Chỉ chốt khi có vị trí thật, geocode xong và địa chỉ không rỗng — cho phép nhập tay thay geocode. */
     private fun confirm() {
         val state = _uiState.value
-        if (!state.hasPickedLocation || state.isGeocoding) return
+        if (!state.hasPickedLocation || state.isGeocoding || state.address.isBlank()) return
         viewModelScope.launch {
             _events.send(
                 HousingLocationPickerEvent.LocationConfirmed(state.latitude, state.longitude, state.address.trim()),

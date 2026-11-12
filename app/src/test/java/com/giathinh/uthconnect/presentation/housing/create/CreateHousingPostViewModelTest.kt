@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
 import com.giathinh.uthconnect.domain.model.HousingListing
+import com.giathinh.uthconnect.domain.model.HousingListingType
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UthCampus
 import com.giathinh.uthconnect.domain.repository.HousingDraftStore
@@ -25,6 +26,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CreateHousingPostViewModelTest {
@@ -94,19 +96,30 @@ class CreateHousingPostViewModelTest {
     private class FakeHousingDraftStore : HousingDraftStore {
         var payload: String? = null
         var readGate: CompletableDeferred<Unit>? = null
+        var readError: IOException? = null
+        var writeError: IOException? = null
+        var clearError: IOException? = null
 
         override suspend fun read(): String? {
             readGate?.await()
+            readError?.let { throw it }
             return payload
         }
 
         override suspend fun write(payload: String) {
+            writeError?.let { throw it }
             this.payload = payload
         }
 
         override suspend fun clear() {
+            clearError?.let { throw it }
             payload = null
         }
+    }
+
+    private fun draftPayload(state: CreateHousingPostUiState, owner: String = "2251001234"): String {
+        val envelope = HousingDraftEnvelope(owner, state)
+        return Json.encodeToString(envelope)
     }
 
     @Test
@@ -268,7 +281,7 @@ class CreateHousingPostViewModelTest {
     fun `mo man - khoi phuc nhap da luu truoc do`() = runTest {
         val store = FakeHousingDraftStore()
         val saved = CreateHousingPostUiState(title = "Nháp phòng gác lửng", rentInput = "2500000")
-        store.payload = Json.encodeToString(saved)
+        store.payload = draftPayload(saved)
 
         val viewModel = viewModel(FakeCreateHousingRepository(), store)
 
@@ -307,7 +320,7 @@ class CreateHousingPostViewModelTest {
     @Test
     fun `khoi phuc tre - khong de len form da bi cham`() = runTest {
         val store = FakeHousingDraftStore()
-        store.payload = Json.encodeToString(CreateHousingPostUiState(title = "Nháp phòng gác lửng"))
+        store.payload = draftPayload(CreateHousingPostUiState(title = "Nháp phòng gác lửng"))
         val gate = CompletableDeferred<Unit>()
         store.readGate = gate
         val viewModel = viewModel(FakeCreateHousingRepository(), store)
@@ -367,6 +380,232 @@ class CreateHousingPostViewModelTest {
         assertEquals("138 Quang Trung, Gò Vấp", viewModel.uiState.value.address)
         assertEquals(10.8051, viewModel.uiState.value.latitude, 0.0)
         assertTrue(viewModel.uiState.value.hasLocation)
+    }
+
+    @Test
+    fun `validate - dien tich thap phan bao loi INVALID_AREA`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng trọ gần CS1"))
+        viewModel.onAction(CreateHousingPostAction.ChangeRent("1500000"))
+
+        viewModel.onAction(CreateHousingPostAction.ChangeArea("25.5"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertEquals(CreateHousingPostError.INVALID_AREA, viewModel.uiState.value.validationError)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeArea("25,5"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertEquals(CreateHousingPostError.INVALID_AREA, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `ChangeAddress - xoa toa do pin cu khi sua dia chi tay`() {
+        val viewModel = viewModel(FakeCreateHousingRepository())
+        viewModel.onAction(CreateHousingPostAction.ChangeLocation(10.8051, 106.7170, "138 Võ Oanh, Bình Thạnh"))
+
+        viewModel.onAction(CreateHousingPostAction.ChangeAddress("Địa chỉ mới nhập tay"))
+
+        assertEquals("Địa chỉ mới nhập tay", viewModel.uiState.value.address)
+        assertEquals(0.0, viewModel.uiState.value.latitude, 0.0)
+        assertEquals(0.0, viewModel.uiState.value.longitude, 0.0)
+        assertFalse(viewModel.uiState.value.hasLocation)
+    }
+
+    @Test
+    fun `ChangeType - LOOKING_FOR_ROOM duoc gui dung loai tin`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeType(HousingListingType.LOOKING_FOR_ROOM))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(HousingListingType.LOOKING_FOR_ROOM, repo.createdListing?.type)
+    }
+
+    @Test
+    fun `SaveDraft - cho khoi phuc hoan tat roi moi ghi`() = runTest {
+        val store = FakeHousingDraftStore()
+        val saved = CreateHousingPostUiState(title = "Nháp phòng gác lửng")
+        store.payload = draftPayload(saved)
+        val gate = CompletableDeferred<Unit>()
+        store.readGate = gate
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+        assertEquals("chua ghi khi khoi phuc chua xong", draftPayload(saved), store.payload)
+
+        gate.complete(Unit)
+
+        assertEquals(CreateHousingPostEvent.DraftRestored, viewModel.events.first())
+        assertEquals(CreateHousingPostEvent.DraftSaved, viewModel.events.first())
+        assertEquals(draftPayload(saved), store.payload)
+    }
+
+    @Test
+    fun `Submit loi - khong tinh la cham form, nhap van duoc khoi phuc`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payload = draftPayload(CreateHousingPostUiState(title = "Nháp phòng gác lửng"))
+        val gate = CompletableDeferred<Unit>()
+        store.readGate = gate
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        gate.complete(Unit)
+
+        assertEquals("Nháp phòng gác lửng", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `nhap cua tai khoan khac - khong khoi phuc`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payload = draftPayload(CreateHousingPostUiState(title = "Nháp tài khoản khác"), owner = "9999999999")
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals("", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `nhap dinh dang cu khong co owner - bo qua`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payload = Json.encodeToString(CreateHousingPostUiState(title = "Nháp định dạng cũ"))
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals("", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `SaveDraft - gan ma sinh vien so huu vao payload`() = runTest {
+        val store = FakeHousingDraftStore()
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Nháp phòng gác lửng"))
+
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+
+        assertEquals(CreateHousingPostEvent.DraftSaved, viewModel.events.first())
+        val payload = requireNotNull(store.payload)
+        assertTrue(payload.contains("2251001234"))
+        assertTrue(payload.contains("Nháp phòng gác lửng"))
+    }
+
+    @Test
+    fun `doc nhap loi IOException - van mo form binh thuong`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.readError = IOException("disk read failed")
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals("", viewModel.uiState.value.title)
+        assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun `luu nhap loi IOException - bao DraftSaveFailed`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.writeError = IOException("disk write failed")
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+
+        assertEquals(CreateHousingPostEvent.DraftSaveFailed, viewModel.events.first())
+        assertNull(store.payload)
+    }
+
+    @Test
+    fun `xoa nhap loi sau khi dang - van PostCreated`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val store = FakeHousingDraftStore()
+        store.clearError = IOException("disk clear failed")
+        val viewModel = viewModel(repo, store)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertNotNull(repo.createdListing)
+        assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun `zalo ngoai mien - bao loi INVALID_ZALO va khong dang`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeContactZalo("https://evil.example/zalo"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_ZALO, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `zalo http - bao loi INVALID_ZALO`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeContactZalo("http://zalo.me/0901234567"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_ZALO, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `zalo hop le - dang voi link giu nguyen`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeContactZalo("https://zalo.me/0901234567"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals("https://zalo.me/0901234567", repo.createdListing?.contactZaloUrl)
+    }
+
+    @Test
+    fun `zalo la sdt - ghep thanh link zalo me`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeContactZalo("0908123456"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals("https://zalo.me/0908123456", repo.createdListing?.contactZaloUrl)
+    }
+
+    @Test
+    fun `zalo trong - fallback theo sdt lien he`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals("https://zalo.me/0901234567", repo.createdListing?.contactZaloUrl)
+    }
+
+    @Test
+    fun `tat zalo - link rac van dang duoc voi contactZaloUrl rong`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeContactZalo("khong phai link"))
+        viewModel.onAction(CreateHousingPostAction.ChangeAllowZalo(false))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals("", repo.createdListing?.contactZaloUrl)
     }
 
     private fun fillValidForm(viewModel: CreateHousingPostViewModel) {

@@ -59,6 +59,7 @@ class HousingLocationPickerViewModelTest {
     @Test
     fun `CurrentLocationResult - tat GPS tang gpsFixCount va danh dau da chon`() {
         val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.UseCurrentLocation)
 
         viewModel.onAction(HousingLocationPickerAction.CurrentLocationResult(10.8051, 106.7170))
 
@@ -73,10 +74,39 @@ class HousingLocationPickerViewModelTest {
     fun `CurrentLocationResult hai lan - gpsFixCount tang hai de camera theo mot lan`() {
         val viewModel = HousingLocationPickerViewModel()
 
+        viewModel.onAction(HousingLocationPickerAction.UseCurrentLocation)
         viewModel.onAction(HousingLocationPickerAction.CurrentLocationResult(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.UseCurrentLocation)
         viewModel.onAction(HousingLocationPickerAction.CurrentLocationResult(10.8060, 106.7180))
 
         assertEquals(2, viewModel.uiState.value.gpsFixCount)
+    }
+
+    @Test
+    fun `GPS den muon sau khi keo pin - khong ghi de pin cua nguoi dung`() {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.UseCurrentLocation)
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+
+        viewModel.onAction(HousingLocationPickerAction.CurrentLocationResult(10.9000, 106.9000))
+
+        val state = viewModel.uiState.value
+        assertEquals(10.8051, state.latitude, 0.0)
+        assertEquals(106.7170, state.longitude, 0.0)
+        assertEquals(0, state.gpsFixCount)
+        assertFalse(state.isLocating)
+    }
+
+    @Test
+    fun `GPS that bai den muon sau khi keo pin - khong bao loi`() {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.UseCurrentLocation)
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+
+        viewModel.onAction(HousingLocationPickerAction.CurrentLocationFailed)
+
+        assertNull(viewModel.uiState.value.failure)
+        assertFalse(viewModel.uiState.value.isLocating)
     }
 
     @Test
@@ -176,5 +206,58 @@ class HousingLocationPickerViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("", state.address)
         assertTrue(state.isGeocoding)
+    }
+
+    @Test
+    fun `sua dia chi tay khi dang geocode - ket qua geocode khong de len`() {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.ChangeAddress("Số 1 Võ Oanh"))
+
+        viewModel.onAction(HousingLocationPickerAction.AddressGeocoded("Địa chỉ do geocode trả về"))
+
+        val state = viewModel.uiState.value
+        assertEquals("Số 1 Võ Oanh", state.address)
+        assertFalse(state.isGeocoding)
+    }
+
+    @Test
+    fun `keo pin moi - reset co sua tay de geocode lan sau ap dung lai`() {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.ChangeAddress("Số 1 Võ Oanh"))
+
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8060, 106.7180))
+        viewModel.onAction(HousingLocationPickerAction.AddressGeocoded("138 Võ Oanh, Bình Thạnh"))
+
+        assertEquals("138 Võ Oanh, Bình Thạnh", viewModel.uiState.value.address)
+    }
+
+    @Test
+    fun `Confirm khi dia chi rong - khong phat event`() = runTest {
+        val viewModel = HousingLocationPickerViewModel()
+        val received = mutableListOf<HousingLocationPickerEvent>()
+        val job = launch { viewModel.events.toList(received) }
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.GeocodeFailed)
+
+        viewModel.onAction(HousingLocationPickerAction.Confirm)
+        advanceUntilIdle()
+
+        assertTrue("dia chi rong thi khong duoc chot", received.isEmpty())
+        job.cancel()
+    }
+
+    @Test
+    fun `Confirm voi dia chi nhap tay sau geocode loi - van phat event`() = runTest {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.GeocodeFailed)
+        viewModel.onAction(HousingLocationPickerAction.ChangeAddress("  Số 1 Võ Oanh  "))
+
+        viewModel.onAction(HousingLocationPickerAction.Confirm)
+
+        val event = viewModel.events.first()
+        assertEquals(HousingLocationPickerEvent.LocationConfirmed(10.8051, 106.7170, "Số 1 Võ Oanh"), event)
     }
 }

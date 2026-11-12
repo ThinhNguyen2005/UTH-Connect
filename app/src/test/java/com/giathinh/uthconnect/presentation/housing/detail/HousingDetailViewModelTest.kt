@@ -105,6 +105,38 @@ class HousingDetailViewModelTest {
     }
 
     @Test
+    fun `zalo doi cu ngoai mien - bao InvalidZaloLink chu khong mo`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing.copy(contactZaloUrl = "https://evil.example/abc"))
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.OpenZalo)
+
+        assertEquals(HousingDetailEvent.InvalidZaloLink, viewModel.events.first())
+    }
+
+    @Test
+    fun `zalo doi cu dung http - bao InvalidZaloLink`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing.copy(contactZaloUrl = "http://zalo.me/0901234567"))
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.OpenZalo)
+
+        assertEquals(HousingDetailEvent.InvalidZaloLink, viewModel.events.first())
+    }
+
+    @Test
+    fun `zalo trong - fallback sdt thanh link zalo me`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing.copy(contactZaloUrl = ""))
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.OpenZalo)
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingDetailEvent.OpenZalo)
+        assertEquals("https://zalo.me/0901234567", (event as HousingDetailEvent.OpenZalo).url)
+    }
+
+    @Test
     fun `danh dau het phong - cap nhat status thanh cong`() = runTest {
         val repository = FakeHousingDetailRepository(sampleListing)
         val viewModel = createViewModel(repository)
@@ -141,6 +173,8 @@ class HousingDetailViewModelTest {
         assertTrue(event is HousingDetailEvent.MarkFulfilledSuccess)
         assertFalse(viewModel.uiState.value.isActionLoading)
         assertEquals(HousingDetailFailure.LoadFailed, viewModel.uiState.value.failure)
+        assertNull("tai lai that bai phai xoa tin cu de khong ho thanh lien he", viewModel.uiState.value.listing)
+        assertFalse(viewModel.uiState.value.isOwner)
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.housing.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giathinh.uthconnect.domain.model.ZaloLink
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.domain.usecase.DeleteHousingListingUseCase
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingDetailUseCase
@@ -20,6 +21,7 @@ import javax.inject.Inject
 sealed interface HousingDetailEvent {
     data class CallPhone(val phoneNumber: String) : HousingDetailEvent
     data class OpenZalo(val url: String) : HousingDetailEvent
+    data object InvalidZaloLink : HousingDetailEvent
     data class OpenMap(val latitude: Double, val longitude: Double, val addressLabel: String) : HousingDetailEvent
     data object MarkFulfilledSuccess : HousingDetailEvent
     data object Deleted : HousingDetailEvent
@@ -58,23 +60,7 @@ class HousingDetailViewModel @Inject constructor(
                 }
             }
 
-            HousingDetailAction.OpenZalo -> {
-                val listing = _uiState.value.listing
-                val url = if (listing != null) {
-                    if (!listing.contactZaloUrl.isNullOrBlank()) {
-                        listing.contactZaloUrl
-                    } else if (!listing.contactPhone.isNullOrBlank()) {
-                        "https://zalo.me/${listing.contactPhone}"
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-                if (!url.isNullOrBlank()) {
-                    viewModelScope.launch { _events.send(HousingDetailEvent.OpenZalo(url)) }
-                }
-            }
+            HousingDetailAction.OpenZalo -> openZalo()
 
             HousingDetailAction.OpenMap -> openMap()
 
@@ -103,6 +89,26 @@ class HousingDetailViewModel @Inject constructor(
                         _uiState.update { it.copy(isActionLoading = false) }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Chỉ phát link đã kiểm tra theo quy tắc miền Zalo — tin đời cũ có thể lưu
+     * URL ngoài zalo.me hoặc http; Route nhận event là mở được ngay, không kiểm tra lại.
+     */
+    private fun openZalo() {
+        val listing = _uiState.value.listing ?: return
+        val url = when {
+            listing.contactZaloUrl.isNotBlank() -> listing.contactZaloUrl
+            listing.contactPhone.isNotBlank() -> ZaloLink.forPhone(listing.contactPhone)
+            else -> ""
+        }
+        viewModelScope.launch {
+            if (ZaloLink.isValid(url)) {
+                _events.send(HousingDetailEvent.OpenZalo(url))
+            } else {
+                _events.send(HousingDetailEvent.InvalidZaloLink)
             }
         }
     }
@@ -140,7 +146,16 @@ class HousingDetailViewModel @Inject constructor(
                 } else {
                     HousingDetailFailure.LoadFailed
                 }
-                _uiState.update { it.copy(isLoading = false, isActionLoading = false, failure = failure) }
+                // Xóa tin cũ để màn lỗi không hở thanh liên hệ của tin có thể đã bị xóa/ẩn.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isActionLoading = false,
+                        listing = null,
+                        isOwner = false,
+                        failure = failure,
+                    )
+                }
             }
         }
     }

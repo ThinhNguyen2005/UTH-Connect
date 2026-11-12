@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.repository.HousingRepository
 import com.giathinh.uthconnect.domain.usecase.GetHousingListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportHousingListingUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -249,14 +250,78 @@ class HousingViewModelTest {
         assertNull(withTimeoutOrNull(1_000) { viewModel.events.first() })
     }
 
+    @Test
+    fun `Refresh that bai khi da co feed - giu listings va bao RefreshFailed rieng`() = runTest {
+        val repository = FakeHousingRepository(listings)
+        val viewModel = createViewModel(repository)
+        repository.failLoad = true
+
+        viewModel.onAction(HousingAction.Refresh)
+
+        val state = viewModel.uiState.value
+        assertEquals("loi tai lai khong duoc thay feed bang man hinh loi", listings, state.listings)
+        assertNull(state.failure)
+        assertFalse(state.isLoading)
+        assertEquals(HousingEvent.RefreshFailed, viewModel.events.first())
+    }
+
+    @Test
+    fun `Refresh that bai khi chua co du lieu - van bao LoadFailed`() {
+        val viewModel = createViewModel(FakeHousingRepository(listings, failLoad = true))
+
+        viewModel.onAction(HousingAction.Refresh)
+
+        assertEquals(HousingFailure.LoadFailed, viewModel.uiState.value.failure)
+        assertTrue(viewModel.uiState.value.listings.isEmpty())
+    }
+
+    @Test
+    fun `Refresh - ket qua tai cu khong ghi de ket qua moi hon`() = runTest {
+        val repository = FakeHousingRepository(listings)
+        val gate = CompletableDeferred<Unit>()
+        repository.loadGate = gate
+        val viewModel = createViewModel(repository)
+
+        repository.listings = emptyList()
+        repository.loadGate = null
+        viewModel.onAction(HousingAction.Refresh)
+        assertTrue(viewModel.uiState.value.listings.isEmpty())
+
+        gate.complete(Unit)
+
+        assertTrue("ket qua cu da bi huy khong duoc ghi de feed moi", viewModel.uiState.value.listings.isEmpty())
+    }
+
+    @Test
+    fun `ConfirmReport gui lap khi dang cho - chi mot request`() = runTest {
+        val repository = FakeHousingRepository(listings)
+        val gate = CompletableDeferred<Unit>()
+        repository.reportGate = gate
+        val viewModel = createViewModel(repository)
+        viewModel.onAction(HousingAction.OpenReport("HS-1"))
+        viewModel.onAction(HousingAction.SelectReportReason(HousingReportReason.FAKE_INFO))
+
+        viewModel.onAction(HousingAction.ConfirmReport)
+        viewModel.onAction(HousingAction.ConfirmReport)
+        gate.complete(Unit)
+
+        assertEquals(1, repository.reportCalls.size)
+        assertEquals(HousingEvent.ReportAccepted, viewModel.events.first())
+    }
+
     private class FakeHousingRepository(
-        private val listings: List<HousingListing>,
+        var listings: List<HousingListing>,
         var failLoad: Boolean = false,
         var failReport: Boolean = false,
     ) : HousingRepository {
         val reportCalls = mutableListOf<Pair<String, String>>()
+        var loadGate: CompletableDeferred<Unit>? = null
+        var reportGate: CompletableDeferred<Unit>? = null
 
-        override suspend fun getListings(): Result<List<HousingListing>> = if (failLoad) Result.failure(IllegalStateException("mat mang")) else Result.success(listings)
+        override suspend fun getListings(): Result<List<HousingListing>> {
+            loadGate?.await()
+            return if (failLoad) Result.failure(IllegalStateException("mat mang")) else Result.success(listings)
+        }
 
         override suspend fun getListingById(id: String): Result<HousingListing> {
             val item = listings.find { it.id == id }
@@ -273,6 +338,7 @@ class HousingViewModelTest {
 
         override suspend fun reportListing(listingId: String, reason: String): Result<Unit> {
             reportCalls += listingId to reason
+            reportGate?.await()
             return if (failReport) Result.failure(IllegalStateException("mat mang")) else Result.success(Unit)
         }
     }

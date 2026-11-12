@@ -984,10 +984,8 @@ private fun MapCard(listing: HousingListing, onOpenMap: () -> Unit, modifier: Mo
                 )
             }
             UthPrimaryButton(
-                text = stringResource(
-                    R.string.housing_detail_directions_to_campus,
-                    stringResource(listing.campus.labelRes()),
-                ),
+                // Đích chỉ đường là phòng trọ đang xem (tọa độ/địa chỉ của tin), không phải cơ sở.
+                text = stringResource(R.string.housing_detail_directions),
                 onClick = onOpenMap,
                 leadingIcon = Icons.Filled.Place,
                 modifier = Modifier

@@ -32,6 +32,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -190,6 +192,8 @@ fun HousingScreen(
                     items(items = uiState.filteredListings, key = { it.id }) { listing ->
                         HousingListingCard(
                             listing = listing,
+                            isSaved = listing.id in uiState.savedListingIds,
+                            onToggleSaved = { onAction(HousingAction.ToggleSaved(listing.id)) },
                             onReport = { onAction(HousingAction.OpenReport(listing.id)) },
                             onClick = { onListingClick(listing.id) },
                         )
@@ -508,6 +512,8 @@ private fun SkeletonLine(fraction: Float, height: Dp, modifier: Modifier = Modif
 @Composable
 private fun HousingListingCard(
     listing: HousingListing,
+    isSaved: Boolean,
+    onToggleSaved: () -> Unit,
     onReport: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -595,6 +601,8 @@ private fun HousingListingCard(
             Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
             HousingCardFooter(
                 listing = listing,
+                isSaved = isSaved,
+                onToggleSaved = onToggleSaved,
                 onReport = onReport,
             )
         }
@@ -769,6 +777,8 @@ private fun HousingNoteBox(listing: HousingListing, modifier: Modifier = Modifie
 @Composable
 private fun HousingCardFooter(
     listing: HousingListing,
+    isSaved: Boolean,
+    onToggleSaved: () -> Unit,
     onReport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -795,6 +805,19 @@ private fun HousingCardFooter(
                     maxLines = 1,
                 )
             }
+        }
+        IconButton(
+            onClick = onToggleSaved,
+            modifier = Modifier.size(UthDimens.Size.MinTouchTarget),
+        ) {
+            Icon(
+                imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = stringResource(
+                    if (isSaved) R.string.housing_unsave_listing else R.string.housing_save_listing,
+                ),
+                tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(UthDimens.Size.IconInline),
+            )
         }
         IconButton(
             onClick = onReport,

@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +25,7 @@ import com.giathinh.uthconnect.presentation.common.messageText
 import com.giathinh.uthconnect.presentation.housing.PICKED_ADDRESS_KEY
 import com.giathinh.uthconnect.presentation.housing.PICKED_LATITUDE_KEY
 import com.giathinh.uthconnect.presentation.housing.PICKED_LONGITUDE_KEY
+import kotlinx.coroutines.launch
 
 @Composable
 fun CreateHousingPostRoute(
@@ -51,17 +54,26 @@ fun CreateHousingPostRoute(
             savedStateHandle[PICKED_LATITUDE_KEY] = 0.0
         }
     }
+    val scope = rememberCoroutineScope()
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5),
     ) { uris ->
+        var deniedCount = 0
         uris.forEach { uri ->
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
+            // Chỉ nhận ảnh khi giữ được quyền đọc lâu dài, nếu không nháp sẽ tham chiếu URI chết.
+            val granted = runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }.isSuccess
+            if (granted) {
+                viewModel.onAction(CreateHousingPostAction.AddPhoto(uri.toString()))
+            } else {
+                deniedCount++
             }
-            viewModel.onAction(CreateHousingPostAction.AddPhoto(uri.toString()))
+        }
+        if (deniedCount > 0) {
+            scope.launch {
+                snackbars.showSnackbar(context.getString(R.string.housing_create_photo_permission_denied))
+            }
         }
     }
 
@@ -85,6 +97,10 @@ fun CreateHousingPostRoute(
 
                 CreateHousingPostEvent.DraftSaved -> {
                     snackbars.showSnackbar(context.getString(R.string.housing_create_draft_saved))
+                }
+
+                CreateHousingPostEvent.DraftSaveFailed -> {
+                    snackbars.showSnackbar(context.getString(R.string.housing_create_draft_save_failed))
                 }
 
                 CreateHousingPostEvent.DraftRestored -> {

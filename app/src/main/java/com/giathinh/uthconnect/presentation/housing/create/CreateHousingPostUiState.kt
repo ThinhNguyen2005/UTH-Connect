@@ -14,6 +14,7 @@ enum class CreateHousingPostError {
     INVALID_AREA,
     EMPTY_ADDRESS,
     EMPTY_PHONE,
+    INVALID_ZALO,
     SIGN_IN_REQUIRED,
 }
 
@@ -46,6 +47,8 @@ data class CreateHousingPostUiState(
     val photos: List<String> = emptyList(),
     @Transient val isSubmitting: Boolean = false,
     @Transient val validationError: CreateHousingPostError? = null,
+    /** Tăng mỗi lần gửi lỗi để màn hình cuộn lại banner dù mã lỗi không đổi. */
+    @Transient val validationNonce: Int = 0,
 ) {
     /** Đã chấm pin thật trên bản đồ — hiện tóm tắt "đã chọn vị trí" thay vì chỉ ô địa chỉ tay. */
     val hasLocation: Boolean get() = latitude != 0.0 || longitude != 0.0

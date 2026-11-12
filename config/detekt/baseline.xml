@@ -341,6 +341,7 @@
     <ID>TooManyFunctions:AuthScreen.kt$com.giathinh.uthconnect.presentation.auth.AuthScreen.kt</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
     <ID>TooManyFunctions:CreateHousingPostScreen.kt$com.giathinh.uthconnect.presentation.housing.create.CreateHousingPostScreen.kt</ID>
+    <ID>TooManyFunctions:CreateHousingPostViewModel.kt$CreateHousingPostViewModel : ViewModel</ID>
     <ID>TooManyFunctions:DemoAuthRepository.kt$DemoAuthRepository : AuthRepositoryStudentContactRepository</ID>
     <ID>TooManyFunctions:EventRepository.kt$EventRepository</ID>
     <ID>TooManyFunctions:HomeScreen.kt$com.giathinh.uthconnect.presentation.home.HomeScreen.kt</ID>

@@ -61,7 +61,7 @@ class HousingScreenUiTest {
 
         rule.onNodeWithText(listing.title).assertExists()
         rule.onNodeWithText(string(R.string.housing_price_per_month, "2.800.000")).assertExists()
-        rule.onNodeWithText(string(R.string.housing_verified)).assertExists()
+        rule.onNodeWithText(string(R.string.housing_verified_student_badge)).assertExists()
     }
 
     @Test
