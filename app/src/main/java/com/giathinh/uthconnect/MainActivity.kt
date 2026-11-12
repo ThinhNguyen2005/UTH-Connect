@@ -1,7 +1,11 @@
 package com.giathinh.uthconnect
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +21,7 @@ import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
 import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
+import com.giathinh.uthconnect.data.push.PushIntentContract
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
@@ -43,6 +48,7 @@ class MainActivity : ComponentActivity() {
      * là recompose ngay, không cần dựng lại activity.
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
+    private var pushNotificationId by mutableStateOf<String?>(null)
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -66,12 +72,40 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+        pushNotificationId = intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
         enableEdgeToEdge()
         observeThemeMode()
         setContent {
             UTHConnectTheme(darkTheme = themeMode.resolveDarkTheme(isSystemInDarkTheme())) {
-                UthApp()
+                UthApp(
+                    pushNotificationId = pushNotificationId,
+                    onPushNavigationHandled = { id ->
+                        if (pushNotificationId == id) {
+                            pushNotificationId = null
+                            intent?.removeExtra(PushIntentContract.NOTIFICATION_ID)
+                        }
+                    },
+                )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pushNotificationId = intent.getStringExtra(PushIntentContract.NOTIFICATION_ID)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(
+                    PushIntentContract.CHANNEL_ID,
+                    getString(R.string.notification_channel_updates),
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply { description = getString(R.string.notification_channel_updates_description) },
+            )
         }
     }
 

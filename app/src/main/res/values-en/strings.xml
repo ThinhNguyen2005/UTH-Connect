@@ -571,4 +571,28 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <!-- Notification Screen -->
+    <string name="notification_title">Notifications</string>
+    <string name="notification_back">Back</string>
+    <string name="notification_mark_all_read">Mark all as read</string>
+    <string name="notification_settings">Notification settings</string>
+    <string name="notification_profile">User profile</string>
+    <string name="notification_category_all">All (%1$d)</string>
+    <string name="notification_category_study">Studies &amp; Schedule (%1$d)</string>
+    <string name="notification_category_event">Events (%1$d)</string>
+    <string name="notification_category_auction">Auctions (%1$d)</string>
+    <string name="notification_category_system">System (%1$d)</string>
+    <string name="notification_section_today">Today</string>
+    <string name="notification_section_previous">Yesterday &amp; Earlier</string>
+    <string name="notification_new_count">%1$d new</string>
+    <string name="notification_viewed">Read</string>
+    <string name="notification_empty_title">No notifications</string>
+    <string name="notification_empty_desc">You will receive updates about classes and events here.</string>
+    <string name="notification_detail_unavailable">This notification could not be found.</string>
+    <string name="notification_tag_event">Event</string>
+    <string name="notification_tag_academic">Academic</string>
+    <string name="notification_tag_system">System</string>
+    <string name="notification_tag_generic">Notification</string>
+    <string name="notification_channel_updates">UTH Connect updates</string>
+    <string name="notification_channel_updates_description">Events, academic, and system updates</string>
 </resources>

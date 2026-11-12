@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
+import com.giathinh.uthconnect.data.push.FcmTokenRegistrar
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionFailure
@@ -24,6 +25,7 @@ class PreferencesSessionRepository @Inject constructor(
     private val client: SupabaseRestClient,
     private val supabaseAuth: SupabaseAuthRepository,
     private val secureStore: SecureSessionStore,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
 ) : SessionRepository {
     private val prefs = context.getSharedPreferences("uth_auth_demo", Context.MODE_PRIVATE)
     private val mutex = Mutex()
@@ -47,6 +49,7 @@ class PreferencesSessionRepository @Inject constructor(
                     profile = candidateProfile,
                     remembered = hasSession,
                 )
+                if (candidateProfile != null) fcmTokenRegistrar.registerForSignedInUser()
             } catch (cancelled: CancellationException) {
                 restored = false
                 throw cancelled
@@ -67,6 +70,7 @@ class PreferencesSessionRepository @Inject constructor(
                 remembered = remember,
             )
         }
+        fcmTokenRegistrar.registerForSignedInUser()
     }
 
     override suspend fun updateProfile(profile: StudentProfile) {
@@ -99,6 +103,7 @@ class PreferencesSessionRepository @Inject constructor(
         mutex.withLock {
             client.setRememberSession(false)
             try {
+                runCatching { fcmTokenRegistrar.unregisterCurrentUser() }
                 auth.signOut()
             } finally {
                 _session.value = StudentSession(isRestoring = false)

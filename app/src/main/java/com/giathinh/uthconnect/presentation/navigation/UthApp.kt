@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -27,6 +28,9 @@ import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
+import com.giathinh.uthconnect.presentation.notification.NotificationDestination
+import com.giathinh.uthconnect.presentation.notification.NotificationDetailDestination
+import com.giathinh.uthconnect.presentation.notification.notificationGraph
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
@@ -49,8 +53,18 @@ import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
  * khung điều hướng không phải biết gì về form đăng nhập, và ngược lại.
  */
 @Composable
-fun UthApp() {
-    AuthRoute(signedInContent = { SignedInUthApp() })
+fun UthApp(
+    pushNotificationId: String? = null,
+    onPushNavigationHandled: (String) -> Unit = {},
+) {
+    AuthRoute(
+        signedInContent = {
+            SignedInUthApp(
+                pushNotificationId = pushNotificationId,
+                onPushNavigationHandled = onPushNavigationHandled,
+            )
+        },
+    )
 }
 
 /**
@@ -68,7 +82,15 @@ fun UthApp() {
 @Composable
 private fun SignedInUthApp(
     navController: NavHostController = rememberNavController(),
+    pushNotificationId: String? = null,
+    onPushNavigationHandled: (String) -> Unit = {},
 ) {
+    LaunchedEffect(pushNotificationId) {
+        pushNotificationId?.let { id ->
+            navController.navigate(NotificationDetailDestination(id)) { launchSingleTop = true }
+            onPushNavigationHandled(id)
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedDestination = UthDestination.from(backStackEntry?.destination)
 
@@ -119,6 +141,9 @@ private fun UthNavHost(
                 onOpenAnnouncement = { announcementId ->
                     navController.navigate(AnnouncementDetailDestination(announcementId))
                 },
+                onOpenNotifications = {
+                    navController.navigate(NotificationDestination)
+                },
             )
         }
         composable<ScheduleDestination> { ScheduleRoute() }
@@ -148,6 +173,7 @@ private fun UthNavHost(
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
+        notificationGraph(navController)
         announcementGraph(navController)
         lostFoundGraph(navController)
     }

@@ -188,6 +188,9 @@ object UthDimens {
 
         /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
         val IndicatorBar: Dp = 20.dp
+
+        /** Container icon của thẻ thông báo (36.dp). */
+        val NotificationIconContainer: Dp = 36.dp
     }
 
     /**

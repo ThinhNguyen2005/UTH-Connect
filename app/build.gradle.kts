@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.google.services)
     alias(libs.plugins.detekt)
     alias(libs.plugins.spotless)
 }
@@ -116,6 +116,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.firebase.messaging)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // DI

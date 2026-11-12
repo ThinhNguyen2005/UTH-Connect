@@ -140,6 +140,19 @@ internal fun JsonObject.toUniversityNotification(): PostNotification = PostNotif
     imageUrl = string("image_url"),
 )
 
+private fun JsonObject.toInboxNotification(): PostNotification = PostNotification(
+    id = requireNotNull(string("id")),
+    title = string("title").orEmpty(),
+    summary = string("summary").orEmpty(),
+    content = string("content").orEmpty(),
+    category = NotificationCategory.fromString(string("category")),
+    author = string("author").orEmpty(),
+    publishedAt = Instant.parse(requireNotNull(string("published_at"))).toEpochMilli(),
+    targetType = string("target_type"),
+    targetId = string("target_id"),
+    readAt = string("read_at")?.let { Instant.parse(it).toEpochMilli() },
+)
+
 @Singleton
 class SupabaseNotificationRepository @Inject constructor(
     private val client: SupabaseRestClient,
@@ -153,6 +166,41 @@ class SupabaseNotificationRepository @Inject constructor(
     override suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?> = suspendResult {
         client.table("notifications?select=*&id=eq.${urlEncode(uuid(notificationId))}&limit=1")
             .jsonArray.singleOrNull()?.jsonObject?.toUniversityNotification()
+    }
+
+    override fun getInbox(): Flow<List<PostNotification>> = flow {
+        val userId = urlEncode(uuid(client.userId))
+        val rows = client.table(
+            "notification_inbox?select=*&recipient_id=eq.$userId&order=published_at.desc&limit=100",
+        ).jsonArray.map { it.jsonObject.toInboxNotification() }
+        emit(rows)
+    }
+
+    override suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> = suspendResult {
+        val userId = urlEncode(uuid(client.userId))
+        val id = urlEncode(uuid(notificationId))
+        client.patchTable(
+            "notification_inbox?id=eq.$id&recipient_id=eq.$userId&read_at=is.null",
+            buildJsonObject { put("read_at", Instant.now().toString()) },
+        )
+        Unit
+    }
+
+    override suspend fun markAllInboxNotificationsRead(): Result<Unit> = suspendResult {
+        val userId = urlEncode(uuid(client.userId))
+        client.patchTable(
+            "notification_inbox?recipient_id=eq.$userId&read_at=is.null",
+            buildJsonObject { put("read_at", Instant.now().toString()) },
+        )
+        Unit
+    }
+
+    override suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> = suspendResult {
+        val userId = urlEncode(uuid(client.userId))
+        val id = urlEncode(uuid(notificationId))
+        client.table(
+            "notification_inbox?select=*&id=eq.$id&recipient_id=eq.$userId&limit=1",
+        ).jsonArray.singleOrNull()?.jsonObject?.toInboxNotification()
     }
 }
 

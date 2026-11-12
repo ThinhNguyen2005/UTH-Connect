@@ -220,6 +220,12 @@ class SupabaseRestClient @Inject constructor() {
 
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
+    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
+
+    /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
+    suspend fun upsertTable(path: String, body: JsonObject): JsonElement =
+        authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
+
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
     suspend fun updatePassword(password: String): JsonElement {
@@ -227,9 +233,14 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-    private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
+    private suspend fun authorized(
+        path: String,
+        method: String,
+        body: JsonObject? = null,
+        prefer: String? = null,
+    ): JsonElement {
         val accessToken = freshToken()
-        return send(path, method, body, accessToken)
+        return send(path, method, body, accessToken, prefer)
     }
 
     private suspend fun freshToken(): String {
@@ -285,6 +296,7 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         bearer: String?,
+        prefer: String? = null,
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
@@ -292,11 +304,11 @@ class SupabaseRestClient @Inject constructor() {
             if (method == "PATCH") {
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-                connection.setRequestProperty("Prefer", "return=representation")
+                connection.setRequestProperty("Prefer", prefer ?: "return=representation")
             } else {
                 connection.requestMethod = method
                 if (method == "POST" && path.startsWith("/rest/v1/")) {
-                    connection.setRequestProperty("Prefer", "return=representation")
+                    connection.setRequestProperty("Prefer", prefer ?: "return=representation")
                 }
             }
             connection.connectTimeout = 15_000
