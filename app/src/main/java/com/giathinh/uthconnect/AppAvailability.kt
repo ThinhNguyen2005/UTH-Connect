@@ -41,10 +41,11 @@ internal enum class AppAvailability { AVAILABLE, MAINTENANCE, UPDATE_REQUIRED }
 internal data class SavedGate(
     val maintenanceMode: Boolean = false,
     val forceUpdateMinVersion: String = "1.0.0",
+    val updateUrl: String = "",
     val hasSavedState: Boolean = false,
 )
 
-// Replace UPDATE_URL with official APK download URL / Store link when published
+// Default static fallback URL when Remote Config update_url is not set
 private const val UPDATE_URL = ""
 
 internal fun remoteConfigFetchIntervalSeconds(
@@ -67,6 +68,7 @@ internal fun loadSavedGate(prefs: SharedPreferences): SavedGate {
         SavedGate(
             maintenanceMode = prefs.getBoolean("maintenance_mode", false),
             forceUpdateMinVersion = prefs.getString("force_update_min_version", "1.0.0") ?: "1.0.0",
+            updateUrl = prefs.getString("update_url", "") ?: "",
             hasSavedState = true,
         )
     } catch (_: Exception) {
@@ -86,6 +88,7 @@ internal fun saveGate(prefs: SharedPreferences, gate: SavedGate) {
     prefs.edit()
         .putBoolean("maintenance_mode", gate.maintenanceMode)
         .putString("force_update_min_version", gate.forceUpdateMinVersion)
+        .putString("update_url", gate.updateUrl)
         .putBoolean("has_saved_state", true)
         .apply()
 }
@@ -108,6 +111,7 @@ internal fun resolveGate(
     fetchSucceeded: Boolean,
     remoteMaintenance: Boolean,
     remoteMinVersion: String,
+    remoteUpdateUrl: String = "",
     currentVersion: String,
 ): Pair<AppAvailability, SavedGate> {
     val maintenance = if (fetchSucceeded) {
@@ -126,10 +130,19 @@ internal fun resolveGate(
         "1.0.0"
     }
 
+    val updateUrl = if (fetchSucceeded) {
+        remoteUpdateUrl.ifBlank { saved.updateUrl }
+    } else if (saved.hasSavedState) {
+        saved.updateUrl
+    } else {
+        ""
+    }
+
     val state = availability(maintenance, currentVersion, minVersion)
     val newSaved = SavedGate(
         maintenanceMode = maintenance,
         forceUpdateMinVersion = minVersion,
+        updateUrl = updateUrl,
         hasSavedState = true,
     )
     return Pair(state, newSaved)
@@ -160,6 +173,7 @@ internal fun availability(maintenance: Boolean, current: String, minimum: String
 @Composable
 internal fun AvailabilityScreen(
     state: AppAvailability,
+    updateUrl: String = UPDATE_URL,
     isRetrying: Boolean = false,
     onRetry: () -> Unit = {},
 ) {
@@ -225,11 +239,12 @@ internal fun AvailabilityScreen(
                     }
                 }
             }
-            if (state == AppAvailability.UPDATE_REQUIRED && isValidUpdateUrl(UPDATE_URL)) {
+            val activeUrl = updateUrl.ifBlank { UPDATE_URL }
+            if (state == AppAvailability.UPDATE_REQUIRED && isValidUpdateUrl(activeUrl)) {
                 Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL.trim()))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(activeUrl.trim()))
                         try {
                             context.startActivity(intent)
                         } catch (_: ActivityNotFoundException) {

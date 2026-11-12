@@ -71,6 +71,26 @@ class AppAvailabilityTest {
     }
 
     @Test
+    fun resolveGatePreservesDynamicUpdateUrl() {
+        val saved = SavedGate(
+            maintenanceMode = false,
+            forceUpdateMinVersion = "1.0.0",
+            updateUrl = "https://play.google.com/store/apps/details?id=com.giathinh.uthconnect",
+            hasSavedState = true,
+        )
+        val (state, newSaved) = resolveGate(
+            saved = saved,
+            fetchSucceeded = true,
+            remoteMaintenance = false,
+            remoteMinVersion = "1.0.0",
+            remoteUpdateUrl = "",
+            currentVersion = "1.0.0",
+        )
+        assertEquals(AppAvailability.AVAILABLE, state)
+        assertEquals("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect", newSaved.updateUrl)
+    }
+
+    @Test
     fun fetchFailurePreservesSavedBlockingGate() {
         val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
         val (state, _) = resolveGate(
@@ -135,13 +155,19 @@ class AppAvailabilityTest {
     @Test
     fun saveGateAndLoadSavedGateRoundTrip() {
         val fake = FakeSharedPreferences()
-        val initial = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "2.0.0", hasSavedState = true)
+        val initial = SavedGate(
+            maintenanceMode = true,
+            forceUpdateMinVersion = "2.0.0",
+            updateUrl = "https://play.google.com/store/apps/details?id=com.giathinh.uthconnect",
+            hasSavedState = true,
+        )
         saveGate(fake, initial)
 
         val loaded = loadSavedGate(fake)
         assertTrue(loaded.hasSavedState)
         assertTrue(loaded.maintenanceMode)
         assertEquals("2.0.0", loaded.forceUpdateMinVersion)
+        assertEquals("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect", loaded.updateUrl)
     }
 
     @Test
@@ -164,6 +190,7 @@ class AppAvailabilityTest {
         assertTrue(loaded.hasSavedState)
         assertFalse(loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+        assertEquals("", loaded.updateUrl)
     }
 
     @Test
@@ -174,6 +201,7 @@ class AppAvailabilityTest {
         assertFalse(loaded.hasSavedState)
         assertFalse(loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+        assertEquals("", loaded.updateUrl)
     }
 
     private class FakeSharedPreferences : SharedPreferences {

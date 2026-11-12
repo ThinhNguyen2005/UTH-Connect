@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
     private var appAvailability by mutableStateOf<AppAvailability?>(null)
+    private var updateUrlState by mutableStateOf("")
     private var isCheckingAvailability by mutableStateOf(false)
     private var remoteConfigJob: Job? = null
 
@@ -99,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
                     else -> AvailabilityScreen(
                         state = state,
+                        updateUrl = updateUrlState,
                         isRetrying = isCheckingAvailability,
                         onRetry = { fetchRemoteConfigGate(userInitiated = true) },
                     )
@@ -138,10 +140,12 @@ class MainActivity : ComponentActivity() {
                     fetchSucceeded = false,
                     remoteMaintenance = false,
                     remoteMinVersion = "1.0.0",
+                    remoteUpdateUrl = "",
                     currentVersion = BuildConfig.VERSION_NAME,
                 )
                 initialState = resolvedInitial
                 appAvailability = initialState
+                updateUrlState = saved.updateUrl
 
                 withContext(Dispatchers.IO) {
                     updateRemoteConfigGate(saved, userInitiated)
@@ -163,6 +167,7 @@ class MainActivity : ComponentActivity() {
         var fetchSucceeded = false
         var remoteMaint = false
         var remoteMinVer = "1.0.0"
+        var remoteUrl = ""
 
         try {
             val config = FirebaseRemoteConfig.getInstance()
@@ -172,13 +177,18 @@ class MainActivity : ComponentActivity() {
                 .build()
             config.setConfigSettingsAsync(settings).await()
             config.setDefaultsAsync(
-                mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
+                mapOf(
+                    "force_update_min_version" to "1.0.0",
+                    "maintenance_mode" to false,
+                    "update_url" to "",
+                ),
             ).await()
 
             config.fetchAndActivate().await()
 
             remoteMaint = config.getBoolean("maintenance_mode")
             remoteMinVer = config.getString("force_update_min_version")
+            remoteUrl = config.getString("update_url")
             fetchSucceeded = true
         } catch (_: Exception) {
             fetchSucceeded = false
@@ -189,12 +199,14 @@ class MainActivity : ComponentActivity() {
             fetchSucceeded = fetchSucceeded,
             remoteMaintenance = remoteMaint,
             remoteMinVersion = remoteMinVer,
+            remoteUpdateUrl = remoteUrl,
             currentVersion = BuildConfig.VERSION_NAME,
         )
         saveGate(this@MainActivity, newSaved)
 
         withContext(Dispatchers.Main) {
             appAvailability = newState
+            updateUrlState = newSaved.updateUrl
         }
     }
 
@@ -206,5 +218,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        internal const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
     }
 }
