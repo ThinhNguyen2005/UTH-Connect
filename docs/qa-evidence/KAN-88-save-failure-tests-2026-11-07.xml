@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.giathinh.uthconnect.BooksContactUiTest" tests="2" failures="0" errors="0" skipped="0" time="33.419" timestamp="2026-11-07T06:45:59" hostname="localhost">
+  <properties>
+    <property name="device" value="Pixel_4(AVD) - 17" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="contactFailureShowsError" classname="com.giathinh.uthconnect.BooksContactUiTest" time="13.35" />
+  <testcase name="failedSaveKeepsFormAndShowsError" classname="com.giathinh.uthconnect.BooksContactUiTest" time="18.016" />
+</testsuite>

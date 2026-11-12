@@ -83,6 +83,7 @@ class SupabaseRestClient @Inject constructor() {
         // A failed login must not accidentally leave the previous user's tokens active.
         // Password confirmation is a separate flow and must preserve the current session on failure.
         credentials = null
+        CrashIdentity.clear()
         rememberSession = false
         sessionStore?.clear()
         val data = send(
@@ -187,6 +188,7 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun signOut() {
         val old = credentials
         credentials = null
+        CrashIdentity.clear()
         rememberSession = false
         sessionStore?.clear()
         if (old != null) {
@@ -233,6 +235,73 @@ class SupabaseRestClient @Inject constructor() {
 
     /** Inserts a row through PostgREST and returns the server response. */
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
+
+    /** Deletes matching rows through PostgREST. */
+    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
+
+    /** Uploads binary data to Supabase Storage using the authenticated session. */
+    suspend fun uploadStorage(
+        bucket: String,
+        path: String,
+        mimeType: String,
+        data: ByteArray,
+    ): String = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val accessToken = freshToken()
+        val cleanPath = path.trimStart('/')
+        val endpoint = "/storage/v1/object/$bucket/$cleanPath"
+        val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 15_000
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            connection.setRequestProperty("Content-Type", mimeType)
+            connection.doOutput = true
+            connection.outputStream.use { it.write(data) }
+            val status = connection.responseCode
+            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching {
+                    val error = json.parseToJsonElement(response).jsonObject
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase Storage HTTP $status"
+                throw SupabaseHttpException(status, message)
+            }
+            cleanPath
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /** Deletes an object from Supabase Storage. */
+    suspend fun deleteStorage(bucket: String, path: String): Unit = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val accessToken = freshToken()
+        val cleanPath = path.trimStart('/')
+        val endpoint = "/storage/v1/object/$bucket/$cleanPath"
+        val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = "DELETE"
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 15_000
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            val status = connection.responseCode
+            if (status !in 200..299 && status != 404) {
+                val response = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val message = runCatching {
+                    val error = json.parseToJsonElement(response).jsonObject
+                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
+                }.getOrNull() ?: "Supabase Storage delete HTTP $status"
+                throw SupabaseHttpException(status, message)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     /** Invokes an authenticated Postgres RPC function. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
@@ -323,6 +392,7 @@ class SupabaseRestClient @Inject constructor() {
             } catch (error: SupabaseHttpException) {
                 if (error.status == 400 || error.status == 401) {
                     credentials = null
+                    CrashIdentity.clear()
                     rememberSession = false
                     sessionStore?.clear()
                 }

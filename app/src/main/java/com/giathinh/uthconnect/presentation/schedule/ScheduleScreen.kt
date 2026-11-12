@@ -165,12 +165,18 @@ fun ScheduleScreen(
                         UthCard {
                             UthEmptyState(
                                 title = stringResource(
-                                    if (uiState.eventsLoadFailed) R.string.schedule_events_load_failed
-                                    else R.string.no_events_for_date,
+                                    if (uiState.eventsLoadFailed) {
+                                        R.string.schedule_events_load_failed
+                                    } else {
+                                        R.string.no_events_for_date
+                                    },
                                 ),
                                 body = stringResource(
-                                    if (uiState.eventsLoadFailed) R.string.schedule_events_load_failed_body
-                                    else R.string.timetable_memory,
+                                    if (uiState.eventsLoadFailed) {
+                                        R.string.schedule_events_load_failed_body
+                                    } else {
+                                        R.string.timetable_memory
+                                    },
                                 ),
                                 icon = Icons.Filled.DateRange,
                             )
@@ -202,7 +208,7 @@ fun ScheduleScreen(
                                         event = event,
                                         now = uiState.now,
                                         registrationStatusAvailable =
-                                            !uiState.registrationsLoadFailed && !uiState.isRegistrationsLoading,
+                                        !uiState.registrationsLoadFailed && !uiState.isRegistrationsLoading,
                                         onAction = onAction,
                                         onViewDetails = { onAction(ScheduleAction.OpenEventDetails(it.id)) },
                                     )
@@ -758,7 +764,13 @@ private fun CampusEventCard(
                     if (displayPoints.isNotBlank()) {
                         UthStatusBadge(
                             text = displayPoints,
-                            tone = if (isInactive) BadgeTone.Neutral else if (isWarningAccent && !isRegistered) BadgeTone.Warning else BadgeTone.Info,
+                            tone = if (isInactive) {
+                                BadgeTone.Neutral
+                            } else if (isWarningAccent && !isRegistered) {
+                                BadgeTone.Warning
+                            } else {
+                                BadgeTone.Info
+                            },
                             icon = null,
                         )
                     }
@@ -945,17 +957,15 @@ private fun DarkPreview() = UthPreview(darkTheme = true) {
 }
 
 /** Converts a registered schedule event into the ticket view model. */
-private fun ScheduleEvent.toTicket(studentId: String): Ticket {
-    return Ticket(
-        id = "ticket-$id",
-        studentId = studentId,
-        eventId = id,
-        eventTitle = title,
-        eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
-        eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
-        status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
-        fallbackCode = "",
-        organizerName = organizer,
-        seatLabel = null,
-    )
-}
+private fun ScheduleEvent.toTicket(studentId: String): Ticket = Ticket(
+    id = "ticket-$id",
+    studentId = studentId,
+    eventId = id,
+    eventTitle = title,
+    eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
+    eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+    status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
+    fallbackCode = "",
+    organizerName = organizer,
+    seatLabel = null,
+)

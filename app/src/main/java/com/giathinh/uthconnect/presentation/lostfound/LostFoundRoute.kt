@@ -19,6 +19,7 @@ fun LostFoundRoute(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LostFoundViewModel = hiltViewModel(),
+    onCallContact: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -27,14 +28,18 @@ fun LostFoundRoute(
         uiState = uiState,
         onAction = viewModel::onAction,
         onNavigateBack = onNavigateBack,
-        onCallClick = { phoneNumber ->
-            dialPhoneNumberSafely(
-                context = context,
-                phoneNumber = phoneNumber,
-                onDialerUnavailable = {
-                    viewModel.onAction(LostFoundAction.ShowDialerUnavailable)
-                },
-            )
+        onCallClick = { phone ->
+            if (onCallContact != null) {
+                onCallContact(phone)
+            } else {
+                dialPhoneNumberSafely(
+                    context = context,
+                    phoneNumber = phone,
+                    onDialerUnavailable = {
+                        viewModel.onAction(LostFoundAction.ShowDialerUnavailable)
+                    },
+                )
+            }
         },
         modifier = modifier,
     )
@@ -54,13 +59,22 @@ fun dialPhoneNumberSafely(
 ) {
     val cleanNumber = phoneNumber.replace(" ", "").trim()
     if (cleanNumber.isNotBlank()) {
-        val intent = Intent(Intent.ACTION_DIAL).apply {
-            data = Uri.parse("tel:$cleanNumber")
-        }
-        try {
-            context.startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-            onDialerUnavailable()
-        }
+        launchDialer(context, cleanNumber, onError = onDialerUnavailable)
+    }
+}
+
+internal fun launchDialer(
+    context: Context,
+    phone: String,
+    intentFactory: (String) -> Intent = { Intent(Intent.ACTION_DIAL, Uri.parse("tel:$it")) },
+    onError: () -> Unit,
+) {
+    try {
+        val dialIntent = intentFactory(phone)
+        context.startActivity(dialIntent)
+    } catch (_: ActivityNotFoundException) {
+        onError()
+    } catch (_: SecurityException) {
+        onError()
     }
 }

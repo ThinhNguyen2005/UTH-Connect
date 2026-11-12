@@ -64,10 +64,9 @@ data class ScheduleEvent(
 )
 
 /** Returns true while a registered ticket can be opened, including the 30-minute check-in grace period. */
-fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean =
-    registration != EventRegistration.NOT_REGISTERED &&
-        (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
-        !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
+fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean = registration != EventRegistration.NOT_REGISTERED &&
+    (status == EventStatus.PUBLISHED || status == EventStatus.HAPPENING) &&
+    !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
 
 private const val TICKET_CHECK_IN_GRACE_MINUTES = 30L
 
