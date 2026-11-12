@@ -210,6 +210,5 @@ class SupabaseMappersTest {
     /**
      * Parses a JSON string literal into a [JsonObject] instance.
      */
-    /** Parses a JSON object fixture for mapper tests. */
     private fun objectFromJson(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
 }

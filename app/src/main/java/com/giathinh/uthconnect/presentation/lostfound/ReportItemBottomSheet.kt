@@ -1,7 +1,10 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -440,68 +443,8 @@ private fun ReportImagePicker(
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
-                val rawMime = withContext(Dispatchers.IO) {
-                    context.contentResolver.getType(uri) ?: "image/jpeg"
-                }
                 val result = withContext(Dispatchers.IO) {
-                    runCatching {
-                        context.contentResolver.openInputStream(uri)?.use { stream ->
-                            val maxBytes = 5 * 1024 * 1024
-                            val buffer = java.io.ByteArrayOutputStream()
-                            val chunk = ByteArray(8192)
-                            var total = 0
-                            var read = stream.read(chunk)
-                            while (read != -1 && total + read <= maxBytes) {
-                                total += read
-                                buffer.write(chunk, 0, read)
-                                read = stream.read(chunk)
-                            }
-                            if (read != -1) {
-                                ImageProcessResult.TooLarge
-                            } else {
-                                val rawBytes = buffer.toByteArray()
-                                val isSupported = rawMime.equals("image/jpeg", ignoreCase = true) ||
-                                    rawMime.equals("image/jpg", ignoreCase = true) ||
-                                    rawMime.equals("image/png", ignoreCase = true) ||
-                                    rawMime.equals("image/webp", ignoreCase = true)
-                                if (isSupported) {
-                                    ImageProcessResult.Success(rawBytes, rawMime)
-                                } else {
-                                    val boundsOptions = BitmapFactory.Options().apply {
-                                        inJustDecodeBounds = true
-                                    }
-                                    BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, boundsOptions)
-                                    var sampleSize = 1
-                                    val maxDim = 1920
-                                    while (boundsOptions.outWidth / sampleSize > maxDim ||
-                                        boundsOptions.outHeight / sampleSize > maxDim
-                                    ) {
-                                        sampleSize *= 2
-                                    }
-                                    val decodeOptions = BitmapFactory.Options().apply {
-                                        inSampleSize = sampleSize
-                                    }
-                                    val bitmap = BitmapFactory.decodeByteArray(
-                                        rawBytes,
-                                        0,
-                                        rawBytes.size,
-                                        decodeOptions,
-                                    )
-                                    if (bitmap != null) {
-                                        try {
-                                            val outStream = java.io.ByteArrayOutputStream()
-                                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outStream)
-                                            ImageProcessResult.Success(outStream.toByteArray(), "image/jpeg")
-                                        } finally {
-                                            bitmap.recycle()
-                                        }
-                                    } else {
-                                        ImageProcessResult.ReadFailed
-                                    }
-                                }
-                            }
-                        } ?: ImageProcessResult.ReadFailed
-                    }.getOrElse { ImageProcessResult.ReadFailed }
+                    processAndCompressImage(context, uri)
                 }
                 when (result) {
                     is ImageProcessResult.Success -> {
@@ -643,11 +586,158 @@ private fun ReportImagePicker(
     }
 }
 
+private const val MAX_IMAGE_INPUT_BYTES = 15 * 1024 * 1024
+private const val MAX_IMAGE_DIMENSION = 1280
+private const val IMAGE_COMPRESSION_QUALITY = 80
+private const val STREAM_BUFFER_CHUNK_SIZE = 8192
+private const val ROTATION_90 = 90f
+private const val ROTATION_180 = 180f
+private const val ROTATION_270 = 270f
+
+private fun readImageBytesBounded(
+    context: Context,
+    uri: Uri,
+    maxBytes: Int,
+): Pair<ByteArray?, Boolean> {
+    val buffer = java.io.ByteArrayOutputStream()
+    val stream = context.contentResolver.openInputStream(uri) ?: return Pair(null, false)
+    val isTooLarge = stream.use { input ->
+        val chunk = ByteArray(STREAM_BUFFER_CHUNK_SIZE)
+        var total = 0
+        var read = input.read(chunk)
+        while (read != -1 && total + read <= maxBytes) {
+            total += read
+            buffer.write(chunk, 0, read)
+            read = input.read(chunk)
+        }
+        read != -1
+    }
+    return Pair(if (isTooLarge) null else buffer.toByteArray(), isTooLarge)
+}
+
+private fun decodeExifOrientation(bytes: ByteArray): Int = runCatching {
+    java.io.ByteArrayInputStream(bytes).use { exifStream ->
+        val exif = ExifInterface(exifStream)
+        exif.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL,
+        )
+    }
+}.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+
+private fun computeSampleSize(options: BitmapFactory.Options, maxDimension: Int): Int {
+    var sampleSize = 1
+    while (options.outWidth / sampleSize > maxDimension || options.outHeight / sampleSize > maxDimension) {
+        sampleSize *= 2
+    }
+    return sampleSize
+}
+
+private fun scaleAndRotate(
+    bitmap: Bitmap,
+    orientation: Int,
+    maxDimension: Int,
+): Bitmap {
+    val maxDim = maxOf(bitmap.width, bitmap.height)
+    val scaled = if (maxDim > maxDimension) {
+        val scale = maxDimension.toFloat() / maxDim
+        val targetWidth = (bitmap.width * scale).toInt().coerceAtLeast(1)
+        val targetHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true).also {
+            if (it != bitmap) bitmap.recycle()
+        }
+    } else {
+        bitmap
+    }
+
+    val rotation = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> ROTATION_90
+        ExifInterface.ORIENTATION_ROTATE_180 -> ROTATION_180
+        ExifInterface.ORIENTATION_ROTATE_270 -> ROTATION_270
+        else -> 0f
+    }
+
+    return if (rotation != 0f) {
+        val matrix = Matrix().apply { postRotate(rotation) }
+        Bitmap.createBitmap(scaled, 0, 0, scaled.width, scaled.height, matrix, true).also {
+            if (it != scaled) scaled.recycle()
+        }
+    } else {
+        scaled
+    }
+}
+
+private fun compressRawBytes(
+    rawBytes: ByteArray,
+    maxDimension: Int,
+    quality: Int,
+): ImageProcessResult {
+    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, boundsOptions)
+    if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+        return ImageProcessResult.ReadFailed
+    }
+
+    val orientation = decodeExifOrientation(rawBytes)
+    val decodeOptions = BitmapFactory.Options().apply {
+        inSampleSize = computeSampleSize(boundsOptions, maxDimension)
+    }
+    val sampledBitmap = BitmapFactory.decodeByteArray(
+        rawBytes,
+        0,
+        rawBytes.size,
+        decodeOptions,
+    ) ?: return ImageProcessResult.ReadFailed
+
+    val finalBitmap = scaleAndRotate(sampledBitmap, orientation, maxDimension)
+    val outStream = java.io.ByteArrayOutputStream()
+    try {
+        finalBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outStream)
+        return ImageProcessResult.Success(outStream.toByteArray(), "image/jpeg")
+    } finally {
+        finalBitmap.recycle()
+    }
+}
+
+/**
+ * Reads, scales down, handles EXIF orientation, and compresses the selected image into JPEG.
+ *
+ * @param context Android context for content resolution.
+ * @param uri Image source URI.
+ * @param maxInputBytes Maximum allowable size for the input stream before compression.
+ * @param maxDimension Target maximum width/height for downscaling.
+ * @param quality JPEG compression quality factor (0..100).
+ * @return Outcome status wrapping compressed JPEG bytes or failure reason.
+ */
+internal fun processAndCompressImage(
+    context: Context,
+    uri: Uri,
+    maxInputBytes: Int = MAX_IMAGE_INPUT_BYTES,
+    maxDimension: Int = MAX_IMAGE_DIMENSION,
+    quality: Int = IMAGE_COMPRESSION_QUALITY,
+): ImageProcessResult = runCatching {
+    val (rawBytes, isTooLarge) = readImageBytesBounded(context, uri, maxInputBytes)
+    when {
+        isTooLarge -> ImageProcessResult.TooLarge
+        rawBytes == null || rawBytes.isEmpty() -> ImageProcessResult.ReadFailed
+        else -> compressRawBytes(rawBytes, maxDimension, quality)
+    }
+}.getOrElse { ImageProcessResult.ReadFailed }
+
 /**
  * Result representing outcome of user image selection and decoding.
  */
-private sealed interface ImageProcessResult {
-    data class Success(val bytes: ByteArray, val mimeType: String) : ImageProcessResult
+internal sealed interface ImageProcessResult {
+    data class Success(val bytes: ByteArray, val mimeType: String) : ImageProcessResult {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Success) return false
+            return bytes.contentEquals(other.bytes) && mimeType == other.mimeType
+        }
+
+        override fun hashCode(): Int = 31 * bytes.contentHashCode() + mimeType.hashCode()
+    }
+
     data object TooLarge : ImageProcessResult
     data object ReadFailed : ImageProcessResult
 }

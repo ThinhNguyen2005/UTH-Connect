@@ -340,26 +340,6 @@ class SupabaseRestClient @Inject constructor() {
         "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$path"
     }
 
-    suspend fun deleteStorage(
-        bucket: String,
-        path: String,
-    ): Unit = withContext(Dispatchers.IO) {
-        val token = freshToken()
-        val deleteUrl = "${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$path"
-        val connection = (URL(deleteUrl).openConnection() as HttpURLConnection).apply {
-            requestMethod = "DELETE"
-            connectTimeout = 15_000
-            readTimeout = STORAGE_READ_TIMEOUT_MS
-            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
-            setRequestProperty("Authorization", "Bearer $token")
-        }
-        val status = connection.responseCode
-        if (status !in 200..299 && status != HttpURLConnection.HTTP_NOT_FOUND) {
-            val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            throw SupabaseHttpException(status, errBody.ifBlank { "Storage delete failed ($status)" })
-        }
-    }
-
     private suspend fun authorized(
         path: String,
         method: String,
