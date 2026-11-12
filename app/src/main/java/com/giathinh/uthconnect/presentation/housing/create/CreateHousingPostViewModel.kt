@@ -77,9 +77,10 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Chỉ khôi phục nháp đúng chủ tài khoản hiện tại; đọc lỗi thì vẫn mở form bình thường. */
     private suspend fun readDraft(): CreateHousingPostUiState? = try {
-        draftStore.read()?.let { payload ->
+        val owner = sessions.observe().value.profile?.studentId ?: return null
+        draftStore.read(owner)?.let { payload ->
             runCatching { json.decodeFromString<HousingDraftEnvelope>(payload) }.getOrNull()
-        }?.takeIf { it.ownerStudentId == sessions.observe().value.profile?.studentId }?.state
+        }?.takeIf { it.ownerStudentId == owner }?.state
     } catch (ignored: IOException) {
         null
     }
@@ -223,7 +224,7 @@ class CreateHousingPostViewModel @Inject constructor(
             draftRestore?.join()
             val owner = sessions.observe().value.profile?.studentId ?: return@launch
             try {
-                draftStore.write(json.encodeToString(HousingDraftEnvelope(owner, _uiState.value)))
+                draftStore.write(owner, json.encodeToString(HousingDraftEnvelope(owner, _uiState.value)))
                 _events.send(CreateHousingPostEvent.DraftSaved)
             } catch (ignored: IOException) {
                 _events.send(CreateHousingPostEvent.DraftSaveFailed)
@@ -231,10 +232,10 @@ class CreateHousingPostViewModel @Inject constructor(
         }
     }
 
-    /** Lỗi xóa nháp không được biến thao tác đăng tin thành công thành thất bại. */
-    private suspend fun clearDraftQuietly() {
+    /** Lỗi xóa nháp không được biến thao tác đăng tin thành công thành thất bại; chỉ xóa nháp đúng chủ. */
+    private suspend fun clearDraftQuietly(owner: String) {
         try {
-            draftStore.clear()
+            draftStore.clear(owner)
         } catch (ignored: IOException) {
         }
     }
@@ -256,8 +257,9 @@ class CreateHousingPostViewModel @Inject constructor(
             val result = createListing(buildListing(state, host, rent, deposit))
             result.fold(
                 onSuccess = {
-                    clearDraftQuietly()
-                    _uiState.update { it.copy(isSubmitting = false) }
+                    clearDraftQuietly(host.studentId)
+                    // Giữ khóa submit tới khi Route điều hướng rời màn — nhả khóa ở đây
+                    // sẽ mở cửa đăng tin thứ hai trong lúc snackbar thành công còn hiện.
                     _events.send(CreateHousingPostEvent.PostCreated)
                 },
                 onFailure = { error ->
@@ -307,6 +309,7 @@ class CreateHousingPostViewModel @Inject constructor(
         hostStudentId = host.studentId,
         contactPhone = state.contactPhone.trim(),
         contactZaloUrl = if (state.allowZalo) zaloUrlOf(state) else "",
+        contactZaloEnabled = state.allowZalo,
         images = state.photos,
         monthlyRentVnd = rent,
         depositVnd = deposit,

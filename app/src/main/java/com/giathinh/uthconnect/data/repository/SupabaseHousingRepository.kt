@@ -18,12 +18,15 @@ import com.giathinh.uthconnect.domain.repository.HousingImageCleanupStore
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -33,6 +36,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -49,6 +53,7 @@ import java.net.URL
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -61,7 +66,7 @@ import kotlin.math.roundToInt
  * ràng (4xx) thì ảnh vừa upload bị dọn, lỗi chưa xác định (5xx/timeout) thì
  * đối chiếu DB trước để không xóa ảnh của tin đã commit. Xóa tin mà Storage
  * chưa dọn được ảnh thì path vào hàng đợi [HousingImageCleanupStore], thử lại
- * ở lần nạp feed/xóa tin kế tiếp.
+ * chạy nền ở lần nạp feed kế tiếp (không chặn feed, chỉ dọn ảnh đúng chủ).
  *
  * `distanceToCampusM` ưu tiên khoảng cách ĐƯỜNG ĐI thật qua OSRM (cùng dữ liệu
  * OpenStreetMap với picker, không key/billing) để khớp số km người dùng tra trên
@@ -79,8 +84,12 @@ class SupabaseHousingRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
     private val roadDistanceCache = ConcurrentHashMap<String, Int>()
 
+    /** Dọn ảnh mồ côi là việc nền của cả vòng đời app, không theo scope của một màn hình. */
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val cleanupRunning = AtomicBoolean(false)
+
     override suspend fun getListings(): Result<List<HousingListing>> = suspendResult {
-        retryPendingImageCleanup()
+        launchPendingImageCleanup()
         val listings = client.table(
             "housing_posts?select=*&status=eq.OPEN&available_slots=gt.0&order=created_at.desc&limit=100",
         ).jsonArray.map { it.jsonObject.toHousingListing() }
@@ -140,7 +149,8 @@ class SupabaseHousingRepository @Inject constructor(
             val updated = client.patchTable("housing_posts?$authorFilter&select=*", payload)
                 .jsonArray.singleOrNull()?.jsonObject?.toHousingListing()
                 ?: throw NoSuchElementException("Không tìm thấy tin để cập nhật: ${listing.id}")
-            deleteObjects(previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) })
+            val removedImages = previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) }
+            enqueueImageCleanup(deleteObjects(removedImages))
             updated
         } catch (rejected: SupabaseHttpException) {
             cleanupUploads(uploadedPaths, rejected.status, listing.id)
@@ -164,9 +174,12 @@ class SupabaseHousingRepository @Inject constructor(
             .jsonArray.singleOrNull()?.jsonObject
             ?.get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
         client.deleteTable("housing_posts?$authorFilter")
-        // Bản ghi đã xóa: ảnh dọn chưa được thì ghi hàng đợi bền vững để lần sau thử lại.
-        val failed = deleteObjects(images.mapNotNull { storagePathOf(it) })
-        enqueueImageCleanup(failed)
+        // Bản ghi đã xóa: dọn ảnh trong NonCancellable để rời màn giữa chừng không mất path;
+        // ảnh dọn chưa được thì ghi hàng đợi bền vững để lần sau thử lại.
+        withContext(NonCancellable) {
+            val failed = deleteObjects(images.mapNotNull { storagePathOf(it) })
+            enqueueImageCleanup(failed)
+        }
         Unit
     }
 
@@ -358,6 +371,26 @@ class SupabaseHousingRepository @Inject constructor(
         }
     }
 
+    /**
+     * Dọn ảnh mồ côi chạy nền để feed không phải chờ từng lệnh xóa Storage;
+     * mỗi lượt chỉ thử một nắm path, phần còn lại giữ trong hàng đợi cho lượt sau.
+     * Hai lần nạp feed liên tiếp không chạy hai lượt dọn chồng nhau.
+     */
+    private fun launchPendingImageCleanup() {
+        if (!cleanupRunning.compareAndSet(false, true)) return
+        cleanupScope.launch {
+            try {
+                retryPendingImageCleanup()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(LOG_TAG, "Dọn ảnh mồ côi nền thất bại", error)
+            } finally {
+                cleanupRunning.set(false)
+            }
+        }
+    }
+
     /** Thử lại ảnh mồ côi của lần xóa trước; chỉ bỏ khỏi hàng đợi những path đã xóa được. */
     private suspend fun retryPendingImageCleanup() {
         val pending = try {
@@ -368,10 +401,13 @@ class SupabaseHousingRepository @Inject constructor(
             Log.w(LOG_TAG, "Không đọc được hàng đợi dọn ảnh", error)
             return
         }
-        if (pending.isEmpty()) return
-        val failed = deleteObjects(pending).toSet()
+        // Path luôn mở đầu bằng uid chủ ảnh — chỉ dọn ảnh của tài khoản hiện tại;
+        // ảnh tài khoản khác để nguyên cho chính chủ dọn, không phí request bị RLS chặn.
+        val ownPaths = pending.filter { it.startsWith("${client.userId}/") }.take(MAX_CLEANUP_PATHS_PER_PASS)
+        if (ownPaths.isEmpty()) return
+        val failed = deleteObjects(ownPaths).toSet()
         try {
-            cleanupStore.dequeue(pending.filter { it !in failed })
+            cleanupStore.dequeue(ownPaths.filter { it !in failed })
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: IOException) {
@@ -390,11 +426,12 @@ class SupabaseHousingRepository @Inject constructor(
         if (uploadedPaths.isEmpty()) return
         withContext(NonCancellable) {
             val confirmedRejection = status != null && status in HTTP_CLIENT_ERROR_MIN..HTTP_CLIENT_ERROR_MAX
-            if (confirmedRejection) {
+            val failed = if (confirmedRejection) {
                 deleteObjects(uploadedPaths)
             } else {
                 deleteObjects(unreferencedUploads(uploadedPaths, listingId))
             }
+            enqueueImageCleanup(failed)
         }
     }
 
@@ -425,6 +462,7 @@ class SupabaseHousingRepository @Inject constructor(
         put("host_student_id", hostStudentId)
         put("contact_phone", contactPhone)
         put("contact_zalo_url", contactZaloUrl)
+        put("contact_zalo_enabled", contactZaloEnabled)
         put("images", JsonArray(images.map { JsonPrimitive(it) }))
         put("monthly_rent_vnd", monthlyRentVnd)
         put("deposit_vnd", depositVnd)
@@ -461,6 +499,8 @@ class SupabaseHousingRepository @Inject constructor(
             hostStudentId = string("host_student_id").orEmpty(),
             contactPhone = string("contact_phone").orEmpty(),
             contactZaloUrl = string("contact_zalo_url").orEmpty(),
+            // Tin đời cũ chưa có cột này (migration chưa chạy) giữ fallback SĐT như cũ.
+            contactZaloEnabled = (get("contact_zalo_enabled") as? JsonPrimitive)?.booleanOrNull ?: true,
             images = get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
             monthlyRentVnd = int("monthly_rent_vnd"),
             depositVnd = int("deposit_vnd"),
@@ -518,6 +558,9 @@ class SupabaseHousingRepository @Inject constructor(
 
         /** Số ảnh upload cùng lúc — giới hạn bộ nhớ đỉnh khi giải mã nhiều ảnh. */
         const val MAX_PARALLEL_UPLOADS = 3
+
+        /** Số path dọn mỗi lượt nền — phần còn lại chờ lượt sau, không dội request lên Storage. */
+        const val MAX_CLEANUP_PATHS_PER_PASS = 20
     }
 }
 

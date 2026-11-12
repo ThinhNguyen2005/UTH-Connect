@@ -60,12 +60,12 @@ class CreateHousingPostViewModelTest {
         override suspend fun reportListing(listingId: String, reason: String): Result<Unit> = Result.success(Unit)
     }
 
-    private class FakeSessionRepository : SessionRepository {
+    private class FakeSessionRepository(studentId: String) : SessionRepository {
         override val session: StateFlow<StudentSession> = MutableStateFlow(
             StudentSession(
                 isRestoring = false,
                 profile = StudentProfile(
-                    studentId = "2251001234",
+                    studentId = studentId,
                     email = "student@ut.edu.vn",
                     displayName = "Sinh viên kiểm thử",
                     className = "22DTH",
@@ -87,33 +87,41 @@ class CreateHousingPostViewModelTest {
     private fun viewModel(
         repository: FakeCreateHousingRepository,
         draftStore: FakeHousingDraftStore = FakeHousingDraftStore(),
+        studentId: String = "2251001234",
     ) = CreateHousingPostViewModel(
         CreateHousingListingUseCase(repository),
-        AccessStudentSessionUseCase(FakeSessionRepository()),
+        AccessStudentSessionUseCase(FakeSessionRepository(studentId)),
         draftStore,
     )
 
     private class FakeHousingDraftStore : HousingDraftStore {
-        var payload: String? = null
+        val payloads = mutableMapOf<String, String>()
         var readGate: CompletableDeferred<Unit>? = null
         var readError: IOException? = null
         var writeError: IOException? = null
         var clearError: IOException? = null
 
-        override suspend fun read(): String? {
+        /** Lối tắt cho nháp của tài khoản mặc định trong test. */
+        var payload: String?
+            get() = payloads["2251001234"]
+            set(value) {
+                if (value == null) payloads.remove("2251001234") else payloads["2251001234"] = value
+            }
+
+        override suspend fun read(owner: String): String? {
             readGate?.await()
             readError?.let { throw it }
-            return payload
+            return payloads[owner]
         }
 
-        override suspend fun write(payload: String) {
+        override suspend fun write(owner: String, payload: String) {
             writeError?.let { throw it }
-            this.payload = payload
+            payloads[owner] = payload
         }
 
-        override suspend fun clear() {
+        override suspend fun clear(owner: String) {
             clearError?.let { throw it }
-            payload = null
+            payloads.remove(owner)
         }
     }
 
@@ -235,6 +243,7 @@ class CreateHousingPostViewModelTest {
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
         assertEquals("", repo.createdListing?.contactZaloUrl)
+        assertEquals(false, repo.createdListing?.contactZaloEnabled)
     }
 
     @Test
@@ -247,6 +256,7 @@ class CreateHousingPostViewModelTest {
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
         assertEquals("https://zalo.me/0901234567", repo.createdListing?.contactZaloUrl)
+        assertEquals(true, repo.createdListing?.contactZaloEnabled)
     }
 
     @Test
@@ -469,6 +479,46 @@ class CreateHousingPostViewModelTest {
     }
 
     @Test
+    fun `nhap tai khoan khac khac khoa - khong doc thay`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payloads["9999999999"] =
+            draftPayload(CreateHousingPostUiState(title = "Nháp tài khoản khác"), owner = "9999999999")
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals("", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `tai khoan B luu nhap - khong ghi de nhap tai khoan A`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payloads["2251001234"] = draftPayload(CreateHousingPostUiState(title = "Nháp của A"))
+        val viewModel = viewModel(FakeCreateHousingRepository(), store, studentId = "9999999999")
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Nháp của B"))
+
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+
+        assertEquals(CreateHousingPostEvent.DraftSaved, viewModel.events.first())
+        assertTrue(requireNotNull(store.payloads["2251001234"]).contains("Nháp của A"))
+        assertTrue(requireNotNull(store.payloads["9999999999"]).contains("Nháp của B"))
+    }
+
+    @Test
+    fun `dang tin thanh cong - khong xoa nhap cua tai khoan khac`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val store = FakeHousingDraftStore()
+        store.payloads["9999999999"] =
+            draftPayload(CreateHousingPostUiState(title = "Nháp của B"), owner = "9999999999")
+        val viewModel = viewModel(repo, store)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertNotNull("nháp tài khoản khác phải còn nguyên", store.payloads["9999999999"])
+    }
+
+    @Test
     fun `nhap dinh dang cu khong co owner - bo qua`() = runTest {
         val store = FakeHousingDraftStore()
         store.payload = Json.encodeToString(CreateHousingPostUiState(title = "Nháp định dạng cũ"))
@@ -527,7 +577,20 @@ class CreateHousingPostViewModelTest {
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
         assertNotNull(repo.createdListing)
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertTrue("thanh cong phai giu khoa submit cho toi khi roi man", viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun `dang thanh cong - Submit lan nua khong tao tin thu hai`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals("khong duoc dang tin thu hai trong luc cho roi man", 1, repo.createCalls)
     }
 
     @Test

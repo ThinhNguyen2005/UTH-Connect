@@ -11,6 +11,7 @@ import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -288,6 +289,7 @@ class HousingViewModelTest {
         assertTrue(viewModel.uiState.value.listings.isEmpty())
 
         gate.complete(Unit)
+        advanceUntilIdle()
 
         assertTrue("ket qua cu da bi huy khong duoc ghi de feed moi", viewModel.uiState.value.listings.isEmpty())
     }
@@ -319,8 +321,11 @@ class HousingViewModelTest {
         var reportGate: CompletableDeferred<Unit>? = null
 
         override suspend fun getListings(): Result<List<HousingListing>> {
+            // Chụp dữ liệu TRƯỚC khi chờ gate: kết quả của lần tải phải là dữ liệu
+            // tại thời điểm gọi, nếu không test race không phân biệt được cũ/mới.
+            val snapshot = listings
             loadGate?.await()
-            return if (failLoad) Result.failure(IllegalStateException("mat mang")) else Result.success(listings)
+            return if (failLoad) Result.failure(IllegalStateException("mat mang")) else Result.success(snapshot)
         }
 
         override suspend fun getListingById(id: String): Result<HousingListing> {
