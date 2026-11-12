@@ -33,6 +33,16 @@ class AppAvailabilityTest {
     }
 
     @Test
+    fun isValidUpdateUrlValidatesHttpsAndMarket() {
+        assertTrue(isValidUpdateUrl("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
+        assertTrue(isValidUpdateUrl("market://details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl(""))
+        assertFalse(isValidUpdateUrl("   "))
+        assertFalse(isValidUpdateUrl("http://insecure.site/app.apk"))
+        assertFalse(isValidUpdateUrl("ftp://invalid.scheme"))
+    }
+
+    @Test
     fun savedGateMaintenanceUnblocksWhenFetchSucceedsWithDefaultSource() {
         val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
         val (state, newSaved) = resolveGate(

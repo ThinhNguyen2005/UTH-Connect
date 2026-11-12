@@ -653,6 +653,7 @@
     <string name="scanner_scan_again">Scan another code</string>
     <string name="availability_retry_action">Retry</string>
     <string name="availability_update_action">Update Now</string>
+    <string name="availability_update_failed">Could not open the update link.</string>
     <string name="campuses_maps_unavailable">No map application found on your device.</string>
     <string name="campuses_call_unavailable">No phone application found on your device.</string>
     <string name="campuses_directions_action">Directions</string>

@@ -668,6 +668,7 @@
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
     <string name="availability_retry_action">Thử lại</string>
     <string name="availability_update_action">Cập nhật ngay</string>
+    <string name="availability_update_failed">Không thể mở liên kết cập nhật.</string>
     <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
     <string name="campuses_directions_action">Chỉ đường</string>

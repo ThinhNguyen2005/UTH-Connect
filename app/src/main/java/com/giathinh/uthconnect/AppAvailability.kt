@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -50,6 +51,12 @@ internal fun remoteConfigFetchIntervalSeconds(
     isDebug: Boolean,
     userInitiated: Boolean,
 ): Long = if (isDebug || userInitiated) 0L else 3600L
+
+internal fun isValidUpdateUrl(url: String): Boolean {
+    if (url.isBlank()) return false
+    val trimmed = url.trim()
+    return trimmed.startsWith("https://", ignoreCase = true) || trimmed.startsWith("market://", ignoreCase = true)
+}
 
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
@@ -218,15 +225,19 @@ internal fun AvailabilityScreen(
                     }
                 }
             }
-            if (state == AppAvailability.UPDATE_REQUIRED && UPDATE_URL.isNotBlank()) {
+            if (state == AppAvailability.UPDATE_REQUIRED && isValidUpdateUrl(UPDATE_URL)) {
                 Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL.trim()))
                         try {
                             context.startActivity(intent)
                         } catch (_: ActivityNotFoundException) {
-                            // Gracefully handled when no browser app is available
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.availability_update_failed),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         }
                     },
                     modifier = Modifier.height(UthDimens.Size.ButtonHeight),
