@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -142,6 +144,7 @@ internal fun availability(maintenance: Boolean, current: String, minimum: String
 @Composable
 internal fun AvailabilityScreen(
     state: AppAvailability,
+    isRetrying: Boolean = false,
     onRetry: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -184,9 +187,18 @@ internal fun AvailabilityScreen(
             if (state == AppAvailability.MAINTENANCE) {
                 Button(
                     onClick = onRetry,
+                    enabled = !isRetrying,
                     modifier = Modifier.height(UthDimens.Size.ButtonHeight),
                 ) {
-                    Text(text = stringResource(R.string.availability_retry_action))
+                    if (isRetrying) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(UthDimens.Size.ProgressInline),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = UthDimens.Size.ProgressInlineStroke,
+                        )
+                    } else {
+                        Text(text = stringResource(R.string.availability_retry_action))
+                    }
                 }
             } else if (state == AppAvailability.UPDATE_REQUIRED) {
                 if (UPDATE_URL.isNotBlank()) {

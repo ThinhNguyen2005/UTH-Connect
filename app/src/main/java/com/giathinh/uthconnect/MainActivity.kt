@@ -30,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -57,6 +58,8 @@ class MainActivity : ComponentActivity() {
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
     private var appAvailability by mutableStateOf<AppAvailability?>(null)
+    private var isCheckingAvailability by mutableStateOf(false)
+    private var remoteConfigJob: Job? = null
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -95,7 +98,11 @@ class MainActivity : ComponentActivity() {
 
                     AppAvailability.AVAILABLE -> UthApp()
 
-                    else -> AvailabilityScreen(state, onRetry = { observeRemoteConfig() })
+                    else -> AvailabilityScreen(
+                        state = state,
+                        isRetrying = isCheckingAvailability,
+                        onRetry = { observeRemoteConfig() },
+                    )
                 }
             }
         }
@@ -109,12 +116,14 @@ class MainActivity : ComponentActivity() {
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
     private fun observeRemoteConfig() {
-        lifecycleScope.launch {
+        if (remoteConfigJob?.isActive == true) return
+        remoteConfigJob = lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
                     appAvailability = AppAvailability.AVAILABLE
                     return@repeatOnLifecycle
                 }
+                isCheckingAvailability = true
                 val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
                 val (initialState, _) = resolveGate(
                     saved = saved,
@@ -139,6 +148,8 @@ class MainActivity : ComponentActivity() {
                     if (appAvailability == null) {
                         appAvailability = initialState
                     }
+                } finally {
+                    isCheckingAvailability = false
                 }
             }
         }
