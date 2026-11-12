@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.StudentProfile
+import com.giathinh.uthconnect.domain.repository.HousingDraftStore
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.domain.usecase.CreateHousingListingUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,12 +19,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 sealed interface CreateHousingPostEvent {
     data object PostCreated : CreateHousingPostEvent
     data class SubmitFailed(val code: ServerErrorCode, val detail: String? = null) : CreateHousingPostEvent
     data object DraftSaved : CreateHousingPostEvent
+    data object DraftRestored : CreateHousingPostEvent
 }
 
 /** Khớp check constraint housing_posts_title_check / area_m2 của backend. */
@@ -36,6 +40,7 @@ private const val LOG_TAG = "HousingCreate"
 class CreateHousingPostViewModel @Inject constructor(
     private val createListing: CreateHousingListingUseCase,
     private val sessions: AccessStudentSessionUseCase,
+    private val draftStore: HousingDraftStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateHousingPostUiState())
@@ -44,7 +49,25 @@ class CreateHousingPostViewModel @Inject constructor(
     private val _events = Channel<CreateHousingPostEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
+    /** Form đã bị chạm thì nháp đọc chậm từ DataStore không được đè lên thao tác thật. */
+    private var formTouched = false
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    init {
+        viewModelScope.launch {
+            val draft = draftStore.read()?.let { payload ->
+                runCatching { json.decodeFromString<CreateHousingPostUiState>(payload) }.getOrNull()
+            }
+            if (draft != null && !formTouched) {
+                _uiState.update { draft }
+                _events.send(CreateHousingPostEvent.DraftRestored)
+            }
+        }
+    }
+
     fun onAction(action: CreateHousingPostAction) {
+        formTouched = true
         when (action) {
             is CreateHousingPostAction.ChangeType,
             is CreateHousingPostAction.ChangeCampus,
@@ -170,9 +193,13 @@ class CreateHousingPostViewModel @Inject constructor(
         }
     }
 
-    /** Lưu nháp giữ nguyên trạng thái form trong phiên (chưa có backend nháp) và báo cho Route. */
+    /** Lưu nháp xuống bộ nhớ máy để tắt app mở lại vẫn còn; đăng thành công thì xóa. */
     private fun saveDraft() {
-        viewModelScope.launch { _events.send(CreateHousingPostEvent.DraftSaved) }
+        val payload = json.encodeToString(_uiState.value)
+        viewModelScope.launch {
+            draftStore.write(payload)
+            _events.send(CreateHousingPostEvent.DraftSaved)
+        }
     }
 
     private fun submitPost() {
@@ -191,7 +218,10 @@ class CreateHousingPostViewModel @Inject constructor(
         viewModelScope.launch {
             val result = createListing(buildListing(state, host, rent, deposit))
             result.fold(
-                onSuccess = { _events.send(CreateHousingPostEvent.PostCreated) },
+                onSuccess = {
+                    draftStore.clear()
+                    _events.send(CreateHousingPostEvent.PostCreated)
+                },
                 onFailure = { error ->
                     Log.e(LOG_TAG, "Create housing listing failed", error)
                     _uiState.update { it.copy(isSubmitting = false) }

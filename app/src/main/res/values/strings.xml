@@ -769,6 +769,7 @@
     <string name="housing_create_guidelines_body">Vui lòng đăng hình ảnh thực tế và giá thuê trung thực để bảo vệ quyền lợi bạn học cùng trường. Tin sai sự thật sẽ bị gỡ và hạn chế đăng.</string>
     <string name="housing_create_save_draft">Lưu nháp</string>
     <string name="housing_create_draft_saved">Đã lưu bản nháp tin đăng!</string>
+    <string name="housing_create_draft_restored">Đã khôi phục bản nháp tin đăng</string>
     <string name="housing_detail_eyebrow">Ghép trọ · %1$s</string>
     <string name="housing_detail_rent_label">Giá thuê mỗi tháng</string>
     <string name="housing_detail_deposit_label">Tiền đặt cọc</string>

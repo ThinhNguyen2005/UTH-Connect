@@ -756,6 +756,7 @@
     <string name="housing_create_guidelines_body">Please post real photos and honest rent prices to protect your schoolmates. False listings will be removed and posting restricted.</string>
     <string name="housing_create_save_draft">Save draft</string>
     <string name="housing_create_draft_saved">Draft saved!</string>
+    <string name="housing_create_draft_restored">Draft restored</string>
     <string name="housing_detail_eyebrow">Housing · %1$s</string>
     <string name="housing_detail_rent_label">Monthly rent</string>
     <string name="housing_detail_deposit_label">Deposit</string>

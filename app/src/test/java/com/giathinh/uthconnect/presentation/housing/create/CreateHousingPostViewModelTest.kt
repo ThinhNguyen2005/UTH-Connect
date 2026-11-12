@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.housing.create
 import com.giathinh.uthconnect.domain.model.HousingListing
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UthCampus
+import com.giathinh.uthconnect.domain.repository.HousingDraftStore
 import com.giathinh.uthconnect.domain.repository.HousingRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -79,10 +82,32 @@ class CreateHousingPostViewModelTest {
         override suspend fun signOut() = Unit
     }
 
-    private fun viewModel(repository: FakeCreateHousingRepository) = CreateHousingPostViewModel(
+    private fun viewModel(
+        repository: FakeCreateHousingRepository,
+        draftStore: FakeHousingDraftStore = FakeHousingDraftStore(),
+    ) = CreateHousingPostViewModel(
         CreateHousingListingUseCase(repository),
         AccessStudentSessionUseCase(FakeSessionRepository()),
+        draftStore,
     )
+
+    private class FakeHousingDraftStore : HousingDraftStore {
+        var payload: String? = null
+        var readGate: CompletableDeferred<Unit>? = null
+
+        override suspend fun read(): String? {
+            readGate?.await()
+            return payload
+        }
+
+        override suspend fun write(payload: String) {
+            this.payload = payload
+        }
+
+        override suspend fun clear() {
+            payload = null
+        }
+    }
 
     @Test
     fun `validate - de trong tieu de bao loi EMPTY_TITLE`() {
@@ -223,6 +248,74 @@ class CreateHousingPostViewModelTest {
         assertEquals("Nháp phòng gác lửng", viewModel.uiState.value.title)
         assertNull("luu nhap khong duoc tao tin that", repo.createdListing)
         assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun `SaveDraft - ghi payload xuong store va giu nguyen form`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val store = FakeHousingDraftStore()
+        val viewModel = viewModel(repo, store)
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Nháp phòng gác lửng"))
+
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+
+        assertEquals(CreateHousingPostEvent.DraftSaved, viewModel.events.first())
+        assertTrue(requireNotNull(store.payload).contains("Nháp phòng gác lửng"))
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `mo man - khoi phuc nhap da luu truoc do`() = runTest {
+        val store = FakeHousingDraftStore()
+        val saved = CreateHousingPostUiState(title = "Nháp phòng gác lửng", rentInput = "2500000")
+        store.payload = Json.encodeToString(saved)
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals(CreateHousingPostEvent.DraftRestored, viewModel.events.first())
+        assertEquals("Nháp phòng gác lửng", viewModel.uiState.value.title)
+        assertEquals("2500000", viewModel.uiState.value.rentInput)
+        assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun `dang tin thanh cong - xoa nhap khoi store`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val store = FakeHousingDraftStore()
+        val viewModel = viewModel(repo, store)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.SaveDraft)
+        assertEquals(CreateHousingPostEvent.DraftSaved, viewModel.events.first())
+        assertNotNull(store.payload)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertNull(store.payload)
+    }
+
+    @Test
+    fun `nhap hong - mo man van form mac dinh khong crash`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payload = "{không phải json"
+
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        assertEquals("", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `khoi phuc tre - khong de len form da bi cham`() = runTest {
+        val store = FakeHousingDraftStore()
+        store.payload = Json.encodeToString(CreateHousingPostUiState(title = "Nháp phòng gác lửng"))
+        val gate = CompletableDeferred<Unit>()
+        store.readGate = gate
+        val viewModel = viewModel(FakeCreateHousingRepository(), store)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Người dùng đang gõ"))
+        gate.complete(Unit)
+
+        assertEquals("Người dùng đang gõ", viewModel.uiState.value.title)
     }
 
     @Test

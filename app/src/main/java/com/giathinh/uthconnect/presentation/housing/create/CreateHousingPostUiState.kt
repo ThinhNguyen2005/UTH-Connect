@@ -4,6 +4,8 @@ import com.giathinh.uthconnect.domain.model.GenderPreference
 import com.giathinh.uthconnect.domain.model.HousingListingType
 import com.giathinh.uthconnect.domain.model.RoomAmenity
 import com.giathinh.uthconnect.domain.model.UthCampus
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 enum class CreateHousingPostError {
     EMPTY_TITLE,
@@ -18,6 +20,8 @@ enum class CreateHousingPostError {
 /** Trần số ảnh phòng cho một tin — khớp ô "Tối đa 6" của form và chặn AddPhoto vượt trần. */
 internal const val MAX_HOUSING_PHOTOS = 6
 
+/** Serialize để lưu nháp cục bộ; hai trường trạng thái tức thời không đi theo nháp. */
+@Serializable
 data class CreateHousingPostUiState(
     val type: HousingListingType = HousingListingType.ROOM_FOR_RENT,
     val campus: UthCampus = UthCampus.CS1_QUANG_TRUNG,
@@ -40,8 +44,8 @@ data class CreateHousingPostUiState(
     /** Cho phép người xem liên hệ qua Zalo; tắt thì ẩn ô Zalo và không gửi kèm link khi đăng. */
     val allowZalo: Boolean = true,
     val photos: List<String> = emptyList(),
-    val isSubmitting: Boolean = false,
-    val validationError: CreateHousingPostError? = null,
+    @Transient val isSubmitting: Boolean = false,
+    @Transient val validationError: CreateHousingPostError? = null,
 ) {
     /** Đã chấm pin thật trên bản đồ — hiện tóm tắt "đã chọn vị trí" thay vì chỉ ô địa chỉ tay. */
     val hasLocation: Boolean get() = latitude != 0.0 || longitude != 0.0

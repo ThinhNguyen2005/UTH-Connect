@@ -86,6 +86,10 @@ fun CreateHousingPostRoute(
                 CreateHousingPostEvent.DraftSaved -> {
                     snackbars.showSnackbar(context.getString(R.string.housing_create_draft_saved))
                 }
+
+                CreateHousingPostEvent.DraftRestored -> {
+                    snackbars.showSnackbar(context.getString(R.string.housing_create_draft_restored))
+                }
             }
         }
     }
