@@ -1,6 +1,5 @@
 package com.giathinh.uthconnect
 
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -38,7 +37,7 @@ class AppAvailabilityTest {
 
     @Test
     fun savedGateHighMinVersionResetsWhenFetchSucceedsWithDefaultSource() {
-        val saved = SavedGate(maintenanceMode = false, forceUpdateMinVersion = "2.0.0", hasSavedState = true)
+        val saved = SavedGate(maintenanceMode = false, forceUpdateMinVersion = "9.9.9", hasSavedState = true)
         val (state, newSaved) = resolveGate(
             saved = saved,
             fetchSucceeded = true,
@@ -88,32 +87,5 @@ class AppAvailabilityTest {
         )
         assertEquals(AppAvailability.MAINTENANCE, state)
         assertEquals(true, newSaved.maintenanceMode)
-    }
-
-    @Test
-    fun newlyActivatedConfigurationChangesTheAppGate() = runTest {
-        var maintenance = false
-        val published = mutableListOf<AppAvailability>()
-        refreshAvailability(
-            read = { availability(maintenance, "1.0", "1.0.0") },
-            fetchAndActivate = { maintenance = true },
-            publish = { published.add(it) },
-        )
-        assertEquals(listOf(AppAvailability.AVAILABLE, AppAvailability.MAINTENANCE), published)
-    }
-
-    @Test
-    fun failedFetchPreservesPreviouslyActivatedGate() = runTest {
-        val published = mutableListOf<AppAvailability>()
-        try {
-            refreshAvailability(
-                read = { AppAvailability.MAINTENANCE },
-                fetchAndActivate = { throw IllegalStateException("network unavailable") },
-                publish = { published.add(it) },
-            )
-        } catch (_: IllegalStateException) {
-            // The caller handles the network failure after the cached state is published.
-        }
-        assertEquals(listOf(AppAvailability.MAINTENANCE), published)
     }
 }

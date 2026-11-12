@@ -145,24 +145,33 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun updateRemoteConfigGate(saved: SavedGate) {
-        val config = FirebaseRemoteConfig.getInstance()
-        val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
-        val settings = FirebaseRemoteConfigSettings.Builder()
-            .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
-            .build()
-        config.setConfigSettingsAsync(settings).await()
-        config.setDefaultsAsync(
-            mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
-        ).await()
+        var fetchSucceeded = false
+        var remoteMaint = false
+        var remoteMinVer = "1.0.0"
 
-        config.fetchAndActivate().await()
+        try {
+            val config = FirebaseRemoteConfig.getInstance()
+            val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
+            val settings = FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
+                .build()
+            config.setConfigSettingsAsync(settings).await()
+            config.setDefaultsAsync(
+                mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
+            ).await()
 
-        val remoteMaint = config.getBoolean("maintenance_mode")
-        val remoteMinVer = config.getString("force_update_min_version")
+            config.fetchAndActivate().await()
+
+            remoteMaint = config.getBoolean("maintenance_mode")
+            remoteMinVer = config.getString("force_update_min_version")
+            fetchSucceeded = true
+        } catch (_: Exception) {
+            fetchSucceeded = false
+        }
 
         val (newState, newSaved) = resolveGate(
             saved = saved,
-            fetchSucceeded = true,
+            fetchSucceeded = fetchSucceeded,
             remoteMaintenance = remoteMaint,
             remoteMinVersion = remoteMinVer,
             currentVersion = BuildConfig.VERSION_NAME,

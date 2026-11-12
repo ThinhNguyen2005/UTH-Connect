@@ -93,16 +93,6 @@ internal fun resolveGate(
     return Pair(state, newSaved)
 }
 
-internal suspend fun refreshAvailability(
-    read: () -> AppAvailability,
-    fetchAndActivate: suspend () -> Unit,
-    publish: (AppAvailability) -> Unit,
-) {
-    publish(read())
-    fetchAndActivate()
-    publish(read())
-}
-
 private fun parseVersion(version: String): List<Int>? {
     val items = version.split('.')
     val parsed = items.mapNotNull { it.toIntOrNull() }
