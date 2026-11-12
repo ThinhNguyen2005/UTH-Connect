@@ -649,16 +649,32 @@ Dự án thiết lập quy trình kiểm thử tự động qua workflow `.githu
   ./gradlew testDebugUnitTest
   ```
 
-#### 4. Hướng dẫn cấu hình GitHub Secrets
+#### 4. Hướng dẫn xem Log, Báo cáo và Tải Artifacts
+- **Xem trực tiếp trên Pull Request:**
+  - Tab **Checks** hoặc danh sách check ở cuối PR: xem trạng thái chi tiết của job `Build & Unit Test` và check `Unit Test Results`.
+  - Bot `github-actions[bot]` tự động comment bảng thống kê tổng số test passed/failed ngay trong PR.
+- **Xem chi tiết trên GitHub Actions:**
+  - Truy cập tab **Actions** trên GitHub, chọn workflow run tương ứng.
+  - Mục **Summary**: hiển thị bảng tổng kết số lượng test (`Total / Passed / Failures / Skipped`).
+  - Mục **Artifacts** (lưu trữ 14 ngày):
+    - `unit-test-reports`: Tải file zip chứa toàn bộ giao diện HTML báo cáo kiểm thử chi tiết.
+    - `unit-test-results-xml`: File XML chuẩn JUnit để tích hợp công cụ phân tích bên thứ ba.
+    - `app-debug-apk`: File APK Debug đã biên dịch sẵn để cài đặt và kiểm thử trực tiếp trên máy thật.
+
+#### 5. Hướng dẫn cấu hình GitHub Secrets & Variables
 Để pipeline CI và Release hoạt động đầy đủ với môi trường staging/production, cấu hình các secrets tại **Repository Settings -> Secrets and variables -> Actions**:
 
-| Secret / Variable | Loại | Mục đích |
-|---|---|---|
-| `SUPABASE_URL` | Secret | URL endpoint Supabase của dự án |
-| `SUPABASE_PUBLISHABLE_KEY` | Secret | Publishable key (bắt đầu bằng `sb_publishable_`) |
-| `GOOGLE_WEB_CLIENT_ID` | Secret | OAuth Web Client ID cho Supabase Google Auth |
-| `GOOGLE_SERVICES_JSON` | Secret | Nội dung file `google-services.json` cho Firebase SDK |
-| `FIREBASE_PROJECT_ID` | Variable | Project ID của Firebase (kiểm tra khớp với `google-services.json`) |
+| Secret / Variable | Loại | Bắt buộc / Tùy chọn | Mục đích |
+|---|---|:---:|---|
+| `SUPABASE_URL` | Secret | Tùy chọn | URL endpoint Supabase (nếu thiếu, CI tự fallback về URL dev mặc định) |
+| `SUPABASE_PUBLISHABLE_KEY` | Secret | Tùy chọn | Publishable key `sb_publishable_...` (nếu thiếu, fallback về key dev mặc định) |
+| `GOOGLE_WEB_CLIENT_ID` | Secret | Tùy chọn | OAuth Web Client ID cho Supabase Google Auth |
+| `GOOGLE_SERVICES_JSON` | Secret | Tùy chọn | Toàn bộ nội dung file `google-services.json` (nếu có, CI sẽ inject; nếu không có, giữ file repo mặc định) |
+| `FIREBASE_PROJECT_ID` | Variable | Tùy chọn | Project ID của Firebase để đối chiếu an toàn với `GOOGLE_SERVICES_JSON` |
+
+> **Lưu ý với Pull Request từ Fork:**
+> - GitHub mặc định cấp token chỉ đọc (`read-only`) và không cho phép truy cập Secrets cho các PR từ fork ngoài để đảm bảo an toàn bảo mật.
+> - Workflow được thiết kế an toàn: Tự động fallback về cấu hình mặc định, đồng thời bỏ qua bước ghi comment/check khi không có quyền, giúp PR từ fork vẫn build và test thành công bình thường mà không bị lỗi `Resource not accessible by integration`.
 
 ---
 
