@@ -34,6 +34,8 @@ import com.giathinh.uthconnect.presentation.notification.notificationGraph
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.books.navigation.BooksDestination
+import com.giathinh.uthconnect.presentation.books.navigation.booksGraph
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
@@ -152,11 +154,8 @@ private fun UthNavHost(
                 onOpenModule = { module ->
                     when (module) {
                         UtilityModuleId.LOST_FOUND -> navController.navigate(LostFoundDestination)
-
                         UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
-
-                        // Module chưa có graph riêng thì ở lại lưới Tiện ích với badge giai đoạn;
-                        // graph của nó do branch feature của module đó thêm (docs/GIT_WORKFLOW.md mục 4).
+                        UtilityModuleId.BOOKS -> navController.navigate(BooksDestination)
                         else -> Unit
                     }
                 },
@@ -176,6 +175,7 @@ private fun UthNavHost(
         notificationGraph(navController)
         announcementGraph(navController)
         lostFoundGraph(navController)
+        booksGraph(navController)
     }
 }
 

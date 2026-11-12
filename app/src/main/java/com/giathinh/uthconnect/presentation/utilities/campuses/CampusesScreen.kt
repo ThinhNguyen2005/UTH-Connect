@@ -1,8 +1,10 @@
 package com.giathinh.uthconnect.presentation.utilities.campuses
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.ButtonDefaults
@@ -45,19 +46,43 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 
-private fun dialPhoneNumber(context: Context, phoneNumber: String) {
+internal fun openDirections(context: Context, address: String, onUnavailable: (() -> Unit)? = null) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        if (onUnavailable != null) {
+            onUnavailable()
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.campuses_maps_unavailable),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+}
+
+internal fun dialPhoneNumber(context: Context, phoneNumber: String, onUnavailable: (() -> Unit)? = null) {
     val cleanNumber = phoneNumber.replace(" ", "")
     val intent = Intent(Intent.ACTION_DIAL).apply {
         data = Uri.parse("tel:$cleanNumber")
     }
-    context.startActivity(intent)
-}
-
-private fun sendEmail(context: Context, emailAddress: String) {
-    val intent = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse("mailto:$emailAddress")
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        if (onUnavailable != null) {
+            onUnavailable()
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.campuses_call_unavailable),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
     }
-    context.startActivity(intent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,19 +181,30 @@ fun CampusesScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         ) {
-                            Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
+                            Icon(
+                                imageVector = Icons.Filled.Phone,
+                                contentDescription = null,
+                                modifier = Modifier.size(UthDimens.Size.IconCompact),
+                            )
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
                             Text(campus.hotline, style = MaterialTheme.typography.bodySmall)
                         }
 
                         OutlinedButton(
-                            onClick = { sendEmail(context, campus.email) },
+                            onClick = { openDirections(context, campus.address) },
                             modifier = Modifier.weight(1f),
                             contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         ) {
-                            Icon(Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(UthDimens.Size.IconCompact))
+                            Icon(
+                                imageVector = Icons.Filled.Place,
+                                contentDescription = null,
+                                modifier = Modifier.size(UthDimens.Size.IconCompact),
+                            )
                             Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                            Text(campus.email, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = stringResource(R.string.campuses_directions_action),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
                 }
