@@ -109,6 +109,12 @@ data class HousingListing(
     val contactPhone: String = "",
     /** Đường dẫn Zalo (zalo.me/...) mở trực tiếp (Jira). */
     val contactZaloUrl: String = "",
+    /**
+     * `false` = chủ tin chủ động tắt liên hệ Zalo — detail ẩn nút Nhắn Zalo và
+     * không fallback SĐT. Tin đời cũ chưa có cột này mặc định `true` (URL rỗng
+     * vẫn fallback SĐT theo quy tắc module).
+     */
+    val contactZaloEnabled: Boolean = true,
     /** Danh sách đường dẫn ảnh phòng (Carousel). */
     val images: List<String> = emptyList(),
     /** Giá thuê một tháng, đơn vị VND (Design-system mục 2: `1.500.000đ`). */

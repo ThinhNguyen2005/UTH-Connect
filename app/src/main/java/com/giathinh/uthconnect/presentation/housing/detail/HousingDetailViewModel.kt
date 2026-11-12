@@ -96,9 +96,11 @@ class HousingDetailViewModel @Inject constructor(
     /**
      * Chỉ phát link đã kiểm tra theo quy tắc miền Zalo — tin đời cũ có thể lưu
      * URL ngoài zalo.me hoặc http; Route nhận event là mở được ngay, không kiểm tra lại.
+     * Chủ tin tắt Zalo thì không mở, kể cả fallback SĐT.
      */
     private fun openZalo() {
         val listing = _uiState.value.listing ?: return
+        if (!listing.contactZaloEnabled) return
         val url = when {
             listing.contactZaloUrl.isNotBlank() -> listing.contactZaloUrl
             listing.contactPhone.isNotBlank() -> ZaloLink.forPhone(listing.contactPhone)

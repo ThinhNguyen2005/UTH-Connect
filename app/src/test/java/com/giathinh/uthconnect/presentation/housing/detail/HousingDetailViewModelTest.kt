@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -134,6 +135,18 @@ class HousingDetailViewModelTest {
         val event = viewModel.events.first()
         assertTrue(event is HousingDetailEvent.OpenZalo)
         assertEquals("https://zalo.me/0901234567", (event as HousingDetailEvent.OpenZalo).url)
+    }
+
+    @Test
+    fun `zalo bi chu tin tat - khong mo ke ca fallback sdt`() = runTest {
+        val repository = FakeHousingDetailRepository(
+            sampleListing.copy(contactZaloUrl = "", contactZaloEnabled = false),
+        )
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.OpenZalo)
+
+        assertNull("chu tin tat Zalo thi khong duoc phat event", withTimeoutOrNull(1_000) { viewModel.events.first() })
     }
 
     @Test

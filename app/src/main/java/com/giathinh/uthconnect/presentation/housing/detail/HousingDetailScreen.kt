@@ -1052,33 +1052,36 @@ private fun DetailBottomBar(
                     }
                 }
 
-                Surface(
-                    onClick = onZalo,
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(UthDimens.Size.ButtonHeight),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
+                // Chủ tin tắt Zalo thì ẩn hẳn nút — không fallback SĐT trái ý chủ tin.
+                if (listing.contactZaloEnabled) {
+                    Surface(
+                        onClick = onZalo,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(UthDimens.Size.ButtonHeight),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_housing_notes),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(UthDimens.Size.IconInline),
-                        )
-                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                        Text(
-                            text = stringResource(R.string.housing_detail_message_zalo),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_housing_notes),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(UthDimens.Size.IconInline),
+                            )
+                            Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                            Text(
+                                text = stringResource(R.string.housing_detail_message_zalo),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
                     }
                 }
             }
