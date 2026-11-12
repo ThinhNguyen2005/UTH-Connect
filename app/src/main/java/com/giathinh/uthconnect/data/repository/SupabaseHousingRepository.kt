@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.CampusReference
 import com.giathinh.uthconnect.domain.model.GenderPreference
@@ -22,6 +23,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -34,9 +37,14 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 /**
  * Nguồn dữ liệu thật của Ghép trọ trên `housing_posts` (RLS giữ quyền sở hữu,
@@ -44,9 +52,11 @@ import javax.inject.Singleton
  * được upload lên bucket [IMAGE_BUCKET] trước khi insert; insert thất bại thì
  * ảnh vừa upload bị dọn để không mồ côi trong Storage.
  *
- * `distanceToCampusM` luôn tính lại từ tọa độ thật qua [CampusReference]; tin
- * chưa gắn vị trí (kể cả tin đời cũ lưu điểm chuẩn cũ) trả khoảng cách 0 và
- * tọa độ (0,0) để UI không bịa số km.
+ * `distanceToCampusM` ưu tiên khoảng cách ĐƯỜNG ĐI thật qua OSRM (cùng dữ liệu
+ * OpenStreetMap với picker, không key/billing) để khớp số km người dùng tra trên
+ * Google Maps; OSRM lỗi/mất mạng thì giữ khoảng cách thẳng haversine qua
+ * [CampusReference]. Tin chưa gắn vị trí (kể cả tin đời cũ lưu điểm chuẩn cũ)
+ * trả khoảng cách 0 và tọa độ (0,0) để UI không bịa số km.
  */
 @Singleton
 class SupabaseHousingRepository @Inject constructor(
@@ -54,15 +64,21 @@ class SupabaseHousingRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : HousingRepository {
 
+    private val json = Json { ignoreUnknownKeys = true }
+    private val roadDistanceCache = ConcurrentHashMap<String, Int>()
+
     override suspend fun getListings(): Result<List<HousingListing>> = suspendResult {
-        client.table("housing_posts?select=*&status=eq.OPEN&available_slots=gt.0&order=created_at.desc&limit=100")
-            .jsonArray.map { it.jsonObject.toHousingListing() }
+        val listings = client.table(
+            "housing_posts?select=*&status=eq.OPEN&available_slots=gt.0&order=created_at.desc&limit=100",
+        ).jsonArray.map { it.jsonObject.toHousingListing() }
+        withRoadDistances(listings)
     }
 
     override suspend fun getListingById(id: String): Result<HousingListing> = suspendResult {
-        client.table("housing_posts?select=*&id=eq.${urlEncode(id)}")
+        val listing = client.table("housing_posts?select=*&id=eq.${urlEncode(id)}")
             .jsonArray.singleOrNull()?.jsonObject?.toHousingListing()
             ?: throw NoSuchElementException("Không tìm thấy tin: $id")
+        withRoadDistances(listOf(listing)).single()
     }
 
     override suspend fun createListing(listing: HousingListing): Result<HousingListing> = suspendResult {
@@ -126,6 +142,60 @@ class SupabaseHousingRepository @Inject constructor(
             },
         )
         Unit
+    }
+
+    /**
+     * Đường đi thật cho tin đã gắn vị trí; song song có trần để feed không
+     * dội request lên OSRM, cache theo tọa độ làm tròn ~11m để lần nạp sau
+     * không gọi lại. Tin chưa vị trí giữ 0.
+     */
+    private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> = coroutineScope {
+        val gate = Semaphore(MAX_PARALLEL_ROUTES)
+        listings.map { listing ->
+            async { gate.withPermit { listing.copy(distanceToCampusM = roadDistanceMeters(listing)) } }
+        }.awaitAll()
+    }
+
+    private suspend fun roadDistanceMeters(listing: HousingListing): Int {
+        val fallback = listing.distanceToCampusM
+        if (fallback == 0) return 0
+        val key = listing.campus.name + ":" +
+            String.format(Locale.US, "%.4f:%.4f", listing.latitude, listing.longitude)
+        val meters = roadDistanceCache[key] ?: withContext(Dispatchers.IO) {
+            try {
+                fetchOsrmDistanceM(listing.latitude, listing.longitude, listing.campus)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(LOG_TAG, "OSRM lỗi, giữ khoảng cách đường thẳng", error)
+                null
+            }
+        }?.also { roadDistanceCache[key] = it }
+        return meters ?: fallback
+    }
+
+    private fun fetchOsrmDistanceM(latitude: Double, longitude: Double, campus: UthCampus): Int? {
+        val (campusLat, campusLng) = CampusReference.of(campus)
+        val connection = URL(
+            "$OSRM_BASE_URL/route/v1/driving/$longitude,$latitude;$campusLng,$campusLat?overview=false",
+        ).openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = OSRM_TIMEOUT_MS
+            connection.readTimeout = OSRM_TIMEOUT_MS
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", OSRM_USER_AGENT)
+            if (connection.responseCode !in HTTP_OK_MIN..HTTP_OK_MAX) {
+                Log.w(LOG_TAG, "OSRM HTTP ${connection.responseCode}")
+                return null
+            }
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            val route = json.parseToJsonElement(body).jsonObject["routes"]?.jsonArray?.firstOrNull()?.jsonObject
+            val meters = (route?.get("distance") as? JsonPrimitive)?.doubleOrNull?.roundToInt()
+            Log.i(LOG_TAG, "OSRM khoảng cách đường đi m=$meters")
+            return meters
+        } finally {
+            connection.disconnect()
+        }
     }
 
     /**
@@ -264,6 +334,21 @@ class SupabaseHousingRepository @Inject constructor(
 
     private companion object {
         const val IMAGE_BUCKET = "housing-images"
+
+        const val LOG_TAG = "HousingRoad"
+
+        /** OSRM demo công cộng, không key/billing — chỉ đường đi để số km khớp bản đồ người dùng tra. */
+        const val OSRM_BASE_URL = "https://router.project-osrm.org"
+
+        /** nginx của OSRM demo trả 403 cho User-Agent mặc định của Android (Dalvik) — phải tự khai báo. */
+        const val OSRM_USER_AGENT = "UTH-Connect/1.0 (student housing app)"
+
+        const val OSRM_TIMEOUT_MS = 8_000
+
+        const val MAX_PARALLEL_ROUTES = 4
+
+        const val HTTP_OK_MIN = 200
+        const val HTTP_OK_MAX = 299
 
         /** Trần dung lượng mỗi ảnh đọc vào — chặn OOM trước khi giải mã. */
         const val MAX_IMAGE_BYTES = 10 * 1024 * 1024

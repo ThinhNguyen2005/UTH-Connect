@@ -126,9 +126,9 @@ data class HousingListing(
     val latitude: Double,
     val longitude: Double,
     /**
-     * Mét tính từ tọa độ chuẩn của `campus`; 0 = trùng chỗ đặt chân cơ sở.
-     * Mặc định 0 để chỗ dựng tin (repository/mock) tự tính qua [CampusReference],
-     * không nhập tay — nguồn dựng tin phải đi qua một đường tính khoảng cách.
+     * Mét tới `campus`: ưu tiên đường đi thật (OSRM), fallback đường thẳng
+     * haversine qua [CampusReference]; 0 = tin chưa gắn vị trí thật.
+     * Mặc định 0 để chỗ dựng tin (repository/mock) tự tính, không nhập tay.
      */
     val distanceToCampusM: Int = 0,
     val status: HousingListingStatus = HousingListingStatus.OPEN,
