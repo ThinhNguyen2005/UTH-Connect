@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main, phu/kan-102-observability]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -18,6 +20,21 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Validate workflow secrets and variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${GOOGLE_SERVICES_JSON:-}" ] && missing+=("secrets.GOOGLE_SERVICES_JSON")
+          [ -z "${EXPECTED_FIREBASE_PROJECT_ID:-}" ] && missing+=("vars.FIREBASE_PROJECT_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required workflow configuration: ${missing[*]}" >&2
+            echo "Please configure GOOGLE_SERVICES_JSON (secret) and FIREBASE_PROJECT_ID (variable) in GitHub Settings -> Secrets and variables -> Actions." >&2
+            exit 1
+          fi
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EXPECTED_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
       - name: Test Firebase configuration validation
         run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
       - name: Inject Firebase configuration
@@ -55,7 +72,8 @@ jobs:
           "$build_tools/apksigner" sign --ks "$keystore" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --out app/build/outputs/apk/release/app-release-signed.apk "$RUNNER_TEMP/uth-aligned.apk"
           "$build_tools/apksigner" verify --verbose app/build/outputs/apk/release/app-release-signed.apk
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: uth-connect-release-apk
           path: app/build/outputs/apk/release/app-release-signed.apk
-          if-no-files-found: error
+          if-no-files-found: ignore
