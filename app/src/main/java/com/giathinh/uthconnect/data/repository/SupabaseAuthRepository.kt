@@ -1,7 +1,6 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.StudentProfile
-import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.DomainRestrictionException
 import com.giathinh.uthconnect.domain.repository.SignUpResult
@@ -112,9 +111,15 @@ class SupabaseAuthRepository @Inject constructor(
             val needsConfirmation = !hasSession && confirmedAt.isNullOrBlank()
 
             if (hasSession) {
-                val roleName = runCatching { ownProfileRow()?.toDomainProfile()?.role?.name }
-                    .getOrNull() ?: UserRole.STUDENT.name
-                CrashIdentity.set(client.userId, roleName)
+                CrashIdentity.set(client.userId, "pending_profile")
+                try {
+                    val row = ownProfileRow()
+                    if (row != null) {
+                        row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
+                    }
+                } catch (_: Exception) {
+                    // Retain "pending_profile" identity if profile fetch fails
+                }
             } else {
                 CrashIdentity.clear()
             }
