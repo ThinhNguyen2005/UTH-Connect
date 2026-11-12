@@ -168,7 +168,10 @@ class SupabaseHousingRepository @Inject constructor(
      * là bị hủy thay vì giữ feed chờ; request đang chặn tự kết thúc theo
      * timeout 8s của kết nối. Hết ngân sách giữ khoảng cách fallback.
      */
-    private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> = withTimeoutOrNull(ROAD_BUDGET_MS) { parallelRoadDistances(listings) } ?: listings
+    private suspend fun withRoadDistances(listings: List<HousingListing>): List<HousingListing> {
+        val routed = withTimeoutOrNull(ROAD_BUDGET_MS) { parallelRoadDistances(listings) }
+        return routed ?: listings
+    }
 
     private suspend fun parallelRoadDistances(listings: List<HousingListing>): List<HousingListing> = coroutineScope {
         val gate = Semaphore(MAX_PARALLEL_ROUTES)
