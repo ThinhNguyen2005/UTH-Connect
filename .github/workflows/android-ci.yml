@@ -1,0 +1,124 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    name: Build & Unit Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Inject Firebase configuration if secret is present
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EXPECTED_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && [ -n "$EXPECTED_FIREBASE_PROJECT_ID" ]; then
+            python3 .github/scripts/inject_google_services.py
+            echo "Injected google-services.json from secret."
+          else
+            echo "Using repository default google-services.json."
+          fi
+
+      - name: Build Debug APK
+        env:
+          ORG_GRADLE_PROJECT_useMockData: 'false'
+          ORG_GRADLE_PROJECT_useSupabase: 'true'
+          ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
+          ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
+          ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Run Unit Tests
+        env:
+          ORG_GRADLE_PROJECT_useMockData: 'false'
+          ORG_GRADLE_PROJECT_useSupabase: 'true'
+          ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
+          ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
+          ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: '**/build/test-results/**/*.xml'
+          check_name: 'Unit Test Results'
+          comment_mode: 'always'
+
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          echo "## 📊 Unit Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -d "app/build/reports/tests/testDebugUnitTest" ]; then
+            echo "- ✅ Test report generated at \`app/build/reports/tests/testDebugUnitTest/\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -d "app/build/test-results/testDebugUnitTest" ]; then
+            test_count=$(find app/build/test-results/testDebugUnitTest -name "*.xml" -exec grep -o 'tests="[0-9]*"' {} + 2>/dev/null | awk -F'"' '{s+=$2} END {print s}')
+            fail_count=$(find app/build/test-results/testDebugUnitTest -name "*.xml" -exec grep -o 'failures="[0-9]*"' {} + 2>/dev/null | awk -F'"' '{s+=$2} END {print s}')
+            skip_count=$(find app/build/test-results/testDebugUnitTest -name "*.xml" -exec grep -o 'skipped="[0-9]*"' {} + 2>/dev/null | awk -F'"' '{s+=$2} END {print s}')
+          else
+            test_count=0
+            fail_count=0
+            skip_count=0
+          fi
+          echo "- **Total Tests:** ${test_count:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failures:** ${fail_count:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Skipped:** ${skip_count:-0}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Test Reports (HTML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-reports
+          path: '**/build/reports/tests/'
+          if-no-files-found: warn
+
+      - name: Upload Test Results (XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results-xml
+          path: '**/build/test-results/'
+          if-no-files-found: warn
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore

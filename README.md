@@ -8,6 +8,7 @@
 
 [![Platform](https://img.shields.io/badge/platform-Android-green?style=flat-square)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-blue?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+[![Android CI](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/android-ci.yml/badge.svg)](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/android-ci.yml)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.02.01-6da8f2?style=flat-square)](https://developer.android.com/jetpack/compose)
 [![Min SDK](https://img.shields.io/badge/minSdk-31-informational?style=flat-square)](https://developer.android.com/about/versions/12)
 [![Version](https://img.shields.io/badge/status-Pre--MVP-yellow?style=flat-square)](#11-lộ-trình-roadmap)
@@ -607,6 +608,57 @@ cd uth-connect
 Android dùng Supabase Auth/PostgreSQL/Storage cho dữ liệu và Firebase cho Crashlytics, Performance, Remote Config, FCM. Cấu hình credentials theo hướng dẫn tương ứng; không đặt service-role key trong ứng dụng.
 
 Cấu hình URL và publishable key Supabase cho môi trường sử dụng; tham khảo `supabase/README.md`.
+
+### 8.4. Quy trình CI/CD (GitHub Actions)
+
+Dự án thiết lập quy trình kiểm thử tự động qua workflow `.github/workflows/android-ci.yml`.
+
+#### 1. Trigger hoạt động
+- **Tự động kích hoạt khi push:** Các nhánh `main` và `develop`.
+- **Tự động kích hoạt khi tạo/cập nhật PR:** Pull Request nhắm vào nhánh `main`.
+- **Kích hoạt thủ công:** Qua `workflow_dispatch` trên tab Actions của GitHub.
+- **Concurrency:** Tự động hủy các run cũ của cùng nhánh/PR khi có commit mới (`cancel-in-progress: true`).
+
+#### 2. Các bước kiểm tra trên CI
+- **Môi trường:** `ubuntu-latest`, **JDK 21** (`temurin`), Gradle cache qua `gradle/actions/setup-gradle@v4`.
+- **Cấu hình & Bảo mật:** Nạp cấu hình Supabase/Firebase từ GitHub Secrets/Vars nếu có; fallback về file cấu hình mặc định cho PR an toàn.
+- **Biên dịch:** Chạy `./gradlew assembleDebug --stacktrace` để kiểm tra khả năng build của toàn bộ app.
+- **Kiểm thử đơn vị:** Chạy `./gradlew testDebugUnitTest --stacktrace` thực thi toàn bộ test suite.
+- **Báo cáo & Artifacts:**
+  - Hiển thị kết quả kiểm thử trực tiếp trên GitHub Checks và PR qua action `EnricoMi/publish-unit-test-result-action@v2`.
+  - Tóm tắt số test Pass / Fail / Skip vào `$GITHUB_STEP_SUMMARY`.
+  - Tải lên artifacts lưu trữ: HTML test report (`unit-test-reports`), XML test results (`unit-test-results-xml`), và Debug APK (`app-debug-apk`).
+- **Quy tắc trạng thái:** Workflow sẽ **FAILED** nếu bước Build hoặc bất kỳ Unit Test nào bị fail.
+
+#### 3. Chạy kiểm thử cục bộ (Local Development)
+- **Yêu cầu JDK:** JDK 17+ (khuyến nghị **JDK 21** để đồng bộ daemon JVM với CI).
+- **Lệnh build debug:**
+  ```powershell
+  # Windows
+  .\gradlew.bat assembleDebug
+  
+  # macOS / Linux
+  ./gradlew assembleDebug
+  ```
+- **Lệnh chạy toàn bộ Unit Test:**
+  ```powershell
+  # Windows
+  .\gradlew.bat testDebugUnitTest
+  
+  # macOS / Linux
+  ./gradlew testDebugUnitTest
+  ```
+
+#### 4. Hướng dẫn cấu hình GitHub Secrets
+Để pipeline CI và Release hoạt động đầy đủ với môi trường staging/production, cấu hình các secrets tại **Repository Settings -> Secrets and variables -> Actions**:
+
+| Secret / Variable | Loại | Mục đích |
+|---|---|---|
+| `SUPABASE_URL` | Secret | URL endpoint Supabase của dự án |
+| `SUPABASE_PUBLISHABLE_KEY` | Secret | Publishable key (bắt đầu bằng `sb_publishable_`) |
+| `GOOGLE_WEB_CLIENT_ID` | Secret | OAuth Web Client ID cho Supabase Google Auth |
+| `GOOGLE_SERVICES_JSON` | Secret | Nội dung file `google-services.json` cho Firebase SDK |
+| `FIREBASE_PROJECT_ID` | Variable | Project ID của Firebase (kiểm tra khớp với `google-services.json`) |
 
 ---
 
