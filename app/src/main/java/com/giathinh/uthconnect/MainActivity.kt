@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
                     else -> AvailabilityScreen(
                         state = state,
                         isRetrying = isCheckingAvailability,
-                        onRetry = { fetchRemoteConfigGate() },
+                        onRetry = { fetchRemoteConfigGate(userInitiated = true) },
                     )
                 }
             }
@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
     private fun observeRemoteConfig() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                fetchRemoteConfigGate()
+                fetchRemoteConfigGate(userInitiated = false)
             }
         }
     }
@@ -122,7 +122,7 @@ class MainActivity : ComponentActivity() {
      * Khi fetch thất bại, trạng thái gate đã lưu được ưu tiên giữ nguyên
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
-    private fun fetchRemoteConfigGate() {
+    private fun fetchRemoteConfigGate(userInitiated: Boolean = false) {
         if (remoteConfigJob?.isActive == true) return
         remoteConfigJob = lifecycleScope.launch {
             if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                 appAvailability = initialState
 
                 withContext(Dispatchers.IO) {
-                    updateRemoteConfigGate(saved)
+                    updateRemoteConfigGate(saved, userInitiated)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -159,14 +159,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun updateRemoteConfigGate(saved: SavedGate) {
+    private suspend fun updateRemoteConfigGate(saved: SavedGate, userInitiated: Boolean) {
         var fetchSucceeded = false
         var remoteMaint = false
         var remoteMinVer = "1.0.0"
 
         try {
             val config = FirebaseRemoteConfig.getInstance()
-            val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
+            val fetchIntervalSeconds = remoteConfigFetchIntervalSeconds(BuildConfig.DEBUG, userInitiated)
             val settings = FirebaseRemoteConfigSettings.Builder()
                 .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
                 .build()
@@ -206,9 +206,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    companion object {
-        private const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
     }
 }

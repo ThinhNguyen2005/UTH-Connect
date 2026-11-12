@@ -25,6 +25,14 @@ class AppAvailabilityTest {
     }
 
     @Test
+    fun remoteConfigFetchIntervalSecondsRespectsUserInitiatedAndDebug() {
+        assertEquals(3600L, remoteConfigFetchIntervalSeconds(isDebug = false, userInitiated = false))
+        assertEquals(0L, remoteConfigFetchIntervalSeconds(isDebug = false, userInitiated = true))
+        assertEquals(0L, remoteConfigFetchIntervalSeconds(isDebug = true, userInitiated = false))
+        assertEquals(0L, remoteConfigFetchIntervalSeconds(isDebug = true, userInitiated = true))
+    }
+
+    @Test
     fun savedGateMaintenanceUnblocksWhenFetchSucceedsWithDefaultSource() {
         val saved = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "1.0.0", hasSavedState = true)
         val (state, newSaved) = resolveGate(
@@ -63,6 +71,19 @@ class AppAvailabilityTest {
             currentVersion = "1.0.0",
         )
         assertEquals(AppAvailability.MAINTENANCE, state)
+    }
+
+    @Test
+    fun fetchFailurePreservesSavedUpdateRequiredGate() {
+        val saved = SavedGate(maintenanceMode = false, forceUpdateMinVersion = "9.9.9", hasSavedState = true)
+        val (state, _) = resolveGate(
+            saved = saved,
+            fetchSucceeded = false,
+            remoteMaintenance = false,
+            remoteMinVersion = "1.0.0",
+            currentVersion = "1.0.0",
+        )
+        assertEquals(AppAvailability.UPDATE_REQUIRED, state)
     }
 
     @Test

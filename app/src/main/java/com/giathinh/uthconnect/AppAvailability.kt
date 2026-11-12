@@ -46,6 +46,8 @@ internal data class SavedGate(
 // Replace UPDATE_URL with official APK download URL / Store link when published
 private const val UPDATE_URL = ""
 
+internal fun remoteConfigFetchIntervalSeconds(isDebug: Boolean, userInitiated: Boolean): Long = if (isDebug || userInitiated) 0L else 3600L
+
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
  */
@@ -188,7 +190,7 @@ internal fun AvailabilityScreen(
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(UthDimens.Spacing.Xl))
-            if (state == AppAvailability.MAINTENANCE) {
+            if (state == AppAvailability.MAINTENANCE || state == AppAvailability.UPDATE_REQUIRED) {
                 Button(
                     onClick = onRetry,
                     enabled = !isRetrying,
@@ -201,24 +203,32 @@ internal fun AvailabilityScreen(
                             strokeWidth = UthDimens.Size.ProgressInlineStroke,
                         )
                     } else {
-                        Text(text = stringResource(R.string.availability_retry_action))
+                        Text(
+                            text = stringResource(
+                                if (state == AppAvailability.MAINTENANCE) {
+                                    R.string.availability_retry_action
+                                } else {
+                                    R.string.availability_retry_action
+                                },
+                            ),
+                        )
                     }
                 }
-            } else if (state == AppAvailability.UPDATE_REQUIRED) {
-                if (UPDATE_URL.isNotBlank()) {
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL))
-                            try {
-                                context.startActivity(intent)
-                            } catch (_: ActivityNotFoundException) {
-                                // Gracefully handled when no browser app is available
-                            }
-                        },
-                        modifier = Modifier.height(UthDimens.Size.ButtonHeight),
-                    ) {
-                        Text(text = stringResource(R.string.availability_update_action))
-                    }
+            }
+            if (state == AppAvailability.UPDATE_REQUIRED && UPDATE_URL.isNotBlank()) {
+                Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL))
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            // Gracefully handled when no browser app is available
+                        }
+                    },
+                    modifier = Modifier.height(UthDimens.Size.ButtonHeight),
+                ) {
+                    Text(text = stringResource(R.string.availability_update_action))
                 }
             }
         }
