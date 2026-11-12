@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
 
                     AppAvailability.AVAILABLE -> UthApp()
 
-                    else -> AvailabilityScreen(state)
+                    else -> AvailabilityScreen(state, onRetry = { observeRemoteConfig() })
                 }
             }
         }

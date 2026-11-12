@@ -1,18 +1,30 @@
 package com.giathinh.uthconnect
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
+import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 
 /**
  * Trạng thái khả dụng của ứng dụng, được quyết định bởi cờ Remote Config.
@@ -27,6 +39,9 @@ internal data class SavedGate(
     val forceUpdateMinVersion: String = "1.0.0",
     val hasSavedState: Boolean = false,
 )
+
+// TODO: Replace UPDATE_URL with official APK download URL / Store link when published
+private const val UPDATE_URL = ""
 
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
@@ -116,7 +131,11 @@ internal fun availability(maintenance: Boolean, current: String, minimum: String
 }
 
 @Composable
-internal fun AvailabilityScreen(state: AppAvailability) {
+internal fun AvailabilityScreen(
+    state: AppAvailability,
+    onRetry: () -> Unit = {},
+) {
+    val context = LocalContext.current
     val title = if (state == AppAvailability.MAINTENANCE) {
         R.string.maintenance_title
     } else {
@@ -127,22 +146,72 @@ internal fun AvailabilityScreen(state: AppAvailability) {
     } else {
         R.string.update_required_message
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Text(
-            text = stringResource(title),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(message),
-            modifier = Modifier.padding(top = 12.dp),
-            textAlign = TextAlign.Center,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(UthDimens.Spacing.Xl),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(message),
+                modifier = Modifier.padding(top = UthDimens.Spacing.Md),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Xl))
+            if (state == AppAvailability.MAINTENANCE) {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.height(UthDimens.Size.ButtonHeight),
+                ) {
+                    Text(text = stringResource(R.string.availability_retry_action))
+                }
+            } else if (state == AppAvailability.UPDATE_REQUIRED) {
+                Button(
+                    onClick = {
+                        if (UPDATE_URL.isNotBlank()) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL))
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: ActivityNotFoundException) {
+                                // Gracefully handled when no browser app is available
+                            }
+                        }
+                    },
+                    modifier = Modifier.height(UthDimens.Size.ButtonHeight),
+                ) {
+                    Text(text = stringResource(R.string.availability_update_action))
+                }
+            }
+        }
+    }
+}
+
+@Preview(name = "Maintenance Screen Light", showBackground = true)
+@Composable
+private fun AvailabilityScreenMaintenancePreview() {
+    UthPreview {
+        AvailabilityScreen(state = AppAvailability.MAINTENANCE)
+    }
+}
+
+@Preview(name = "Update Required Screen Dark", showBackground = true)
+@Composable
+private fun AvailabilityScreenUpdateDarkPreview() {
+    UthPreview(darkTheme = true) {
+        AvailabilityScreen(state = AppAvailability.UPDATE_REQUIRED)
     }
 }
