@@ -56,7 +56,23 @@ internal fun remoteConfigFetchIntervalSeconds(
 internal fun isValidUpdateUrl(url: String): Boolean {
     if (url.isBlank()) return false
     val trimmed = url.trim()
-    return trimmed.startsWith("https://", ignoreCase = true) || trimmed.startsWith("market://", ignoreCase = true)
+    if (trimmed.startsWith("market://", ignoreCase = true)) {
+        return trimmed.length > "market://".length
+    }
+    if (trimmed.startsWith("https://", ignoreCase = true)) {
+        val hostAndPath = trimmed.substring("https://".length)
+        val host = hostAndPath.substringBefore('/').substringBefore(':').lowercase()
+        return host.isNotEmpty() && (
+            host == "play.google.com" ||
+                host == "github.com" ||
+                host.endsWith(".github.com") ||
+                host == "ut.edu.vn" ||
+                host.endsWith(".ut.edu.vn") ||
+                host == "uth.edu.vn" ||
+                host.endsWith(".uth.edu.vn")
+            )
+    }
+    return false
 }
 
 /**
@@ -64,16 +80,16 @@ internal fun isValidUpdateUrl(url: String): Boolean {
  */
 internal fun loadSavedGate(prefs: SharedPreferences): SavedGate {
     if (!prefs.contains("has_saved_state")) return SavedGate()
-    return try {
-        SavedGate(
-            maintenanceMode = prefs.getBoolean("maintenance_mode", false),
-            forceUpdateMinVersion = prefs.getString("force_update_min_version", "1.0.0") ?: "1.0.0",
-            updateUrl = prefs.getString("update_url", "") ?: "",
-            hasSavedState = true,
-        )
-    } catch (_: Exception) {
-        SavedGate(hasSavedState = false)
-    }
+    val maintenance = runCatching { prefs.getBoolean("maintenance_mode", false) }.getOrDefault(false)
+    val minVersion = runCatching { prefs.getString("force_update_min_version", "1.0.0") }.getOrNull() ?: "1.0.0"
+    val url = runCatching { prefs.getString("update_url", "") }.getOrNull() ?: ""
+    val hasState = runCatching { prefs.getBoolean("has_saved_state", true) }.getOrDefault(true)
+    return SavedGate(
+        maintenanceMode = maintenance,
+        forceUpdateMinVersion = minVersion,
+        updateUrl = url,
+        hasSavedState = hasState,
+    )
 }
 
 internal fun loadSavedGate(context: Context): SavedGate {
