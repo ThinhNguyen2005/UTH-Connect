@@ -40,7 +40,7 @@ internal data class SavedGate(
     val hasSavedState: Boolean = false,
 )
 
-// TODO: Replace UPDATE_URL with official APK download URL / Store link when published
+// Replace UPDATE_URL with official APK download URL / Store link when published
 private const val UPDATE_URL = ""
 
 /**
@@ -202,7 +202,7 @@ internal fun AvailabilityScreen(
 
 @Preview(name = "Maintenance Screen Light", showBackground = true)
 @Composable
-private fun AvailabilityScreenMaintenancePreview() {
+internal fun AvailabilityScreenMaintenancePreview() {
     UthPreview {
         AvailabilityScreen(state = AppAvailability.MAINTENANCE)
     }
@@ -210,7 +210,7 @@ private fun AvailabilityScreenMaintenancePreview() {
 
 @Preview(name = "Update Required Screen Dark", showBackground = true)
 @Composable
-private fun AvailabilityScreenUpdateDarkPreview() {
+internal fun AvailabilityScreenUpdateDarkPreview() {
     UthPreview(darkTheme = true) {
         AvailabilityScreen(state = AppAvailability.UPDATE_REQUIRED)
     }
