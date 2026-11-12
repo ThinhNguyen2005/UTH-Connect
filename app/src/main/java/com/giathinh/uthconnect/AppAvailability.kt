@@ -26,9 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
-import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 
 /**
  * Trạng thái khả dụng của ứng dụng, được quyết định bởi cờ Remote Config.
@@ -47,47 +45,14 @@ internal data class SavedGate(
 
 // Default static fallback URL when Remote Config update_url is not set
 private const val UPDATE_URL = ""
+private const val DEFAULT_REMOTE_CONFIG_FETCH_INTERVAL_SECONDS = 3600L
 
 internal fun remoteConfigFetchIntervalSeconds(
     isDebug: Boolean,
     userInitiated: Boolean,
-): Long = if (isDebug || userInitiated) 0L else 3600L
+): Long = if (isDebug || userInitiated) 0L else DEFAULT_REMOTE_CONFIG_FETCH_INTERVAL_SECONDS
 
-internal fun isValidUpdateUrl(url: String): Boolean {
-    if (url.isBlank()) return false
-    val trimmed = url.trim()
-    if (trimmed.any { it.isWhitespace() || it.isISOControl() }) return false
-
-    if (trimmed.startsWith("market://", ignoreCase = true)) {
-        val target = trimmed.substring("market://".length)
-        if (target.isBlank()) return false
-        return target.startsWith("details?", ignoreCase = true) || target.startsWith("search?", ignoreCase = true)
-    }
-
-    if (trimmed.startsWith("https://", ignoreCase = true)) {
-        val authorityAndPath = trimmed.substring("https://".length)
-        val authority = authorityAndPath.substringBefore('/').substringBefore('?').substringBefore('#')
-
-        if ('@' in authority) return false
-        if (':' in authority) {
-            val portString = authority.substringAfter(':')
-            if (portString != "443") return false
-        }
-
-        val host = authority.substringBefore(':').lowercase()
-        if (host.isEmpty()) return false
-
-        return host == "play.google.com" ||
-            host == "github.com" ||
-            host.endsWith(".github.com") ||
-            host == "ut.edu.vn" ||
-            host.endsWith(".ut.edu.vn") ||
-            host == "uth.edu.vn" ||
-            host.endsWith(".uth.edu.vn")
-    }
-
-    return false
-}
+internal fun isValidUpdateUrl(url: String): Boolean = UpdateUrlValidator.isValid(url)
 
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
@@ -178,13 +143,12 @@ internal fun resolveGate(
     return Pair(state, newSaved)
 }
 
-private fun parseVersion(version: String): List<Int>? {
-    val items = version.split('.')
-    val parsed = items.mapNotNull { it.toIntOrNull() }
-    return if (version.matches(Regex("[0-9]+(\\.[0-9]+)*")) && parsed.size == items.size) parsed else null
-}
-
 internal fun availability(maintenance: Boolean, current: String, minimum: String): AppAvailability {
+    val parseVersion: (String) -> List<Int>? = { version ->
+        val items = version.split('.')
+        val parsed = items.mapNotNull { it.toIntOrNull() }
+        if (version.matches(Regex("[0-9]+(\\.[0-9]+)*")) && parsed.size == items.size) parsed else null
+    }
     val actual = parseVersion(current)
     val required = parseVersion(minimum)
     val maxLen = if (actual != null && required != null) maxOf(actual.size, required.size) else 0
@@ -291,21 +255,5 @@ internal fun AvailabilityScreen(
                 }
             }
         }
-    }
-}
-
-@Preview(name = "Maintenance Screen Light", showBackground = true)
-@Composable
-internal fun AvailabilityScreenMaintenancePreview() {
-    UthPreview {
-        AvailabilityScreen(state = AppAvailability.MAINTENANCE)
-    }
-}
-
-@Preview(name = "Update Required Screen Dark", showBackground = true)
-@Composable
-internal fun AvailabilityScreenUpdateDarkPreview() {
-    UthPreview(darkTheme = true) {
-        AvailabilityScreen(state = AppAvailability.UPDATE_REQUIRED)
     }
 }

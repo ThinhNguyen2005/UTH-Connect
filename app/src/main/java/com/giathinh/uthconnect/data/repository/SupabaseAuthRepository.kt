@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.repository.StudentContactRepository
 import com.giathinh.uthconnect.domain.repository.StudentVerificationRequiredException
 import com.giathinh.uthconnect.domain.repository.VerificationRequestResult
 import com.giathinh.uthconnect.domain.repository.VerificationStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -118,6 +119,8 @@ class SupabaseAuthRepository @Inject constructor(
                     if (row != null) {
                         row.toDomainProfile().also { CrashIdentity.set(currentUid, it.role.name) }
                     }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
                     // Retain "pending_profile" identity if profile fetch fails
                 }
@@ -126,6 +129,8 @@ class SupabaseAuthRepository @Inject constructor(
             }
 
             SignUpResult(needsEmailConfirmation = needsConfirmation, email = email)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Exception) {
             CrashIdentity.clear()
             throw error

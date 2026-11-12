@@ -124,6 +124,7 @@ class MainActivity : ComponentActivity() {
      * Khi fetch thất bại, trạng thái gate đã lưu được ưu tiên giữ nguyên
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
+    @Suppress("TooGenericExceptionCaught")
     private fun fetchRemoteConfigGate(userInitiated: Boolean = false) {
         if (remoteConfigJob?.isActive == true) return
         remoteConfigJob = lifecycleScope.launch {
@@ -163,6 +164,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun updateRemoteConfigGate(saved: SavedGate, userInitiated: Boolean) {
         var fetchSucceeded = false
         var remoteMaint = false
@@ -190,6 +192,8 @@ class MainActivity : ComponentActivity() {
             remoteMinVer = config.getString("force_update_min_version")
             remoteUrl = config.getString("update_url")
             fetchSucceeded = true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             fetchSucceeded = false
         }

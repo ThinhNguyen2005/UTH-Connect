@@ -33,16 +33,103 @@ class AppAvailabilityTest {
     }
 
     @Test
-    fun isValidUpdateUrlValidatesHttpsAndMarket() {
+    fun isValidUpdateUrlAcceptsApprovedTargets() {
         assertTrue(isValidUpdateUrl("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
         assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases/"))
+        assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases/latest"))
+        assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases/tag/v1.0.0"))
+        assertTrue(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases/download/v1.0.0/app.apk"))
         assertTrue(isValidUpdateUrl("https://ut.edu.vn/download/app.apk"))
+        assertTrue(isValidUpdateUrl("https://uth.edu.vn/download/uth-connect.apk"))
         assertTrue(isValidUpdateUrl("market://details?id=com.giathinh.uthconnect"))
+    }
+
+    @Test
+    fun isValidUpdateUrlRejectsInsecureSchemesAndBlankInputs() {
         assertFalse(isValidUpdateUrl(""))
         assertFalse(isValidUpdateUrl("   "))
-        assertFalse(isValidUpdateUrl("http://insecure.site/app.apk"))
-        assertFalse(isValidUpdateUrl("https://unapproved-phishing-domain.com/app.apk"))
-        assertFalse(isValidUpdateUrl("ftp://invalid.scheme"))
+        assertFalse(isValidUpdateUrl("http://play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("http://github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("http://ut.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("ftp://ut.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("javascript:alert(1)"))
+    }
+
+    @Test
+    fun isValidUpdateUrlRejectsUserinfoSpoofingAndCustomPorts() {
+        assertFalse(isValidUpdateUrl("https://github.com:443@evil.example/app.apk"))
+        assertFalse(isValidUpdateUrl("https://github.com@evil.example/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://user:pass@play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("https://@github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://github.com:8443/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://github.com:443/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://play.google.com:8080/store/apps/details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn:/download/app.apk"))
+        assertFalse(isValidUpdateUrl("market://user@details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("market://details:443?id=com.giathinh.uthconnect"))
+    }
+
+    @Test
+    fun isValidUpdateUrlRejectsSpoofedSubdomainsAndLookalikeDomains() {
+        assertFalse(isValidUpdateUrl("https://evil.github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://fake.play.google.com/store/apps/details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("https://evil.ut.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://evil.uth.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://github.com.evil.example/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn.evil.com/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://notuth.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://fake-github.com/ThinhNguyen2005/UTH-Connect/releases"))
+    }
+
+    @Test
+    fun isValidUpdateUrlRejectsMalformedMissingHostWhitespaceAndControlChars() {
+        assertFalse(isValidUpdateUrl("https:///ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://:443/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://not valid/path"))
+        assertFalse(isValidUpdateUrl("https:github.com/ThinhNguyen2005/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://github.com\\@evil.example/app.apk"))
+        assertFalse(isValidUpdateUrl("https://[::1]/download/app.apk"))
+        assertFalse(isValidUpdateUrl(" https://ut.edu.vn/download/app.apk"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download/app.apk "))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download/app.apk\n"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download\t/app.apk"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download/app\u0000.apk"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download/app\u200B.apk"))
+    }
+
+    @Test
+    fun isValidUpdateUrlRejectsInvalidMarketAndDisallowedPathsQueriesFragments() {
+        assertFalse(isValidUpdateUrl("market://"))
+        assertFalse(isValidUpdateUrl("market://details"))
+        assertFalse(isValidUpdateUrl("market://details?id=com.other.app"))
+        assertFalse(isValidUpdateUrl("market://search?q=uth"))
+        assertFalse(isValidUpdateUrl("market://details/extra?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("market://details?id=com.giathinh.uthconnect&url=https://evil.example"))
+        assertFalse(isValidUpdateUrl("market://details?id=com.giathinh.uthconnect#frag"))
+        assertFalse(isValidUpdateUrl("market:details?id=com.giathinh.uthconnect"))
+        assertFalse(isValidUpdateUrl("https://github.com/attacker/UTH-Connect/releases"))
+        assertFalse(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releasesEvil"))
+        assertFalse(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases/../../../evil/releases"))
+        assertFalse(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases%2f..%2fevil"))
+        assertFalse(
+            isValidUpdateUrl(
+                "https://github.com/ThinhNguyen2005/UTH-Connect/releases?return_to=https://evil.example",
+            ),
+        )
+        assertFalse(isValidUpdateUrl("https://github.com/ThinhNguyen2005/UTH-Connect/releases#frag"))
+        assertFalse(isValidUpdateUrl("https://play.google.com/store/apps/details?id=com.evil.app"))
+        assertFalse(
+            isValidUpdateUrl(
+                "https://play.google.com/store/apps/details?id=com.giathinh.uthconnect&redirect=https://evil.example",
+            ),
+        )
+        assertFalse(isValidUpdateUrl("https://play.google.com/store/apps/details?id=com.giathinh.uthconnect#frag"))
+        assertFalse(isValidUpdateUrl("https://play.google.com/store/search?q=uth"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/"))
+        assertFalse(isValidUpdateUrl("https://ut.edu.vn/download/app.apk?redirect=https://evil.example"))
+        assertFalse(isValidUpdateUrl("https://uth.edu.vn/download/app.apk#frag"))
     }
 
     @Test
@@ -199,9 +286,14 @@ class AppAvailabilityTest {
     @Test
     fun wrongTypedKeysFallBackToDefaultGate() {
         val fake = FakeSharedPreferences()
-        fake.edit().putString("maintenance_mode", "corrupted_string").apply()
+        fake.edit()
+            .putBoolean("has_saved_state", true)
+            .putString("maintenance_mode", "corrupted_string")
+            .putInt("force_update_min_version", 123)
+            .putBoolean("update_url", true)
+            .apply()
         val loaded = loadSavedGate(fake)
-        assertFalse(loaded.hasSavedState)
+        assertTrue(loaded.hasSavedState)
         assertFalse(loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
         assertEquals("", loaded.updateUrl)
@@ -210,31 +302,106 @@ class AppAvailabilityTest {
     @Test
     fun corruptedMinVersionPreservesValidMaintenanceMode() {
         val fake = FakeSharedPreferences()
+        val validUrl = "https://play.google.com/store/apps/details?id=com.giathinh.uthconnect"
         fake.edit()
             .putBoolean("has_saved_state", true)
             .putBoolean("maintenance_mode", true)
             .putInt("force_update_min_version", 999)
+            .putString("update_url", validUrl)
             .apply()
 
         val loaded = loadSavedGate(fake)
         assertTrue(loaded.hasSavedState)
         assertTrue("Maintenance mode preserved even if min_version type is corrupted", loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+        assertEquals(validUrl, loaded.updateUrl)
     }
 
     @Test
     fun corruptedMaintenanceModePreservesValidMinVersion() {
         val fake = FakeSharedPreferences()
+        val validUrl = "https://github.com/ThinhNguyen2005/UTH-Connect/releases"
         fake.edit()
             .putBoolean("has_saved_state", true)
             .putString("maintenance_mode", "invalid_string_type")
             .putString("force_update_min_version", "2.0.0")
+            .putString("update_url", validUrl)
             .apply()
 
         val loaded = loadSavedGate(fake)
         assertTrue(loaded.hasSavedState)
         assertFalse("Maintenance mode falls back to false on ClassCastException", loaded.maintenanceMode)
         assertEquals("2.0.0", loaded.forceUpdateMinVersion)
+        assertEquals(validUrl, loaded.updateUrl)
+    }
+
+    @Test
+    fun corruptedFieldsPreserveValidUpdateUrl() {
+        val fake = FakeSharedPreferences()
+        val validUrl = "https://uth.edu.vn/download/app.apk"
+        fake.edit()
+            .putBoolean("has_saved_state", true)
+            .putInt("maintenance_mode", 1)
+            .putBoolean("force_update_min_version", true)
+            .putString("update_url", validUrl)
+            .apply()
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertFalse(loaded.maintenanceMode)
+        assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+        assertEquals(validUrl, loaded.updateUrl)
+    }
+
+    @Test
+    fun corruptedUpdateUrlPreservesValidMaintenanceAndMinVersion() {
+        val fake = FakeSharedPreferences()
+        fake.edit()
+            .putBoolean("has_saved_state", true)
+            .putBoolean("maintenance_mode", true)
+            .putString("force_update_min_version", "2.1.0")
+            .putInt("update_url", 404)
+            .apply()
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertTrue(loaded.maintenanceMode)
+        assertEquals("2.1.0", loaded.forceUpdateMinVersion)
+        assertEquals("", loaded.updateUrl)
+    }
+
+    @Test
+    fun wrongTypedHasSavedStateDoesNotCrashAndPreservesValidFields() {
+        val fake = FakeSharedPreferences()
+        val validUrl = "https://play.google.com/store/apps/details?id=com.giathinh.uthconnect"
+        fake.edit()
+            .putString("has_saved_state", "corrupted_boolean")
+            .putBoolean("maintenance_mode", true)
+            .putString("force_update_min_version", "2.0.0")
+            .putString("update_url", validUrl)
+            .apply()
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertTrue(loaded.maintenanceMode)
+        assertEquals("2.0.0", loaded.forceUpdateMinVersion)
+        assertEquals(validUrl, loaded.updateUrl)
+    }
+
+    @Test
+    fun updateRequiredWithBlankUpdateUrlStaysSafeAndDefaultVersionIsAvailable() {
+        assertEquals(AppAvailability.AVAILABLE, availability(false, "1.0", "1.0.0"))
+        val (state, newSaved) = resolveGate(
+            saved = SavedGate(hasSavedState = false),
+            fetchSucceeded = true,
+            remoteMaintenance = false,
+            remoteMinVersion = "2.0.0",
+            remoteUpdateUrl = "",
+            currentVersion = "1.0",
+        )
+        assertEquals(AppAvailability.UPDATE_REQUIRED, state)
+        assertEquals("", newSaved.updateUrl)
+        assertFalse(isValidUpdateUrl(newSaved.updateUrl))
     }
 
     private class FakeSharedPreferences : SharedPreferences {
@@ -250,7 +417,14 @@ class AppAvailabilityTest {
             return (value as? String) ?: defValue
         }
 
-        override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? = defValues
+        override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? {
+            val value = if (map.containsKey(key)) map[key] else return defValues
+            if (value != null && value !is Set<*>) {
+                throw ClassCastException("Value $value for $key is not Set")
+            }
+            @Suppress("UNCHECKED_CAST")
+            return (value as? Set<String>)?.toMutableSet() ?: defValues
+        }
 
         override fun getInt(key: String, defValue: Int): Int {
             if (!map.containsKey(key)) return defValue
@@ -307,7 +481,11 @@ class AppAvailabilityTest {
                 return this
             }
 
-            override fun putStringSet(key: String, values: MutableSet<String>?): SharedPreferences.Editor = this
+            override fun putStringSet(key: String, values: MutableSet<String>?): SharedPreferences.Editor {
+                changes[key] = values?.toSet()
+                removedKeys.remove(key)
+                return this
+            }
 
             override fun putInt(key: String, value: Int): SharedPreferences.Editor {
                 changes[key] = value
