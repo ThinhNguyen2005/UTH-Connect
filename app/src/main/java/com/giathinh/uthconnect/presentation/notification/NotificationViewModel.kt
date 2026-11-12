@@ -52,19 +52,29 @@ class NotificationViewModel @Inject constructor(
                 _uiState.update { it.copy(selectedCategory = action.category) }
             }
             is NotificationAction.MarkAllAsRead -> {
+                val previousIds = _uiState.value.readNotificationIds
                 _uiState.update { state ->
                     state.copy(readNotificationIds = state.notifications.map { it.id }.toSet())
                 }
                 viewModelScope.launch {
-                    notificationRepository.markAllInboxNotificationsRead()
+                    val result = notificationRepository.markAllInboxNotificationsRead()
+                    if (result.isFailure) {
+                        // Khôi phục trạng thái optimistic nếu ghi thất bại
+                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                    }
                 }
             }
             is NotificationAction.ClickNotification -> {
+                val previousIds = _uiState.value.readNotificationIds
                 _uiState.update { state ->
                     state.copy(readNotificationIds = state.readNotificationIds + action.notificationId)
                 }
                 viewModelScope.launch {
-                    notificationRepository.markInboxNotificationRead(action.notificationId)
+                    val result = notificationRepository.markInboxNotificationRead(action.notificationId)
+                    if (result.isFailure) {
+                        // Khôi phục trạng thái optimistic nếu ghi thất bại
+                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                    }
                 }
                 viewModelScope.launch {
                     _events.emit(NotificationNavigationEvent.OpenDetail(action.notificationId))
@@ -110,6 +120,15 @@ class NotificationViewModel @Inject constructor(
             notificationRepository.getInboxNotification(notificationId).fold(
                 onSuccess = { detail ->
                     _uiState.update { it.copy(detail = detail, isDetailLoading = false) }
+                    // Đánh dấu đã đọc giống luồng ClickNotification
+                    val previousIds = _uiState.value.readNotificationIds
+                    _uiState.update { state ->
+                        state.copy(readNotificationIds = state.readNotificationIds + notificationId)
+                    }
+                    val result = notificationRepository.markInboxNotificationRead(notificationId)
+                    if (result.isFailure) {
+                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                    }
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(isDetailLoading = false, errorMessage = error.localizedMessage) }

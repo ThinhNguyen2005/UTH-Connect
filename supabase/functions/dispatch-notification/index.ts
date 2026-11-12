@@ -81,10 +81,20 @@ Deno.serve(async (request) => {
 
     try {
       const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
-      const tokenFilter = `notification_devices?select=user_id,token&user_id=in.(${userIds.join(",")})`;
-      const devices = await supabaseRest<Array<{ user_id: string; token: string }>>(tokenFilter);
+      // Phân trang devices để không bỏ sót token khi tổng thiết bị vượt 1.000 hàng
+      const allDevices: Array<{ user_id: string; token: string }> = [];
+      const pageSize = 1000;
+      let offset = 0;
+      while (true) {
+        const page = await supabaseRest<Array<{ user_id: string; token: string }>>(
+          `notification_devices?select=user_id,token&user_id=in.(${userIds.join(",")})&limit=${pageSize}&offset=${offset}`,
+        );
+        allDevices.push(...page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
       const tokensByUser = new Map<string, string[]>();
-      for (const device of devices) {
+      for (const device of allDevices) {
         tokensByUser.set(device.user_id, [...(tokensByUser.get(device.user_id) ?? []), device.token]);
       }
 
@@ -93,17 +103,23 @@ Deno.serve(async (request) => {
       let delivered = 0;
       for (const row of claimed) {
         const tokens = tokensByUser.get(row.recipient_id) ?? [];
-        let rowDelivered = tokens.length === 0;
+        if (tokens.length === 0) {
+          // Không có thiết bị — coi hàng là đã gửi (không có gì để gửi)
+          continue;
+        }
+        let hasFailed = false;
         for (const token of tokens) {
           const result = await sendFcm(accessToken, token, row);
           if (result === "SENT") {
-            rowDelivered = true;
             delivered++;
           } else if (result === "UNREGISTERED") {
             await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(token)}`, { method: "DELETE" });
+          } else {
+            // FAILED — đánh dấu hàng là chưa gửi để thử lại
+            hasFailed = true;
           }
         }
-        if (!rowDelivered) failedRows.push(row.id);
+        if (hasFailed) failedRows.push(row.id);
       }
 
       const sentRows = claimed.map((row) => row.id).filter((id) => !failedRows.includes(id));
@@ -182,10 +198,19 @@ function toSourceNotification(payload: WebhookPayload) {
 
 async function recipientIds(recipientId: string | null, excludedUserId: string | null): Promise<string[]> {
   if (recipientId) return [recipientId];
-  const profiles = await supabaseRest<Array<{ id: string }>>(
-    "profiles?select=id&student_id_verified=eq.true",
-  );
-  return profiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
+  // Phân trang để không bỏ sót hồ sơ khi vượt giới hạn 1.000 hàng mặc định của Supabase
+  const allProfiles: Array<{ id: string }> = [];
+  const pageSize = 1000;
+  let offset = 0;
+  while (true) {
+    const page = await supabaseRest<Array<{ id: string }>>(
+      `profiles?select=id&student_id_verified=eq.true&limit=${pageSize}&offset=${offset}`,
+    );
+    allProfiles.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return allProfiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
 }
 
 async function sendFcm(accessToken: string, token: string, row: InboxRow): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
@@ -215,7 +240,8 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
   if (response.ok) return "SENT";
   const errorBody = await response.text();
   console.error("FCM send failed", response.status, errorBody.slice(0, 500));
-  if (response.status === 404 || errorBody.includes("UNREGISTERED")) return "UNREGISTERED";
+  // Chỉ xóa token khi FCM xác nhận UNREGISTERED trong payload — tránh xóa nhầm khi 404 do cấu hình sai
+  if (errorBody.includes("UNREGISTERED")) return "UNREGISTERED";
   return "FAILED";
 }
 
@@ -261,9 +287,10 @@ async function supabaseRest<T = unknown>(path: string, init: RequestInit = {}): 
   const key = supabaseSecretKey();
   const headers = new Headers({
     apikey: key,
-    Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
   });
+  // Khóa sb_ không phải JWT — chỉ gửi qua apikey; JWT legacy mới cần Authorization Bearer
+  if (!key.startsWith("sb_")) headers.set("Authorization", `Bearer ${key}`);
   new Headers(init.headers).forEach((value, name) => headers.set(name, value));
   const response = await fetch(`${url}/rest/v1/${path}`, {
     ...init,

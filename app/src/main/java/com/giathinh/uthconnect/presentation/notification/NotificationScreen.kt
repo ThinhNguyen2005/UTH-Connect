@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -100,6 +102,11 @@ fun NotificationScreen(
                 }
             } else if (uiState.isLoading) {
                 NotificationLoadingState()
+            } else if (uiState.errorMessage != null && uiState.notifications.isEmpty()) {
+                NotificationErrorState(
+                    message = uiState.errorMessage,
+                    onRetry = { onAction(NotificationAction.Refresh) },
+                )
             } else if (uiState.filteredNotifications.isEmpty()) {
                 NotificationEmptyState()
             } else {
@@ -214,12 +221,11 @@ private fun NotificationFilterChipsRow(
             onClick = { onSelectCategory(null) },
         )
 
-        // Chip 2: Học tập & TKB
+        // Chip 2: Học tập & TKB — hiển thị cả ACADEMIC + EXAMINATION
         NotificationFilterChip(
             label = stringResource(
                 R.string.notification_category_study,
-                uiState.countForCategory(NotificationCategory.ACADEMIC) +
-                    uiState.countForCategory(NotificationCategory.EXAMINATION),
+                uiState.countForCategory(NotificationCategory.ACADEMIC),
             ),
             isSelected = uiState.selectedCategory == NotificationCategory.ACADEMIC,
             onClick = { onSelectCategory(NotificationCategory.ACADEMIC) },
@@ -232,7 +238,7 @@ private fun NotificationFilterChipsRow(
             onClick = { onSelectCategory(NotificationCategory.ACTIVITIES) },
         )
 
-        // Housing and service updates are grouped under the requested System tag.
+        // Chip 4: Hệ thống — hiển thị cả GENERAL + TUITION
         NotificationFilterChip(
             label = stringResource(R.string.notification_category_system, uiState.countForCategory(NotificationCategory.GENERAL)),
             isSelected = uiState.selectedCategory == NotificationCategory.GENERAL,
@@ -249,6 +255,53 @@ private fun NotificationLoadingState() {
             strokeWidth = UthDimens.Size.ProgressStroke,
             color = UthNavy,
         )
+    }
+}
+
+/**
+ * Trạng thái lỗi kèm nút thử lại — hiển thị khi tải inbox thất bại và chưa có dữ liệu.
+ */
+@Composable
+private fun NotificationErrorState(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(UthDimens.Spacing.Xl),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = null,
+                modifier = Modifier.size(UthDimens.Size.AvatarLarge),
+                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+            )
+            Text(
+                text = stringResource(R.string.notification_error_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(onClick = onRetry) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Spacer(modifier = Modifier.size(UthDimens.Spacing.Xs))
+                Text(text = stringResource(R.string.notification_retry))
+            }
+        }
     }
 }
 

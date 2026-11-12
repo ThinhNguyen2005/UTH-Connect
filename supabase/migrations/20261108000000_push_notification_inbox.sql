@@ -55,7 +55,7 @@ create index if not exists notification_inbox_pending_push_idx
   on public.notification_inbox(source_table, source_id, push_status, push_claimed_at)
   where push_status <> 'SENT';
 alter table public.notification_inbox enable row level security;
-revoke all on public.notification_inbox from anon;
+revoke all on public.notification_inbox from anon, authenticated;
 grant select on public.notification_inbox to authenticated;
 grant update (read_at) on public.notification_inbox to authenticated;
 grant all on public.notification_inbox to service_role;

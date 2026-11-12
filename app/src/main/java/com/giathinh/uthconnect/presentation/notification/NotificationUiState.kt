@@ -2,6 +2,7 @@ package com.giathinh.uthconnect.presentation.notification
 
 import com.giathinh.uthconnect.domain.model.NotificationCategory
 import com.giathinh.uthconnect.domain.model.PostNotification
+import java.util.Calendar
 
 /**
  * Trạng thái giao diện màn hình Thông Báo (immutable UiState).
@@ -19,12 +20,17 @@ data class NotificationUiState(
 ) {
     /**
      * Danh sách thông báo sau khi lọc theo danh mục đang chọn.
+     * Chip "Học tập & TKB" → ACADEMIC + EXAMINATION
+     * Chip "Hệ thống" → GENERAL + TUITION
      */
     val filteredNotifications: List<PostNotification>
-        get() = if (selectedCategory == null || selectedCategory == NotificationCategory.ALL) {
-            notifications
-        } else {
-            notifications.filter { it.category == selectedCategory }
+        get() = when (selectedCategory) {
+            null, NotificationCategory.ALL -> notifications
+            NotificationCategory.ACADEMIC ->
+                notifications.filter { it.category == NotificationCategory.ACADEMIC || it.category == NotificationCategory.EXAMINATION }
+            NotificationCategory.GENERAL ->
+                notifications.filter { it.category == NotificationCategory.GENERAL || it.category == NotificationCategory.TUITION }
+            else -> notifications.filter { it.category == selectedCategory }
         }
 
     /**
@@ -52,17 +58,22 @@ data class NotificationUiState(
         get() = notifications.count { it.id !in readNotificationIds }
 
     fun countForCategory(category: NotificationCategory?): Int {
-        return if (category == null || category == NotificationCategory.ALL) {
-            notifications.size
-        } else {
-            notifications.count { it.category == category }
+        return when (category) {
+            null, NotificationCategory.ALL -> notifications.size
+            NotificationCategory.ACADEMIC ->
+                notifications.count { it.category == NotificationCategory.ACADEMIC || it.category == NotificationCategory.EXAMINATION }
+            NotificationCategory.GENERAL ->
+                notifications.count { it.category == NotificationCategory.GENERAL || it.category == NotificationCategory.TUITION }
+            else -> notifications.count { it.category == category }
         }
     }
 
     private fun isToday(timestampMs: Long): Boolean {
-        // Coi như hôm nay nếu trong vòng 24 giờ kể từ thời điểm hiện tại hoặc timestamp lớn hơn
-        val now = System.currentTimeMillis()
-        val diff = now - timestampMs
-        return diff in 0..(24 * 3600 * 1000L)
+        // So sánh ngày lịch trong cùng múi giờ thiết bị để tránh thông báo từ hôm qua
+        // vẫn được xếp vào nhóm "Hôm nay" do chưa đủ 24 giờ.
+        val nowCal = Calendar.getInstance()
+        val tsCal = Calendar.getInstance().apply { timeInMillis = timestampMs }
+        return nowCal.get(Calendar.YEAR) == tsCal.get(Calendar.YEAR) &&
+            nowCal.get(Calendar.DAY_OF_YEAR) == tsCal.get(Calendar.DAY_OF_YEAR)
     }
 }
