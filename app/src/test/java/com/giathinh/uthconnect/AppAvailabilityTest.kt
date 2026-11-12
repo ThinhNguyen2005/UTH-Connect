@@ -1,6 +1,9 @@
 package com.giathinh.uthconnect
 
+import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppAvailabilityTest {
@@ -87,5 +90,116 @@ class AppAvailabilityTest {
         )
         assertEquals(AppAvailability.MAINTENANCE, state)
         assertEquals(true, newSaved.maintenanceMode)
+    }
+
+    @Test
+    fun unsavedSharedPreferencesReturnsDefaultSavedGate() {
+        val fake = FakeSharedPreferences()
+        val loaded = loadSavedGate(fake)
+        assertFalse(loaded.hasSavedState)
+        assertFalse(loaded.maintenanceMode)
+        assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+    }
+
+    @Test
+    fun saveGateAndLoadSavedGateRoundTrip() {
+        val fake = FakeSharedPreferences()
+        val initial = SavedGate(maintenanceMode = true, forceUpdateMinVersion = "2.0.0", hasSavedState = true)
+        saveGate(fake, initial)
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertTrue(loaded.maintenanceMode)
+        assertEquals("2.0.0", loaded.forceUpdateMinVersion)
+    }
+
+    @Test
+    fun saveGateOverwritesPreviousValues() {
+        val fake = FakeSharedPreferences()
+        saveGate(fake, SavedGate(maintenanceMode = true, forceUpdateMinVersion = "2.0.0", hasSavedState = true))
+        saveGate(fake, SavedGate(maintenanceMode = false, forceUpdateMinVersion = "1.5.0", hasSavedState = true))
+
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertFalse(loaded.maintenanceMode)
+        assertEquals("1.5.0", loaded.forceUpdateMinVersion)
+    }
+
+    private class FakeSharedPreferences : SharedPreferences {
+        private val map = mutableMapOf<String, Any?>()
+
+        override fun getAll(): MutableMap<String, *> = map
+
+        override fun getString(key: String, defValue: String?): String? = (map[key] as? String) ?: defValue
+
+        override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? = defValues
+
+        override fun getInt(key: String, defValue: Int): Int = (map[key] as? Int) ?: defValue
+
+        override fun getLong(key: String, defValue: Long): Long = (map[key] as? Long) ?: defValue
+
+        override fun getFloat(key: String, defValue: Float): Float = (map[key] as? Float) ?: defValue
+
+        override fun getBoolean(key: String, defValue: Boolean): Boolean = (map[key] as? Boolean) ?: defValue
+
+        override fun contains(key: String): Boolean = map.containsKey(key)
+
+        override fun edit(): SharedPreferences.Editor = FakeEditor(map)
+
+        override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+
+        override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+
+        private class FakeEditor(private val target: MutableMap<String, Any?>) : SharedPreferences.Editor {
+            private val changes = mutableMapOf<String, Any?>()
+            private var clearAll = false
+
+            override fun putString(key: String, value: String?): SharedPreferences.Editor {
+                changes[key] = value
+                return this
+            }
+
+            override fun putStringSet(key: String, values: MutableSet<String>?): SharedPreferences.Editor = this
+
+            override fun putInt(key: String, value: Int): SharedPreferences.Editor {
+                changes[key] = value
+                return this
+            }
+
+            override fun putLong(key: String, value: Long): SharedPreferences.Editor {
+                changes[key] = value
+                return this
+            }
+
+            override fun putFloat(key: String, value: Float): SharedPreferences.Editor {
+                changes[key] = value
+                return this
+            }
+
+            override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
+                changes[key] = value
+                return this
+            }
+
+            override fun remove(key: String): SharedPreferences.Editor {
+                changes.remove(key)
+                return this
+            }
+
+            override fun clear(): SharedPreferences.Editor {
+                clearAll = true
+                return this
+            }
+
+            override fun commit(): Boolean {
+                apply()
+                return true
+            }
+
+            override fun apply() {
+                if (clearAll) target.clear()
+                target.putAll(changes)
+            }
+        }
     }
 }

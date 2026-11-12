@@ -3,6 +3,7 @@ package com.giathinh.uthconnect
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,8 +47,7 @@ private const val UPDATE_URL = ""
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
  */
-internal fun loadSavedGate(context: Context): SavedGate {
-    val prefs = context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE)
+internal fun loadSavedGate(prefs: SharedPreferences): SavedGate {
     if (!prefs.contains("has_saved_state")) return SavedGate()
     return SavedGate(
         maintenanceMode = prefs.getBoolean("maintenance_mode", false),
@@ -56,16 +56,21 @@ internal fun loadSavedGate(context: Context): SavedGate {
     )
 }
 
+internal fun loadSavedGate(context: Context): SavedGate = loadSavedGate(context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE))
+
 /**
  * Lưu trạng thái gate mới vào SharedPreferences cục bộ.
  */
-internal fun saveGate(context: Context, gate: SavedGate) {
-    val prefs = context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE)
+internal fun saveGate(prefs: SharedPreferences, gate: SavedGate) {
     prefs.edit()
         .putBoolean("maintenance_mode", gate.maintenanceMode)
         .putString("force_update_min_version", gate.forceUpdateMinVersion)
         .putBoolean("has_saved_state", true)
         .apply()
+}
+
+internal fun saveGate(context: Context, gate: SavedGate) {
+    saveGate(context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE), gate)
 }
 
 /**
@@ -180,20 +185,20 @@ internal fun AvailabilityScreen(
                     Text(text = stringResource(R.string.availability_retry_action))
                 }
             } else if (state == AppAvailability.UPDATE_REQUIRED) {
-                Button(
-                    onClick = {
-                        if (UPDATE_URL.isNotBlank()) {
+                if (UPDATE_URL.isNotBlank()) {
+                    Button(
+                        onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(UPDATE_URL))
                             try {
                                 context.startActivity(intent)
                             } catch (_: ActivityNotFoundException) {
                                 // Gracefully handled when no browser app is available
                             }
-                        }
-                    },
-                    modifier = Modifier.height(UthDimens.Size.ButtonHeight),
-                ) {
-                    Text(text = stringResource(R.string.availability_update_action))
+                        },
+                        modifier = Modifier.height(UthDimens.Size.ButtonHeight),
+                    ) {
+                        Text(text = stringResource(R.string.availability_update_action))
+                    }
                 }
             }
         }
