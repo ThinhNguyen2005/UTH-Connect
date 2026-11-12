@@ -807,6 +807,8 @@
     <string name="housing_area_sqm">%1$d m²</string>
     <string name="housing_verified_student_badge">Sinh viên UTH đã xác thực</string>
     <string name="housing_posted_today">Hôm nay, %1$s</string>
+    <string name="housing_posted_at">Đăng %1$s</string>
+    <string name="housing_filter_type_label">Loại tin</string>
     <string name="housing_posted_yesterday">Hôm qua, %1$s</string>
     <string name="housing_posted_days_ago">%1$d ngày trước</string>
 </resources>

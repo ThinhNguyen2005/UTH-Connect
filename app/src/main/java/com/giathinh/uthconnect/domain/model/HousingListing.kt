@@ -135,6 +135,8 @@ data class HousingListing(
     val verified: Boolean = false,
     val verificationMethod: HostVerificationMethod? = null,
     val areaM2: Int? = null,
+    /** ISO-8601 từ `created_at`; rỗng = nguồn không có (mock) → UI ẩn nhãn giờ đăng. */
+    val createdAt: String = "",
 ) {
     /** Tin chỉ hiện trên feed khi còn phòng và chưa bị kiểm duyệt ẩn. */
     val isPublishable: Boolean

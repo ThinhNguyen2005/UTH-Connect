@@ -93,6 +93,9 @@ import com.giathinh.uthconnect.domain.model.HousingPriceRange
 import com.giathinh.uthconnect.domain.model.RoomAmenity
 import com.giathinh.uthconnect.domain.model.UthCampus
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -678,26 +681,32 @@ private fun HousingCoverMedia(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom,
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.extraSmall,
-                color = MaterialTheme.colorScheme.scrim.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xxs),
-                    verticalAlignment = Alignment.CenterVertically,
+            val postedAt = formatPostedAt(listing.createdAt)
+            if (postedAt != null) {
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.scrim.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Info,
-                        contentDescription = null,
-                        tint = UthTheme.extendedColors.headerOnGradient,
-                        modifier = Modifier.size(UthDimens.Size.IconBadge),
-                    )
-                    Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                    Text(
-                        text = stringResource(R.string.housing_posted_today, "10:30"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = UthTheme.extendedColors.headerOnGradient,
-                    )
+                    Row(
+                        modifier = Modifier.padding(
+                            horizontal = UthDimens.Spacing.Sm,
+                            vertical = UthDimens.Spacing.Xxs,
+                        ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Info,
+                            contentDescription = null,
+                            tint = UthTheme.extendedColors.headerOnGradient,
+                            modifier = Modifier.size(UthDimens.Size.IconBadge),
+                        )
+                        Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                        Text(
+                            text = stringResource(R.string.housing_posted_at, postedAt),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = UthTheme.extendedColors.headerOnGradient,
+                        )
+                    }
                 }
             }
             Text(
@@ -895,6 +904,20 @@ private fun HousingFilterBottomSheet(uiState: HousingUiState, onAction: (Housing
                             label = stringResource(campus.labelRes()),
                             selected = uiState.selectedCampus == campus,
                             onClick = { onAction(HousingAction.SelectCampus(campus)) },
+                        )
+                    }
+                }
+                FilterGroup(label = stringResource(R.string.housing_filter_type_label)) {
+                    HousingFilterChip(
+                        label = stringResource(R.string.housing_filter_all),
+                        selected = uiState.selectedType == null,
+                        onClick = { onAction(HousingAction.SelectType(null)) },
+                    )
+                    HousingListingType.entries.forEach { type ->
+                        HousingFilterChip(
+                            label = stringResource(type.labelRes()),
+                            selected = uiState.selectedType == type,
+                            onClick = { onAction(HousingAction.SelectType(type)) },
                         )
                     }
                 }
@@ -1160,6 +1183,12 @@ fun RoomAmenity.labelRes(): Int = when (this) {
     RoomAmenity.BALCONY -> R.string.housing_amenity_balcony
     RoomAmenity.KEY_CARD -> R.string.housing_amenity_key_card
 }
+
+/** Giờ đăng thật từ created_at ISO; null khi thiếu/hỏng để UI ẩn nhãn thay vì bịa giờ. */
+private fun formatPostedAt(iso: String): String? = runCatching {
+    Instant.parse(iso).atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy", Locale.getDefault()))
+}.getOrNull()
 
 private fun formatVnd(amount: Int): String {
     val formatter = NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN"))

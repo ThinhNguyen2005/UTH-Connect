@@ -795,6 +795,8 @@
     <string name="housing_area_sqm">%1$d m²</string>
     <string name="housing_verified_student_badge">Verified UTH Student</string>
     <string name="housing_posted_today">Today, %1$s</string>
+    <string name="housing_posted_at">Posted %1$s</string>
+    <string name="housing_filter_type_label">Listing type</string>
     <string name="housing_posted_yesterday">Yesterday, %1$s</string>
     <string name="housing_posted_days_ago">%1$d days ago</string>
 </resources>

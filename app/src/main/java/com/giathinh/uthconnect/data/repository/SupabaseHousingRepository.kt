@@ -329,6 +329,7 @@ class SupabaseHousingRepository @Inject constructor(
             verified = bool("verified"),
             verificationMethod = string("verification_method")?.let { HostVerificationMethod.valueOf(it) },
             areaM2 = (get("area_m2") as? JsonPrimitive)?.intOrNull,
+            createdAt = string("created_at").orEmpty(),
         )
     }
 
