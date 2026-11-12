@@ -39,6 +39,8 @@ fun ServerErrorCode.messageText(fallback: String? = null): String = when (this) 
     ServerErrorCode.HousingNotFound -> stringResource(R.string.common_error_housing_not_found)
     ServerErrorCode.HousingStatusRpcOnly -> stringResource(R.string.common_error_housing_status_rpc_only)
     ServerErrorCode.HousingReportReasonRequired -> stringResource(R.string.common_error_housing_report_reason_required)
+    ServerErrorCode.HousingImageBucketInvalid -> stringResource(R.string.common_error_housing_image_bucket_invalid)
+    ServerErrorCode.HousingZaloUrlInvalid -> stringResource(R.string.common_error_housing_zalo_url_invalid)
     ServerErrorCode.Network -> stringResource(R.string.common_error_network)
     ServerErrorCode.Unknown -> fallback?.takeIf { it.isNotBlank() } ?: stringResource(R.string.common_error_unknown)
 }

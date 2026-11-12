@@ -587,6 +587,8 @@
     <string name="common_error_housing_not_found">Tin không còn tồn tại hoặc đã bị gỡ</string>
     <string name="common_error_housing_status_rpc_only">Trạng thái tin chỉ được đổi qua chức năng của ứng dụng</string>
     <string name="common_error_housing_report_reason_required">Hãy chọn lý do báo cáo trước khi gửi</string>
+    <string name="common_error_housing_image_bucket_invalid">Ảnh không thuộc kho lưu trữ của ứng dụng</string>
+    <string name="common_error_housing_zalo_url_invalid">Link Zalo phải là HTTPS thuộc zalo.me</string>
     <string name="common_error_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
@@ -660,6 +662,7 @@
     <string name="housing_detail_contact_title">Liên hệ chủ tin</string>
     <string name="housing_detail_call_now">Gọi điện thoại</string>
     <string name="housing_detail_open_zalo">Mở chat Zalo</string>
+    <string name="housing_detail_zalo_invalid">Link Zalo của tin này không hợp lệ.</string>
     <string name="housing_detail_mark_fulfilled">Đánh dấu hết phòng</string>
     <string name="housing_detail_fulfilled_success">Đã cập nhật tin thành hết phòng.</string>
     <string name="housing_detail_manage_title">Quản lý tin của bạn</string>
@@ -711,6 +714,7 @@
     <string name="housing_create_error_area">Diện tích phải là số lớn hơn 0</string>
     <string name="housing_create_error_rent">Vui lòng nhập giá thuê hợp lệ</string>
     <string name="housing_create_error_phone">Vui lòng nhập số điện thoại liên hệ</string>
+    <string name="housing_create_error_zalo">Link Zalo phải là HTTPS thuộc zalo.me, hoặc nhập SĐT Zalo</string>
     <string name="housing_create_sign_in_required">Vui lòng đăng nhập để đăng tin bằng hồ sơ sinh viên của bạn</string>
     <string name="housing_create_error_address">Vui lòng nhập địa chỉ phòng</string>
     <string name="housing_create_add_photo">Thêm ảnh phòng</string>
@@ -728,6 +732,8 @@
     <string name="housing_report_cancel">Hủy</string>
     <string name="housing_report_accepted">Đã gửi báo cáo tới ban quản trị.</string>
     <string name="housing_report_rejected">Chưa gửi được báo cáo — hãy thử lại.</string>
+    <string name="housing_refresh_error">Không tải lại được danh sách tin — hãy thử lại.</string>
+    <string name="housing_no_app_to_open">Không tìm thấy ứng dụng để mở liên kết này.</string>
     <string name="housing_empty_title">Chưa có tin trọ nào</string>
     <string name="housing_empty_body">Tin phòng và tin tìm bạn ở ghép sẽ xuất hiện ở đây sau khi được duyệt.</string>
     <string name="housing_empty_filtered_title">Không có tin phù hợp</string>
@@ -770,6 +776,8 @@
     <string name="housing_create_save_draft">Lưu nháp</string>
     <string name="housing_create_draft_saved">Đã lưu bản nháp tin đăng!</string>
     <string name="housing_create_draft_restored">Đã khôi phục bản nháp tin đăng</string>
+    <string name="housing_create_draft_save_failed">Không lưu được nháp, vui lòng thử lại</string>
+    <string name="housing_create_photo_permission_denied">Không giữ được quyền đọc ảnh, vui lòng chọn lại ảnh</string>
     <string name="housing_detail_eyebrow">Ghép trọ · %1$s</string>
     <string name="housing_detail_rent_label">Giá thuê mỗi tháng</string>
     <string name="housing_detail_deposit_label">Tiền đặt cọc</string>

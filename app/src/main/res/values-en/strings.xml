@@ -557,6 +557,8 @@
     <string name="common_error_housing_not_found">The listing no longer exists or was removed</string>
     <string name="common_error_housing_status_rpc_only">Listing status can only be changed through the app\'s own actions</string>
     <string name="common_error_housing_report_reason_required">Pick a report reason before submitting</string>
+    <string name="common_error_housing_image_bucket_invalid">Photos must be uploaded through the app</string>
+    <string name="common_error_housing_zalo_url_invalid">Zalo link must be HTTPS on zalo.me</string>
     <string name="common_error_network">Cannot reach the server. Check the connection and try again.</string>
     <string name="common_error_unknown">Something went wrong</string>
     <string name="tickets_qr_issuing">Issuing a secure QR code…</string>
@@ -647,6 +649,7 @@
     <string name="housing_detail_contact_title">Contact Host</string>
     <string name="housing_detail_call_now">Phone Call</string>
     <string name="housing_detail_open_zalo">Open Zalo Chat</string>
+    <string name="housing_detail_zalo_invalid">This listing\'s Zalo link is invalid.</string>
     <string name="housing_detail_mark_fulfilled">Mark as Fulfilled</string>
     <string name="housing_detail_fulfilled_success">Listing marked as full/closed.</string>
     <string name="housing_detail_manage_title">Manage your listing</string>
@@ -698,6 +701,7 @@
     <string name="housing_create_error_area">Area must be a number greater than 0</string>
     <string name="housing_create_error_rent">Please enter a valid monthly rent</string>
     <string name="housing_create_error_phone">Please enter a contact phone number</string>
+    <string name="housing_create_error_zalo">Zalo link must be HTTPS on zalo.me, or enter a Zalo phone number</string>
     <string name="housing_create_sign_in_required">Sign in to publish a listing with your student profile</string>
     <string name="housing_create_error_address">Please enter the room address</string>
     <string name="housing_create_add_photo">Add Room Photo</string>
@@ -715,6 +719,8 @@
     <string name="housing_report_cancel">Cancel</string>
     <string name="housing_report_accepted">Report sent to the moderation team.</string>
     <string name="housing_report_rejected">Could not send the report — please retry.</string>
+    <string name="housing_refresh_error">Could not refresh listings — please retry.</string>
+    <string name="housing_no_app_to_open">No app found to open this link.</string>
     <string name="housing_empty_title">No listings yet</string>
     <string name="housing_empty_body">Room and roommate listings will appear here once approved.</string>
     <string name="housing_empty_filtered_title">No matching listings</string>
@@ -757,6 +763,8 @@
     <string name="housing_create_save_draft">Save draft</string>
     <string name="housing_create_draft_saved">Draft saved!</string>
     <string name="housing_create_draft_restored">Draft restored</string>
+    <string name="housing_create_draft_save_failed">Cannot save the draft, please try again</string>
+    <string name="housing_create_photo_permission_denied">Photo access not granted, please pick the photo again</string>
     <string name="housing_detail_eyebrow">Housing · %1$s</string>
     <string name="housing_detail_rent_label">Monthly rent</string>
     <string name="housing_detail_deposit_label">Deposit</string>

@@ -43,6 +43,8 @@ enum class ServerErrorCode(val token: String) {
     HousingNotFound("HOUSING_NOT_FOUND"),
     HousingStatusRpcOnly("HOUSING_STATUS_RPC_ONLY"),
     HousingReportReasonRequired("HOUSING_REPORT_REASON_REQUIRED"),
+    HousingImageBucketInvalid("HOUSING_IMAGE_BUCKET_INVALID"),
+    HousingZaloUrlInvalid("HOUSING_ZALO_URL_INVALID"),
 
     /** Không có mã nào của server trong lỗi — rơi về hai giá trị dưới. */
     Network(""),
