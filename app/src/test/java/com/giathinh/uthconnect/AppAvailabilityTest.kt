@@ -125,6 +125,16 @@ class AppAvailabilityTest {
         assertEquals("1.5.0", loaded.forceUpdateMinVersion)
     }
 
+    @Test
+    fun missingOrCorruptedKeysReturnSafeDefaults() {
+        val fake = FakeSharedPreferences()
+        fake.edit().putBoolean("has_saved_state", true).apply()
+        val loaded = loadSavedGate(fake)
+        assertTrue(loaded.hasSavedState)
+        assertFalse(loaded.maintenanceMode)
+        assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+    }
+
     private class FakeSharedPreferences : SharedPreferences {
         private val map = mutableMapOf<String, Any?>()
 
