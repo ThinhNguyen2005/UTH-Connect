@@ -46,7 +46,10 @@ internal data class SavedGate(
 // Replace UPDATE_URL with official APK download URL / Store link when published
 private const val UPDATE_URL = ""
 
-internal fun remoteConfigFetchIntervalSeconds(isDebug: Boolean, userInitiated: Boolean): Long = if (isDebug || userInitiated) 0L else 3600L
+internal fun remoteConfigFetchIntervalSeconds(
+    isDebug: Boolean,
+    userInitiated: Boolean,
+): Long = if (isDebug || userInitiated) 0L else 3600L
 
 /**
  * Đọc trạng thái gate đã lưu từ SharedPreferences cục bộ.
