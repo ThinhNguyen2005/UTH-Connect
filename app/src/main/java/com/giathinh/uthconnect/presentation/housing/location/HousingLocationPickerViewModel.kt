@@ -37,6 +37,7 @@ class HousingLocationPickerViewModel @Inject constructor() : ViewModel() {
                     longitude = action.longitude,
                     hasPickedLocation = true,
                     isGeocoding = true,
+                    address = "",
                     failure = null,
                 )
             }
@@ -51,6 +52,7 @@ class HousingLocationPickerViewModel @Inject constructor() : ViewModel() {
                     isLocating = false,
                     hasPickedLocation = true,
                     isGeocoding = true,
+                    address = "",
                     gpsFixCount = it.gpsFixCount + 1,
                     failure = null,
                 )
@@ -73,10 +75,10 @@ class HousingLocationPickerViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    /** Chỉ chốt khi đã có vị trí thật — chặn đăng nhầm điểm mặc định giữa sân trường. */
+    /** Chỉ chốt khi đã có vị trí thật và địa chỉ dịch xong — tránh gửi tọa độ mới kèm địa chỉ cũ. */
     private fun confirm() {
         val state = _uiState.value
-        if (!state.hasPickedLocation) return
+        if (!state.hasPickedLocation || state.isGeocoding) return
         viewModelScope.launch {
             _events.send(
                 HousingLocationPickerEvent.LocationConfirmed(state.latitude, state.longitude, state.address.trim()),

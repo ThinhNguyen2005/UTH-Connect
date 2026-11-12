@@ -150,4 +150,31 @@ class HousingLocationPickerViewModelTest {
         val event = viewModel.events.first()
         assertEquals(HousingLocationPickerEvent.LocationConfirmed(10.8051, 106.7170, "138 Võ Oanh"), event)
     }
+
+    @Test
+    fun `Confirm khi dang geocode - khong phat event`() = runTest {
+        val viewModel = HousingLocationPickerViewModel()
+        val received = mutableListOf<HousingLocationPickerEvent>()
+        val job = launch { viewModel.events.toList(received) }
+
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.Confirm)
+        advanceUntilIdle()
+
+        assertTrue("dang dich dia chi thi khong duoc chot", received.isEmpty())
+        job.cancel()
+    }
+
+    @Test
+    fun `PinMoved - xoa dia chi cu de khong lech toa do`() {
+        val viewModel = HousingLocationPickerViewModel()
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8051, 106.7170))
+        viewModel.onAction(HousingLocationPickerAction.AddressGeocoded("138 Võ Oanh, Bình Thạnh"))
+
+        viewModel.onAction(HousingLocationPickerAction.PinMoved(10.8060, 106.7180))
+
+        val state = viewModel.uiState.value
+        assertEquals("", state.address)
+        assertTrue(state.isGeocoding)
+    }
 }
