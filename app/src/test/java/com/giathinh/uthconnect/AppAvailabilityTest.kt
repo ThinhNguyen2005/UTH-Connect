@@ -126,11 +126,21 @@ class AppAvailabilityTest {
     }
 
     @Test
-    fun missingOrCorruptedKeysReturnSafeDefaults() {
+    fun missingKeysReturnSafeDefaults() {
         val fake = FakeSharedPreferences()
         fake.edit().putBoolean("has_saved_state", true).apply()
         val loaded = loadSavedGate(fake)
         assertTrue(loaded.hasSavedState)
+        assertFalse(loaded.maintenanceMode)
+        assertEquals("1.0.0", loaded.forceUpdateMinVersion)
+    }
+
+    @Test
+    fun wrongTypedKeysFallBackToDefaultGate() {
+        val fake = FakeSharedPreferences()
+        fake.edit().putString("maintenance_mode", "corrupted_string").apply()
+        val loaded = loadSavedGate(fake)
+        assertFalse(loaded.hasSavedState)
         assertFalse(loaded.maintenanceMode)
         assertEquals("1.0.0", loaded.forceUpdateMinVersion)
     }
@@ -140,17 +150,43 @@ class AppAvailabilityTest {
 
         override fun getAll(): MutableMap<String, *> = map
 
-        override fun getString(key: String, defValue: String?): String? = (map[key] as? String) ?: defValue
+        override fun getString(key: String, defValue: String?): String? {
+            if (!map.containsKey(key)) return defValue
+            val value = map[key]
+            if (value != null && value !is String) throw ClassCastException("Value $value for $key is not String")
+            @Suppress("UNCHECKED_CAST")
+            return (value as? String) ?: defValue
+        }
 
         override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? = defValues
 
-        override fun getInt(key: String, defValue: Int): Int = (map[key] as? Int) ?: defValue
+        override fun getInt(key: String, defValue: Int): Int {
+            if (!map.containsKey(key)) return defValue
+            val value = map[key]
+            if (value !is Int) throw ClassCastException("Value $value for $key is not Int")
+            return value
+        }
 
-        override fun getLong(key: String, defValue: Long): Long = (map[key] as? Long) ?: defValue
+        override fun getLong(key: String, defValue: Long): Long {
+            if (!map.containsKey(key)) return defValue
+            val value = map[key]
+            if (value !is Long) throw ClassCastException("Value $value for $key is not Long")
+            return value
+        }
 
-        override fun getFloat(key: String, defValue: Float): Float = (map[key] as? Float) ?: defValue
+        override fun getFloat(key: String, defValue: Float): Float {
+            if (!map.containsKey(key)) return defValue
+            val value = map[key]
+            if (value !is Float) throw ClassCastException("Value $value for $key is not Float")
+            return value
+        }
 
-        override fun getBoolean(key: String, defValue: Boolean): Boolean = (map[key] as? Boolean) ?: defValue
+        override fun getBoolean(key: String, defValue: Boolean): Boolean {
+            if (!map.containsKey(key)) return defValue
+            val value = map[key]
+            if (value !is Boolean) throw ClassCastException("Value $value for $key is not Boolean")
+            return value
+        }
 
         override fun contains(key: String): Boolean = map.containsKey(key)
 
@@ -170,10 +206,12 @@ class AppAvailabilityTest {
 
         private class FakeEditor(private val target: MutableMap<String, Any?>) : SharedPreferences.Editor {
             private val changes = mutableMapOf<String, Any?>()
+            private val removedKeys = mutableSetOf<String>()
             private var clearAll = false
 
             override fun putString(key: String, value: String?): SharedPreferences.Editor {
                 changes[key] = value
+                removedKeys.remove(key)
                 return this
             }
 
@@ -181,26 +219,31 @@ class AppAvailabilityTest {
 
             override fun putInt(key: String, value: Int): SharedPreferences.Editor {
                 changes[key] = value
+                removedKeys.remove(key)
                 return this
             }
 
             override fun putLong(key: String, value: Long): SharedPreferences.Editor {
                 changes[key] = value
+                removedKeys.remove(key)
                 return this
             }
 
             override fun putFloat(key: String, value: Float): SharedPreferences.Editor {
                 changes[key] = value
+                removedKeys.remove(key)
                 return this
             }
 
             override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
                 changes[key] = value
+                removedKeys.remove(key)
                 return this
             }
 
             override fun remove(key: String): SharedPreferences.Editor {
                 changes.remove(key)
+                removedKeys.add(key)
                 return this
             }
 
@@ -215,7 +258,12 @@ class AppAvailabilityTest {
             }
 
             override fun apply() {
-                if (clearAll) target.clear()
+                if (clearAll) {
+                    target.clear()
+                }
+                for (key in removedKeys) {
+                    target.remove(key)
+                }
                 target.putAll(changes)
             }
         }
