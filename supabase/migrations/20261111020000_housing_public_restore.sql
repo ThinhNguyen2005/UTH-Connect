@@ -39,7 +39,7 @@ begin
             contact_phone = d.contact_phone,
             contact_zalo_url = d.contact_zalo_url,
             address_label = case
-                when btrim(p.address_label) = '' then d.exact_address
+                when btrim(coalesce(d.exact_address, '')) <> '' then d.exact_address
                 else p.address_label
             end
         from public.housing_private_details d

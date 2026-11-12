@@ -15,6 +15,18 @@
 begin;
 
 -- 1. Dựng lại bảng -----------------------------------------------------------
+-- Chặn DROP khi bảng còn dữ liệu: deploy phải dừng thay vì xóa tin thật.
+-- IF lồng: câu lệnh tham chiếu bảng chỉ được plan khi bảng tồn tại, nếu không
+-- DB mới tinh sẽ lỗi "relation does not exist" ngay ở bước phân tích câu lệnh.
+do $$
+begin
+    if to_regclass('public.housing_posts') is not null then
+        if exists (select 1 from public.housing_posts) then
+            raise exception 'HOUSING_REBUILD_HAS_DATA: viết bước chuyển đổi dữ liệu trước khi dựng lại bảng';
+        end if;
+    end if;
+end $$;
+
 drop table if exists public.housing_posts;
 
 create table public.housing_posts (
