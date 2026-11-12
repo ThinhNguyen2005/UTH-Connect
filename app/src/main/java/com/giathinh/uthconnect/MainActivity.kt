@@ -101,9 +101,17 @@ class MainActivity : ComponentActivity() {
                     else -> AvailabilityScreen(
                         state = state,
                         isRetrying = isCheckingAvailability,
-                        onRetry = { observeRemoteConfig() },
+                        onRetry = { fetchRemoteConfigGate() },
                     )
                 }
+            }
+        }
+    }
+
+    private fun observeRemoteConfig() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                fetchRemoteConfigGate()
             }
         }
     }
@@ -115,42 +123,40 @@ class MainActivity : ComponentActivity() {
      * Khi fetch thất bại, trạng thái gate đã lưu được ưu tiên giữ nguyên
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
-    private fun observeRemoteConfig() {
+    private fun fetchRemoteConfigGate() {
         if (remoteConfigJob?.isActive == true) return
         remoteConfigJob = lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
-                    appAvailability = AppAvailability.AVAILABLE
-                    return@repeatOnLifecycle
-                }
-                isCheckingAvailability = true
-                val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
-                val (initialState, _) = resolveGate(
-                    saved = saved,
-                    fetchSucceeded = false,
-                    remoteMaintenance = false,
-                    remoteMinVersion = "1.0.0",
-                    currentVersion = BuildConfig.VERSION_NAME,
-                )
-                appAvailability = initialState
+            if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
+                appAvailability = AppAvailability.AVAILABLE
+                return@launch
+            }
+            isCheckingAvailability = true
+            val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
+            val (initialState, _) = resolveGate(
+                saved = saved,
+                fetchSucceeded = false,
+                remoteMaintenance = false,
+                remoteMinVersion = "1.0.0",
+                currentVersion = BuildConfig.VERSION_NAME,
+            )
+            appAvailability = initialState
 
-                try {
-                    withContext(Dispatchers.IO) {
-                        updateRemoteConfigGate(saved)
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: FirebaseRemoteConfigFetchThrottledException) {
-                    if (appAvailability == null) {
-                        appAvailability = initialState
-                    }
-                } catch (_: Exception) {
-                    if (appAvailability == null) {
-                        appAvailability = initialState
-                    }
-                } finally {
-                    isCheckingAvailability = false
+            try {
+                withContext(Dispatchers.IO) {
+                    updateRemoteConfigGate(saved)
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: FirebaseRemoteConfigFetchThrottledException) {
+                if (appAvailability == null) {
+                    appAvailability = initialState
+                }
+            } catch (_: Exception) {
+                if (appAvailability == null) {
+                    appAvailability = initialState
+                }
+            } finally {
+                isCheckingAvailability = false
             }
         }
     }
