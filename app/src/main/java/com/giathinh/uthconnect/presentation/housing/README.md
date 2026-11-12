@@ -13,13 +13,15 @@ tin `FULFILLED` / hết chỗ / bị ẩn không lên feed.
 - **Chi tiết + liên hệ công khai**: sinh viên đã đăng nhập xem được địa chỉ đầy đủ,
   tọa độ chính xác, SĐT và Zalo của chủ tin (cổng duyệt contact-request đã bỏ theo
   quyết định sản phẩm 11/11). Nút Gọi điện / Nhắn Zalo / Chỉ đường mở app ngoài
-  bằng deep-link; link Zalo được kiểm tra theo quy tắc miền trước khi mở.
+  bằng deep-link; link Zalo được kiểm tra theo quy tắc miền trước khi mở. Chủ tin
+  tắt Zalo (`contact_zalo_enabled = false`) thì ẩn nút Nhắn Zalo, không fallback SĐT.
 - **Đăng tin**: form đủ trường (3 loại tin, giá, cọc, diện tích, tiện nghi, giới
   tính, tối đa 6 ảnh upload song song lên bucket `housing-images`), picker vị trí
   OpenStreetMap (OSMDroid, không API key) chấm pin + GPS + geocode địa chỉ, nháp
   cục bộ theo tài khoản (DataStore), validation trước khi gửi.
 - **Quản lý tin của chủ**: sửa tin, đánh dấu hết phòng, xóa tin (kèm dọn ảnh
-  Storage; ảnh dọn chưa được ghi hàng đợi DataStore để lần nạp feed sau thử lại);
+  Storage; ảnh dọn chưa được ghi hàng đợi DataStore, thử lại chạy nền ở lần nạp
+  feed sau — không chặn feed, chỉ dọn ảnh đúng tài khoản);
   giới hạn 2 tin OPEN mỗi người và ngưỡng 3 báo cáo ẩn tin enforced
   bằng RLS + trigger + RPC trong `supabase/migrations`.
 - **Tương tác feed**: lưu tin yêu thích (cục bộ), báo vi phạm kèm lý do.
