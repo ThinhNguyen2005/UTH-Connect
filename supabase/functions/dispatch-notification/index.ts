@@ -82,16 +82,26 @@ Deno.serve(async (request) => {
     try {
       const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
       // Phân trang devices để không bỏ sót token khi tổng thiết bị vượt 1.000 hàng
-      const allDevices: Array<{ user_id: string; token: string }> = [];
+      // Phân trang devices bằng keyset để không bỏ sót token
+      const allDevices: Array<{ id: string; user_id: string; token: string }> = [];
       const pageSize = 1000;
-      let offset = 0;
+      let lastDeviceId: string | undefined = undefined;
+      
       while (true) {
-        const page = await supabaseRest<Array<{ user_id: string; token: string }>>(
-          `notification_devices?select=user_id,token&user_id=in.(${userIds.join(",")})&limit=${pageSize}&offset=${offset}`,
+        const queryParams = [
+          "select=id,user_id,token",
+          `user_id=in.(${userIds.join(",")})`,
+          "order=id.asc",
+          `limit=${pageSize}`
+        ];
+        if (lastDeviceId) queryParams.push(`id=gt.${lastDeviceId}`);
+
+        const page = await supabaseRest<Array<{ id: string; user_id: string; token: string }>>(
+          `notification_devices?${queryParams.join("&")}`,
         );
         allDevices.push(...page);
         if (page.length < pageSize) break;
-        offset += pageSize;
+        lastDeviceId = page[page.length - 1].id;
       }
       const tokensByUser = new Map<string, string[]>();
       for (const device of allDevices) {
@@ -199,16 +209,26 @@ function toSourceNotification(payload: WebhookPayload) {
 async function recipientIds(recipientId: string | null, excludedUserId: string | null): Promise<string[]> {
   if (recipientId) return [recipientId];
   // Phân trang để không bỏ sót hồ sơ khi vượt giới hạn 1.000 hàng mặc định của Supabase
+  // Phân trang profiles bằng keyset để không bỏ sót hồ sơ
   const allProfiles: Array<{ id: string }> = [];
   const pageSize = 1000;
-  let offset = 0;
+  let lastProfileId: string | undefined = undefined;
+
   while (true) {
+    const queryParams = [
+      "select=id",
+      "student_id_verified=eq.true",
+      "order=id.asc",
+      `limit=${pageSize}`
+    ];
+    if (lastProfileId) queryParams.push(`id=gt.${lastProfileId}`);
+
     const page = await supabaseRest<Array<{ id: string }>>(
-      `profiles?select=id&student_id_verified=eq.true&limit=${pageSize}&offset=${offset}`,
+      `profiles?${queryParams.join("&")}`,
     );
     allProfiles.push(...page);
     if (page.length < pageSize) break;
-    offset += pageSize;
+    lastProfileId = page[page.length - 1].id;
   }
   return allProfiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
 }

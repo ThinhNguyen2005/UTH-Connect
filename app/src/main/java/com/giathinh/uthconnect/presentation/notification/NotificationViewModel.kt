@@ -125,9 +125,14 @@ class NotificationViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(readNotificationIds = state.readNotificationIds + notificationId)
                     }
-                    val result = notificationRepository.markInboxNotificationRead(notificationId)
+                    val result = notificationRepository.markInboxNotificationRead(action.notificationId)
                     if (result.isFailure) {
-                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                        // Thay vì dùng previousIds, chỉ gỡ bỏ đúng ID của notification hiện tại bị lỗi
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                readNotificationIds = currentState.readNotificationIds - action.notificationId
+                            )
+                        }
                     }
                 },
                 onFailure = { error ->

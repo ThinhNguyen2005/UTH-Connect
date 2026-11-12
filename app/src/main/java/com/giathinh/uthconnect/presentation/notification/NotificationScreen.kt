@@ -103,10 +103,15 @@ fun NotificationScreen(
             } else if (uiState.isLoading) {
                 NotificationLoadingState()
             } else if (uiState.errorMessage != null && uiState.notifications.isEmpty()) {
-                NotificationErrorState(
-                    message = uiState.errorMessage,
-                    onRetry = { onAction(NotificationAction.Refresh) },
-                )
+                if (uiState.isRefreshing || uiState.isLoading) {
+                    // Hiển thị trạng thái đang tải thay cho giao diện lỗi/nút thử lại
+                    NotificationLoadingState() // Hoặc CircularProgressIndicator tuỳ vào component của bạn
+                } else {
+                    NotificationErrorState(
+                        message = uiState.errorMessage,
+                        onRetry = { onAction(NotificationAction.Refresh) }
+                    )
+                }
             } else if (uiState.filteredNotifications.isEmpty()) {
                 NotificationEmptyState()
             } else {
