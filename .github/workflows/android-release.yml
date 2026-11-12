@@ -3,7 +3,7 @@ name: Android release APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, test/observability-ci-20261109]
+    branches: [main, phu/kan-102-observability]
 
 permissions:
   contents: read
@@ -25,6 +25,8 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           EXPECTED_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: python3 .github/scripts/inject_google_services.py
+      - name: Static code analysis and unit tests
+        run: bash ./gradlew detekt spotlessCheck :app:testDebugUnitTest
       - name: Build release APK
         env:
           ORG_GRADLE_PROJECT_useMockData: 'false'
