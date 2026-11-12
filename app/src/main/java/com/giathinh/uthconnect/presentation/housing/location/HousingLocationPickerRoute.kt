@@ -148,8 +148,10 @@ fun HousingLocationPickerRoute(
         }
     }
 
-    LaunchedEffect(uiState.latitude, uiState.longitude, uiState.hasPickedLocation) {
-        if (!uiState.hasPickedLocation) return@LaunchedEffect
+    // gpsFixCount nằm trong khóa để GPS trùng tọa độ vẫn geocode lại được sau lượt lỗi;
+    // chỉ chạy khi ViewModel thật sự đang chờ geocode (giữ địa chỉ cũ thì không dịch lại).
+    LaunchedEffect(uiState.latitude, uiState.longitude, uiState.hasPickedLocation, uiState.gpsFixCount) {
+        if (!uiState.hasPickedLocation || !uiState.isGeocoding) return@LaunchedEffect
         delay(GEOCODE_DEBOUNCE_MS)
         val address = withContext(Dispatchers.IO) {
             runCatching {

@@ -88,6 +88,16 @@ class HousingLocationPickerViewModel @Inject constructor() : ViewModel() {
     private fun applyCurrentLocation(action: HousingLocationPickerAction.CurrentLocationResult) {
         if (!gpsRequestPending) return
         gpsRequestPending = false
+        val state = _uiState.value
+        val sameSpot = state.hasPickedLocation &&
+            state.latitude == action.latitude && state.longitude == action.longitude
+        if (sameSpot && (state.address.isNotBlank() || state.isGeocoding)) {
+            // Cùng tọa độ thì giữ địa chỉ/geocode hiện tại — xóa đi bắt geocode lại sẽ
+            // kẹt nút Xong vì effect geocode không chạy lại khi tọa độ không đổi.
+            // Vẫn tăng gpsFixCount để camera quay về pin nếu người dùng đã kéo bản đồ đi.
+            _uiState.update { it.copy(isLocating = false, failure = null, gpsFixCount = it.gpsFixCount + 1) }
+            return
+        }
         addressEditedManually = false
         _uiState.update {
             it.copy(
