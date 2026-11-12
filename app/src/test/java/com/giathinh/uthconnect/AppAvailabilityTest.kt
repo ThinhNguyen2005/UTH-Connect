@@ -146,9 +146,17 @@ class AppAvailabilityTest {
 
         override fun edit(): SharedPreferences.Editor = FakeEditor(map)
 
-        override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+        override fun registerOnSharedPreferenceChangeListener(
+            listener: SharedPreferences.OnSharedPreferenceChangeListener?,
+        ) {
+            // No-op for unit test
+        }
 
-        override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+        override fun unregisterOnSharedPreferenceChangeListener(
+            listener: SharedPreferences.OnSharedPreferenceChangeListener?,
+        ) {
+            // No-op for unit test
+        }
 
         private class FakeEditor(private val target: MutableMap<String, Any?>) : SharedPreferences.Editor {
             private val changes = mutableMapOf<String, Any?>()

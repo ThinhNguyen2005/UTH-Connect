@@ -56,7 +56,10 @@ internal fun loadSavedGate(prefs: SharedPreferences): SavedGate {
     )
 }
 
-internal fun loadSavedGate(context: Context): SavedGate = loadSavedGate(context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE))
+internal fun loadSavedGate(context: Context): SavedGate {
+    val prefs = context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE)
+    return loadSavedGate(prefs)
+}
 
 /**
  * Lưu trạng thái gate mới vào SharedPreferences cục bộ.
@@ -70,7 +73,8 @@ internal fun saveGate(prefs: SharedPreferences, gate: SavedGate) {
 }
 
 internal fun saveGate(context: Context, gate: SavedGate) {
-    saveGate(context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE), gate)
+    val prefs = context.getSharedPreferences("uth_remote_config_gate", Context.MODE_PRIVATE)
+    saveGate(prefs, gate)
 }
 
 /**
