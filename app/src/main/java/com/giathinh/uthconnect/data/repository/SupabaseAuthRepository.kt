@@ -111,11 +111,12 @@ class SupabaseAuthRepository @Inject constructor(
             val needsConfirmation = !hasSession && confirmedAt.isNullOrBlank()
 
             if (hasSession) {
-                CrashIdentity.set(client.userId, "pending_profile")
                 try {
+                    val currentUid = client.userId
+                    CrashIdentity.set(currentUid, "pending_profile")
                     val row = ownProfileRow()
                     if (row != null) {
-                        row.toDomainProfile().also { CrashIdentity.set(client.userId, it.role.name) }
+                        row.toDomainProfile().also { CrashIdentity.set(currentUid, it.role.name) }
                     }
                 } catch (_: Exception) {
                     // Retain "pending_profile" identity if profile fetch fails
