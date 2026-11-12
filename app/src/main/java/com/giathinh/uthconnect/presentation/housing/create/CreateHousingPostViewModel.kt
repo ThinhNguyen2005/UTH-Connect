@@ -176,6 +176,7 @@ class CreateHousingPostViewModel @Inject constructor(
     }
 
     private fun submitPost() {
+        if (_uiState.value.isSubmitting) return
         val state = _uiState.value
         val profile = sessions.observe().value.profile
         val error = validationError(state, profile)
@@ -186,8 +187,8 @@ class CreateHousingPostViewModel @Inject constructor(
         val host = requireNotNull(profile) { "profile đã được validationError kiểm tra" }
         val rent = requireNotNull(parseAmount(state.rentInput)) { "giá thuê đã được validationError kiểm tra" }
         val deposit = parseAmount(state.depositInput) ?: 0
+        _uiState.update { it.copy(isSubmitting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true) }
             val result = createListing(buildListing(state, host, rent, deposit))
             result.fold(
                 onSuccess = { _events.send(CreateHousingPostEvent.PostCreated) },

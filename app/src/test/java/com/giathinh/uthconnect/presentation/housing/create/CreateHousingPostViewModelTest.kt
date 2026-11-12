@@ -9,6 +9,7 @@ import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.AccessStudentSessionUseCase
 import com.giathinh.uthconnect.domain.usecase.CreateHousingListingUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,8 @@ class CreateHousingPostViewModelTest {
 
     private class FakeCreateHousingRepository : HousingRepository {
         var createdListing: HousingListing? = null
+        var createCalls = 0
+        var createGate: CompletableDeferred<Unit>? = null
         private val notFound: Result<HousingListing> = Result.failure(NoSuchElementException())
 
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(emptyList())
@@ -37,6 +40,8 @@ class CreateHousingPostViewModelTest {
         override suspend fun getListingById(id: String): Result<HousingListing> = notFound
 
         override suspend fun createListing(listing: HousingListing): Result<HousingListing> {
+            createCalls++
+            createGate?.await()
             createdListing = listing
             return Result.success(listing)
         }
@@ -149,6 +154,23 @@ class CreateHousingPostViewModelTest {
         assertEquals("2251001234", repo.createdListing?.hostStudentId)
         assertEquals("Sinh viên kiểm thử", repo.createdListing?.hostName)
         assertTrue(repo.createdListing?.verified == true)
+    }
+
+    @Test
+    fun `Submit hai lan khi dang gui - chi tao mot tin`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val gate = CompletableDeferred<Unit>()
+        repo.createGate = gate
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertTrue(viewModel.uiState.value.isSubmitting)
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        gate.complete(Unit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(1, repo.createCalls)
     }
 
     @Test

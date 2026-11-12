@@ -123,7 +123,15 @@ class HousingDetailViewModel @Inject constructor(
                 val profile = sessions.observe().value.profile
                 val isOwner = profile != null && listing.hostStudentId.isNotBlank() &&
                     listing.hostStudentId == profile.studentId
-                _uiState.update { it.copy(isLoading = false, listing = listing, isOwner = isOwner, failure = null) }
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        isActionLoading = false,
+                        listing = listing,
+                        isOwner = isOwner,
+                        failure = null,
+                    )
+                }
             }.onFailure { error ->
                 // Repository trả NoSuchElementException khi id không tồn tại → trạng thái "không tìm thấy"
                 // khác với lỗi mạng để Screen chọn đúng thông điệp + lối thoát (Quay lại vs Thử lại).
@@ -132,7 +140,7 @@ class HousingDetailViewModel @Inject constructor(
                 } else {
                     HousingDetailFailure.LoadFailed
                 }
-                _uiState.update { it.copy(isLoading = false, failure = failure) }
+                _uiState.update { it.copy(isLoading = false, isActionLoading = false, failure = failure) }
             }
         }
     }

@@ -117,6 +117,33 @@ class HousingDetailViewModelTest {
     }
 
     @Test
+    fun `danh dau het phong thanh cong - nut thao tac mo lai sau khi tai lai`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing)
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(HousingDetailAction.MarkFulfilled)
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingDetailEvent.MarkFulfilledSuccess)
+        assertFalse(viewModel.uiState.value.isActionLoading)
+        assertEquals(HousingListingStatus.FULFILLED, viewModel.uiState.value.listing?.status)
+    }
+
+    @Test
+    fun `danh dau het phong - tai lai that bai van mo nut thao tac`() = runTest {
+        val repository = FakeHousingDetailRepository(sampleListing)
+        val viewModel = createViewModel(repository)
+        repository.loadFailure = IllegalStateException("mat mang")
+
+        viewModel.onAction(HousingDetailAction.MarkFulfilled)
+
+        val event = viewModel.events.first()
+        assertTrue(event is HousingDetailEvent.MarkFulfilledSuccess)
+        assertFalse(viewModel.uiState.value.isActionLoading)
+        assertEquals(HousingDetailFailure.LoadFailed, viewModel.uiState.value.failure)
+    }
+
+    @Test
     fun `OpenMap - phat toa do that va dia chi de Route dung deep-link`() = runTest {
         val viewModel = createViewModel()
 
