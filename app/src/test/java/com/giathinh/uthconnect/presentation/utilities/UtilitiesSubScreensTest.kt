@@ -40,7 +40,7 @@ class UtilitiesSubScreensTest {
         val state = CampusesUiState()
         assertEquals("Phải có đủ 3 cơ sở đào tạo", 3, state.campuses.size)
         val campus1 = state.campuses.first { it.name.contains("Cơ sở 1") }
-        assertEquals("Số 2 Võ Oanh, Phường 25, Quận Bình Thạnh, TP. Hồ Chí Minh", campus1.address)
+        assertEquals("Số 2 Võ Oanh, Phường Thạnh Mỹ Tây, TP. Hồ Chí Minh (quận Bình Thạnh cũ)", campus1.address)
         assertTrue("Địa chỉ Cơ sở 1 chứa Võ Oanh", campus1.address.contains("Võ Oanh"))
         assertFalse("Không chứa cụm Nguyễn Văn Thương cũ", campus1.address.contains("Nguyễn Văn Thương"))
         assertTrue(state.campuses.any { it.name.contains("Cơ sở 2") })
