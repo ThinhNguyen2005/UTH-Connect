@@ -20,7 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
-private const val STORAGE_READ_TIMEOUT_MS = 30_000
+private const val STORAGE_READ_TIMEOUT_MS = 60_000
 
 @Singleton
 class SupabaseRestClient @Inject constructor() {
@@ -513,6 +513,3 @@ class SupabaseRestClient @Inject constructor() {
 }
 
 class SupabaseHttpException(val status: Int, message: String) : IllegalStateException(message)
-
-/** Ảnh phòng có thể vài MB; timeout đọc dài hơn REST thông thường (15s). */
-private const val STORAGE_READ_TIMEOUT_MS = 60_000

@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -96,8 +97,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private const val TIMEOUT_MILLIS = 10_000
-private const val IMAGE_CACHE_MAX_SIZE = 50
-private val listingImageCache = LruCache<String, ImageBitmap>(IMAGE_CACHE_MAX_SIZE)
+private const val IMAGE_CACHE_MAX_SIZE_KB = 32 * 1024
+private val listingImageCache = object : LruCache<String, ImageBitmap>(IMAGE_CACHE_MAX_SIZE_KB) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = value.asAndroidBitmap().byteCount / 1024
+}
 
 /**
  * Root Composable for the Lost & Found screen with Scaffold, TopAppBar, FAB, and BottomSheet.

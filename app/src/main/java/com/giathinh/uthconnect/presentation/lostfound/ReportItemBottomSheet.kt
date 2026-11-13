@@ -263,18 +263,19 @@ fun ReportItemBottomSheet(
 
             // Nút Submit chính dạng Google Pill Button
             val loadingDescription = stringResource(R.string.common_loading)
+            val isBusy = form.isSubmitting || form.isProcessingImage
             Button(
                 onClick = { onAction(LostFoundAction.SubmitReport) },
-                enabled = !form.isSubmitting,
+                enabled = !isBusy,
                 shape = CircleShape,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
                     .semantics {
-                        if (form.isSubmitting) stateDescription = loadingDescription
+                        if (isBusy) stateDescription = loadingDescription
                     },
             ) {
-                if (form.isSubmitting) {
+                if (isBusy) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(UthDimens.Size.ProgressInline).clearAndSetSemantics { },
                         strokeWidth = UthDimens.Size.ProgressInlineStroke,
@@ -459,30 +460,37 @@ private fun ReportImagePicker(
     ) { uri: Uri? ->
         if (uri != null) {
             activeJob?.cancel()
+            onAction(LostFoundAction.SetReportImageProcessing(true))
             activeJob = scope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    processAndCompressImage(context, uri)
-                }
-                if (!isActive) return@launch
-                when (result) {
-                    is ImageProcessResult.Success -> {
-                        onAction(LostFoundAction.UpdateReportImage(result.bytes, result.mimeType, uri.toString()))
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        processAndCompressImage(context, uri)
                     }
+                    if (!isActive) return@launch
+                    when (result) {
+                        is ImageProcessResult.Success -> {
+                            onAction(LostFoundAction.UpdateReportImage(result.bytes, result.mimeType, uri.toString()))
+                        }
 
-                    ImageProcessResult.TooLarge -> {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.lostfound_image_too_large),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        ImageProcessResult.TooLarge -> {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.lostfound_image_too_large),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+
+                        ImageProcessResult.ReadFailed -> {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.lostfound_image_read_error),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                     }
-
-                    ImageProcessResult.ReadFailed -> {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.lostfound_image_read_error),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                } finally {
+                    if (isActive) {
+                        onAction(LostFoundAction.SetReportImageProcessing(false))
                     }
                 }
             }
@@ -523,7 +531,11 @@ private fun ReportImagePicker(
                     )
                 }
                 IconButton(
-                    onClick = { onAction(LostFoundAction.RemoveReportImage) },
+                    onClick = {
+                        activeJob?.cancel()
+                        onAction(LostFoundAction.SetReportImageProcessing(false))
+                        onAction(LostFoundAction.RemoveReportImage)
+                    },
                     enabled = enabled,
                     modifier = Modifier
                         .align(Alignment.TopEnd)

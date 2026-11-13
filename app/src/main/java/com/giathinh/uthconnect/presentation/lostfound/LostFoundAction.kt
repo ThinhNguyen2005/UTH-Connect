@@ -43,6 +43,7 @@ sealed interface LostFoundAction {
             return result
         }
     }
+    data class SetReportImageProcessing(val isProcessing: Boolean) : LostFoundAction
     data object RemoveReportImage : LostFoundAction
     data object SubmitReport : LostFoundAction
     data object DismissMessage : LostFoundAction

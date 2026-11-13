@@ -85,6 +85,7 @@ data class ReportFormState(
     val locationError: FormValidationError? = null,
     val phoneError: FormValidationError? = null,
     val isSubmitting: Boolean = false,
+    val isProcessingImage: Boolean = false,
 ) {
     /**
      * Checks value equality across all form fields including image bytes.
@@ -107,7 +108,8 @@ data class ReportFormState(
             descriptionError == other.descriptionError &&
             locationError == other.locationError &&
             phoneError == other.phoneError &&
-            isSubmitting == other.isSubmitting
+            isSubmitting == other.isSubmitting &&
+            isProcessingImage == other.isProcessingImage
     }
 
     /**
@@ -129,6 +131,7 @@ data class ReportFormState(
         result = 31 * result + (locationError?.hashCode() ?: 0)
         result = 31 * result + (phoneError?.hashCode() ?: 0)
         result = 31 * result + isSubmitting.hashCode()
+        result = 31 * result + isProcessingImage.hashCode()
         return result
     }
 }

@@ -114,7 +114,12 @@ class LostFoundViewModel @Inject constructor(
             }
 
             LostFoundAction.CloseReportDialog -> {
-                _uiState.update { it.copy(isReportDialogOpen = false) }
+                _uiState.update {
+                    it.copy(
+                        isReportDialogOpen = false,
+                        reportForm = it.reportForm.copy(isProcessingImage = false),
+                    )
+                }
             }
 
             is LostFoundAction.UpdateReportTitle -> {
@@ -166,8 +171,15 @@ class LostFoundViewModel @Inject constructor(
                             imageBytes = action.bytes,
                             imageMimeType = action.mimeType,
                             imagePreviewUri = action.previewUri,
+                            isProcessingImage = false,
                         ),
                     )
+                }
+            }
+
+            is LostFoundAction.SetReportImageProcessing -> {
+                _uiState.update {
+                    it.copy(reportForm = it.reportForm.copy(isProcessingImage = action.isProcessing))
                 }
             }
 
@@ -178,6 +190,7 @@ class LostFoundViewModel @Inject constructor(
                             imageBytes = null,
                             imageMimeType = null,
                             imagePreviewUri = null,
+                            isProcessingImage = false,
                         ),
                     )
                 }
@@ -219,7 +232,7 @@ class LostFoundViewModel @Inject constructor(
      */
     private fun submitReport() {
         val form = _uiState.value.reportForm
-        if (form.isSubmitting) return
+        if (form.isSubmitting || form.isProcessingImage) return
 
         val titleError = if (form.title.isBlank()) FormValidationError.TitleRequired else null
         val locationError = if (form.location.isBlank()) FormValidationError.LocationRequired else null

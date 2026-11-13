@@ -286,6 +286,31 @@ class LostFoundViewModelTest {
         assertNull(clearedState.imageBytes)
         assertNull(clearedState.imageMimeType)
         assertNull(clearedState.imagePreviewUri)
+        assertFalse(clearedState.isProcessingImage)
+    }
+
+    /**
+     * Verifies `setReportImageProcessing_updatesStateAndBlocksSubmit` behavior.
+     */
+    @Test
+    fun `setReportImageProcessing_updatesStateAndBlocksSubmit`() {
+        val viewModel = createViewModel()
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Ví đen"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Cơ sở 1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
+
+        viewModel.onAction(LostFoundAction.SetReportImageProcessing(true))
+        assertTrue(viewModel.uiState.value.reportForm.isProcessingImage)
+
+        // Khi đang xử lý ảnh, submitReport phải bị chặn
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        assertFalse(viewModel.uiState.value.reportForm.isSubmitting)
+        assertEquals(8, viewModel.uiState.value.listings.size)
+
+        // Sau khi xử lý ảnh hoàn tất
+        viewModel.onAction(LostFoundAction.SetReportImageProcessing(false))
+        assertFalse(viewModel.uiState.value.reportForm.isProcessingImage)
     }
 
     /**
