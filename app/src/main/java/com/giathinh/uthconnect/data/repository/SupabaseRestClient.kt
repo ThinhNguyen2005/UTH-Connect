@@ -331,13 +331,18 @@ class SupabaseRestClient @Inject constructor() {
             setRequestProperty("x-upsert", "true")
             setFixedLengthStreamingMode(bytes.size)
         }
-        connection.outputStream.use { it.write(bytes) }
-        val status = connection.responseCode
-        if (status !in 200..299) {
-            val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            throw SupabaseHttpException(status, errBody.ifBlank { "Storage upload failed ($status)" })
+        try {
+            connection.outputStream.use { it.write(bytes) }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, errBody.ifBlank { "Storage upload failed ($status)" })
+            }
+            connection.inputStream?.bufferedReader()?.use { it.readText() }
+            "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$path"
+        } finally {
+            connection.disconnect()
         }
-        "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$path"
     }
 
     private suspend fun authorized(
@@ -354,7 +359,13 @@ class SupabaseRestClient @Inject constructor() {
         return send(path, method, body, bearer = accessToken)
     }
 
-    private suspend fun freshTokenOrNull(): String? = runCatching { freshToken() }.getOrNull()
+    private suspend fun freshTokenOrNull(): String? = try {
+        freshToken()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        null
+    }
 
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")

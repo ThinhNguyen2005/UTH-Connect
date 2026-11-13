@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,6 +78,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -93,6 +96,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private const val TIMEOUT_MILLIS = 10_000
+private const val IMAGE_CACHE_MAX_SIZE = 50
+private val listingImageCache = LruCache<String, ImageBitmap>(IMAGE_CACHE_MAX_SIZE)
 
 /**
  * Root Composable for the Lost & Found screen with Scaffold, TopAppBar, FAB, and BottomSheet.
@@ -293,7 +298,11 @@ private fun KindSegmentedRow(
                 modifier = Modifier
                     .weight(1f)
                     .height(40.dp)
-                    .clickable { onSelectKind(ListingKind.LOST) },
+                    .selectable(
+                        selected = lostSelected,
+                        role = Role.Tab,
+                        onClick = { onSelectKind(ListingKind.LOST) },
+                    ),
                 shape = CircleShape,
                 color = if (lostSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
                 shadowElevation = if (lostSelected) 2.dp else 0.dp,
@@ -317,7 +326,11 @@ private fun KindSegmentedRow(
                 modifier = Modifier
                     .weight(1f)
                     .height(40.dp)
-                    .clickable { onSelectKind(ListingKind.FOUND) },
+                    .selectable(
+                        selected = foundSelected,
+                        role = Role.Tab,
+                        onClick = { onSelectKind(ListingKind.FOUND) },
+                    ),
                 shape = CircleShape,
                 color = if (foundSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
                 shadowElevation = if (foundSelected) 2.dp else 0.dp,
@@ -484,6 +497,12 @@ private fun AsyncListingImage(
     var isLoading by remember(imageUrl) { mutableStateOf(true) }
 
     LaunchedEffect(imageUrl) {
+        val cached = listingImageCache.get(imageUrl)
+        if (cached != null) {
+            bitmap = cached
+            isLoading = false
+            return@LaunchedEffect
+        }
         isLoading = true
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
@@ -499,8 +518,14 @@ private fun AsyncListingImage(
                     connectTimeout = TIMEOUT_MILLIS
                     readTimeout = TIMEOUT_MILLIS
                 }
-                connection.inputStream.use { stream ->
-                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                try {
+                    connection.inputStream.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()?.also {
+                            listingImageCache.put(imageUrl, it)
+                        }
+                    }
+                } finally {
+                    connection.disconnect()
                 }
             }.getOrNull()
         }

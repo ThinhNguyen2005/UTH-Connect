@@ -452,7 +452,7 @@
     <string name="lostfound_search_desc">Search</string>
     <string name="lostfound_clear_search">Clear search</string>
     <string name="lostfound_no_results_title">No results found</string>
-    <string name="lostfound_no_results_desc">No listings matching "%1$s". Try another keyword.</string>
+    <string name="lostfound_no_results_desc">No listings matching \"%1$s\". Try another keyword.</string>
     <string name="lostfound_status_resolved_lost">Reclaimed</string>
     <string name="lostfound_status_resolved_found">Returned</string>
     <string name="lostfound_action_mark_lost">Mark as reclaimed</string>
@@ -461,7 +461,7 @@
     <string name="lostfound_btn_close">Close</string>
     <string name="lostfound_image_attached_desc">Attached photo</string>
     <string name="lostfound_poster_prefix">Posted by: %1$s</string>
-    <string name="lostfound_image_too_large">Image size exceeds 5MB limit</string>
+    <string name="lostfound_image_too_large">Image size exceeds 15MB limit</string>
     <string name="lostfound_image_read_error">Failed to read or process this image file</string>
     <string name="lostfound_msg_update_status_failed">Failed to update listing status</string>
 

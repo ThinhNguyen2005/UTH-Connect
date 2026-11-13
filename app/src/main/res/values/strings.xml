@@ -472,7 +472,7 @@
     <string name="lostfound_search_desc">Tìm kiếm</string>
     <string name="lostfound_clear_search">Xóa tìm kiếm</string>
     <string name="lostfound_no_results_title">Không tìm thấy kết quả</string>
-    <string name="lostfound_no_results_desc">Không có tin nào khớp với "%1$s". Hãy thử từ khóa khác.</string>
+    <string name="lostfound_no_results_desc">Không có tin nào khớp với \"%1$s\". Hãy thử từ khóa khác.</string>
     <string name="lostfound_status_resolved_lost">Đã nhận lại</string>
     <string name="lostfound_status_resolved_found">Đã trao trả</string>
     <string name="lostfound_action_mark_lost">Đánh dấu đã tìm thấy</string>
@@ -481,7 +481,7 @@
     <string name="lostfound_btn_close">Đóng</string>
     <string name="lostfound_image_attached_desc">Ảnh đính kèm</string>
     <string name="lostfound_poster_prefix">Người đăng: %1$s</string>
-    <string name="lostfound_image_too_large">Kích thước ảnh vượt quá giới hạn 5MB</string>
+    <string name="lostfound_image_too_large">Kích thước ảnh vượt quá giới hạn 15MB</string>
     <string name="lostfound_image_read_error">Không thể đọc hoặc xử lý tệp ảnh này</string>
     <string name="lostfound_msg_update_status_failed">Cập nhật trạng thái bài đăng thất bại</string>
 

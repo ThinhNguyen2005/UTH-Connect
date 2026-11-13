@@ -11,13 +11,13 @@
 -- ---------------------------------------------------------------------------
 create table if not exists public.lost_found_items (
     id              uuid primary key default gen_random_uuid(),
-    title           text not null check (char_length(trim(title)) >= 3),
+    title           text not null check (char_length(trim(title)) > 0),
     description     text not null default '',
     kind            text not null check (kind in ('LOST', 'FOUND')),
     category        text not null check (category in ('ALL', 'STUDENT_CARD', 'ELECTRONICS', 'WALLET_PAPERS', 'PERSONAL_ITEMS', 'OTHER')),
     location        text not null check (char_length(trim(location)) > 0),
     date            text not null,
-    contact_name    text not null check (char_length(trim(contact_name)) > 0),
+    contact_name    text not null default '',
     contact_phone   text not null check (char_length(trim(contact_phone)) >= 9),
     image_url       text,
     is_resolved     boolean not null default false,
