@@ -19,14 +19,14 @@ data class CampusesUiState(
     val campuses: List<CampusInfo> = listOf(
         CampusInfo(
             name = "Cơ sở 1 (Trụ sở chính)",
-            address = "Số 2 Võ Oanh, Phường 25, Quận Bình Thạnh, TP. Hồ Chí Minh",
+            address = "Số 2 Võ Oanh, Phường Thạnh Mỹ Tây, TP. Hồ Chí Minh (quận Bình Thạnh cũ)",
             hotline = "028 3899 2862",
             email = "ut-hcmc@ut.edu.vn",
             note = "Khu hiệu bộ, các khoa, viện và giảng đường chính.",
         ),
         CampusInfo(
             name = "Cơ sở 2 (Cơ sở Thủ Đức)",
-            address = "Số 10/80 Song Hành Xa Lộ Hà Nội, Phường Tân Phú, TP. Thủ Đức, TP. Hồ Chí Minh",
+            address = "Số 10 đường số 12, Phường An Khánh, TP. Hồ Chí Minh (TP. Thủ Đức cũ)",
             hotline = "028 3730 7908",
             email = "cs2@ut.edu.vn",
             note = "Khu xưởng thực hành, phòng thí nghiệm chuyên ngành và ký túc xá.",

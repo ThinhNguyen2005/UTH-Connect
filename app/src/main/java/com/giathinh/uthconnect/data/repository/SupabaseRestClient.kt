@@ -239,6 +239,18 @@ class SupabaseRestClient @Inject constructor() {
     /** Deletes matching rows through PostgREST. */
     suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
 
+    /** Invokes an authenticated Postgres RPC function. */
+    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+
+    /** Upload nhị phân lên Storage; path phải thuộc thư mục `auth.uid()` để qua RLS. */
+    suspend fun uploadStorageObject(bucket: String, path: String, bytes: ByteArray, contentType: String) {
+        storageRequest("/object/$bucket/$path", "POST", bytes, contentType)
+    }
+
+    suspend fun deleteStorageObject(bucket: String, path: String) {
+        storageRequest("/object/$bucket/$path", "DELETE", null, null)
+    }
+
     /** Uploads binary data to Supabase Storage using the authenticated session. */
     suspend fun uploadStorage(
         bucket: String,
@@ -303,9 +315,6 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
-    /** Invokes an authenticated Postgres RPC function. */
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
-
     /** Updates the password for the currently authenticated user. */
     suspend fun updatePassword(password: String): JsonElement {
         val token = freshToken()
@@ -367,6 +376,37 @@ class SupabaseRestClient @Inject constructor() {
         null
     }
 
+    private suspend fun storageRequest(
+        path: String,
+        method: String,
+        body: ByteArray?,
+        contentType: String?,
+    ) = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
+        val accessToken = freshToken()
+        val connection = (URL(BuildConfig.SUPABASE_URL + "/storage/v1" + path).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 15_000
+            connection.readTimeout = STORAGE_READ_TIMEOUT_MS
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            if (body != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", contentType ?: "application/octet-stream")
+                connection.outputStream.use { it.write(body) }
+            }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val message = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, message.ifBlank { "Storage HTTP $status" })
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /** Returns the current access token, refreshing it when it is close to expiration. */
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
@@ -473,3 +513,6 @@ class SupabaseRestClient @Inject constructor() {
 }
 
 class SupabaseHttpException(val status: Int, message: String) : IllegalStateException(message)
+
+/** Ảnh phòng có thể vài MB; timeout đọc dài hơn REST thông thường (15s). */
+private const val STORAGE_READ_TIMEOUT_MS = 60_000
