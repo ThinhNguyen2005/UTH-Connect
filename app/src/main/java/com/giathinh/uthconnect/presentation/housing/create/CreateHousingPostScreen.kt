@@ -1123,6 +1123,7 @@ private fun ValidationErrorBanner(error: CreateHousingPostError, modifier: Modif
         CreateHousingPostError.EMPTY_TITLE -> R.string.housing_create_error_title
         CreateHousingPostError.INVALID_TITLE_LENGTH -> R.string.housing_create_error_title_length
         CreateHousingPostError.INVALID_RENT -> R.string.housing_create_error_rent
+        CreateHousingPostError.INVALID_DEPOSIT -> R.string.housing_create_error_deposit
         CreateHousingPostError.INVALID_AREA -> R.string.housing_create_error_area
         CreateHousingPostError.EMPTY_ADDRESS -> R.string.housing_create_error_address
         CreateHousingPostError.EMPTY_PHONE -> R.string.housing_create_error_phone

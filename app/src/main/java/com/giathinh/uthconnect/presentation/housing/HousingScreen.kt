@@ -1,6 +1,13 @@
 package com.giathinh.uthconnect.presentation.housing
 
+import android.animation.ValueAnimator
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +65,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +73,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -76,7 +85,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
@@ -461,10 +469,32 @@ private fun FeedHeader(
     }
 }
 
-/** Skeleton khối `surfaceSubtle` khi tải feed. */
+/**
+ * Skeleton khi tải feed (mục 4.2 Design-system): khối `surfaceSubtle` đúng cấu trúc card thật
+ * để layout không nhảy khi dữ liệu về, cộng shimmer `Motion.ShimmerMillis`. Nhịp shimmer do
+ * cha giữ để mọi khối sáng cùng lúc; hệ thống tắt animation thì skeleton đứng yên.
+ */
 @Composable
 private fun HousingSkeletonList(modifier: Modifier = Modifier) {
     val loadingLabel = stringResource(R.string.housing_loading)
+    val shimmerProgress = if (ValueAnimator.areAnimatorsEnabled()) {
+        val shimmer = rememberInfiniteTransition(label = "housingSkeleton")
+        val progress by shimmer.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = UthDimens.Motion.ShimmerMillis,
+                    easing = LinearEasing,
+                ),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "housingSkeletonProgress",
+        )
+        progress
+    } else {
+        null
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -473,39 +503,136 @@ private fun HousingSkeletonList(modifier: Modifier = Modifier) {
             .semantics { contentDescription = loadingLabel },
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
-        HousingSkeletonCard()
-        HousingSkeletonCard()
+        HousingSkeletonCard(progress = shimmerProgress)
+        HousingSkeletonCard(progress = shimmerProgress)
     }
 }
 
 @Composable
-private fun HousingSkeletonCard(modifier: Modifier = Modifier) {
+private fun HousingSkeletonCard(progress: Float?, modifier: Modifier = Modifier) {
     UthCard(modifier = modifier.fillMaxWidth(), contentPadding = false) {
-        Box(
+        HousingSkeletonBlock(
+            progress = progress,
+            shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(UthDimens.Layout.CoverAspectRatio)
-                .background(UthTheme.extendedColors.surfaceSubtle),
+                .aspectRatio(UthDimens.Layout.CoverAspectRatio),
         )
-        Column(
-            modifier = Modifier.padding(UthDimens.Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
-        ) {
-            SkeletonLine(fraction = UthDimens.Layout.HousingSkeletonTitleFraction, height = UthDimens.Size.Icon)
-            SkeletonLine(fraction = UthDimens.Layout.HousingSkeletonBodyFraction, height = UthDimens.Size.IconInline)
-            SkeletonLine(fraction = UthDimens.Layout.HousingSkeletonBodyFraction, height = UthDimens.Size.IconInline)
+        Column(modifier = Modifier.padding(UthDimens.Spacing.Lg)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                HousingSkeletonBlock(
+                    progress = progress,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(UthDimens.Size.Icon),
+                )
+                Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                HousingSkeletonBlock(
+                    progress = progress,
+                    modifier = Modifier
+                        .width(UthDimens.Layout.HousingSkeletonChipWidth)
+                        .height(UthDimens.Size.IconInline),
+                )
+            }
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HousingSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.IconInline))
+                Spacer(modifier = Modifier.width(UthDimens.Spacing.Xs))
+                HousingSkeletonBlock(
+                    progress = progress,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(UthDimens.Size.IconInline),
+                )
+            }
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .fillMaxWidth(UthDimens.Layout.HousingSkeletonBadgeFraction)
+                    .height(UthDimens.Size.IconInline),
+            )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+            HousingSkeletonBlock(
+                progress = progress,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(UthDimens.Layout.HousingSkeletonInsetBoxHeight),
+            )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = UthDimens.Size.MinTouchTarget),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            ) {
+                HousingSkeletonBlock(
+                    progress = progress,
+                    shape = CircleShape,
+                    modifier = Modifier.size(UthDimens.Size.Avatar),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    HousingSkeletonBlock(
+                        progress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth(UthDimens.Layout.HousingSkeletonTitleFraction)
+                            .height(UthDimens.Size.IconInline),
+                    )
+                    Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
+                    HousingSkeletonBlock(
+                        progress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth(UthDimens.Layout.HousingSkeletonBodyFraction)
+                            .height(UthDimens.Size.IconInline),
+                    )
+                }
+                HousingSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.Icon))
+                HousingSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.Icon))
+            }
         }
     }
 }
 
+/**
+ * Khối giữ chỗ có shimmer (mục 4.2): nền `surfaceSubtle` cộng dải sáng `surface` chạy ngang,
+ * cả hai vẽ trong [drawBehind] để nền không che dải sáng. [progress] null khi hệ thống
+ * tắt chuyển động — chỉ vẽ nền tĩnh.
+ */
 @Composable
-private fun SkeletonLine(fraction: Float, height: Dp, modifier: Modifier = Modifier) {
+private fun HousingSkeletonBlock(
+    progress: Float?,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.extraSmall,
+) {
+    val base = UthTheme.extendedColors.surfaceSubtle
+    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = UthDimens.Opacity.ShimmerHighlight)
     Box(
         modifier = modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(MaterialTheme.shapes.extraSmall)
-            .background(UthTheme.extendedColors.surfaceSubtle),
+            .clip(shape)
+            .drawBehind {
+                drawRect(color = base)
+                if (progress != null) {
+                    val band = size.width * UthDimens.Layout.ShimmerBandFraction
+                    val travel = size.width + band * 2
+                    val start = -band + travel * progress
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color.Transparent, highlight, Color.Transparent),
+                            start = Offset(start, 0f),
+                            end = Offset(start + band, size.height),
+                        ),
+                    )
+                }
+            },
     )
 }
 
@@ -1068,53 +1195,61 @@ private fun HousingReportBottomSheet(selectedReason: HousingReportReason?, onAct
                 .padding(horizontal = UthDimens.Spacing.Lg)
                 .padding(bottom = UthDimens.Spacing.Xl),
         ) {
-            Text(
-                text = stringResource(R.string.housing_report_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.housing_report_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = UthTheme.extendedColors.textSecondary,
-                modifier = Modifier.padding(top = UthDimens.Spacing.Xs),
-            )
-
-            Spacer(Modifier.height(UthDimens.Spacing.Lg))
-
+            // Danh sách lý do dài hoặc chữ phóng to có thể tràn màn hình: nội dung
+            // cuộn được, hàng nút luôn ghim đáy như sheet bộ lọc.
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
             ) {
-                HousingReportReason.entries.forEach { reason ->
-                    val isSelected = selectedReason == reason
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.small)
-                            .selectable(
-                                selected = isSelected,
-                                onClick = { onAction(HousingAction.SelectReportReason(reason)) },
-                                role = Role.RadioButton,
+                Text(
+                    text = stringResource(R.string.housing_report_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.housing_report_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = UthTheme.extendedColors.textSecondary,
+                    modifier = Modifier.padding(top = UthDimens.Spacing.Xs),
+                )
+
+                Spacer(Modifier.height(UthDimens.Spacing.Lg))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                ) {
+                    HousingReportReason.entries.forEach { reason ->
+                        val isSelected = selectedReason == reason
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .selectable(
+                                    selected = isSelected,
+                                    onClick = { onAction(HousingAction.SelectReportReason(reason)) },
+                                    role = Role.RadioButton,
+                                )
+                                .padding(vertical = UthDimens.Spacing.Sm, horizontal = UthDimens.Spacing.Xs),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                        ) {
+                            RadioButton(selected = isSelected, onClick = null)
+                            Text(
+                                text = stringResource(reason.labelRes()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
-                            .padding(vertical = UthDimens.Spacing.Sm, horizontal = UthDimens.Spacing.Xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
-                    ) {
-                        RadioButton(selected = isSelected, onClick = null)
-                        Text(
-                            text = stringResource(reason.labelRes()),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(UthDimens.Spacing.Xl))
+                Spacer(Modifier.height(UthDimens.Spacing.Xl))
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

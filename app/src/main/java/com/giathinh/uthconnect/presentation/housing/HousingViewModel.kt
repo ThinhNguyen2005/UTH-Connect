@@ -50,6 +50,9 @@ class HousingViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var reportJob: Job? = null
 
+    /** Mỗi lần mở dialog là một phiên báo tin mới — kết quả phiên cũ không được đóng dialog phiên mới. */
+    private var reportSession = 0
+
     init {
         loadListings()
     }
@@ -136,17 +139,16 @@ class HousingViewModel @Inject constructor(
     /** Gom nhóm action của dialog báo tin để [onAction] không vượt ngưỡng phức tạp. */
     private fun handleReportAction(action: HousingAction) {
         when (action) {
-            is HousingAction.OpenReport -> _uiState.update {
-                it.copy(reportingListingId = action.listingId, reportingReason = null)
+            is HousingAction.OpenReport -> {
+                reportSession++
+                _uiState.update { it.copy(reportingListingId = action.listingId, reportingReason = null) }
             }
 
             is HousingAction.SelectReportReason -> _uiState.update { state ->
                 state.copy(reportingReason = action.reason)
             }
 
-            HousingAction.CloseReport -> _uiState.update {
-                it.copy(reportingListingId = null, reportingReason = null)
-            }
+            HousingAction.CloseReport -> clearReportDialog()
 
             HousingAction.ConfirmReport -> reportSelectedListing()
 
@@ -188,10 +190,13 @@ class HousingViewModel @Inject constructor(
         // backend xử phạt nhầm chủ tin.
         val reason = snapshot.reportingReason
         if (listingId == null || reason == null) return
+        val session = reportSession
         reportJob = viewModelScope.launch {
             reportListing(listingId = listingId, reason = reason.name).fold(
                 onSuccess = {
-                    _uiState.update { it.copy(reportingListingId = null, reportingReason = null) }
+                    // Người dùng đã mở dialog báo tin khác trong lúc chờ: chỉ đóng
+                    // dialog khi kết quả này còn thuộc phiên hiện tại.
+                    if (session == reportSession) clearReportDialog()
                     // Tin có thể bị ẩn ngay vì vượt ngưỡng báo cáo (README 3.2), nên
                     // nạp lại từ nguồn thay vì tự biên tập danh sách đang giữ trong state.
                     loadListings(showLoading = false)
@@ -203,5 +208,9 @@ class HousingViewModel @Inject constructor(
                 },
             )
         }
+    }
+
+    private fun clearReportDialog() {
+        _uiState.update { it.copy(reportingListingId = null, reportingReason = null) }
     }
 }

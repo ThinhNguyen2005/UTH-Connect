@@ -311,6 +311,27 @@ class HousingViewModelTest {
         assertEquals(HousingEvent.ReportAccepted, viewModel.events.first())
     }
 
+    @Test
+    fun `bao tin cu hoan tat sau khi mo dialog tin khac - khong dong dialog moi`() = runTest {
+        val repository = FakeHousingRepository(listings)
+        val gate = CompletableDeferred<Unit>()
+        repository.reportGate = gate
+        val viewModel = createViewModel(repository)
+        viewModel.onAction(HousingAction.OpenReport("HS-1"))
+        viewModel.onAction(HousingAction.SelectReportReason(HousingReportReason.FAKE_INFO))
+        viewModel.onAction(HousingAction.ConfirmReport)
+
+        viewModel.onAction(HousingAction.OpenReport("HS-2"))
+        viewModel.onAction(HousingAction.SelectReportReason(HousingReportReason.WRONG_PRICE))
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("ket qua phien cu khong duoc dong dialog phien moi", "HS-2", state.reportingListingId)
+        assertEquals(HousingReportReason.WRONG_PRICE, state.reportingReason)
+        assertEquals(HousingEvent.ReportAccepted, viewModel.events.first())
+    }
+
     private class FakeHousingRepository(
         var listings: List<HousingListing>,
         var failLoad: Boolean = false,

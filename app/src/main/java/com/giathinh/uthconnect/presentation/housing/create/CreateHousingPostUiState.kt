@@ -11,6 +11,7 @@ enum class CreateHousingPostError {
     EMPTY_TITLE,
     INVALID_TITLE_LENGTH,
     INVALID_RENT,
+    INVALID_DEPOSIT,
     INVALID_AREA,
     EMPTY_ADDRESS,
     EMPTY_PHONE,
@@ -45,6 +46,12 @@ data class CreateHousingPostUiState(
     /** Cho phép người xem liên hệ qua Zalo; tắt thì ẩn ô Zalo và không gửi kèm link khi đăng. */
     val allowZalo: Boolean = true,
     val photos: List<String> = emptyList(),
+    /**
+     * ID tin cho lượt gửi hiện tại — giữ nguyên khi gửi lại sau lỗi (response
+     * mất nhưng server có thể đã commit) để không nhân đôi tin; mọi sửa đổi
+     * form xóa ID này. Đi theo nháp để khôi phục xong gửi lại vẫn đúng ID.
+     */
+    val submitId: String = "",
     @Transient val isSubmitting: Boolean = false,
     @Transient val validationError: CreateHousingPostError? = null,
     /** Tăng mỗi lần gửi lỗi để màn hình cuộn lại banner dù mã lỗi không đổi. */

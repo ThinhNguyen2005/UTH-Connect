@@ -323,9 +323,21 @@ object UthDimens {
         /** Lưới ô tiện ích ở màn chi tiết Ghép trọ (2 cột: icon + nhãn, theo mockup detail). */
         const val HousingAmenityGridColumns = 2
 
+        /** Tỉ lệ gallery ảnh phòng màn chi tiết Ghép trọ (4:3 theo mockup detail). */
+        const val HousingGalleryAspectRatio = 4f / 3f
+
         /** Skeleton feed Ghép trọ: bề ngang khối tiêu đề / khối nội dung so với khổ card. */
         const val HousingSkeletonTitleFraction = 0.62f
         const val HousingSkeletonBodyFraction = 0.9f
+
+        /** Skeleton Ghép trọ: bề ngang khối badge xác minh / nhãn phụ so với khổ card. */
+        const val HousingSkeletonBadgeFraction = 0.38f
+
+        /** Bề ngang khối chip diện tích cạnh tiêu đề trong skeleton feed Ghép trọ. */
+        val HousingSkeletonChipWidth: Dp = 56.dp
+
+        /** Chiều cao khối hộp nhấn trong skeleton Ghép trọ (note box feed / proximity box detail). */
+        val HousingSkeletonInsetBoxHeight: Dp = 76.dp
     }
 }
 

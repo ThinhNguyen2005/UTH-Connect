@@ -24,6 +24,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 
 sealed interface CreateHousingPostEvent {
@@ -60,6 +61,12 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Form đã bị chạm thì nháp đọc chậm từ DataStore không được đè lên thao tác thật. */
     private var formTouched = false
+
+    /** Mọi sửa đổi form mở danh tính gửi mới — gửi lại sau lỗi chỉ trùng ID khi nội dung giữ nguyên. */
+    private fun markFormEdited() {
+        formTouched = true
+        if (_uiState.value.submitId.isNotEmpty()) _uiState.update { it.copy(submitId = "") }
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -120,7 +127,7 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Gom nhóm ô nhập liệu để [onAction] không vượt ngưỡng phức tạp (docs/CODING_STANDARDS.md mục 4). */
     private fun handleFieldChange(action: CreateHousingPostAction) {
-        formTouched = true
+        markFormEdited()
         when (action) {
             is CreateHousingPostAction.ChangeType -> _uiState.update { it.copy(type = action.type) }
 
@@ -136,7 +143,7 @@ class CreateHousingPostViewModel @Inject constructor(
                 _uiState.update { it.copy(rentInput = action.rent, validationError = null) }
 
             is CreateHousingPostAction.ChangeDeposit ->
-                _uiState.update { it.copy(depositInput = action.deposit) }
+                _uiState.update { it.copy(depositInput = action.deposit, validationError = null) }
 
             is CreateHousingPostAction.ChangeAddress ->
                 // Sửa địa chỉ tay thì pin cũ không còn khớp — xóa tọa độ để khỏi gửi vị trí sai.
@@ -173,7 +180,7 @@ class CreateHousingPostViewModel @Inject constructor(
     }
 
     private fun handlePreferenceChange(action: CreateHousingPostAction) {
-        formTouched = true
+        markFormEdited()
         when (action) {
             is CreateHousingPostAction.ChangeUtilitiesIncluded ->
                 _uiState.update { it.copy(utilitiesIncluded = action.included) }
@@ -198,7 +205,7 @@ class CreateHousingPostViewModel @Inject constructor(
     }
 
     private fun handlePhotoChange(action: CreateHousingPostAction) {
-        formTouched = true
+        markFormEdited()
         when (action) {
             is CreateHousingPostAction.AddPhoto -> _uiState.update { state ->
                 // Chặn vượt trần ảnh để lưới ảnh và ô "Tối đa 6" không bị vỡ.
@@ -251,10 +258,12 @@ class CreateHousingPostViewModel @Inject constructor(
         }
         val host = requireNotNull(profile) { "profile đã được validationError kiểm tra" }
         val rent = requireNotNull(parseAmount(state.rentInput)) { "giá thuê đã được validationError kiểm tra" }
-        val deposit = parseAmount(state.depositInput) ?: 0
-        _uiState.update { it.copy(isSubmitting = true) }
+        val deposit = parseDeposit(state.depositInput) ?: 0
+        // ID cố định cho lượt gửi này: gửi lại sau lỗi mất response không nhân đôi tin.
+        val submitId = state.submitId.ifBlank { UUID.randomUUID().toString() }
+        _uiState.update { it.copy(isSubmitting = true, submitId = submitId) }
         viewModelScope.launch {
-            val result = createListing(buildListing(state, host, rent, deposit))
+            val result = createListing(buildListing(state, host, rent, deposit, submitId))
             result.fold(
                 onSuccess = {
                     clearDraftQuietly(host.studentId)
@@ -284,6 +293,9 @@ class CreateHousingPostViewModel @Inject constructor(
 
         parseAmount(state.rentInput) == null -> CreateHousingPostError.INVALID_RENT
 
+        state.depositInput.isNotBlank() && parseDeposit(state.depositInput) == null ->
+            CreateHousingPostError.INVALID_DEPOSIT
+
         state.areaInput.isNotBlank() && parseArea(state.areaInput) == null -> CreateHousingPostError.INVALID_AREA
 
         state.address.isBlank() -> CreateHousingPostError.EMPTY_ADDRESS
@@ -300,7 +312,9 @@ class CreateHousingPostViewModel @Inject constructor(
         host: StudentProfile,
         rent: Int,
         deposit: Int,
+        submitId: String,
     ): HousingListing = HousingListing(
+        id = submitId,
         type = state.type,
         campus = state.campus,
         title = state.title.trim(),
@@ -329,6 +343,9 @@ class CreateHousingPostViewModel @Inject constructor(
 
     /** Chỉ nhận chữ số, bỏ dấu phân cách người dùng gõ — `null` khi không phải số dương. */
     private fun parseAmount(input: String): Int? = input.filter { it.isDigit() }.toIntOrNull()?.takeIf { it > 0 }
+
+    /** Tiền cọc khác giá thuê: chấp nhận 0 (không cọc); `null` khi tràn số hoặc không có chữ số. */
+    private fun parseDeposit(input: String): Int? = input.filter { it.isDigit() }.toIntOrNull()
 
     /**
      * Ô Zalo nhận link HTTPS zalo.me hoặc SĐT thuần (ô nhập ghi "Link Zalo hoặc

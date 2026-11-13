@@ -793,6 +793,7 @@
     <string name="housing_create_error_title_length">Tiêu đề cần từ 5 đến 150 ký tự</string>
     <string name="housing_create_error_area">Diện tích phải là số lớn hơn 0</string>
     <string name="housing_create_error_rent">Vui lòng nhập giá thuê hợp lệ</string>
+    <string name="housing_create_error_deposit">Vui lòng nhập tiền cọc hợp lệ</string>
     <string name="housing_create_error_phone">Vui lòng nhập số điện thoại liên hệ</string>
     <string name="housing_create_error_zalo">Link Zalo phải là HTTPS thuộc zalo.me, hoặc nhập SĐT Zalo</string>
     <string name="housing_create_sign_in_required">Vui lòng đăng nhập để đăng tin bằng hồ sơ sinh viên của bạn</string>
@@ -871,7 +872,7 @@
     <string name="housing_detail_not_found_title">Không tìm thấy tin trọ</string>
     <string name="housing_detail_not_found_body">Tin có thể đã bị gỡ hoặc đã hết phòng.</string>
     <string name="housing_detail_verified_uth">Phòng Trọ Xác Thực UTH</string>
-    <string name="housing_detail_host_badge">Chính chủ phòng</string>
+    <string name="housing_detail_host_badge">Người đăng tin</string>
     <string name="housing_detail_proximity_sub">~4 phút xe máy • 12 phút đi bộ</string>
     <string name="housing_detail_amenities_heading">Tiện nghi &amp; Chi phí</string>
     <string name="housing_detail_amenities_sub">%1$d tiện ích chính</string>

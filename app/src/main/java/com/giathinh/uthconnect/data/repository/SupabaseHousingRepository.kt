@@ -104,6 +104,14 @@ class SupabaseHousingRepository @Inject constructor(
     }
 
     override suspend fun createListing(listing: HousingListing): Result<HousingListing> = suspendResult {
+        // Gửi lại sau lỗi mất response: ID giữ nguyên từ lần trước — tin đã commit
+        // thì trả lại chính nó thay vì nhân đôi (đối chiếu trước cả khi upload ảnh).
+        if (listing.id.isNotBlank()) {
+            val idFilter = "id=eq.${urlEncode(listing.id)}&author_id=eq.${urlEncode(client.userId)}"
+            val rows = client.table("housing_posts?select=*&$idFilter").jsonArray
+            val existing = rows.singleOrNull()?.jsonObject?.toHousingListing()
+            if (existing != null) return@suspendResult existing
+        }
         val uploadedPaths = mutableListOf<String>()
         val images = try {
             resolveImages(listing.images, uploadedPaths)
@@ -153,7 +161,7 @@ class SupabaseHousingRepository @Inject constructor(
             // Ảnh gỡ bỏ vào hàng đợi rồi trả kết quả sửa tin ngay; worker nền dọn,
             // hàng đợi lỗi đĩa thì dọn đồng bộ để không mồ côi.
             withContext(NonCancellable) {
-                if (!enqueueImageCleanup(removedImages)) deleteObjects(removedImages)
+                if (!enqueueImageCleanup(removedImages)) deleteUnreferencedObjects(removedImages)
             }
             launchPendingImageCleanup()
             updated
@@ -184,7 +192,7 @@ class SupabaseHousingRepository @Inject constructor(
         // thì dọn đồng bộ ngay, thà chậm còn hơn để ảnh mồ côi.
         withContext(NonCancellable) {
             val paths = images.mapNotNull { storagePathOf(it) }
-            if (!enqueueImageCleanup(paths)) deleteObjects(paths)
+            if (!enqueueImageCleanup(paths)) deleteUnreferencedObjects(paths)
         }
         launchPendingImageCleanup()
         Unit
@@ -417,7 +425,17 @@ class SupabaseHousingRepository @Inject constructor(
         // ảnh tài khoản khác để nguyên cho chính chủ dọn, không phí request bị RLS chặn.
         val ownPaths = pending.filter { it.startsWith("${client.userId}/") }.take(MAX_CLEANUP_PATHS_PER_PASS)
         if (ownPaths.isEmpty()) return
-        val failed = deleteObjects(ownPaths).toSet()
+        deleteQueuedOrphans(ownPaths)
+    }
+
+    /**
+     * Path còn được tin của chủ tham chiếu không phải mồ côi: bỏ khỏi hàng đợi
+     * mà không xóa (tin tham chiếu bị xóa sau này sẽ enqueue lại). Đối chiếu
+     * lỗi thì giữ nguyên hàng đợi, lượt sau thử lại.
+     */
+    private suspend fun deleteQueuedOrphans(ownPaths: List<String>) {
+        val referenced = referencedImagePaths() ?: return
+        val failed = deleteObjects(ownPaths.filter { it !in referenced }).toSet()
         try {
             cleanupStore.dequeue(ownPaths.filter { it !in failed })
         } catch (cancelled: CancellationException) {
@@ -447,25 +465,43 @@ class SupabaseHousingRepository @Inject constructor(
         }
     }
 
+    /**
+     * Mọi path Storage đang được tin của tài khoản hiện tại tham chiếu; `null`
+     * khi đối chiếu lỗi — caller phải giữ ảnh (thà mồ côi trong Storage còn hơn
+     * làm tin thật mất ảnh).
+     */
+    private suspend fun referencedImagePaths(idFilter: String = ""): Set<String>? = try {
+        client.table("housing_posts?select=images&author_id=eq.${urlEncode(client.userId)}$idFilter")
+            .jsonArray
+            .flatMap { it.jsonObject["images"]?.jsonArray.orEmpty() }
+            .mapNotNull { storagePathOf(it.jsonPrimitive.content) }
+            .toSet()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Log.w(LOG_TAG, "Không đối chiếu được tin tham chiếu ảnh — giữ ảnh", error)
+        null
+    }
+
     private suspend fun unreferencedUploads(uploadedPaths: List<String>, listingId: String?): List<String> {
         val idFilter = listingId?.let { "&id=eq.${urlEncode(it)}" }.orEmpty()
-        val referenced = try {
-            client.table("housing_posts?select=images&author_id=eq.${urlEncode(client.userId)}$idFilter")
-                .jsonArray
-                .flatMap { it.jsonObject["images"]?.jsonArray.orEmpty() }
-                .mapNotNull { storagePathOf(it.jsonPrimitive.content) }
-                .toSet()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            Log.w(LOG_TAG, "Không đối chiếu được tin sau lỗi chưa xác định — giữ ảnh", error)
-            return emptyList()
-        }
+        val referenced = referencedImagePaths(idFilter) ?: return emptyList()
         return uploadedPaths.filter { it !in referenced }
     }
 
+    /** Dọn đồng bộ khi hàng đợi không ghi được đĩa: chỉ xóa ảnh không còn tin nào tham chiếu. */
+    private suspend fun deleteUnreferencedObjects(paths: List<String>) {
+        if (paths.isEmpty()) return
+        val referenced = referencedImagePaths() ?: return
+        deleteObjects(paths.filter { it !in referenced })
+    }
+
     private fun HousingListing.toPayload(images: List<String>, includeAuthor: Boolean): JsonObject = buildJsonObject {
-        if (includeAuthor) put("author_id", uuid(client.userId))
+        if (includeAuthor) {
+            put("author_id", uuid(client.userId))
+            // INSERT mang ID cố định phía client: gửi lại sau lỗi mất response không nhân đôi tin.
+            if (id.isNotBlank()) put("id", uuid(id))
+        }
         put("type", type.name)
         put("campus", campus.name)
         put("title", title)

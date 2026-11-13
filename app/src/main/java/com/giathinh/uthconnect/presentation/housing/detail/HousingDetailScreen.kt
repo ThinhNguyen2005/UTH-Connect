@@ -1,7 +1,14 @@
 package com.giathinh.uthconnect.presentation.housing.detail
 
+import android.animation.ValueAnimator
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +65,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -68,8 +77,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
@@ -429,7 +436,7 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(4f / 3f)
+                .aspectRatio(UthDimens.Layout.HousingGalleryAspectRatio)
                 .clip(MaterialTheme.shapes.medium),
         ) {
             HorizontalPager(
@@ -899,13 +906,6 @@ private fun AmenityTile(amenity: RoomAmenity, modifier: Modifier = Modifier) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = stringResource(amenity.subtitleRes()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
         }
     }
@@ -1107,10 +1107,32 @@ private fun DetailBottomBar(
     }
 }
 
-/** Skeleton trạng thái tải. */
+/**
+ * Skeleton trạng thái tải (mục 4.2 Design-system): gallery + khối thông tin chính + khối chủ tin
+ * đúng cấu trúc nội dung thật để layout không nhảy khi dữ liệu về, cộng shimmer
+ * `Motion.ShimmerMillis`; hệ thống tắt animation thì skeleton đứng yên.
+ */
 @Composable
 private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
     val loadingLabel = stringResource(R.string.housing_loading)
+    val shimmerProgress = if (ValueAnimator.areAnimatorsEnabled()) {
+        val shimmer = rememberInfiniteTransition(label = "housingDetailSkeleton")
+        val progress by shimmer.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = UthDimens.Motion.ShimmerMillis,
+                    easing = LinearEasing,
+                ),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "housingDetailSkeletonProgress",
+        )
+        progress
+    } else {
+        null
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -1119,45 +1141,162 @@ private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
             .semantics { contentDescription = loadingLabel },
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
-        Box(
+        HousingSkeletonBlock(
+            progress = shimmerProgress,
+            shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(4f / 3f)
-                .clip(MaterialTheme.shapes.medium)
-                .background(UthTheme.extendedColors.surfaceSubtle),
+                .aspectRatio(UthDimens.Layout.HousingGalleryAspectRatio),
         )
-        HousingSkeletonCard()
-        HousingSkeletonCard()
+        DetailPrimaryInfoSkeleton(progress = shimmerProgress)
+        DetailHostSkeleton(progress = shimmerProgress)
     }
 }
 
+/** Khối giữ chỗ cho [PrimaryInfoCard]: tiêu đề, hàng giá/cọc, địa chỉ và hộp khoảng cách. */
 @Composable
-private fun HousingSkeletonCard(modifier: Modifier = Modifier) {
+private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Modifier) {
     UthCard(modifier = modifier.fillMaxWidth()) {
-        SkeletonLine(
-            fraction = UthDimens.Layout.HousingSkeletonTitleFraction,
-            height = UthDimens.Size.Icon,
+        HousingSkeletonBlock(
+            progress = progress,
+            modifier = Modifier
+                .fillMaxWidth(UthDimens.Layout.HousingSkeletonTitleFraction)
+                .height(UthDimens.Size.Icon),
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        SkeletonLine(
-            fraction = UthDimens.Layout.HousingSkeletonBodyFraction,
-            height = UthDimens.Size.IconInline,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(UthDimens.Size.Icon),
+            )
+            Spacer(modifier = Modifier.width(UthDimens.Spacing.Md))
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .fillMaxWidth(UthDimens.Layout.HousingSkeletonBadgeFraction)
+                    .height(UthDimens.Size.IconInline),
+            )
+        }
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        HousingSkeletonBlock(
+            progress = progress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(UthDimens.Size.Stroke),
         )
-        SkeletonLine(
-            fraction = UthDimens.Layout.HousingSkeletonBodyFraction,
-            height = UthDimens.Size.IconInline,
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        ) {
+            HousingSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.IconInline))
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(UthDimens.Size.IconInline),
+            )
+        }
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        HousingSkeletonBlock(
+            progress = progress,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(UthDimens.Layout.HousingSkeletonInsetBoxHeight),
         )
     }
 }
 
+/** Khối giữ chỗ cho [HostCard]: nhãn + badge, avatar lớn và tên/MSSV chủ tin. */
 @Composable
-private fun SkeletonLine(fraction: Float, height: Dp, modifier: Modifier = Modifier) {
+private fun DetailHostSkeleton(progress: Float?, modifier: Modifier = Modifier) {
+    UthCard(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .fillMaxWidth(UthDimens.Layout.HousingSkeletonBadgeFraction)
+                    .height(UthDimens.Size.IconInline),
+            )
+            HousingSkeletonBlock(
+                progress = progress,
+                modifier = Modifier
+                    .width(UthDimens.Layout.HousingSkeletonChipWidth)
+                    .height(UthDimens.Size.Badge),
+            )
+        }
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            HousingSkeletonBlock(
+                progress = progress,
+                shape = CircleShape,
+                modifier = Modifier.size(UthDimens.Size.AvatarLarge),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                HousingSkeletonBlock(
+                    progress = progress,
+                    modifier = Modifier
+                        .fillMaxWidth(UthDimens.Layout.HousingSkeletonTitleFraction)
+                        .height(UthDimens.Size.Icon),
+                )
+                Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
+                HousingSkeletonBlock(
+                    progress = progress,
+                    modifier = Modifier
+                        .fillMaxWidth(UthDimens.Layout.HousingSkeletonBodyFraction)
+                        .height(UthDimens.Size.IconInline),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Khối giữ chỗ có shimmer (mục 4.2): nền `surfaceSubtle` cộng dải sáng `surface` chạy ngang,
+ * cả hai vẽ trong [drawBehind] để nền không che dải sáng. [progress] null khi hệ thống
+ * tắt chuyển động — chỉ vẽ nền tĩnh.
+ */
+@Composable
+private fun HousingSkeletonBlock(
+    progress: Float?,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.extraSmall,
+) {
+    val base = UthTheme.extendedColors.surfaceSubtle
+    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = UthDimens.Opacity.ShimmerHighlight)
     Box(
         modifier = modifier
-            .fillMaxWidth(fraction)
-            .height(height)
-            .clip(MaterialTheme.shapes.extraSmall)
-            .background(UthTheme.extendedColors.surfaceSubtle),
+            .clip(shape)
+            .drawBehind {
+                drawRect(color = base)
+                if (progress != null) {
+                    val band = size.width * UthDimens.Layout.ShimmerBandFraction
+                    val travel = size.width + band * 2
+                    val start = -band + travel * progress
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color.Transparent, highlight, Color.Transparent),
+                            start = Offset(start, 0f),
+                            end = Offset(start + band, size.height),
+                        ),
+                    )
+                }
+            },
     )
 }
 
@@ -1196,21 +1335,6 @@ private fun RoomAmenity.iconRes(): Int = when (this) {
     RoomAmenity.HOT_WATER -> R.drawable.ic_amenity_hot_water
     RoomAmenity.BALCONY -> R.drawable.ic_amenity_balcony
     RoomAmenity.KEY_CARD -> R.drawable.ic_amenity_key_card
-}
-
-@StringRes
-private fun RoomAmenity.subtitleRes(): Int = when (this) {
-    RoomAmenity.MEZZANINE -> R.string.housing_amenity_mezzanine_sub
-    RoomAmenity.AIR_CONDITIONER -> R.string.housing_amenity_ac_sub
-    RoomAmenity.MACHINE_WASH -> R.string.housing_amenity_washing_sub
-    RoomAmenity.FREE_HOURS -> R.string.housing_amenity_free_hours_sub
-    RoomAmenity.GOVERNMENT_UTILITY_RATES -> R.string.housing_amenity_bolt_sub
-    RoomAmenity.SECURED_PARKING -> R.string.housing_amenity_parking_sub
-    RoomAmenity.COOKING -> R.string.housing_amenity_cooking_sub
-    RoomAmenity.HIGH_SPEED_WIFI -> R.string.housing_amenity_wifi_sub
-    RoomAmenity.HOT_WATER -> R.string.housing_amenity_hot_water_sub
-    RoomAmenity.BALCONY -> R.string.housing_amenity_balcony_sub
-    RoomAmenity.KEY_CARD -> R.string.housing_amenity_key_card_sub
 }
 
 private const val METERS_PER_KM = 1000

@@ -21,6 +21,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -38,6 +39,8 @@ class CreateHousingPostViewModelTest {
         var createdListing: HousingListing? = null
         var createCalls = 0
         var createGate: CompletableDeferred<Unit>? = null
+        var createError: Exception? = null
+        val createdIds = mutableListOf<String>()
         private val notFound: Result<HousingListing> = Result.failure(NoSuchElementException())
 
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(emptyList())
@@ -46,7 +49,9 @@ class CreateHousingPostViewModelTest {
 
         override suspend fun createListing(listing: HousingListing): Result<HousingListing> {
             createCalls++
+            createdIds += listing.id
             createGate?.await()
+            createError?.let { return Result.failure(it) }
             createdListing = listing
             return Result.success(listing)
         }
@@ -669,6 +674,83 @@ class CreateHousingPostViewModelTest {
 
         assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
         assertEquals("", repo.createdListing?.contactZaloUrl)
+    }
+
+    @Test
+    fun `validate - tien coc tran so bao loi INVALID_DEPOSIT`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeDeposit("99999999999"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_DEPOSIT, viewModel.uiState.value.validationError)
+        assertNull("tien coc loi khong duoc am tham dang tin", repo.createdListing)
+    }
+
+    @Test
+    fun `validate - tien coc khong phai so bao loi INVALID_DEPOSIT`() {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeDeposit("abc"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostError.INVALID_DEPOSIT, viewModel.uiState.value.validationError)
+        assertNull(repo.createdListing)
+    }
+
+    @Test
+    fun `tien coc 0 - hop le va dang voi depositVnd 0`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        viewModel.onAction(CreateHousingPostAction.ChangeDeposit("0"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(0, repo.createdListing?.depositVnd)
+    }
+
+    @Test
+    fun `gui lai sau loi - giu nguyen ID tin de khong nhan doi`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        repo.createError = IOException("mat mang")
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertTrue(viewModel.events.first() is CreateHousingPostEvent.SubmitFailed)
+
+        repo.createError = null
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(2, repo.createdIds.size)
+        assertTrue("ID phai khac rong de backend doi chieu duoc", repo.createdIds[0].isNotBlank())
+        assertEquals("gui lai phai trung ID lan truoc de khong nhan doi tin", repo.createdIds[0], repo.createdIds[1])
+    }
+
+    @Test
+    fun `sua form sau loi - luot gui moi dung ID khac`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+        fillValidForm(viewModel)
+        repo.createError = IOException("mat mang")
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+        assertTrue(viewModel.events.first() is CreateHousingPostEvent.SubmitFailed)
+
+        repo.createError = null
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng gác lửng gần CS1 sửa lại"))
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(2, repo.createdIds.size)
+        assertNotEquals("sua form la danh tinh gui moi, khong dung lai ID cu", repo.createdIds[0], repo.createdIds[1])
     }
 
     private fun fillValidForm(viewModel: CreateHousingPostViewModel) {

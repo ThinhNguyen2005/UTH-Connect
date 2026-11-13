@@ -79,10 +79,17 @@ fun HousingLocationPickerScreen(
             var mapView by remember { mutableStateOf<MapView?>(null) }
             val currentOnAction by rememberUpdatedState(onAction)
 
+            // OSMDroid bắn onScroll cả khi setCenter bằng code (kể cả replay ở layout
+            // đầu tiên) — ghi lại đích để không nhầm là kéo tay, tránh bật
+            // hasPickedLocation ngay khi mở màn dù người dùng chưa chạm bản đồ.
+            val programmaticCenter = remember { mutableStateOf<GeoPoint?>(null) }
+
             // GPS trả kết quả → nhảy tâm bản đồ tới đó một lần; kéo tay không đi qua nhánh này.
             LaunchedEffect(uiState.gpsFixCount) {
                 if (uiState.gpsFixCount > 0) {
-                    mapView?.controller?.setCenter(GeoPoint(uiState.latitude, uiState.longitude))
+                    val target = GeoPoint(uiState.latitude, uiState.longitude)
+                    programmaticCenter.value = target
+                    mapView?.controller?.setCenter(target)
                 }
             }
 
@@ -93,14 +100,25 @@ fun HousingLocationPickerScreen(
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
                         controller.setZoom(PIN_ZOOM)
-                        controller.setCenter(GeoPoint(uiState.latitude, uiState.longitude))
+                        val initialCenter = GeoPoint(uiState.latitude, uiState.longitude)
+                        programmaticCenter.value = initialCenter
+                        controller.setCenter(initialCenter)
                         addMapListener(
                             object : MapListener {
                                 override fun onScroll(event: ScrollEvent?): Boolean {
                                     val center = event?.source?.mapCenter ?: return false
-                                    currentOnAction(
-                                        HousingLocationPickerAction.PinMoved(center.latitude, center.longitude),
-                                    )
+                                    val expected = programmaticCenter.value
+                                    programmaticCenter.value = null
+                                    // GeoPoint lưu tọa độ E6 nguyên nên so sánh chính xác an toàn;
+                                    // chỉ chặn khi trùng đích lập trình, kéo tay luôn đi tiếp.
+                                    val programmatic = expected != null &&
+                                        center.latitude == expected.latitude &&
+                                        center.longitude == expected.longitude
+                                    if (!programmatic) {
+                                        currentOnAction(
+                                            HousingLocationPickerAction.PinMoved(center.latitude, center.longitude),
+                                        )
+                                    }
                                     return false
                                 }
 
