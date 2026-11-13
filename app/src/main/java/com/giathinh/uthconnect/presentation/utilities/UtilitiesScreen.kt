@@ -470,7 +470,7 @@ private val PreviewModules = listOf(
     UtilityModule(UtilityModuleId.TIMETABLE, DeliveryPhase.PHASE_2, enabled = false),
     UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = true),
     UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.BACKLOG, enabled = false),
-    UtilityModule(UtilityModuleId.HOUSING, DeliveryPhase.BACKLOG, enabled = false),
+    UtilityModule(UtilityModuleId.HOUSING, DeliveryPhase.BACKLOG, enabled = true),
     UtilityModule(UtilityModuleId.RIDE_SHARE, DeliveryPhase.BACKLOG, enabled = false),
 )
 
