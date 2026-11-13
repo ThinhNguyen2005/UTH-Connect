@@ -64,9 +64,9 @@ import kotlin.math.roundToInt
  * giới hạn 2 tin mở và ngưỡng báo cáo ở backend). Ảnh cục bộ (`content://`)
  * được upload lên bucket [IMAGE_BUCKET] trước khi insert; server từ chối rõ
  * ràng (4xx) thì ảnh vừa upload bị dọn, lỗi chưa xác định (5xx/timeout) thì
- * đối chiếu DB trước để không xóa ảnh của tin đã commit. Xóa tin mà Storage
- * chưa dọn được ảnh thì path vào hàng đợi [HousingImageCleanupStore], thử lại
- * chạy nền ở lần nạp feed kế tiếp (không chặn feed, chỉ dọn ảnh đúng chủ).
+ * đối chiếu DB trước để không xóa ảnh của tin đã commit. Xóa/sửa tin ghi path
+ * ảnh cần dọn vào hàng đợi [HousingImageCleanupStore] rồi trả kết quả ngay;
+ * worker nền dọn ảnh (không chặn thao tác lẫn feed, chỉ dọn ảnh đúng chủ).
  *
  * `distanceToCampusM` ưu tiên khoảng cách ĐƯỜNG ĐI thật qua OSRM (cùng dữ liệu
  * OpenStreetMap với picker, không key/billing) để khớp số km người dùng tra trên
@@ -150,7 +150,12 @@ class SupabaseHousingRepository @Inject constructor(
                 .jsonArray.singleOrNull()?.jsonObject?.toHousingListing()
                 ?: throw NoSuchElementException("Không tìm thấy tin để cập nhật: ${listing.id}")
             val removedImages = previousImages.filter { it !in images }.mapNotNull { storagePathOf(it) }
-            enqueueImageCleanup(deleteObjects(removedImages))
+            // Ảnh gỡ bỏ vào hàng đợi rồi trả kết quả sửa tin ngay; worker nền dọn,
+            // hàng đợi lỗi đĩa thì dọn đồng bộ để không mồ côi.
+            withContext(NonCancellable) {
+                if (!enqueueImageCleanup(removedImages)) deleteObjects(removedImages)
+            }
+            launchPendingImageCleanup()
             updated
         } catch (rejected: SupabaseHttpException) {
             cleanupUploads(uploadedPaths, rejected.status, listing.id)
@@ -174,12 +179,14 @@ class SupabaseHousingRepository @Inject constructor(
             .jsonArray.singleOrNull()?.jsonObject
             ?.get("images")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
         client.deleteTable("housing_posts?$authorFilter")
-        // Bản ghi đã xóa: dọn ảnh trong NonCancellable để rời màn giữa chừng không mất path;
-        // ảnh dọn chưa được thì ghi hàng đợi bền vững để lần sau thử lại.
+        // Bản ghi đã xóa: ghi path vào hàng đợi bền vững rồi trả kết quả ngay, worker nền
+        // dọn ảnh — người dùng không phải chờ từng lệnh xóa Storage. Hàng đợi lỗi đĩa
+        // thì dọn đồng bộ ngay, thà chậm còn hơn để ảnh mồ côi.
         withContext(NonCancellable) {
-            val failed = deleteObjects(images.mapNotNull { storagePathOf(it) })
-            enqueueImageCleanup(failed)
+            val paths = images.mapNotNull { storagePathOf(it) }
+            if (!enqueueImageCleanup(paths)) deleteObjects(paths)
         }
+        launchPendingImageCleanup()
         Unit
     }
 
@@ -359,15 +366,20 @@ class SupabaseHousingRepository @Inject constructor(
         return failed
     }
 
-    /** Ghi hàng đợi bền vững là việc phụ: lỗi đĩa không được làm hỏng thao tác xóa tin chính. */
-    private suspend fun enqueueImageCleanup(paths: List<String>) {
-        if (paths.isEmpty()) return
-        try {
+    /**
+     * Ghi hàng đợi bền vững là việc phụ: lỗi đĩa không được làm hỏng thao tác chính.
+     * Trả false khi không ghi được để caller dọn đồng bộ ngay, không mất path.
+     */
+    private suspend fun enqueueImageCleanup(paths: List<String>): Boolean {
+        if (paths.isEmpty()) return true
+        return try {
             cleanupStore.enqueue(paths)
+            true
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: IOException) {
             Log.w(LOG_TAG, "Không lưu được hàng đợi dọn ảnh", error)
+            false
         }
     }
 
