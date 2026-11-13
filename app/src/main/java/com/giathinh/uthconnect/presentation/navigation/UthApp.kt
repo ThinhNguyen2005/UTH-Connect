@@ -30,6 +30,8 @@ import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDesti
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
+import com.giathinh.uthconnect.presentation.books.navigation.BooksDestination
+import com.giathinh.uthconnect.presentation.books.navigation.booksGraph
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
@@ -132,6 +134,8 @@ private fun UthNavHost(
 
                         UtilityModuleId.EVENTS -> navController.navigate(EventsDestination)
 
+                        UtilityModuleId.BOOKS -> navController.navigate(BooksDestination)
+
                         UtilityModuleId.HOUSING -> navController.navigate(HousingDestination)
 
                         // Module chưa có graph riêng thì ở lại lưới Tiện ích với badge giai đoạn;
@@ -154,6 +158,7 @@ private fun UthNavHost(
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
         announcementGraph(navController)
         lostFoundGraph(navController)
+        booksGraph(navController)
         housingGraph(navController)
     }
 }

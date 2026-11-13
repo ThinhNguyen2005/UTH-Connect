@@ -7,9 +7,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -17,9 +22,17 @@ import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
 import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
+import com.google.firebase.FirebaseApp
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigFetchThrottledException
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 
@@ -43,6 +56,7 @@ class MainActivity : ComponentActivity() {
      * là recompose ngay, không cần dựng lại activity.
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
+    private var appAvailability by mutableStateOf<AppAvailability?>(null)
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -68,10 +82,99 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         observeThemeMode()
+        observeRemoteConfig()
         setContent {
             UTHConnectTheme(darkTheme = themeMode.resolveDarkTheme(isSystemInDarkTheme())) {
-                UthApp()
+                when (val state = appAvailability) {
+                    null -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+
+                    AppAvailability.AVAILABLE -> UthApp()
+
+                    else -> AvailabilityScreen(state)
+                }
             }
+        }
+    }
+
+    /**
+     * Tải trạng thái gate đã lưu bền vững, sau đó thực thi fetch & activate Remote Config
+     * trên luồng I/O ([Dispatchers.IO]) để tránh chặn UI Thread.
+     *
+     * Khi fetch thất bại hoặc trả về giá trị mặc định, trạng thái gate đã lưu được ưu tiên giữ nguyên
+     * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
+     */
+    private fun observeRemoteConfig() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
+                    appAvailability = AppAvailability.AVAILABLE
+                    return@repeatOnLifecycle
+                }
+                val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
+                val (initialState, _) = resolveGate(saved, null, null, BuildConfig.VERSION_NAME)
+                appAvailability = initialState
+
+                try {
+                    withContext(Dispatchers.IO) {
+                        updateRemoteConfigGate(saved)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: FirebaseRemoteConfigFetchThrottledException) {
+                    if (appAvailability == null) {
+                        appAvailability = initialState
+                    }
+                } catch (_: Exception) {
+                    if (appAvailability == null) {
+                        appAvailability = initialState
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun updateRemoteConfigGate(saved: SavedGate) {
+        val config = FirebaseRemoteConfig.getInstance()
+        val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
+        val settings = FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
+            .build()
+        config.setConfigSettingsAsync(settings).await()
+        config.setDefaultsAsync(
+            mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
+        ).await()
+
+        config.fetchAndActivate().await()
+
+        val maintVal = config.getValue("maintenance_mode")
+        val minVerVal = config.getValue("force_update_min_version")
+
+        val remoteMaint = if (maintVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
+            maintVal.asBoolean()
+        } else {
+            null
+        }
+        val remoteMinVer = if (minVerVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
+            minVerVal.asString()
+        } else {
+            null
+        }
+
+        val (newState, newSaved) = resolveGate(
+            saved = saved,
+            remoteMaintenance = remoteMaint,
+            remoteMinVersion = remoteMinVer,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
+        saveGate(this@MainActivity, newSaved)
+
+        withContext(Dispatchers.Main) {
+            appAvailability = newState
         }
     }
 
@@ -83,5 +186,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        private const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
     }
 }

@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
     alias(libs.plugins.detekt)
     alias(libs.plugins.spotless)
 }
@@ -31,6 +32,10 @@ if (useSupabase) {
     require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
         "Supply -PsupabaseUrl=https://... -PsupabasePublishableKey=sb_publishable_..."
     }
+}
+if (file("google-services.json").exists()) {
+    pluginManager.apply(libs.plugins.google.services.get().pluginId)
+    pluginManager.apply(libs.plugins.firebase.crashlytics.get().pluginId)
 }
 
 android {
@@ -108,10 +113,6 @@ dependencies {
     implementation(libs.googleid)
 
     // Máy quét QR điểm danh: preview + phân tích frame liên tục trong app.
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
 
     // Ghép trọ: bản đồ OpenStreetMap chấm pin khi đăng tin (không key/billing) + GPS vị trí hiện tại.
     implementation(libs.osmdroid.android)
@@ -122,6 +123,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.coil.compose)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // DI

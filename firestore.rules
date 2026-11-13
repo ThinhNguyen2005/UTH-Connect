@@ -25,6 +25,42 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer');
     }
 
+    function validBookListing() {
+      return request.resource.data.keys().hasAll([
+          'title', 'subject', 'condition', 'dealType', 'priceVnd', 'description',
+          'sellerName', 'contact', 'ownerUid', 'photoUrl', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'title', 'subject', 'condition', 'dealType', 'priceVnd', 'description',
+          'sellerName', 'contact', 'ownerUid', 'photoUrl', 'status', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 100
+        && request.resource.data.sellerName is string
+        && request.resource.data.sellerName.size() > 0
+        && request.resource.data.sellerName.size() <= 100
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() > 0
+        && request.resource.data.contact.size() <= 254
+        && (request.resource.data.contact.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+          || (request.resource.data.contact.size() <= 20
+            && request.resource.data.contact.matches('^[+() -]*([0-9][+() -]*){8,}[+() -]*$')))
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.dealType in ['SALE', 'EXCHANGE']
+        && request.resource.data.condition in ['NEW', 'GOOD', 'USED']
+        && request.resource.data.status in ['AVAILABLE', 'SOLD']
+        && request.resource.data.createdAt is int
+        && (request.resource.data.photoUrl == null || request.resource.data.photoUrl is string)
+        && ((request.resource.data.dealType == 'EXCHANGE' && request.resource.data.priceVnd == null)
+          || (request.resource.data.dealType == 'SALE'
+            && request.resource.data.priceVnd is int && request.resource.data.priceVnd > 0));
+    }
+
     // --- USERS COLLECTION ---
     match /users/{userId} {
       // Bất kỳ user đã đăng nhập đều có thể đọc profile cơ bản (để hiển thị tên tác giả/bạn học)
@@ -73,6 +109,21 @@ service cloud.firestore {
         isAdmin()
       );
       allow write: if isAdmin();
+    }
+
+    // --- BOOK MARKETPLACE ---
+    match /book_listings/{listingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'AVAILABLE'
+        && validBookListing();
+      allow update: if isAuthenticated()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validBookListing();
+      allow delete: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
     }
 
     // --- GRADES (BẢNG ĐIỂM) ---

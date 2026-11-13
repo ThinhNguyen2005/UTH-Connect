@@ -1,17 +1,19 @@
 package com.giathinh.uthconnect
 
 import android.app.Application
+import com.giathinh.uthconnect.data.repository.CrashIdentity
 import dagger.hilt.android.HiltAndroidApp
 
 /**
- * Application duy nhất của app và là **gốc của cây DI**.
+ * Application class gắn `@HiltAndroidApp` để kích hoạt cây DI Hilt.
  *
- * `@HiltAndroidApp` sinh `SingletonComponent` — component cha của mọi component
- * khác (Activity, ViewModel…). Không có nó, Hilt không injection chỗ nào cả.
- *
- * File thuộc quyền sở hữu chung (xem `docs/REPO_TREE.md` mục "file gốc"): chỉ sửa khi
- * thật sự thêm khởi tạo cấp app (WorkManager, crash report…), không thêm binding
+ * Chỉ dùng cho khởi tạo toàn app (DI, log tree, push SDK khi cần). Không nhét logic
  * nghiệp vụ vào đây — binding của module nào nằm trong `data/di/` của module đó.
  */
 @HiltAndroidApp
-class UTHConnectApplication : Application()
+class UTHConnectApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        CrashIdentity.clear()
+    }
+}
