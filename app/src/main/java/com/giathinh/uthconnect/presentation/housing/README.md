@@ -19,9 +19,9 @@ tin `FULFILLED` / hết chỗ / bị ẩn không lên feed.
   tính, tối đa 6 ảnh upload song song lên bucket `housing-images`), picker vị trí
   OpenStreetMap (OSMDroid, không API key) chấm pin + GPS + geocode địa chỉ, nháp
   cục bộ theo tài khoản (DataStore), validation trước khi gửi.
-- **Quản lý tin của chủ**: sửa tin, đánh dấu hết phòng, xóa tin (kèm dọn ảnh
-  Storage; ảnh dọn chưa được ghi hàng đợi DataStore, thử lại chạy nền ở lần nạp
-  feed sau — không chặn feed, chỉ dọn ảnh đúng tài khoản);
+- **Quản lý tin của chủ**: sửa tin, đánh dấu hết phòng, xóa tin (ảnh cần dọn ghi
+  hàng đợi DataStore rồi trả kết quả ngay, worker nền dọn — không chặn thao tác
+  lẫn feed, chỉ dọn ảnh đúng tài khoản; hàng đợi lỗi đĩa thì dọn đồng bộ ngay);
   giới hạn 2 tin OPEN mỗi người và ngưỡng 3 báo cáo ẩn tin enforced
   bằng RLS + trigger + RPC trong `supabase/migrations`.
 - **Tương tác feed**: lưu tin yêu thích (cục bộ), báo vi phạm kèm lý do.
