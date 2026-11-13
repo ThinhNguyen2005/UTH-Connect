@@ -56,6 +56,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -455,6 +456,9 @@ private fun ReportImagePicker(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var activeJob by remember { mutableStateOf<Job?>(null) }
+    DisposableEffect(Unit) {
+        onDispose { onAction(LostFoundAction.SetReportImageProcessing(false)) }
+    }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? ->
