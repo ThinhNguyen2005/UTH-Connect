@@ -67,7 +67,6 @@
     <ID>MagicNumber:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$6</ID>
     <ID>MagicNumber:InMemoryTimetableRepository.kt$InMemoryTimetableRepository$6</ID>
     <ID>MagicNumber:InMemoryTimetableRepository.kt$InMemoryTimetableRepository$7</ID>
-    <ID>MagicNumber:LostFoundViewModel.kt$LostFoundViewModel$20</ID>
     <ID>MagicNumber:PasswordChangeValidator.kt$PasswordChangeValidator$64</ID>
     <ID>MagicNumber:PasswordChangeValidator.kt$PasswordChangeValidator$8</ID>
     <ID>MagicNumber:QrFrameDecoder.kt$QrFrameDecoder$0xFF</ID>
@@ -253,20 +252,6 @@
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Sạc màu trắng 67W Apple kèm dây cáp C to C, để quên ở khu tự học tầng 2 thư viện CS1 khoảng 11h trưa nay. Ai thấy cho mình xin lại với ạ."</ID>
     <ID>MaxLineLength:InMemoryLostFoundRepository.kt$InMemoryLostFoundRepository$description = "Tai nghe nhặt được tại dãy ghế chờ hành lang lầu 3 nhà A CS1 sau tiết học sáng. Ai là chủ nhân vui lòng liên hệ xác nhận tên bluetooth."</ID>
     <ID>MaxLineLength:InMemoryTimetableRepository.kt$InMemoryTimetableRepository$state.update { it.copy(deadlines = it.deadlines + Deadline(UUID.randomUUID().toString(), course, title.trim(), dueAt)) }</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$color = if (form.kind == ListingKind.FOUND) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$color = if (form.kind == ListingKind.FOUND) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$color = if (form.kind == ListingKind.LOST) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$color = if (form.kind == ListingKind.LOST) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$color = if (form.phoneError != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$fontWeight = if (uiState.selectedKind == ListingKind.FOUND) FontWeight.Bold else FontWeight.Normal</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$fontWeight = if (uiState.selectedKind == ListingKind.LOST) FontWeight.Bold else FontWeight.Normal</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$is FormValidationError.DescriptionTooShort -&gt; stringResource(error.messageRes, error.currentLength)</ID>
-    <ID>MaxLineLength:LostFoundScreen.kt$supportingText = { form.locationError?.let { Text(stringResource(it.messageRes), color = MaterialTheme.colorScheme.onErrorContainer) } }</ID>
-    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$assertEquals("Nhặt được tai nghe AirPods Pro trong hộp màu xanh", viewModel.uiState.value.filteredListings.first().title)</ID>
-    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$assertEquals("titleError phải là FormValidationError.TitleRequired", FormValidationError.TitleRequired, state.reportForm.titleError)</ID>
-    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$assertTrue("descriptionError phải là DescriptionTooShort", state.reportForm.descriptionError is FormValidationError.DescriptionTooShort)</ID>
-    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest$viewModel.onAction(LostFoundAction.UpdateReportDescription("Đây là mô tả dài hơn hai mươi ký tự để pass kiểm tra"))</ID>
-    <ID>MaxLineLength:LostFoundViewModelTest.kt$LostFoundViewModelTest.&lt;no name provided&gt;$override suspend fun reportItem(item: LostFoundListing): Result&lt;LostFoundListing&gt;</ID>
     <ID>MaxLineLength:MockTicketRepository.kt$MockTicketRepository$override suspend</ID>
     <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `accept strong distinct password`()</ID>
     <ID>MaxLineLength:PasswordChangeValidatorTest.kt$PasswordChangeValidatorTest$@Test fun `reject whitespace and excessive password`()</ID>
@@ -369,6 +354,7 @@
     <ID>ReturnCount:GoogleIdTokenSource.kt$GoogleIdTokenSource$suspend fun request(activity: Activity, webClientId: String): GoogleIdTokenResult</ID>
     <ID>ReturnCount:QrFrameDecoder.kt$QrFrameDecoder$fun compactLuminance(plane: ByteBuffer, width: Int, height: Int, rowStride: Int): ByteArray</ID>
     <ID>ReturnCount:QrScannerRoute.kt$private fun decodeFrame(frame: ImageProxy): String?</ID>
+    <ID>ReturnCount:ReportItemBottomSheet.kt$private fun compressRawBytes( rawBytes: ByteArray, maxDimension: Int, quality: Int, ): ImageProcessResult</ID>
     <ID>ReturnCount:ScheduleViewModel.kt$ScheduleViewModel$fun onAction(action: ScheduleAction)</ID>
     <ID>ReturnCount:SupabaseMappers.kt$internal fun JsonObject.toDomainTicket( studentId: String, userId: String, attendedEventIds: Set&lt;String&gt;, ): Ticket?</ID>
     <ID>ReturnCount:UpdateStudentContactUseCase.kt$UpdateStudentContactUseCase$suspend operator fun invoke(phone: String, email: String, address: String): UpdateContactResult</ID>

@@ -20,6 +20,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
+private const val STORAGE_READ_TIMEOUT_MS = 60_000
+
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
@@ -32,6 +34,7 @@ class SupabaseRestClient @Inject constructor() {
     @Volatile private var credentials: Credentials? = null
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
+    val userIdOrNull: String? get() = credentials?.userId
 
     /** Called by the session repository, which owns the remember-me decision. */
     fun attachSecureStore(store: SecureSessionStore) {
@@ -222,8 +225,10 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore?.clear()
     }
 
-    /** Reads a PostgREST table or view using the authenticated session. */
-    suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
+    suspend fun table(
+        path: String,
+        allowAnonymous: Boolean = false,
+    ): JsonElement = authorized("/rest/v1/$path", "GET", allowAnonymous = allowAnonymous)
 
     /** Updates matching rows through PostgREST. */
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
@@ -316,10 +321,59 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-    /** Sends an authenticated request after obtaining a valid access token. */
-    private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
-        val accessToken = freshToken()
-        return send(path, method, body, accessToken)
+    suspend fun uploadStorage(
+        bucket: String,
+        path: String,
+        bytes: ByteArray,
+        mimeType: String = "image/jpeg",
+    ): String = withContext(Dispatchers.IO) {
+        val token = freshToken()
+        val uploadUrl = "${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$path"
+        val connection = (URL(uploadUrl).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = 15_000
+            readTimeout = STORAGE_READ_TIMEOUT_MS
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Content-Type", mimeType)
+            setRequestProperty("x-upsert", "true")
+            setFixedLengthStreamingMode(bytes.size)
+        }
+        try {
+            connection.outputStream.use { it.write(bytes) }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, errBody.ifBlank { "Storage upload failed ($status)" })
+            }
+            connection.inputStream?.bufferedReader()?.use { it.readText() }
+            "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$path"
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private suspend fun authorized(
+        path: String,
+        method: String,
+        body: JsonObject? = null,
+        allowAnonymous: Boolean = false,
+    ): JsonElement {
+        val accessToken = if (allowAnonymous) {
+            freshTokenOrNull()
+        } else {
+            freshToken()
+        }
+        return send(path, method, body, bearer = accessToken)
+    }
+
+    private suspend fun freshTokenOrNull(): String? = try {
+        freshToken()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        null
     }
 
     private suspend fun storageRequest(
@@ -459,6 +513,3 @@ class SupabaseRestClient @Inject constructor() {
 }
 
 class SupabaseHttpException(val status: Int, message: String) : IllegalStateException(message)
-
-/** Ảnh phòng có thể vài MB; timeout đọc dài hơn REST thông thường (15s). */
-private const val STORAGE_READ_TIMEOUT_MS = 60_000
