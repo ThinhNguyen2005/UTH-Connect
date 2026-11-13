@@ -657,6 +657,9 @@
     <string name="scanner_camera_scanning">Place the QR code inside the frame</string>
     <string name="scanner_camera_received">Code read. Select Scan another code to continue.</string>
     <string name="scanner_scan_again">Scan another code</string>
+    <string name="availability_retry_action">Retry</string>
+    <string name="availability_update_action">Update Now</string>
+    <string name="availability_update_failed">Could not open the update link.</string>
     <string name="housing_title">Roommate match</string>
     <plurals name="housing_open_count">
         <item quantity="one">%1$d open listing</item>

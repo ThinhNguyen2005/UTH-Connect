@@ -24,12 +24,12 @@ import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigFetchThrottledException
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -57,6 +57,9 @@ class MainActivity : ComponentActivity() {
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
     private var appAvailability by mutableStateOf<AppAvailability?>(null)
+    private var updateUrlState by mutableStateOf("")
+    private var isCheckingAvailability by mutableStateOf(false)
+    private var remoteConfigJob: Job? = null
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -95,8 +98,21 @@ class MainActivity : ComponentActivity() {
 
                     AppAvailability.AVAILABLE -> UthApp()
 
-                    else -> AvailabilityScreen(state)
+                    else -> AvailabilityScreen(
+                        state = state,
+                        updateUrl = updateUrlState,
+                        isRetrying = isCheckingAvailability,
+                        onRetry = { fetchRemoteConfigGate(userInitiated = true) },
+                    )
                 }
+            }
+        }
+    }
+
+    private fun observeRemoteConfig() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                fetchRemoteConfigGate(userInitiated = false)
             }
         }
     }
@@ -105,76 +121,96 @@ class MainActivity : ComponentActivity() {
      * Tải trạng thái gate đã lưu bền vững, sau đó thực thi fetch & activate Remote Config
      * trên luồng I/O ([Dispatchers.IO]) để tránh chặn UI Thread.
      *
-     * Khi fetch thất bại hoặc trả về giá trị mặc định, trạng thái gate đã lưu được ưu tiên giữ nguyên
+     * Khi fetch thất bại, trạng thái gate đã lưu được ưu tiên giữ nguyên
      * để duy trì việc chặn truy cập đối với phiên bản cũ hoặc ứng dụng đang bảo trì.
      */
-    private fun observeRemoteConfig() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
-                    appAvailability = AppAvailability.AVAILABLE
-                    return@repeatOnLifecycle
-                }
+    @Suppress("TooGenericExceptionCaught")
+    private fun fetchRemoteConfigGate(userInitiated: Boolean = false) {
+        if (remoteConfigJob?.isActive == true) return
+        remoteConfigJob = lifecycleScope.launch {
+            if (FirebaseApp.getApps(this@MainActivity).isEmpty()) {
+                appAvailability = AppAvailability.AVAILABLE
+                return@launch
+            }
+            isCheckingAvailability = true
+            var initialState = AppAvailability.AVAILABLE
+            try {
                 val saved = withContext(Dispatchers.IO) { loadSavedGate(this@MainActivity) }
-                val (initialState, _) = resolveGate(saved, null, null, BuildConfig.VERSION_NAME)
+                val (resolvedInitial, _) = resolveGate(
+                    saved = saved,
+                    fetchSucceeded = false,
+                    remoteMaintenance = false,
+                    remoteMinVersion = "1.0.0",
+                    remoteUpdateUrl = "",
+                    currentVersion = BuildConfig.VERSION_NAME,
+                )
+                initialState = resolvedInitial
                 appAvailability = initialState
+                updateUrlState = saved.updateUrl
 
-                try {
-                    withContext(Dispatchers.IO) {
-                        updateRemoteConfigGate(saved)
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: FirebaseRemoteConfigFetchThrottledException) {
-                    if (appAvailability == null) {
-                        appAvailability = initialState
-                    }
-                } catch (_: Exception) {
-                    if (appAvailability == null) {
-                        appAvailability = initialState
-                    }
+                withContext(Dispatchers.IO) {
+                    updateRemoteConfigGate(saved, userInitiated)
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                android.util.Log.w("MainActivity", "Remote Config check failed: ${e.message}")
+                if (appAvailability == null) {
+                    appAvailability = initialState
+                }
+            } finally {
+                isCheckingAvailability = false
             }
         }
     }
 
-    private suspend fun updateRemoteConfigGate(saved: SavedGate) {
-        val config = FirebaseRemoteConfig.getInstance()
-        val fetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else RELEASE_FETCH_INTERVAL_SECONDS
-        val settings = FirebaseRemoteConfigSettings.Builder()
-            .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
-            .build()
-        config.setConfigSettingsAsync(settings).await()
-        config.setDefaultsAsync(
-            mapOf("force_update_min_version" to "1.0.0", "maintenance_mode" to false),
-        ).await()
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun updateRemoteConfigGate(saved: SavedGate, userInitiated: Boolean) {
+        var fetchSucceeded = false
+        var remoteMaint = false
+        var remoteMinVer = "1.0.0"
+        var remoteUrl = ""
 
-        config.fetchAndActivate().await()
+        try {
+            val config = FirebaseRemoteConfig.getInstance()
+            val fetchIntervalSeconds = remoteConfigFetchIntervalSeconds(BuildConfig.DEBUG, userInitiated)
+            val settings = FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(fetchIntervalSeconds)
+                .build()
+            config.setConfigSettingsAsync(settings).await()
+            config.setDefaultsAsync(
+                mapOf(
+                    "force_update_min_version" to "1.0.0",
+                    "maintenance_mode" to false,
+                    "update_url" to "",
+                ),
+            ).await()
 
-        val maintVal = config.getValue("maintenance_mode")
-        val minVerVal = config.getValue("force_update_min_version")
+            config.fetchAndActivate().await()
 
-        val remoteMaint = if (maintVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-            maintVal.asBoolean()
-        } else {
-            null
-        }
-        val remoteMinVer = if (minVerVal.source == FirebaseRemoteConfig.VALUE_SOURCE_REMOTE) {
-            minVerVal.asString()
-        } else {
-            null
+            remoteMaint = config.getBoolean("maintenance_mode")
+            remoteMinVer = config.getString("force_update_min_version")
+            remoteUrl = config.getString("update_url")
+            fetchSucceeded = true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            fetchSucceeded = false
         }
 
         val (newState, newSaved) = resolveGate(
             saved = saved,
+            fetchSucceeded = fetchSucceeded,
             remoteMaintenance = remoteMaint,
             remoteMinVersion = remoteMinVer,
+            remoteUpdateUrl = remoteUrl,
             currentVersion = BuildConfig.VERSION_NAME,
         )
         saveGate(this@MainActivity, newSaved)
 
         withContext(Dispatchers.Main) {
             appAvailability = newState
+            updateUrlState = newSaved.updateUrl
         }
     }
 
@@ -189,6 +225,6 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
+        internal const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
     }
 }

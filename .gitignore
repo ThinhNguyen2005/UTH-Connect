@@ -17,3 +17,5 @@ local.properties
 /docs/backups
 /docs/sessions
 /docs/plan
+__pycache__/
+*.pyc

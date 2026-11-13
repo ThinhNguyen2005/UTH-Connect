@@ -672,6 +672,9 @@
     <string name="common_error_network">Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.</string>
     <string name="common_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="tickets_qr_issuing">Đang cấp mã QR bảo mật…</string>
+    <string name="availability_retry_action">Thử lại</string>
+    <string name="availability_update_action">Cập nhật ngay</string>
+    <string name="availability_update_failed">Không thể mở liên kết cập nhật.</string>
     <string name="housing_title">Ghép trọ</string>
     <plurals name="housing_open_count">
         <item quantity="other">%1$d tin đang mở</item>
