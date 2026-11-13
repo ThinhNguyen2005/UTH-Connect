@@ -46,12 +46,13 @@ $$;
 -- 2. Dọn URL hỏng của tin cũ trước khi trigger có hiệu lực -------------------
 -- Một lệnh duy nhất dọn cả ảnh lẫn Zalo để lần chạy lại (trigger đã bật) không
 -- bị chính trigger chặn giữa chừng khi hàng vi phạm cả hai; chỉ đụng hàng lỗi.
+-- WITH ORDINALITY + order by giữ đúng thứ tự ảnh còn lại — phần tử đầu là ảnh bìa.
 update public.housing_posts
 set
     images = coalesce(
         (
-            select array_agg(img)
-            from unnest(images) as img
+            select array_agg(img order by ord)
+            from unnest(images) with ordinality as t(img, ord)
             where img ~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/'
         ),
         '{}'
