@@ -21,6 +21,9 @@ begin;
 do $$
 begin
     if to_regclass('public.housing_posts') is not null then
+        -- Khóa bảng trước khi đếm: hai deploy đồng thời không thể cùng vượt qua
+        -- kiểm tra rồi DROP bảng của nhau (khóa giữ tới COMMIT).
+        lock table public.housing_posts in access exclusive mode;
         if exists (select 1 from public.housing_posts) then
             raise exception 'HOUSING_REBUILD_HAS_DATA: viết bước chuyển đổi dữ liệu trước khi dựng lại bảng';
         end if;
@@ -47,7 +50,14 @@ create table public.housing_posts (
     available_slots integer not null default 1 check (available_slots >= 0),
     gender_preference text not null default 'ANY' check (gender_preference in ('ANY', 'MALE', 'FEMALE')),
     schedule_note text not null default '',
-    amenities text[] not null default '{}',
+    amenities text[] not null default '{}'
+        constraint housing_posts_amenities_check check (
+            amenities <@ array[
+                'MEZZANINE', 'AIR_CONDITIONER', 'MACHINE_WASH', 'FREE_HOURS',
+                'GOVERNMENT_UTILITY_RATES', 'SECURED_PARKING', 'COOKING',
+                'HIGH_SPEED_WIFI', 'HOT_WATER', 'BALCONY', 'KEY_CARD'
+            ]::text[] and array_position(amenities, null) is null
+        ),
     address_label text not null,
     latitude double precision not null default 0.0,
     longitude double precision not null default 0.0,
@@ -133,6 +143,22 @@ $$;
 create trigger housing_guard_status
     before update on public.housing_posts
     for each row execute function public.trg_housing_guard_status();
+
+-- Guard trên chỉ chạy khi UPDATE: INSERT vẫn nhận report_count client gửi kèm.
+-- Trigger riêng luôn đưa số đếm báo cáo về 0 — chỉ RPC báo tin được tăng nó.
+create or replace function public.trg_housing_reset_report_count()
+returns trigger
+language plpgsql
+as $$
+begin
+    new.report_count := 0;
+    return new;
+end;
+$$;
+
+create trigger housing_reset_report_count
+    before insert on public.housing_posts
+    for each row execute function public.trg_housing_reset_report_count();
 
 -- Chủ tin đánh dấu hết phòng (README 3.2): gỡ khỏi feed, giữ bản ghi.
 create or replace function public.mark_housing_listing_fulfilled(p_listing_id uuid)

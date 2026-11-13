@@ -33,4 +33,14 @@ create trigger housing_trusted_host
     before insert or update on public.housing_posts
     for each row execute function public.trg_housing_trusted_host();
 
+-- Tin tạo trước khi trigger tồn tại vẫn giữ giá trị danh tính client tự khai:
+-- chuẩn hóa một lần từ profiles cho khớp trigger (idempotent, chạy lại cho kết
+-- quả cũ; tin không còn profile tương ứng thì giữ nguyên).
+update public.housing_posts h
+set host_student_id = coalesce(btrim(p.student_id), ''),
+    verified = coalesce(p.student_id_verified, false),
+    verification_method = case when coalesce(p.student_id_verified, false) then 'EMAIL_UTH' else null end
+from public.profiles p
+where p.id = h.author_id;
+
 commit;
