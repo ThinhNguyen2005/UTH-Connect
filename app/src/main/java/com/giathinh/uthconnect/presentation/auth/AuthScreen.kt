@@ -1117,14 +1117,14 @@ private fun ModernResetPasswordContent(
             ) {
                 Column(modifier = Modifier.padding(UthDimens.Spacing.Md)) {
                     Text(
-                        text = "✓ Đã xác thực thành công liên kết email",
+                        text = stringResource(R.string.auth_recovery_email_verified_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = extended.onSuccessContainer,
                     )
                     Spacer(Modifier.height(UthDimens.Spacing.Xxs))
                     Text(
-                        text = "Phiên khôi phục hợp lệ. Vui lòng tạo mật khẩu mới cho tài khoản của bạn.",
+                        text = stringResource(R.string.auth_recovery_email_verified_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = extended.onSuccessContainer,
                     )
@@ -1139,15 +1139,14 @@ private fun ModernResetPasswordContent(
             ) {
                 Column(modifier = Modifier.padding(UthDimens.Spacing.Md)) {
                     Text(
-                        text = "Đã gửi liên kết đặt lại mật khẩu",
+                        text = stringResource(R.string.auth_recovery_link_sent_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(UthDimens.Spacing.Xxs))
                     Text(
-                        text = "Vui lòng kiểm tra hộp thư ${uiState.forgotEmail}\n" +
-                            "và nhấn vào liên kết 'Reset password' để xác thực và tạo mật khẩu mới.",
+                        text = stringResource(R.string.auth_recovery_link_sent_desc, uiState.forgotEmail),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1167,9 +1166,9 @@ private fun ModernResetPasswordContent(
             ) {
                 Text(
                     if (uiState.forgotCooldownSeconds > 0) {
-                        "Gửi lại liên kết sau ${uiState.forgotCooldownSeconds}s"
+                        stringResource(R.string.auth_resend_link_cooldown, uiState.forgotCooldownSeconds)
                     } else {
-                        "Gửi lại email xác thực"
+                        stringResource(R.string.auth_resend_email)
                     },
                 )
             }
@@ -1179,7 +1178,11 @@ private fun ModernResetPasswordContent(
                     onClick = { onAction(AuthAction.ToggleManualOtpInput) },
                 ) {
                     Text(
-                        text = if (uiState.showManualOtpField) "Ẩn nhập OTP" else "Nhập OTP thủ công",
+                        text = if (uiState.showManualOtpField) {
+                            stringResource(R.string.auth_toggle_otp_hide)
+                        } else {
+                            stringResource(R.string.auth_toggle_otp_show)
+                        },
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
@@ -1201,7 +1204,7 @@ private fun ModernResetPasswordContent(
                     focusedContainerColor = extended.surfaceSubtle,
                     unfocusedContainerColor = extended.surfaceSubtle,
                 ),
-                label = { Text("Mã xác minh OTP (6 số)") },
+                label = { Text(stringResource(R.string.auth_reset_otp_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             )
         }
@@ -1365,7 +1368,7 @@ private fun ModernVerifyEmailContent(
                 .heightIn(min = UthDimens.Size.ButtonHeight),
         ) {
             Text(
-                text = "Mở ứng dụng Email",
+                text = stringResource(R.string.auth_open_email_app),
                 style = MaterialTheme.typography.labelLarge,
             )
         }

@@ -25,11 +25,17 @@ export default function ResetPasswordPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasSession, setHasSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [appRecoveryHash, setAppRecoveryHash] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Kiểm tra hash URL có lỗi từ Supabase không
+    // 1. Lưu hash ban đầu trước khi GoTrue client làm sạch URL
+    if (typeof window !== "undefined" && window.location.hash) {
+      setAppRecoveryHash(window.location.hash);
+    }
+
+    // 2. Kiểm tra hash URL có lỗi từ Supabase không
     if (typeof window !== "undefined") {
       const hash = window.location.hash.substring(1);
       const hashParams = new URLSearchParams(hash);
@@ -52,7 +58,7 @@ export default function ResetPasswordPage() {
       }
     }
 
-    // 2. Lắng nghe trạng thái phiên phục hồi (PASSWORD_RECOVERY)
+    // 3. Lắng nghe trạng thái phiên phục hồi (PASSWORD_RECOVERY)
     const { data: authListener } = supabaseBrowserClient.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return;
@@ -64,11 +70,15 @@ export default function ResetPasswordPage() {
       }
     );
 
-    // 3. Kiểm tra phiên hiện tại
+    // 4. Kiểm tra phiên hiện tại
     supabaseBrowserClient.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
       if (session) {
         setHasSession(true);
+      } else {
+        setErrorMessage((prev) =>
+          prev || "Không tìm thấy phiên đặt lại mật khẩu hợp lệ hoặc liên kết đã hết hạn. Vui lòng yêu cầu link mới."
+        );
       }
       setIsCheckingSession(false);
     });
@@ -158,7 +168,7 @@ export default function ResetPasswordPage() {
               <Loader2 className="w-8 h-8 animate-spin text-sky-600" />
               <p className="text-sm">Đang xác thực liên kết bảo mật...</p>
             </div>
-          ) : !hasSession && errorMessage ? (
+          ) : !hasSession ? (
             <div className="space-y-4">
               <Link
                 href="/login"
@@ -229,7 +239,7 @@ export default function ResetPasswordPage() {
 
               <div className="pt-2 flex flex-col items-center gap-3">
                 <a
-                  href={`uthconnect://auth/reset-password${typeof window !== "undefined" ? window.location.hash : ""}`}
+                  href={`uthconnect://auth/reset-password${appRecoveryHash}`}
                   className="w-full text-center py-2 px-3 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors"
                 >
                   Mở trong ứng dụng UTH Connect trên điện thoại

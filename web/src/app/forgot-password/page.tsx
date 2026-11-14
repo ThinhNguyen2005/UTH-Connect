@@ -98,6 +98,13 @@ export default function ForgotPasswordPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-8 px-6 shadow-sm rounded-xl border border-slate-200/80 sm:px-10">
+          {errorMessage && (
+            <div className="mb-5 rounded-lg bg-rose-50 p-3.5 border border-rose-200/60 flex items-start gap-2.5">
+              <ShieldAlert className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-rose-800 leading-tight">{errorMessage}</p>
+            </div>
+          )}
+
           {successEmail ? (
             <div className="space-y-6 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
@@ -143,13 +150,6 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              {errorMessage && (
-                <div className="rounded-lg bg-rose-50 p-3.5 border border-rose-200/60 flex items-start gap-2.5">
-                  <ShieldAlert className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-rose-800 leading-tight">{errorMessage}</p>
-                </div>
-              )}
-
               <div>
                 <label
                   htmlFor="identifier"

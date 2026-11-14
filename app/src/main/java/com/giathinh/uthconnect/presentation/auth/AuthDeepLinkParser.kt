@@ -19,6 +19,8 @@ sealed interface AuthDeepLinkTarget {
 }
 
 object AuthDeepLinkParser {
+    private var activeRequestId = 0L
+
     fun parse(uriString: String): AuthDeepLinkTarget {
         val fragment = uriString.substringAfter('#', "")
         val query = uriString.substringAfter('?', "").substringBefore('#')
@@ -110,6 +112,7 @@ object AuthDeepLinkParser {
         events: Channel<AuthEvent>,
         scope: CoroutineScope,
     ) {
+        val requestId = ++activeRequestId
         val accessToken = target.accessToken
         val tokenHash = target.tokenHash
         if (!accessToken.isNullOrBlank()) {
@@ -128,7 +131,7 @@ object AuthDeepLinkParser {
                 try {
                     val verified = client.verifyEmailTokenHash(tokenHash, "recovery")
                     val token = verified["access_token"]?.jsonPrimitive?.content
-                    if (token != null) {
+                    if (token != null && requestId == activeRequestId) {
                         uiState.update {
                             it.copy(
                                 screenStep = AuthScreenStep.ResetPassword,
@@ -141,13 +144,17 @@ object AuthDeepLinkParser {
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: SupabaseHttpException) {
-                    val msg = error.message?.ifBlank {
-                        "Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ."
-                    } ?: "Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ."
-                    uiState.update { it.copy(screenStep = AuthScreenStep.ResetPassword, resetPasswordError = msg) }
+                    if (requestId == activeRequestId) {
+                        val msg = error.message?.ifBlank {
+                            "Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ."
+                        } ?: "Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ."
+                        uiState.update { it.copy(screenStep = AuthScreenStep.ResetPassword, resetPasswordError = msg) }
+                    }
                 } catch (io: IOException) {
-                    val msg = io.message?.ifBlank { "Lỗi mạng" } ?: "Lỗi kết nối mạng khi xác thực liên kết."
-                    uiState.update { it.copy(screenStep = AuthScreenStep.ResetPassword, resetPasswordError = msg) }
+                    if (requestId == activeRequestId) {
+                        val msg = io.message?.ifBlank { "Lỗi mạng" } ?: "Lỗi kết nối mạng khi xác thực liên kết."
+                        uiState.update { it.copy(screenStep = AuthScreenStep.ResetPassword, resetPasswordError = msg) }
+                    }
                 }
             }
         } else {
@@ -162,29 +169,40 @@ object AuthDeepLinkParser {
         events: Channel<AuthEvent>,
         scope: CoroutineScope,
     ) {
+        val requestId = ++activeRequestId
         val tokenHash = target.tokenHash
         if (!tokenHash.isNullOrBlank()) {
             scope.launch {
                 try {
                     client.verifyEmailTokenHash(tokenHash, "signup")
-                    uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
-                    events.send(AuthEvent.GeneralMessage("Xác thực email thành công! Bạn có thể đăng nhập ngay."))
+                    if (requestId == activeRequestId) {
+                        uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
+                        events.send(AuthEvent.GeneralMessage("Xác thực email thành công! Bạn có thể đăng nhập ngay."))
+                    }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: SupabaseHttpException) {
-                    val msg = error.message?.ifBlank {
-                        "Liên kết xác thực đã hết hạn hoặc không hợp lệ."
-                    } ?: "Liên kết xác thực đã hết hạn hoặc không hợp lệ."
-                    events.send(AuthEvent.GeneralMessage(msg))
+                    if (requestId == activeRequestId) {
+                        val msg = error.message?.ifBlank {
+                            "Liên kết xác thực đã hết hạn hoặc không hợp lệ."
+                        } ?: "Liên kết xác thực đã hết hạn hoặc không hợp lệ."
+                        events.send(AuthEvent.GeneralMessage(msg))
+                    }
                 } catch (io: IOException) {
-                    val msg = io.message?.ifBlank { "Lỗi mạng" } ?: "Lỗi kết nối mạng khi xác thực email."
-                    events.send(AuthEvent.GeneralMessage(msg))
+                    if (requestId == activeRequestId) {
+                        val msg = io.message?.ifBlank { "Lỗi mạng" } ?: "Lỗi kết nối mạng khi xác thực email."
+                        events.send(AuthEvent.GeneralMessage(msg))
+                    }
                 }
             }
-        } else {
+        } else if (!target.accessToken.isNullOrBlank()) {
             uiState.update { it.copy(screenStep = AuthScreenStep.Password) }
             scope.launch {
                 events.send(AuthEvent.GeneralMessage("Xác thực email thành công! Bạn có thể đăng nhập ngay."))
+            }
+        } else {
+            scope.launch {
+                events.send(AuthEvent.GeneralMessage("Liên kết xác thực không hợp lệ hoặc thiếu mã xác nhận."))
             }
         }
     }

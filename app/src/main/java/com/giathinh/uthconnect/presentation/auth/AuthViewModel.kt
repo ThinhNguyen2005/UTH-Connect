@@ -153,6 +153,7 @@ class AuthViewModel @Inject constructor(
                     resetNewPassword = "",
                     resetConfirmPassword = "",
                     forgotEmail = "",
+                    recoveryAccessToken = null,
                 )
             }
 
@@ -392,6 +393,7 @@ class AuthViewModel @Inject constructor(
                             resetNewPassword = "",
                             resetConfirmPassword = "",
                             resetPasswordError = null,
+                            recoveryAccessToken = null,
                         )
                     }
 

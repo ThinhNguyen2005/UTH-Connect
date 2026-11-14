@@ -447,6 +447,16 @@
     <string name="auth_unverified_badge">Chưa xác minh UTH</string>
     <string name="auth_organizer_demo_badge">Ban tổ chức sự kiện</string>
     <string name="auth_logout_retry">Thử lại</string>
+    <string name="auth_recovery_email_verified_title">✓ Đã xác thực thành công liên kết email</string>
+    <string name="auth_recovery_email_verified_desc">Phiên khôi phục hợp lệ. Vui lòng tạo mật khẩu mới cho tài khoản của bạn.</string>
+    <string name="auth_recovery_link_sent_title">Đã gửi liên kết đặt lại mật khẩu</string>
+    <string name="auth_recovery_link_sent_desc">Vui lòng kiểm tra hộp thư %1$s và nhấn vào liên kết \'Reset password\' để xác thực và tạo mật khẩu mới.</string>
+    <string name="auth_toggle_otp_hide">Ẩn nhập OTP</string>
+    <string name="auth_toggle_otp_show">Nhập OTP thủ công</string>
+    <string name="auth_open_email_app">Mở ứng dụng Email</string>
+    <string name="auth_resend_link_cooldown">Gửi lại liên kết sau %1$ds</string>
+    <string name="auth_resend_email">Gửi lại email xác thực</string>
+    <string name="auth_reset_otp_label">Mã xác minh OTP (6 số)</string>
     <!-- Auth/Profile V3.1: login retry -->
     <string name="auth_login_retry">Thử đăng nhập lại</string>
     <string name="scanner_open">Mở soát vé</string>

@@ -25,7 +25,7 @@ alter table public.housing_posts add column if not exists rejection_reason text 
 alter table public.housing_posts drop constraint if exists housing_posts_status_check;
 alter table public.housing_posts 
     add constraint housing_posts_status_check 
-    check (status in ('pending', 'approved', 'rejected', 'fulfilled', 'OPEN', 'HIDDEN_BY_REPORTS'));
+    check (status in ('pending', 'approved', 'rejected', 'fulfilled', 'FULFILLED', 'OPEN', 'HIDDEN_BY_REPORTS'));
 
 -- Cập nhật trigger kiểm tra URL ảnh áp dụng cho cả images và image_urls
 create or replace function public.trg_housing_url_guards()
@@ -36,22 +36,28 @@ declare
     v_image text;
 begin
     -- Đồng bộ hai chiều giữa images và image_urls để tương thích ngược 100%
-    if new.image_urls is not null and new.image_urls <> '{}' and (new.images is null or new.images = '{}') then
-        new.images := new.image_urls;
-    elsif new.images is not null and new.images <> '{}' and (new.image_urls is null or new.image_urls = '{}') then
+    if tg_op = 'INSERT' then
+        if new.image_urls is not null and new.image_urls <> '{}' and (new.images is null or new.images = '{}') then
+            new.images := new.image_urls;
+        elsif new.images is not null and new.images <> '{}' and (new.image_urls is null or new.image_urls = '{}') then
+            new.image_urls := new.images;
+        end if;
+    elsif new.images is distinct from old.images then
         new.image_urls := new.images;
+    elsif new.image_urls is distinct from old.image_urls then
+        new.images := new.image_urls;
     end if;
 
     -- Kiểm tra regex bucket cho toàn bộ URL ảnh
     foreach v_image in array coalesce(new.image_urls, new.images, '{}') loop
-        if v_image !~ '^https://[a-z0-9-]+\\.supabase\\.co/storage/v1/object/public/housing-images/' then
+        if v_image !~ '^https://[a-z0-9-]+[.]supabase[.]co/storage/v1/object/public/housing-images/' then
             raise exception 'HOUSING_IMAGE_BUCKET_INVALID' using errcode = 'P0001';
         end if;
     end loop;
 
     -- Kiểm tra link Zalo
     if coalesce(new.contact_zalo_url, '') <> ''
-        and new.contact_zalo_url !~* '^https://zalo\\.me(/|$)' then
+        and new.contact_zalo_url !~* '^https://zalo[.]me(/|$)' then
         raise exception 'HOUSING_ZALO_URL_INVALID' using errcode = 'P0001';
     end if;
 
@@ -87,7 +93,7 @@ create policy "notifications_select" on public.notifications
     using (
         user_id = (select auth.uid()) 
         or recipient_id = (select auth.uid()) 
-        or recipient_id is null 
+        or (user_id is null and recipient_id is null)
         or (select is_admin())
     );
 
@@ -105,3 +111,23 @@ create policy "notifications_update" on public.notifications
         or recipient_id = (select auth.uid()) 
         or (select is_admin() or is_organizer())
     );
+
+-- Bảo vệ các cột nhạy cảm (recipient_id, title, content) khi người dùng cập nhật is_read
+create or replace function public.protect_notification_fields()
+returns trigger
+language plpgsql
+as $$
+begin
+  if not (select public.is_admin() or public.is_organizer())
+     and (to_jsonb(new) - 'is_read') is distinct from (to_jsonb(old) - 'is_read') then
+    raise exception 'Chỉ Admin hoặc Ban tổ chức mới có quyền sửa nội dung thông báo'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists tr_protect_notification_fields on public.notifications;
+create trigger tr_protect_notification_fields
+  before update on public.notifications
+  for each row execute function public.protect_notification_fields();

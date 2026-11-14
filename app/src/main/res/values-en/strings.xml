@@ -442,6 +442,16 @@
     <string name="auth_unverified_badge">Not UTH verified</string>
     <string name="auth_organizer_demo_badge">Event Organizer</string>
     <string name="auth_logout_retry">Retry</string>
+    <string name="auth_recovery_email_verified_title">✓ Email link verified successfully</string>
+    <string name="auth_recovery_email_verified_desc">Valid recovery session. Please create a new password for your account.</string>
+    <string name="auth_recovery_link_sent_title">Password reset link sent</string>
+    <string name="auth_recovery_link_sent_desc">Please check your inbox %1$s and click the \'Reset password\' link to verify and create a new password.</string>
+    <string name="auth_toggle_otp_hide">Hide OTP input</string>
+    <string name="auth_toggle_otp_show">Enter OTP manually</string>
+    <string name="auth_open_email_app">Open Email app</string>
+    <string name="auth_resend_link_cooldown">Resend link in %1$ds</string>
+    <string name="auth_resend_email">Resend verification email</string>
+    <string name="auth_reset_otp_label">OTP verification code (6 digits)</string>
     <!-- Auth/Profile V3.1: login retry -->
     <string name="auth_login_retry">Retry sign-in</string>
     <!-- Lost & Found -->
