@@ -72,8 +72,8 @@ class PreferencesSessionRepository @Inject constructor(
                 profile = profile,
                 remembered = remember,
             )
+            fcmTokenRegistrar.registerForSignedInUser()
         }
-        fcmTokenRegistrar.registerForSignedInUser()
     }
 
     override suspend fun updateProfile(profile: StudentProfile) {
