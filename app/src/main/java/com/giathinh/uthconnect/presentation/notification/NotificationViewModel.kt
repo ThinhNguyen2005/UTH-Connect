@@ -87,6 +87,12 @@ class NotificationViewModel @Inject constructor(
             }
 
             is NotificationAction.ClickNotification -> {
+                if (action.notificationId in pendingReadIds) {
+                    viewModelScope.launch {
+                        _events.emit(NotificationNavigationEvent.OpenDetail(action.notificationId))
+                    }
+                    return
+                }
                 val ids = listOf(action.notificationId)
                 val version = markReadOptimistically(ids)
                 viewModelScope.launch {
@@ -148,7 +154,7 @@ class NotificationViewModel @Inject constructor(
                             latestMutationById.entries.fold(
                                 it.readNotificationIds + serverReadIds,
                             ) { ids, (id, succeeded) ->
-                                if (succeeded) ids + id else ids - id
+                                if (succeeded || id in serverReadIds) ids + id else ids - id
                             }
                         }
                         it.copy(

@@ -25,6 +25,7 @@ import javax.inject.Singleton
 
 /** Registers the current Android installation's FCM token against its signed-in Supabase user. */
 @Singleton
+@Suppress("TooManyFunctions")
 class FcmTokenRegistrar @Inject constructor(
     @ApplicationContext private val context: Context,
     private val client: SupabaseRestClient,
@@ -35,6 +36,8 @@ class FcmTokenRegistrar @Inject constructor(
     private val registrationStateLock = Any()
 
     @Volatile private var registrationEnabled = false
+
+    @Volatile private var signOutInProgress = false
 
     @Volatile private var registrationJob: Job? = null
     private val preferences = context.getSharedPreferences("uth_push", Context.MODE_PRIVATE)
@@ -57,6 +60,7 @@ class FcmTokenRegistrar @Inject constructor(
     /** Queues token registration after login or session restoration without delaying the UI. */
     fun registerForSignedInUser() {
         synchronized(registrationStateLock) {
+            signOutInProgress = false
             registrationEnabled = true
             registrationJob?.cancel()
             registrationJob = scope.launch {
@@ -75,11 +79,12 @@ class FcmTokenRegistrar @Inject constructor(
                 registrationJob = scope.launch { retryRegistration { registerToken(token) } }
                 return
             }
+            if (signOutInProgress) return
         }
         synchronized(registrationStateLock) {
             registrationJob = scope.launch {
-                runCatching { client.restoreSavedSession() }
-                if (client.userIdOrNull != null) registerForSignedInUser()
+                restoreSavedSessionWithRetry()
+                if (client.userIdOrNull != null && !signOutInProgress) registerForSignedInUser()
             }
         }
     }
@@ -92,6 +97,7 @@ class FcmTokenRegistrar @Inject constructor(
     ) {
         try {
             val jobToJoin = synchronized(registrationStateLock) {
+                if (!restoreOnFailure) signOutInProgress = true
                 registrationEnabled = false
                 val job = registrationJob
                 registrationJob = null
@@ -168,9 +174,30 @@ class FcmTokenRegistrar @Inject constructor(
         scope.launch {
             delay(PENDING_RETRY_DELAY_MS)
             val shouldRetry = synchronized(registrationStateLock) {
-                registrationEnabled && client.userIdOrNull != null
+                registrationEnabled && !signOutInProgress && client.userIdOrNull != null
             }
             if (shouldRetry) registerForSignedInUser()
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun restoreSavedSessionWithRetry() {
+        repeat(MAX_ATTEMPTS) { attempt ->
+            synchronized(registrationStateLock) {
+                if (signOutInProgress || registrationEnabled) return
+            }
+            try {
+                client.restoreSavedSession()
+                return
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                if (attempt == MAX_ATTEMPTS - 1) {
+                    android.util.Log.w(TAG, "Unable to restore remembered session for FCM token", error)
+                } else {
+                    delay(RETRY_DELAY_MS * (1L shl attempt))
+                }
+            }
         }
     }
 
