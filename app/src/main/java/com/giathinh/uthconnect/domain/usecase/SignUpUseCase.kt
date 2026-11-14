@@ -58,7 +58,9 @@ class SignUpUseCase @Inject constructor(
             confirmError = "Mật khẩu xác nhận không khớp"
         }
 
-        if (nameError != null || emailError != null || passwordError != null || confirmError != null) {
+        val hasIdentityError = nameError != null || emailError != null
+        val hasPasswordError = passwordError != null || confirmError != null
+        if (hasIdentityError || hasPasswordError) {
             return SignUpOutcome.InvalidForm(
                 nameError = nameError,
                 emailError = emailError,

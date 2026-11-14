@@ -163,10 +163,11 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
                 val now = LocalDateTime.now(clock)
-                if (
-                    state.value.isRegistrationsLoading || state.value.registrationsLoadFailed ||
+                val current = state.value
+                val registrationsUnavailable = current.isRegistrationsLoading || current.registrationsLoadFailed
+                val eventUnavailable =
                     event.status != EventStatus.PUBLISHED || now >= event.startAt || now >= event.endAt
-                ) {
+                if (registrationsUnavailable || eventUnavailable) {
                     return
                 }
                 state.update { it.copy(registrationError = null, registrationErrorCode = null) }
