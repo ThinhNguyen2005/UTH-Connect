@@ -377,8 +377,6 @@ function toSourceNotification(payload: WebhookEventPayload) {
   if (payload.type === "DELETE") return null;
   const publishedAt = stringValue(row.published_at);
   if (publishedAt && Date.parse(publishedAt) > Date.now()) return null;
-  const oldPublishedAt = stringValue(payload.old_record?.published_at);
-  if (payload.type === "UPDATE" && oldPublishedAt && Date.parse(oldPublishedAt) <= Date.now()) return null;
   const sourceCategory = stringValue(row.category);
   const academic = ["ACADEMIC", "EXAMINATION"].includes(sourceCategory);
   return {
