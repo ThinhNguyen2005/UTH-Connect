@@ -41,6 +41,7 @@ const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
 const MAX_CONTINUATION_DEPTH = 4;
 const CONTINUATION_TIMEOUT_MS = 2_000;
+const CLEANUP_BUDGET_MS = 5_000;
 
 class DispatchDeadlineError extends Error {}
 
@@ -144,7 +145,7 @@ Deno.serve(async (request) => {
         { push_status: "PROCESSING", push_claimed_at: new Date().toISOString() },
         "&push_status=eq.PENDING",
         true,
-        deadline,
+        cleanupDeadline(),
       );
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
@@ -191,7 +192,7 @@ Deno.serve(async (request) => {
               { push_device_cursor: device.device_id, push_claimed_at: new Date().toISOString() },
               "&push_status=eq.PROCESSING",
               false,
-              deadline,
+              cleanupDeadline(),
             );
             processedDevices++;
           }
@@ -202,7 +203,7 @@ Deno.serve(async (request) => {
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
               false,
-              deadline,
+              cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
             pendingTotal++;
@@ -213,7 +214,7 @@ Deno.serve(async (request) => {
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
               false,
-              deadline,
+              cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
             deferred = true;
@@ -223,7 +224,7 @@ Deno.serve(async (request) => {
               { push_status: "SENT", push_claimed_at: null, push_device_cursor: null },
               "&push_status=eq.PROCESSING",
               false,
-              deadline,
+              cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
             processedRows++;
@@ -235,7 +236,7 @@ Deno.serve(async (request) => {
             { push_status: "PENDING", push_claimed_at: null },
             "&push_status=eq.PROCESSING",
             false,
-            deadline,
+            cleanupDeadline(),
           );
           heldClaimIds.clear();
         }
@@ -245,7 +246,7 @@ Deno.serve(async (request) => {
           { push_status: "PENDING", push_claimed_at: null },
           "&push_status=eq.PROCESSING",
           false,
-          deadline,
+          cleanupDeadline(),
         );
         if (error instanceof DispatchDeadlineError) {
           deferred = true;
@@ -565,6 +566,10 @@ async function supabaseRest<T = unknown>(path: string, init: RequestInit = {}, d
 function deadlineSignal(deadline: number): AbortSignal {
   const remainingMs = Math.max(1, deadline - Date.now());
   return AbortSignal.timeout(remainingMs);
+}
+
+function cleanupDeadline(): number {
+  return Date.now() + CLEANUP_BUDGET_MS;
 }
 
 function supabaseSecretKey(): string {
