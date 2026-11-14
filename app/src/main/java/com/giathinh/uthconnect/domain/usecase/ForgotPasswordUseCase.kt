@@ -5,6 +5,9 @@ import com.giathinh.uthconnect.domain.validation.LoginValidator
 import java.io.IOException
 import javax.inject.Inject
 
+private const val MIN_RESET_STUDENT_ID_LENGTH = 8
+private const val MAX_RESET_STUDENT_ID_LENGTH = 12
+
 sealed interface ForgotPasswordOutcome {
     data object Success : ForgotPasswordOutcome
     data class InvalidEmail(val message: String) : ForgotPasswordOutcome
@@ -22,7 +25,9 @@ class ForgotPasswordUseCase @Inject constructor(
         val trimmed = rawIdentifier.trim()
         val email = if ('@' in trimmed) {
             trimmed
-        } else if (trimmed.all { it.isDigit() } && trimmed.length in 8..12) {
+        } else if (trimmed.all { it.isDigit() } &&
+            trimmed.length in MIN_RESET_STUDENT_ID_LENGTH..MAX_RESET_STUDENT_ID_LENGTH
+        ) {
             "$trimmed@ut.edu.vn"
         } else {
             trimmed
