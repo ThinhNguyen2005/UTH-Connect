@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
@@ -46,6 +48,10 @@ fun NotificationRoute(
 
     LaunchedEffect(notificationId) {
         notificationId?.let { viewModel.onAction(NotificationAction.LoadDetail(it)) }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (notificationId == null) viewModel.onAction(NotificationAction.Refresh)
     }
 
     LaunchedEffect(Unit) {

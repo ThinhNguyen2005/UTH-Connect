@@ -48,6 +48,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.giathinh.uthconnect.R
@@ -477,7 +479,14 @@ private fun NotificationFeed(
                 Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
                 NotificationSectionHeader(
                     title = stringResource(R.string.notification_section_previous),
-                    badgeText = stringResource(R.string.notification_viewed),
+                    badgeText = if (uiState.previousNotifications.all {
+                            it.id in uiState.readNotificationIds
+                        }
+                    ) {
+                        stringResource(R.string.notification_viewed)
+                    } else {
+                        null
+                    },
                     isMutedBadge = true,
                 )
             }
@@ -556,6 +565,9 @@ private fun NotificationCardItem(
     } else {
         MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
     }
+    val accessibilityState = stringResource(
+        if (isUnread) R.string.notification_unread else R.string.notification_read,
+    )
 
     Surface(
         onClick = onClick,
@@ -566,7 +578,9 @@ private fun NotificationCardItem(
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isUnread) 0.5f else 0.25f),
         ),
         tonalElevation = if (isUnread) UthDimens.Elevation.Card else UthDimens.Elevation.None,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { stateDescription = accessibilityState },
     ) {
         Row(
             modifier = Modifier.padding(UthDimens.Spacing.Md),

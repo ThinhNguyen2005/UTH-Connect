@@ -947,6 +947,8 @@
     <string name="notification_section_previous">Hôm qua &amp; Trước đó</string>
     <string name="notification_new_count">%1$d mới</string>
     <string name="notification_viewed">Đã xem</string>
+    <string name="notification_read">Đã đọc</string>
+    <string name="notification_unread">Chưa đọc</string>
     <string name="notification_empty_title">Không có thông báo nào</string>
     <string name="notification_empty_desc">Bạn sẽ nhận được các thông báo cập nhật về học tập, sự kiện tại đây.</string>
     <string name="notification_detail_unavailable">Không tìm thấy thông báo này.</string>

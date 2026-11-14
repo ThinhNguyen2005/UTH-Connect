@@ -39,7 +39,11 @@ class NotificationViewModel @Inject constructor(
     private val readMutationMutex = Mutex()
     private val pendingReadIds = mutableSetOf<String>()
     private val readMutationVersions = mutableMapOf<String, Long>()
-    private data class CompletedReadMutation(val ids: Set<String>, val succeeded: Boolean)
+    private val readMutationPreviousStates = mutableMapOf<Long, Set<String>>()
+    private data class CompletedReadMutation(
+        val ids: Set<String>,
+        val succeeded: Boolean,
+    )
     private val completedReadMutations = mutableListOf<CompletedReadMutation>()
     private var nextReadMutationVersion = 0L
     private var inboxLoadGeneration = 0L
@@ -78,6 +82,7 @@ class NotificationViewModel @Inject constructor(
                         notificationRepository.markAllInboxNotificationsRead()
                     }
                     finishReadMutation(ids, version, result.isSuccess)
+                    if (result.isSuccess) loadNotifications(isRefresh = true)
                 }
             }
 
@@ -192,10 +197,12 @@ class NotificationViewModel @Inject constructor(
 
     private fun markReadOptimistically(ids: List<String>): Long {
         val version = ++nextReadMutationVersion
+        val previouslyRead = _uiState.value.readNotificationIds.intersect(ids.toSet())
         ids.forEach { id ->
             pendingReadIds += id
             readMutationVersions[id] = version
         }
+        readMutationPreviousStates[version] = previouslyRead
         _uiState.update { state ->
             state.copy(readNotificationIds = state.readNotificationIds + ids)
         }
@@ -209,10 +216,11 @@ class NotificationViewModel @Inject constructor(
             pendingReadIds.remove(id)
             readMutationVersions.remove(id)
         }
+        val previous = readMutationPreviousStates.remove(version).orEmpty().intersect(ownedIds.toSet())
         completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
             _uiState.update { state ->
-                state.copy(readNotificationIds = state.readNotificationIds - ownedIds.toSet())
+                state.copy(readNotificationIds = (state.readNotificationIds - ownedIds.toSet()) + previous)
             }
         }
     }

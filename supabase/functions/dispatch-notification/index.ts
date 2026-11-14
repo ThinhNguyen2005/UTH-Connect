@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
 
   const webhookSecret = Deno.env.get("WEBHOOK_SHARED_SECRET");
-  if (!webhookSecret || request.headers.get("x-webhook-secret") !== webhookSecret) {
+  if (!webhookSecret || !(await secretsEqual(request.headers.get("x-webhook-secret") ?? "", webhookSecret))) {
     return json({ error: "Unauthorized webhook" }, 401);
   }
 
@@ -229,6 +229,18 @@ Deno.serve(async (request) => {
     return json({ error: "Notification dispatch failed" }, 500);
   }
 });
+
+async function secretsEqual(left: string, right: string): Promise<boolean> {
+  const [leftDigest, rightDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const leftBytes = new Uint8Array(leftDigest);
+  const rightBytes = new Uint8Array(rightDigest);
+  let difference = 0;
+  for (let index = 0; index < leftBytes.length; index++) difference |= leftBytes[index] ^ rightBytes[index];
+  return difference === 0;
+}
 
 async function queueContinuation(depth: number): Promise<void> {
   if (depth >= MAX_CONTINUATION_DEPTH) {

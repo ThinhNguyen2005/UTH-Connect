@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.data.push
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import com.giathinh.uthconnect.data.repository.SecureSessionStore
 import com.giathinh.uthconnect.data.repository.SupabaseRestClient
 import com.giathinh.uthconnect.data.repository.urlEncode
 import com.google.firebase.messaging.FirebaseMessaging
@@ -27,6 +28,7 @@ import javax.inject.Singleton
 class FcmTokenRegistrar @Inject constructor(
     @ApplicationContext private val context: Context,
     private val client: SupabaseRestClient,
+    private val secureSessionStore: SecureSessionStore,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val registrationMutex = Mutex()
@@ -41,6 +43,7 @@ class FcmTokenRegistrar @Inject constructor(
     @Volatile private var installationId: String? = null
 
     init {
+        client.attachSecureStore(secureSessionStore)
         connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 val shouldRegister = synchronized(registrationStateLock) {
@@ -67,9 +70,17 @@ class FcmTokenRegistrar @Inject constructor(
     /** Queues a token rotation update received by FirebaseMessagingService. */
     fun onTokenRefreshed(token: String) {
         synchronized(registrationStateLock) {
-            if (!registrationEnabled) return
-            registrationJob?.cancel()
-            registrationJob = scope.launch { retryRegistration { registerToken(token) } }
+            if (registrationEnabled) {
+                registrationJob?.cancel()
+                registrationJob = scope.launch { retryRegistration { registerToken(token) } }
+                return
+            }
+        }
+        synchronized(registrationStateLock) {
+            registrationJob = scope.launch {
+                runCatching { client.restoreSavedSession() }
+                if (client.userIdOrNull != null) registerForSignedInUser()
+            }
         }
     }
 
@@ -89,7 +100,10 @@ class FcmTokenRegistrar @Inject constructor(
             }
             jobToJoin?.join()
             registrationMutex.withLock {
-                val userId = client.userIdOrNull?.let(::urlEncode) ?: return@withLock
+                val userId = client.userIdOrNull?.let(::urlEncode) ?: run {
+                    if (!restoreOnFailure) markIdentityRotationPending()
+                    return@withLock
+                }
                 val deviceId = urlEncode(deviceId())
                 client.deleteTable(
                     "notification_devices?device_id=eq.$deviceId&user_id=eq.$userId",
@@ -151,6 +165,13 @@ class FcmTokenRegistrar @Inject constructor(
             }
         }
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
+        scope.launch {
+            delay(PENDING_RETRY_DELAY_MS)
+            val shouldRetry = synchronized(registrationStateLock) {
+                registrationEnabled && client.userIdOrNull != null
+            }
+            if (shouldRetry) registerForSignedInUser()
+        }
     }
 
     private fun deviceId(): String = currentInstallationId()
@@ -181,6 +202,7 @@ class FcmTokenRegistrar @Inject constructor(
         const val KEY_ROTATION_PENDING = "rotation_pending"
         const val MAX_ATTEMPTS = 3
         const val RETRY_DELAY_MS = 1_000L
+        const val PENDING_RETRY_DELAY_MS = 30_000L
         const val TAG = "FcmTokenRegistrar"
     }
 }
