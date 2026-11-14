@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber")
+@file:Suppress("MagicNumber", "TooGenericExceptionThrown")
 
 package com.giathinh.uthconnect.core.util
 
@@ -258,6 +258,126 @@ class ImageCompressorTest {
             bitmap.recycle()
         }
         checkDecoded(success(input)) { assertEquals(0, Color.alpha(it.getPixel(0, 0))) }
+    }
+
+    @Test
+    fun tc01ValidExifReadsOrientationCorrectly() {
+        val file = temporaryFolder.newFile("tc01.jpg")
+        file.writeBytes(fixture(160, 80))
+        ExifInterface(file.path).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            saveAttributes()
+        }
+        val orientation = ImageCompressor.readOrientation({ file.inputStream() })
+        assertEquals(ExifInterface.ORIENTATION_ROTATE_90, orientation)
+    }
+
+    @Test
+    fun tc02ExifIOExceptionFallsBackToNormalOrientation() {
+        var closed = false
+        val orientation = ImageCompressor.readOrientation(
+            openStream = {
+                object : ByteArrayInputStream(byteArrayOf(1, 2, 3)) {
+                    override fun close() {
+                        closed = true
+                        super.close()
+                    }
+                }
+            },
+            parseExif = { throw java.io.IOException("Simulated EXIF read IO error") },
+        )
+        assertEquals(ExifInterface.ORIENTATION_NORMAL, orientation)
+        assertTrue(closed)
+    }
+
+    @Test
+    fun tc03ExifRuntimeExceptionFallsBackToNormalOrientationAndCompressSucceeds() = runBlocking {
+        var closed = false
+        val orientation = ImageCompressor.readOrientation(
+            openStream = {
+                object : ByteArrayInputStream(byteArrayOf(1, 2, 3)) {
+                    override fun close() {
+                        closed = true
+                        super.close()
+                    }
+                }
+            },
+            parseExif = { throw IllegalStateException("Android 12 HEIC parser failure") },
+        )
+        assertEquals(ExifInterface.ORIENTATION_NORMAL, orientation)
+        assertTrue(closed)
+
+        // End-to-end compress with malformed HEIC EXIF RuntimeException succeeds in compressing
+        val validImageBytes = fixture(200, 150)
+        val result = ImageCompressor.compress(
+            openStream = { ByteArrayInputStream(validImageBytes) },
+            parseExif = { throw IllegalArgumentException("Malformed HEIC box parser crash") },
+        )
+        assertTrue(result is ImageCompressor.Result.Success)
+        val success = result as ImageCompressor.Result.Success
+        assertEquals(200, success.width)
+        assertEquals(150, success.height)
+    }
+
+    @Test
+    fun tc04SecurityExceptionOnOpenStreamIsNotTreatedAsExifError() = runBlocking {
+        var securityExceptionEscaped = false
+        try {
+            ImageCompressor.readOrientation({ throw SecurityException("Access denied") })
+        } catch (_: SecurityException) {
+            securityExceptionEscaped = true
+        }
+        assertTrue(securityExceptionEscaped)
+
+        val result = ImageCompressor.compress({ throw SecurityException("Permission denied") })
+        assertEquals(
+            ImageCompressor.Result.Failure(ImageCompressor.FailureReason.UNREADABLE_INPUT),
+            result,
+        )
+    }
+
+    @Test
+    fun tc05CancellationExceptionIsNotSwallowed() = runBlocking {
+        var closed = false
+        var cancellationEscaped = false
+        try {
+            ImageCompressor.readOrientation(
+                openStream = {
+                    object : ByteArrayInputStream(byteArrayOf(1, 2, 3)) {
+                        override fun close() {
+                            closed = true
+                            super.close()
+                        }
+                    }
+                },
+                parseExif = { throw CancellationException("Coroutine cancelled") },
+            )
+        } catch (_: CancellationException) {
+            cancellationEscaped = true
+        }
+        assertTrue(cancellationEscaped)
+        assertTrue(closed)
+
+        var compressCancelled = false
+        try {
+            ImageCompressor.compress(
+                openStream = { ByteArrayInputStream(fixture(200, 150)) },
+                parseExif = { throw CancellationException("Coroutine cancelled in EXIF") },
+            )
+        } catch (_: CancellationException) {
+            compressCancelled = true
+        }
+        assertTrue(compressCancelled)
+    }
+
+    @Test
+    fun tc06UndecodableImageReturnsInvalidImageFailure() = runBlocking {
+        val corruptBytes = byteArrayOf(0, 1, 2, 3, 4, 5)
+        val result = ImageCompressor.compress({ ByteArrayInputStream(corruptBytes) })
+        assertEquals(
+            ImageCompressor.Result.Failure(ImageCompressor.FailureReason.INVALID_IMAGE),
+            result,
+        )
     }
 
     private suspend fun success(input: ByteArray): ImageCompressor.Result.Success {

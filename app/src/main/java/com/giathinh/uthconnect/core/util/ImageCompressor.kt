@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -83,11 +84,14 @@ object ImageCompressor {
     internal suspend fun compress(
         openStream: () -> InputStream,
         options: Options = Options(),
+        parseExif: (InputStream) -> Int = {
+            ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        },
     ): Result = withContext(Dispatchers.IO) {
         processing.withLock {
             try {
                 val inputSize = measureInput(openStream)
-                val orientation = readOrientation(openStream)
+                val orientation = readOrientation(openStream, parseExif)
                 encode(openStream, orientation, inputSize, options)
             } catch (error: CompressionException) {
                 Result.Failure(error.reason)
@@ -116,13 +120,24 @@ object ImageCompressor {
         total
     }
 
-    private fun readOrientation(openStream: () -> InputStream): Int = try {
-        openStream().use {
+    @Suppress("TooGenericExceptionCaught")
+    internal fun readOrientation(
+        openStream: () -> InputStream,
+        parseExif: (InputStream) -> Int = {
             ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        },
+    ): Int = openStream().use { stream ->
+        try {
+            parseExif(stream)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            // Formats without EXIF can still be valid BitmapFactory inputs.
+            ExifInterface.ORIENTATION_NORMAL
+        } catch (_: RuntimeException) {
+            // Android 12 (API 31) ExifInterface can throw RuntimeException on malformed HEIC metadata.
+            ExifInterface.ORIENTATION_NORMAL
         }
-    } catch (_: IOException) {
-        // Formats without EXIF can still be valid BitmapFactory inputs.
-        ExifInterface.ORIENTATION_NORMAL
     }
 
     private fun decode(openStream: () -> InputStream, maxEdge: Int): Bitmap {
