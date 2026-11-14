@@ -20,6 +20,11 @@ import java.nio.ByteBuffer
  */
 object QrFrameDecoder {
 
+    private const val CHANNEL_MASK = 0xFF
+    private const val ALPHA_SHIFT = 24
+    private const val RED_SHIFT = 16
+    private const val GREEN_SHIFT = 8
+
     private val hints = mapOf(DecodeHintType.TRY_HARDER to true)
 
     /**
@@ -63,8 +68,8 @@ object QrFrameDecoder {
         if (width <= 0 || height <= 0 || luminance.size < width * height) return null
         val pixels = IntArray(width * height)
         for (index in pixels.indices) {
-            val gray = luminance[index].toInt() and 0xFF
-            pixels[index] = (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
+            val gray = luminance[index].toInt() and CHANNEL_MASK
+            pixels[index] = (CHANNEL_MASK shl ALPHA_SHIFT) or (gray shl RED_SHIFT) or (gray shl GREEN_SHIFT) or gray
         }
         val source = RGBLuminanceSource(width, height, pixels)
         return runCatching { QRCodeReader().decode(BinaryBitmap(HybridBinarizer(source)), hints).text }
