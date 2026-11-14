@@ -432,6 +432,7 @@ private fun NotificationFilterChip(
     onClick: () -> Unit,
 ) {
     Surface(
+        selected = isSelected,
         onClick = onClick,
         shape = UthDimens.Radius.PillShape,
         color = if (isSelected) UthNavyContainerLight else MaterialTheme.colorScheme.surfaceVariant,
