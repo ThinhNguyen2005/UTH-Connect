@@ -78,14 +78,19 @@ class SupabaseAuthRepository @Inject constructor(
     }
 
     private suspend fun ownProfileRow(): JsonObject? = client.table(
-        "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url,phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",
+        "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url," +
+            "phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",
     ).jsonArray.singleOrNull()?.jsonObject
 
-    override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = suspendResult {
+    override suspend fun authenticateWithGoogle(
+        idToken: String,
+        rawNonce: String,
+    ): Result<StudentProfile> = suspendResult {
         google.exchange(idToken, rawNonce)
         val row = ownProfileRow()
         val email = row?.string("email").orEmpty()
-        val isUtEmail = email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true)
+        val isUtEmail = email.endsWith("@ut.edu.vn", ignoreCase = true) ||
+            email.endsWith("@uth.edu.vn", ignoreCase = true)
         if (!isUtEmail) {
             client.signOut()
             throw DomainRestrictionException(email)
@@ -146,11 +151,17 @@ class SupabaseAuthRepository @Inject constructor(
         client.recoverPassword(email)
     }
 
-    override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = suspendResult {
+    override suspend fun completePasswordReset(
+        email: String,
+        otp: String,
+        newPassword: String,
+    ): Result<Unit> = suspendResult {
         client.resetPasswordWithOtp(email, otp, newPassword)
     }
 
-    override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = suspendResult {
+    override suspend fun submitVerificationRequest(
+        studentId: String,
+    ): Result<VerificationRequestResult> = suspendResult {
         val response = client.rpc(
             "submit_student_verification_request",
             buildJsonObject { put("p_student_id", studentId) },
@@ -191,7 +202,11 @@ class SupabaseAuthRepository @Inject constructor(
         ownProfile().takeIf { it.studentId == studentId }
     }
 
-    override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = suspendResult {
+    override suspend fun changePassword(
+        studentId: String,
+        oldPassword: String,
+        newPassword: String,
+    ): Result<Boolean> = suspendResult {
         val profile = ownProfile()
         check(profile.studentId == studentId) { "Not signed in as this student" }
         try {

@@ -23,20 +23,28 @@ interface AuthRepository {
     /**
      * Sends password recovery instructions to the student email.
      */
-    suspend fun sendPasswordReset(email: String): Result<Unit> = Result.failure(UnsupportedOperationException("sendPasswordReset not implemented"))
+    suspend fun sendPasswordReset(email: String): Result<Unit> = Result.failure(
+        UnsupportedOperationException("sendPasswordReset not implemented"),
+    )
 
     /** Verify a recovery OTP with the provider before changing a password. */
-    suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = Result.failure(UnsupportedOperationException("completePasswordReset not implemented"))
+    suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = Result.failure(
+        UnsupportedOperationException("completePasswordReset not implemented"),
+    )
 
     /**
      * Submits a student ID verification request.
      */
-    suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = Result.failure(UnsupportedOperationException("submitVerificationRequest not implemented"))
+    suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = Result.failure(
+        UnsupportedOperationException("submitVerificationRequest not implemented"),
+    )
 
     /**
      * Checks the latest student ID verification request status.
      */
-    suspend fun checkVerificationStatus(): Result<VerificationStatus?> = Result.failure(UnsupportedOperationException("checkVerificationStatus not implemented"))
+    suspend fun checkVerificationStatus(): Result<VerificationStatus?> = Result.failure(
+        UnsupportedOperationException("checkVerificationStatus not implemented"),
+    )
 
     /**
      * Redeems a Google ID token from Credential Manager for a Supabase session and returns the
@@ -48,7 +56,9 @@ interface AuthRepository {
      * state instead of a generic error. Backends without Google support fail with
      * [GoogleSignInUnsupportedException].
      */
-    suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = Result.failure(GoogleSignInUnsupportedException())
+    suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = Result.failure(
+        GoogleSignInUnsupportedException(),
+    )
 }
 
 data class SignUpResult(val needsEmailConfirmation: Boolean, val email: String)
