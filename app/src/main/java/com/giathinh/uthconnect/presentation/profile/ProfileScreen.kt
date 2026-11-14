@@ -210,11 +210,19 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
         )
         ProfileRow(
             stringResource(R.string.auth_contact_email),
-            if (student.personalEmail.isBlank()) stringResource(R.string.auth_contact_not_set) else student.personalEmail,
+            if (student.personalEmail.isBlank()) {
+                stringResource(R.string.auth_contact_not_set)
+            } else {
+                student.personalEmail
+            },
         )
         ProfileRow(
             stringResource(R.string.auth_contact_address),
-            if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress,
+            if (student.currentAddress.isBlank()) {
+                stringResource(R.string.auth_contact_not_set)
+            } else {
+                student.currentAddress
+            },
         )
     }
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
@@ -238,10 +246,20 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
     ) { Text(stringResource(R.string.auth_password_change_title)) }
     Spacer(Modifier.height(UthDimens.Spacing.Sm))
     OutlinedButton(
-        onClick = { onAction(if (state.biometricEnabled) ProfileAction.DisableBiometric else ProfileAction.RequestBiometricEnroll) },
+        onClick = {
+            onAction(
+                if (state.biometricEnabled) ProfileAction.DisableBiometric else ProfileAction.RequestBiometricEnroll,
+            )
+        },
         enabled = !state.isSaving,
         modifier = Modifier.fillMaxWidth().testTag("profile_biometric_toggle"),
-    ) { Text(stringResource(if (state.biometricEnabled) R.string.auth_biometric_disable else R.string.auth_biometric_enable)) }
+    ) {
+        Text(
+            stringResource(
+                if (state.biometricEnabled) R.string.auth_biometric_disable else R.string.auth_biometric_enable,
+            ),
+        )
+    }
     Spacer(Modifier.height(UthDimens.Spacing.Xs))
     Text(
         stringResource(R.string.auth_biometric_note),
@@ -521,7 +539,9 @@ private val DemoStudent = StudentProfile(
 )
 
 @Composable
-private fun PreviewProfile(state: ProfileUiState, dark: Boolean = false) = UthPreview(darkTheme = dark) { ProfileScreen(state, onAction = {}) }
+private fun PreviewProfile(state: ProfileUiState, dark: Boolean = false) = UthPreview(darkTheme = dark) {
+    ProfileScreen(state, onAction = {})
+}
 
 @Preview(name = "Profile content light", showBackground = true)
 @Composable
@@ -533,15 +553,22 @@ private fun ProfileContentDark() = PreviewProfile(ProfileUiState(false, DemoStud
 
 @Preview(name = "Profile organizer light", showBackground = true)
 @Composable
-private fun ProfileOrganizerLight() = PreviewProfile(ProfileUiState(false, DemoStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)))
+private fun ProfileOrganizerLight() = PreviewProfile(
+    ProfileUiState(false, DemoStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)),
+)
 
 @Preview(name = "Profile password light", showBackground = true)
 @Composable
-private fun ProfilePasswordLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword))
+private fun ProfilePasswordLight() = PreviewProfile(
+    ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword),
+)
 
 @Preview(name = "Profile password dark", showBackground = true)
 @Composable
-private fun ProfilePasswordDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword), true)
+private fun ProfilePasswordDark() = PreviewProfile(
+    ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword),
+    true,
+)
 
 @Preview(name = "Profile contact light", showBackground = true)
 @Composable
@@ -549,7 +576,10 @@ private fun ProfileContactLight() = PreviewProfile(ProfileUiState(false, DemoStu
 
 @Preview(name = "Profile contact dark", showBackground = true)
 @Composable
-private fun ProfileContactDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact), true)
+private fun ProfileContactDark() = PreviewProfile(
+    ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact),
+    true,
+)
 
 @Preview(name = "Profile empty light", showBackground = true)
 @Composable
