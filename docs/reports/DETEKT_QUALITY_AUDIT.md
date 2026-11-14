@@ -18,6 +18,8 @@ Phase 2 is being performed on `Kan111`, based on `main` at `9e56eca`. The earlie
 - `9f4f8c1`, `ac552c6`, and `ae6aafc`: wrapped long lines in authentication, book, and event screens.
 - `bdf2968`: simplified the event editor guard and used the equivalent Kotlin error checks in the Firestore transaction and profile test fixture.
 - `b0dcf79`: named Supabase transport timeouts, token lifetime values, and HTTP status values without changing their numeric values.
+- `b548ae2`, `7946e09`, `6379eda`, and `1e54c8f`: wrapped long lines in authentication, profile, book, and authentication repository files.
+- `73990b7` and `8a97a32`: corrected CI YAML, enabled Gradle build cache, limited the workflow token to `contents: read`, and updated the README. Test results remain available as artifacts; the automatic PR comment/check publisher remains in the old manual workflow.
 - All code batches passed `assembleDebug`, `detekt`, `spotlessCheck`, and `testDebugUnitTest` after the change. The latest unit test XML reports 436 tests, zero failures, errors or skips.
 - `UnusedPrivateMember.ignoreAnnotated: ['Preview']` is a targeted Detekt configuration change: all 81 reported private members carried `@Preview` and are used by Android Studio's Compose Preview. This follows the [Detekt 1.23.8 Compose guidance](https://detekt.dev/docs/1.23.8/introduction/compose/). Other private members remain checked. No `@Suppress` was added. The baseline has not been regenerated because cleanup remains incomplete.
 
@@ -26,6 +28,10 @@ After the first five batches, a separate Detekt 1.23.8 CLI scan without baseline
 On the current branch, the same scope and CLI reported 532 findings before the Preview configuration and 451 afterward: 263 MaxLineLength, 99 MagicNumber, zero UnusedPrivateMember, and 89 other findings. The 81 removed findings are IDE-only preview entry points, not dead code.
 
 At `ae6aafc`, the same CLI scope reported 339 findings without baseline: 206 MaxLineLength, 49 MagicNumber, 21 TooGenericExceptionCaught, 19 TooManyFunctions, 11 ReturnCount, 11 CyclomaticComplexMethod, 8 LongMethod, 8 MatchingDeclarationName, 3 SwallowedException, 2 UnusedPrivateProperty, and 1 LongParameterList. The scan excludes `androidTest`; its finding count must not be directly compared with the 566-finding Phase 1 scan on `develop`.
+
+At `8a97a32`, the same scan reported 299 findings: 166 MaxLineLength, 49 MagicNumber, 21 TooGenericExceptionCaught, 19 TooManyFunctions, 11 ReturnCount, 11 CyclomaticComplexMethod, 8 LongMethod, 8 MatchingDeclarationName, 3 SwallowedException, 2 UnusedPrivateProperty, and 1 LongParameterList.
+
+The CI YAML was parsed with SnakeYAML and checked locally for its two branch triggers, read-only permissions, four independent jobs, required setup steps, and build-cache flags. This does not validate GitHub-specific expressions or replace a real Actions run. A combined local Gradle run with `--build-cache` succeeded; its tasks were up to date.
 
 ## Outstanding work
 
