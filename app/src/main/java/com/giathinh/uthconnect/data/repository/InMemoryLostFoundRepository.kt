@@ -10,6 +10,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val GENERATED_ID_LENGTH = 6
+
 /**
  * In-memory fallback implementation of [LostFoundRepository] for testing and offline preview.
  */
@@ -126,7 +128,11 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         imageMimeType: String?,
     ): Result<LostFoundListing> = mutex.withLock {
         val newItem = item.copy(
-            id = if (item.id.isBlank()) "LF-${UUID.randomUUID().toString().take(6).uppercase()}" else item.id,
+            id = if (item.id.isBlank()) {
+                "LF-${UUID.randomUUID().toString().take(GENERATED_ID_LENGTH).uppercase()}"
+            } else {
+                item.id
+            },
         )
         listings.add(0, newItem)
         Result.success(newItem)

@@ -17,6 +17,10 @@ import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val PASSWORD_DERIVATION_ITERATIONS = 180_000
+private const val PASSWORD_DERIVATION_BITS = 256
+private const val PASSWORD_SALT_BYTES = 16
+
 /** Two isolated demo accounts, without any UTH identity/role verification server. */
 @Singleton
 class DemoAuthRepository @Inject constructor(
@@ -74,7 +78,7 @@ class DemoAuthRepository @Inject constructor(
     }
 
     private fun derivePassword(password: String, salt: ByteArray): ByteArray {
-        val spec = PBEKeySpec(password.toCharArray(), salt, 180_000, 256)
+        val spec = PBEKeySpec(password.toCharArray(), salt, PASSWORD_DERIVATION_ITERATIONS, PASSWORD_DERIVATION_BITS)
         return try {
             SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
         } finally {
@@ -106,7 +110,7 @@ class DemoAuthRepository @Inject constructor(
             mutex.withLock {
                 val base = baseFor(studentId) ?: return@withLock false
                 if (!passwordMatches(base, oldPassword)) return@withLock false
-                val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+                val salt = ByteArray(PASSWORD_SALT_BYTES).also { SecureRandom().nextBytes(it) }
                 val hash = derivePassword(newPassword, salt)
                 check(
                     store.putAll(
