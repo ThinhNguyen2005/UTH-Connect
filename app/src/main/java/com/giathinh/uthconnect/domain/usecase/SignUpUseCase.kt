@@ -4,6 +4,10 @@ import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.validation.LoginValidator
 import javax.inject.Inject
 
+private const val MIN_STUDENT_ID_LENGTH = 8
+private const val MAX_STUDENT_ID_LENGTH = 12
+private const val MIN_SIGN_UP_PASSWORD_LENGTH = 6
+
 sealed interface SignUpOutcome {
     data class Success(val needsEmailConfirmation: Boolean, val email: String) : SignUpOutcome
     data class InvalidForm(
@@ -34,13 +38,7 @@ class SignUpUseCase @Inject constructor(
         val trimmedConfirm = confirmPassword.trim()
         val trimmedFaculty = faculty.trim().ifEmpty { "Chưa cập nhật" }
 
-        val email = if ('@' in trimmedIdentifier) {
-            trimmedIdentifier
-        } else if (trimmedIdentifier.all { it.isDigit() } && trimmedIdentifier.length in 8..12) {
-            "$trimmedIdentifier@ut.edu.vn"
-        } else {
-            trimmedIdentifier
-        }
+        val email = studentEmail(trimmedIdentifier)
 
         var nameError: String? = null
         var emailError: String? = null
@@ -53,7 +51,7 @@ class SignUpUseCase @Inject constructor(
         if (!validator.isUniversityEmail(email)) {
             emailError = "Chỉ chấp nhận email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)"
         }
-        if (trimmedPassword.length < 6) {
+        if (trimmedPassword.length < MIN_SIGN_UP_PASSWORD_LENGTH) {
             passwordError = "Mật khẩu phải có ít nhất 6 ký tự"
         }
         if (trimmedPassword != trimmedConfirm) {
@@ -89,5 +87,14 @@ class SignUpUseCase @Inject constructor(
                 }
             },
         )
+    }
+
+    private fun studentEmail(identifier: String): String {
+        val isStudentId = '@' !in identifier && identifier.all { it.isDigit() }
+        return if (isStudentId && identifier.length in MIN_STUDENT_ID_LENGTH..MAX_STUDENT_ID_LENGTH) {
+            "$identifier@ut.edu.vn"
+        } else {
+            identifier
+        }
     }
 }
