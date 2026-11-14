@@ -36,6 +36,9 @@ begin
 end;
 $$;
 
+revoke all on function public.dispatch_notification_pending_job() from public, anon, authenticated;
+grant execute on function public.dispatch_notification_pending_job() to service_role;
+
 select cron.unschedule(jobid)
 from cron.job
 where jobname = 'dispatch-notification-pending';
