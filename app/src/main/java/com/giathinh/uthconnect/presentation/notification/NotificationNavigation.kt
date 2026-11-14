@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.giathinh.uthconnect.presentation.navigation.ProfileDestination
+import com.giathinh.uthconnect.presentation.navigation.SettingsDestination
 import kotlinx.serialization.Serializable
 
 /**
@@ -25,8 +26,7 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
         NotificationRoute(
             onBack = { navController.popBackStack() },
             onOpenSettings = {
-                // Điều hướng tới cài đặt (tab profile hoặc settings nếu có)
-                navController.navigate(ProfileDestination)
+                navController.navigate(SettingsDestination)
             },
             onOpenProfile = {
                 navController.navigate(ProfileDestination)
@@ -38,7 +38,7 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
         val args = entry.toRoute<NotificationDetailDestination>()
         NotificationRoute(
             onBack = { navController.popBackStack() },
-            onOpenSettings = { navController.navigate(ProfileDestination) },
+            onOpenSettings = { navController.navigate(SettingsDestination) },
             onOpenProfile = { navController.navigate(ProfileDestination) },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
             notificationId = args.notificationId,

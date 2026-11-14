@@ -48,6 +48,7 @@ import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
+import com.giathinh.uthconnect.presentation.utilities.SettingsRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
@@ -169,6 +170,9 @@ private fun UthNavHost(
                     }
                 },
             )
+        }
+        composable<SettingsDestination> {
+            SettingsRoute(onBack = { navController.popBackStack() })
         }
         composable<ProfileDestination> {
             // Vé chuyển từ tab đáy vào tab Cá nhân (docs/Design.md mục 8.2) để thanh nav giữ 4 điểm đến.
