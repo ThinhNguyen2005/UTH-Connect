@@ -78,7 +78,7 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
