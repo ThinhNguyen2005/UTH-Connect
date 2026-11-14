@@ -1,62 +1,116 @@
 package com.giathinh.uthconnect.data.repository
 
-import com.giathinh.uthconnect.domain.model.ItemCategory
-import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.repository.LostFoundRepository
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
-/** Authenticated, RLS-protected community reports; never seeds fictional postings. */
+/**
+ * Supabase-backed implementation of [LostFoundRepository].
+ * Interacts with PostgREST `lost_found_items` table and Supabase Storage `lost-found` bucket.
+ */
 @Singleton
 class SupabaseLostFoundRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : LostFoundRepository {
-    override suspend fun getListings(): Result<List<LostFoundListing>> = suspendResult {
-        client.table("lost_found?select=*&order=created_at.desc&limit=100")
-            .jsonArray.map { it.jsonObject.toLostFoundListing() }
-    }
 
-    override suspend fun reportItem(item: LostFoundListing): Result<LostFoundListing> = suspendResult {
-        require(item.title.isNotBlank() && item.description.length >= 20 && item.location.isNotBlank())
-        require(item.category != ItemCategory.ALL)
-        require(item.contactPhone.isNotBlank())
-        val payload = buildJsonObject {
-            put("owner_user_id", uuid(client.userId))
-            put("title", item.title.trim())
-            put("description", item.description.trim())
-            put("kind", item.kind.name)
-            put("category", item.category.name)
-            put("location", item.location.trim())
-            put("contact_name", item.contactName.trim())
-            put("contact_phone", item.contactPhone.trim())
+    /**
+     * Retrieves all lost and found listings ordered by most recently created first.
+     * Allows anonymous reading so all students can browse listings without logging in.
+     */
+    override suspend fun getListings(): Result<List<LostFoundListing>> = runCatching {
+        val rows = client.table("lost_found_items?select=*&order=created_at.desc", allowAnonymous = true).jsonArray
+        rows.map { it.jsonObject.toDomainLostFoundListing() }
+    }.onFailure { if (it is CancellationException) throw it }
+
+    /**
+     * Reports a new lost or found listing with optional proof photo upload.
+     * Requires the user to be authenticated in accordance with RLS policies.
+     *
+     * @param item The listing metadata to create.
+     * @param imageBytes Optional raw byte array of the attached photo.
+     * @param imageMimeType Optional MIME type of the attached photo.
+     * @return Result containing the created [LostFoundListing].
+     */
+    override suspend fun reportItem(
+        item: LostFoundListing,
+        imageBytes: ByteArray?,
+        imageMimeType: String?,
+    ): Result<LostFoundListing> {
+        var uploadedBucketPath: String? = null
+        return runCatching {
+            var uploadedImageUrl: String? = item.imageUrl
+            if (imageBytes != null && imageBytes.isNotEmpty()) {
+                val (extension, resolvedMime) = when {
+                    imageMimeType?.contains("png", ignoreCase = true) == true -> "png" to "image/png"
+                    imageMimeType?.contains("webp", ignoreCase = true) == true -> "webp" to "image/webp"
+                    else -> "jpg" to "image/jpeg"
+                }
+                val userId = client.userId
+                val filename = "${UUID.randomUUID()}.$extension"
+                val bucketPath = "items/$userId/$filename"
+                uploadedBucketPath = bucketPath
+                uploadedImageUrl = client.uploadStorage(
+                    bucket = "lost-found",
+                    path = bucketPath,
+                    bytes = imageBytes,
+                    mimeType = resolvedMime,
+                )
+            }
+
+            val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
+            val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
+            val response = client.insertTable("lost_found_items", payload)
+            val createdRow = when (response) {
+                is JsonArray -> response.firstOrNull()?.jsonObject
+                is JsonObject -> response
+                else -> null
+            } ?: error("Failed to insert lost & found item: empty response")
+            createdRow.toDomainLostFoundListing()
+        }.onFailure { error ->
+            val path = uploadedBucketPath
+            if (path != null) {
+                withContext(NonCancellable) {
+                    runCatching { client.deleteStorage("lost-found", path) }
+                }
+            }
+            if (error is CancellationException) throw error
         }
-        client.insertTable("lost_found?select=*", payload).jsonArray.single().jsonObject.toLostFoundListing()
     }
 
-    private fun JsonObject.toLostFoundListing(): LostFoundListing = LostFoundListing(
-        id = requireNotNull(string("id")),
-        title = string("title").orEmpty(),
-        description = string("description").orEmpty(),
-        kind = ListingKind.valueOf(requireNotNull(string("kind"))),
-        category = ItemCategory.valueOf(requireNotNull(string("category"))),
-        location = string("location").orEmpty(),
-        date = DATE_FORMAT.format(Instant.parse(requireNotNull(string("created_at")))),
-        contactName = string("contact_name").orEmpty(),
-        contactPhone = string("contact_phone").orEmpty(),
-        isResolved = bool("is_resolved"),
-    )
-
-    private companion object {
-        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-            .withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
-    }
+    /**
+     * Toggles the resolved status of a listing.
+     * Requires the user to be authenticated and the author/owner of the listing.
+     *
+     * @param id Unique identifier of the listing.
+     * @param isResolved New resolved boolean status.
+     */
+    override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = runCatching {
+        val rowId = runCatching { uuid(id) }.getOrNull() ?: id
+        val response = client.patchTable(
+            "lost_found_items?id=eq.${urlEncode(rowId)}",
+            buildJsonObject { put("is_resolved", isResolved) },
+        )
+        val updatedRows = when (response) {
+            is JsonArray -> response.size
+            is JsonObject -> 1
+            else -> 0
+        }
+        if (updatedRows == 0) {
+            throw SupabaseHttpException(
+                status = java.net.HttpURLConnection.HTTP_FORBIDDEN,
+                message = "No permission to update this listing",
+            )
+        }
+    }.onFailure { if (it is CancellationException) throw it }
 }

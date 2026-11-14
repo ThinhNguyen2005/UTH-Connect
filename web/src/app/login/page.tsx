@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { authProvider } from "@/providers/auth-provider";
 import {
   ShieldAlert,
   CheckCircle2,
   Eye,
   EyeOff,
-  Sparkles,
   Loader2,
 } from "lucide-react";
 
@@ -148,14 +148,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickFill = (presetEmail: string, presetPassword = "123456") => {
-    setEmail(presetEmail);
-    setPassword(presetPassword);
-    setMode("login");
-    setErrorMessage(null);
-    setSuccessMessage(null);
-  };
-
   return (
     <div className="flex min-h-screen bg-white">
       {/* Form Left Side */}
@@ -163,8 +155,15 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Header Branding */}
           <div className="mb-8">
-            <div className="mb-6 flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-sm font-bold text-white shadow-sm">
-              U
+            <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 p-2 border border-slate-200/80 shadow-sm">
+              <Image
+                src="/images/icon-uth.png"
+                alt="UTH Connect"
+                width={36}
+                height={36}
+                priority
+                className="h-auto w-auto object-contain"
+              />
             </div>
             <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
               {mode === "login" ? "Welcome back" : "Create an account"}
@@ -374,75 +373,63 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
-
-          {/* Demo Accounts Quick-Fill Box */}
-          <div className="mt-8 rounded-xl border border-neutral-100 bg-neutral-50/80 p-3.5 text-xs text-neutral-600">
-            <div className="mb-2 font-semibold text-neutral-800 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-neutral-500" />
-              <span>Tài khoản kiểm thử nhanh (bấm để điền sẵn pass 123456):</span>
-            </div>
-            <div className="space-y-1.5 text-[11px]">
-              <div className="flex items-center justify-between">
-                <span>👑 Admin:</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("nguyenthinhk52005@gmail.com", "123456")}
-                  className="font-mono text-[10px] text-blue-700 hover:underline bg-white px-2 py-0.5 rounded border border-neutral-200"
-                  title="Click to auto-fill"
-                >
-                  nguyenthinhk52005@gmail.com
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>👨‍🏫 Giảng viên:</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("thinh@ut.edu.vn", "123456")}
-                  className="font-mono text-[10px] text-blue-700 hover:underline bg-white px-2 py-0.5 rounded border border-neutral-200"
-                  title="Click to auto-fill"
-                >
-                  thinh@ut.edu.vn
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>🎓 Sinh viên:</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("duc1@ut.edu.vn", "123456")}
-                  className="font-mono text-[10px] text-blue-700 hover:underline bg-white px-2 py-0.5 rounded border border-neutral-200"
-                  title="Click to auto-fill"
-                >
-                  duc1@ut.edu.vn
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Visual Right Side */}
-      <div className="hidden bg-neutral-900 lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:p-14">
+      {/* Visual Right Side with Real Authentic UTH Campus Photography */}
+      <div className="relative hidden overflow-hidden bg-neutral-950 lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:p-12">
+        {/* Real Campus Photo Background */}
+        <Image
+          src="/images/uth-campus.jpg"
+          alt="Trường Đại học Giao thông vận tải TP.HCM - Cơ sở chính"
+          fill
+          priority
+          sizes="50vw"
+          quality={90}
+          className="object-cover object-center"
+        />
+
+        {/* Sophisticated Multi-layer Overlay for AAA Legibility & Photographic Depth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/95 via-neutral-950/60 to-neutral-950/40" />
+        <div className="absolute inset-0 bg-neutral-950/20 backdrop-brightness-[0.9]" />
+
         {/* Top Header in Visual Panel */}
-        <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-950/60 px-3.5 py-1 text-xs text-neutral-300 backdrop-blur-sm">
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3.5 py-1.5 text-xs text-neutral-200 backdrop-blur-md">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>UTH Connect Platform v1.0</span>
+            <span className="font-medium">UTH Connect Platform v1.0</span>
           </div>
-          <span className="text-xs text-neutral-500 font-mono">Ho Chi Minh City, VN</span>
+          <span className="text-xs text-neutral-300 font-mono tracking-wider bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm border border-white/5">
+            Ho Chi Minh City, VN
+          </span>
         </div>
 
-        {/* Center / Bottom Quote */}
-        <div>
-          <blockquote className="max-w-md text-2xl font-medium leading-snug text-white">
-            &ldquo;This is the fastest we&apos;ve ever shipped a product. It just works.&rdquo;
-          </blockquote>
-          <p className="mt-4 text-sm text-neutral-400">Alex Rivera — CTO, Northwind</p>
+        {/* Bottom Hero Card */}
+        <div className="relative z-10">
+          <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span>Đại học Giao thông vận tải TP.HCM</span>
+            </div>
 
-          <div className="mt-8 border-t border-neutral-800/80 pt-6">
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Trường Đại học Giao thông vận tải TP.HCM — Cổng kết nối Sinh viên & Giảng viên.
+            <h2 className="mt-3 text-2xl font-semibold leading-tight text-white tracking-tight">
+              Cổng dịch vụ số hợp nhất dành cho Sinh viên & Giảng viên
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-neutral-300">
+              Tra cứu thông tin học tập, hoạt động rèn luyện, đăng ký sự kiện và hỗ trợ kết nối nhà trọ sinh viên tiện lợi, an toàn.
             </p>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-white/10 text-[11px] text-neutral-300">
+              <span className="rounded-md bg-white/10 px-2.5 py-1 font-medium">3 Phân hiệu</span>
+              <span className="rounded-md bg-white/10 px-2.5 py-1 font-medium">20.000+ Sinh viên</span>
+              <span className="rounded-md bg-white/10 px-2.5 py-1 font-medium">Hệ thống một cửa</span>
+            </div>
           </div>
+
+          <p className="mt-4 text-xs text-neutral-400/80 text-center lg:text-left">
+            📍 Trụ sở chính: Số 2, Đường Võ Oanh, Phường 25, Quận Bình Thạnh, TP.HCM
+          </p>
         </div>
       </div>
     </div>

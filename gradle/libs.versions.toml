@@ -31,6 +31,9 @@ detekt = "1.23.8"
 detektCompose = "0.6.8"
 spotless = "8.11.0"
 coil = "2.7.0"
+osmdroid = "6.1.20"
+playServicesLocation = "21.2.0"
+datastore = "1.1.7"
 
 [libraries]
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
@@ -41,6 +44,7 @@ credentials-play-services-auth = { module = "androidx.credentials:credentials-pl
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 kotlin-metadata-jvm = { group = "org.jetbrains.kotlin", name = "kotlin-metadata-jvm", version.ref = "kotlin" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -79,6 +83,8 @@ firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutinesTest" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 detekt-compose = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "detektCompose" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

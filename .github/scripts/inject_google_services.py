@@ -1,6 +1,7 @@
 """Validate the CI-provided Firebase configuration without printing its contents."""
 import json
 import os
+import sys
 from pathlib import Path
 
 
@@ -17,7 +18,14 @@ def inject(raw, expected_project, destination):
         raise ValueError("Firebase project mismatch")
     if "com.giathinh.uthconnect" not in packages:
         raise ValueError("Firebase package mismatch")
-    Path(destination).write_text(json.dumps(data), encoding="utf-8")
+
+    target_path = Path(destination)
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text(json.dumps(data), encoding="utf-8")
+    except OSError as error:
+        print(f"Error writing Firebase configuration to {destination}: {error}", file=sys.stderr)
+        raise ValueError(f"Failed to write configuration: {error}") from error
 
 
 if __name__ == "__main__":

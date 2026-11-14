@@ -20,6 +20,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
+private const val STORAGE_READ_TIMEOUT_MS = 60_000
+
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
@@ -32,6 +34,7 @@ class SupabaseRestClient @Inject constructor() {
     @Volatile private var credentials: Credentials? = null
 
     val userId: String get() = credentials?.userId ?: error("Supabase sign-in required")
+    val userIdOrNull: String? get() = credentials?.userId
 
     /** Called by the session repository, which owns the remember-me decision. */
     fun attachSecureStore(store: SecureSessionStore) {
@@ -222,8 +225,10 @@ class SupabaseRestClient @Inject constructor() {
         sessionStore?.clear()
     }
 
-    /** Reads a PostgREST table or view using the authenticated session. */
-    suspend fun table(path: String): JsonElement = authorized("/rest/v1/$path", "GET")
+    suspend fun table(
+        path: String,
+        allowAnonymous: Boolean = false,
+    ): JsonElement = authorized("/rest/v1/$path", "GET", allowAnonymous = allowAnonymous)
 
     /** Updates matching rows through PostgREST. */
     suspend fun patchTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "PATCH", body)
@@ -237,6 +242,17 @@ class SupabaseRestClient @Inject constructor() {
     /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
     suspend fun upsertTable(path: String, body: JsonObject): JsonElement =
         authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
+    /** Invokes an authenticated Postgres RPC function. */
+    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+
+    /** Upload nhị phân lên Storage; path phải thuộc thư mục `auth.uid()` để qua RLS. */
+    suspend fun uploadStorageObject(bucket: String, path: String, bytes: ByteArray, contentType: String) {
+        storageRequest("/object/$bucket/$path", "POST", bytes, contentType)
+    }
+
+    suspend fun deleteStorageObject(bucket: String, path: String) {
+        storageRequest("/object/$bucket/$path", "DELETE", null, null)
+    }
 
     /** Uploads binary data to Supabase Storage using the authenticated session. */
     suspend fun uploadStorage(
@@ -302,24 +318,96 @@ class SupabaseRestClient @Inject constructor() {
         }
     }
 
-    /** Invokes an authenticated Postgres RPC function. */
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
-
     /** Updates the password for the currently authenticated user. */
     suspend fun updatePassword(password: String): JsonElement {
         val token = freshToken()
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-    /** Sends an authenticated request after obtaining a valid access token. */
+    suspend fun uploadStorage(
+        bucket: String,
+        path: String,
+        bytes: ByteArray,
+        mimeType: String = "image/jpeg",
+    ): String = withContext(Dispatchers.IO) {
+        val token = freshToken()
+        val uploadUrl = "${BuildConfig.SUPABASE_URL}/storage/v1/object/$bucket/$path"
+        val connection = (URL(uploadUrl).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = 15_000
+            readTimeout = STORAGE_READ_TIMEOUT_MS
+            setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Content-Type", mimeType)
+            setRequestProperty("x-upsert", "true")
+            setFixedLengthStreamingMode(bytes.size)
+        }
+        try {
+            connection.outputStream.use { it.write(bytes) }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, errBody.ifBlank { "Storage upload failed ($status)" })
+            }
+            connection.inputStream?.bufferedReader()?.use { it.readText() }
+            "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$bucket/$path"
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private suspend fun authorized(
         path: String,
         method: String,
         body: JsonObject? = null,
         prefer: String? = null,
+        allowAnonymous: Boolean = false,
     ): JsonElement {
+        val accessToken = if (allowAnonymous) {
+            freshTokenOrNull()
+        } else {
+            freshToken()
+        }
+        return send(path, method, body, bearer = accessToken, prefer = prefer)
+    }
+
+    private suspend fun freshTokenOrNull(): String? = try {
+        freshToken()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        null
+    }
+
+    private suspend fun storageRequest(
+        path: String,
+        method: String,
+        body: ByteArray?,
+        contentType: String?,
+    ) = withContext(Dispatchers.IO) {
+        require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val accessToken = freshToken()
-        return send(path, method, body, accessToken, prefer)
+        val connection = (URL(BuildConfig.SUPABASE_URL + "/storage/v1" + path).openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 15_000
+            connection.readTimeout = STORAGE_READ_TIMEOUT_MS
+            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
+            if (body != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", contentType ?: "application/octet-stream")
+                connection.outputStream.use { it.write(body) }
+            }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val message = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw SupabaseHttpException(status, message.ifBlank { "Storage HTTP $status" })
+            }
+        } finally {
+            connection.disconnect()
+        }
     }
 
     /** Returns the current access token, refreshing it when it is close to expiration. */

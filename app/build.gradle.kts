@@ -87,7 +87,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.coil.compose)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -111,10 +113,10 @@ dependencies {
     implementation(libs.googleid)
 
     // Máy quét QR điểm danh: preview + phân tích frame liên tục trong app.
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+
+    // Ghép trọ: bản đồ OpenStreetMap chấm pin khi đăng tin (không key/billing) + GPS vị trí hiện tại.
+    implementation(libs.osmdroid.android)
+    implementation(libs.play.services.location)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
