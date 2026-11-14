@@ -11,10 +11,11 @@ Phase 2 is being performed on `Kan111`, based on `main` at `9e56eca`. The earlie
 - `d34a3b1`: named password length limits in password change and password reset validation without changing their input handling.
 - `86fec1a`: named separate student ID length limits for password recovery and verification.
 - `2171991`: named channel and shift constants in QR luminance conversion.
-- All five batches passed `assembleDebug`, `detekt`, `spotlessCheck`, and `testDebugUnitTest` after the change. The latest unit test XML reports 435 tests, zero failures, errors or skips.
+- `3eae303`: named schedule period boundaries and added a unit test for the noon and evening transitions.
+- All six batches passed `assembleDebug`, `detekt`, `spotlessCheck`, and `testDebugUnitTest` after the change. The latest unit test XML reports 436 tests, zero failures, errors or skips.
 - No Detekt rule or suppression was added or loosened. The baseline has not been regenerated because cleanup remains incomplete.
 
-After those changes, a separate Detekt 1.23.8 CLI scan without baseline over `app/src/main/java` and `app/src/test/java` reported 536 findings: 263 MaxLineLength, 101 MagicNumber, 81 UnusedPrivateMember, and 91 from other rules. This scan does not include `androidTest`; it has a different scope and revision from the prior 566-finding Phase 1 scan and cannot be used as a before/after comparison.
+After the first five batches, a separate Detekt 1.23.8 CLI scan without baseline over `app/src/main/java` and `app/src/test/java` reported 536 findings: 263 MaxLineLength, 101 MagicNumber, 81 UnusedPrivateMember, and 91 from other rules. This scan predates the schedule batch and does not include `androidTest`; it has a different scope and revision from the prior 566-finding Phase 1 scan and cannot be used as a before/after comparison.
 
 ## Outstanding work
 
