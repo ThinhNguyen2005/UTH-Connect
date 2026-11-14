@@ -21,7 +21,11 @@ class SupabaseBookListingRepositoryTest {
 
     @Test
     fun `validateImageBytes accepts valid PNG magic bytes`() {
-        val pngBytes = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(), 0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(), 0, 0, 0, 0)
+        val pngBytes = byteArrayOf(
+            0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(),
+            0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(),
+            0, 0, 0, 0,
+        )
 
         val (bytes, mime) = SupabaseBookListingRepository.validateImageBytes(pngBytes)
 
@@ -62,7 +66,11 @@ class SupabaseBookListingRepositoryTest {
 
     @Test
     fun `readAndValidateStream accepts valid stream and parses mime type`() {
-        val pngBytes = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(), 0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(), 0, 0, 0, 0)
+        val pngBytes = byteArrayOf(
+            0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(),
+            0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(),
+            0, 0, 0, 0,
+        )
         val stream = ByteArrayInputStream(pngBytes)
 
         val (bytes, mime) = SupabaseBookListingRepository.readAndValidateStream(stream)

@@ -4,11 +4,15 @@ import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
 import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookListingStatus
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.BookListingRepository
+import com.giathinh.uthconnect.domain.repository.SessionRepository
+import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.BookListingUseCases
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -65,7 +69,6 @@ class BooksViewModelTest {
 
         assertEquals(BooksFailure.SAVE_FAILED, viewModel.uiState.value.saveFailure)
 
-        // New snapshot from stream should update listings but NOT wipe out saveFailure
         val newListing = BookListing(
             id = "book-2", title = "Algorithms", subject = "CS", condition = BookCondition.NEW,
             dealType = BookDealType.EXCHANGE, priceVnd = null, description = "", sellerName = "Peer",
@@ -111,7 +114,7 @@ class BooksViewModelTest {
     }
 
     @Test
-    fun `DismissError clears saveFailure`() {
+    fun `DismissError clears saveFailure and resets saveStep`() {
         val viewModel = BooksViewModel(BookListingUseCases(FailingSaveRepository))
 
         viewModel.onAction(
@@ -128,6 +131,68 @@ class BooksViewModelTest {
 
         viewModel.onAction(BooksAction.DismissError)
 
+        assertNull(viewModel.uiState.value.saveFailure)
+        assertEquals(BookSaveStep.IDLE, viewModel.uiState.value.saveStep)
+    }
+
+    @Test
+    fun `session profile automatically populates currentProfile and currentUserUid`() {
+        val sampleProfile = StudentProfile(
+            studentId = "20230001",
+            email = "student@uth.edu.vn",
+            displayName = "Nguyen Van A",
+            className = "CNTT1",
+            major = "CNTT",
+            faculty = "CNTT",
+        )
+        val sessionRepo = object : SessionRepository {
+            override val session: StateFlow<StudentSession> =
+                MutableStateFlow(StudentSession(isRestoring = false, profile = sampleProfile))
+            override suspend fun restore() = Unit
+            override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+            override suspend fun updateProfile(profile: StudentProfile) = Unit
+            override suspend fun enableBiometric(studentId: String) = Unit
+            override suspend fun disableBiometric() = Unit
+            override suspend fun signOut() = Unit
+        }
+        val bookRepo = object : BookListingRepository {
+            override fun currentUserId(): String? = null
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing) = Result.success(Unit)
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.success(Unit)
+            override suspend fun deleteListing(id: String) = Result.success(Unit)
+            override fun refresh() = Unit
+        }
+
+        val viewModel = BooksViewModel(BookListingUseCases(bookRepo), sessionRepo)
+
+        assertEquals(sampleProfile, viewModel.uiState.value.currentProfile)
+        assertEquals("20230001", viewModel.uiState.value.currentUserUid)
+    }
+
+    @Test
+    fun `successful save updates lastSavedId and finishes with success step`() {
+        val bookRepo = object : BookListingRepository {
+            override fun currentUserId() = "student-1"
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing) = Result.success(Unit)
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.success(Unit)
+            override suspend fun deleteListing(id: String) = Result.success(Unit)
+            override fun refresh() = Unit
+        }
+
+        val viewModel = BooksViewModel(BookListingUseCases(bookRepo))
+        val sample = BookListing(
+            id = "new-book-id", title = "Calculus", subject = "Math", condition = BookCondition.NEW,
+            dealType = BookDealType.SALE, priceVnd = 45000, description = "Clean copy",
+            sellerName = "Student A", contact = "0987654321",
+        )
+
+        viewModel.onAction(BooksAction.Save(sample))
+
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertEquals(BookSaveStep.SUCCESS, viewModel.uiState.value.saveStep)
+        assertEquals("new-book-id", viewModel.uiState.value.lastSavedId)
         assertNull(viewModel.uiState.value.saveFailure)
     }
 
