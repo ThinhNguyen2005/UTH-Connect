@@ -60,38 +60,38 @@ Deno.serve(async (request) => {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
 
-      if (payload.table === "housing_posts" && source.broadcastAuthorId) {
-        const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId, deadline);
-        if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
-      }
-
-      const recipients = await recipientIds(source.recipientId, source.excludeUserId, deadline);
-      if (recipients.length === 0) return json({ delivered: 0, ignored: true });
-
-      const dedupeKey = `${payload.table}:${source.sourceId}`;
-      const rows = recipients.map((recipientId) => ({
-        recipient_id: recipientId,
-        title: source.title,
-        summary: source.summary,
-        content: source.content,
-        category: source.category,
-        author: source.author,
-        target_type: source.targetType,
-        target_id: source.targetId,
-        source_table: payload.table,
-        source_id: source.sourceId,
-        dedupe_key: dedupeKey,
-        published_at: source.publishedAt,
-      }));
-      const progressRows = await supabaseRest<DispatchProgress[]>(
-        `notification_dispatch_progress?select=dedupe_key,next_recipient_offset&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
-        {},
-        deadline,
-      );
-      const startOffset = Math.min(progressRows[0]?.next_recipient_offset ?? 0, rows.length);
-      // Keep recipient fan-out inserts bounded so a large verified-user list does
-      // not exceed PostgREST request limits or get partially dropped as one body.
       try {
+        if (payload.table === "housing_posts" && source.broadcastAuthorId) {
+          const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId, deadline);
+          if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
+        }
+
+        const recipients = await recipientIds(source.recipientId, source.excludeUserId, deadline);
+        if (recipients.length === 0) return json({ delivered: 0, ignored: true });
+
+        const dedupeKey = `${payload.table}:${source.sourceId}`;
+        const rows = recipients.map((recipientId) => ({
+          recipient_id: recipientId,
+          title: source.title,
+          summary: source.summary,
+          content: source.content,
+          category: source.category,
+          author: source.author,
+          target_type: source.targetType,
+          target_id: source.targetId,
+          source_table: payload.table,
+          source_id: source.sourceId,
+          dedupe_key: dedupeKey,
+          published_at: source.publishedAt,
+        }));
+        const progressRows = await supabaseRest<DispatchProgress[]>(
+          `notification_dispatch_progress?select=dedupe_key,next_recipient_offset&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
+          {},
+          deadline,
+        );
+        const startOffset = Math.min(progressRows[0]?.next_recipient_offset ?? 0, rows.length);
+        // Keep recipient fan-out inserts bounded so a large verified-user list does
+        // not exceed PostgREST request limits or get partially dropped as one body.
         for (let offset = startOffset; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
           const nextOffset = Math.min(offset + INBOX_INSERT_BATCH_SIZE, rows.length);
           await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
@@ -106,6 +106,8 @@ Deno.serve(async (request) => {
           }, deadline);
         }
       } catch (error) {
+        // Preserve the original source payload so a transient failure before or
+        // during fan-out can resume from the saved recipient offset.
         await queueContinuation(payload.continuationDepth ?? 0, payload);
         throw error;
       }
