@@ -9,15 +9,22 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
 1. Apply all migrations, in order:
    - `supabase/migrations/20261108000000_push_notification_inbox.sql`
    - `supabase/migrations/20261116000000_notification_dispatch_progress.sql`
+   - `supabase/migrations/20261117000000_dispatch_notification_cron.sql`
    - `supabase/migrations/20261114000000_notification_push_cursor.sql`
    - `supabase/migrations/20261115000000_notification_device_claim.sql`
    - `supabase/migrations/20261115010000_notification_broadcast_rate_limit.sql`
    - `supabase/migrations/20261115020000_secure_notification_device_claim.sql`
 2. Deploy the function with `supabase functions deploy dispatch-notification`.
-3. Add these Edge Function secrets in Supabase project settings:
+3. Before applying the scheduler migration, store these values in Supabase Vault:
+   - `SUPABASE_FUNCTIONS_URL`: `https://<project-ref>.supabase.co/functions/v1`
+   - `WEBHOOK_SHARED_SECRET`: the same value configured for the Edge Function
+   The scheduler runs every 6 minutes, so stale `PROCESSING` claims older than
+   five minutes are released and remaining `PENDING` rows are retried even when
+   no new database webhook is emitted.
+4. Add these Edge Function secrets in Supabase project settings:
    - `WEBHOOK_SHARED_SECRET` (generate a long random value)
    - `FCM_SERVICE_ACCOUNT_JSON` (the Firebase service-account JSON; never commit it)
-4. In Supabase Database Webhooks, create HTTP `POST` webhooks to
+5. In Supabase Database Webhooks, create HTTP `POST` webhooks to
    `https://<project-ref>.supabase.co/functions/v1/dispatch-notification` with the
    header `x-webhook-secret: <same WEBHOOK_SHARED_SECRET>`:
    - `public.events`: `INSERT` and `UPDATE` (sends only when an event first becomes `PUBLISHED`)
