@@ -122,7 +122,11 @@ class SupabaseBookListingRepository @Inject constructor(
                     try {
                         client.deleteStorage(BUCKET_NAME, newlyUploadedPath)
                     } catch (cleanupFailure: Exception) {
-                        Log.w("SupabaseBookListing", "Compensating storage cleanup failed for $newlyUploadedPath", cleanupFailure)
+                        Log.w(
+                            "SupabaseBookListing",
+                            "Compensating storage cleanup failed for $newlyUploadedPath",
+                            cleanupFailure,
+                        )
                     }
                 }
                 throw error
@@ -130,7 +134,10 @@ class SupabaseBookListingRepository @Inject constructor(
         }
     }
 
-    override suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateStatus(
+        id: String,
+        status: BookListingStatus,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         suspendResult {
             val listingId = uuid(id)
             val payload = buildJsonObject {
@@ -177,15 +184,18 @@ class SupabaseBookListingRepository @Inject constructor(
             id = requireNotNull(string("id")),
             title = string("title").orEmpty(),
             subject = string("subject").orEmpty(),
-            condition = runCatching { BookCondition.valueOf(string("condition").orEmpty()) }.getOrDefault(BookCondition.GOOD),
-            dealType = runCatching { BookDealType.valueOf(string("deal_type").orEmpty()) }.getOrDefault(BookDealType.SALE),
+            condition = runCatching { BookCondition.valueOf(string("condition").orEmpty()) }
+                .getOrDefault(BookCondition.GOOD),
+            dealType = runCatching { BookDealType.valueOf(string("deal_type").orEmpty()) }
+                .getOrDefault(BookDealType.SALE),
             priceVnd = (get("price_vnd") as? kotlinx.serialization.json.JsonPrimitive)?.longOrNull,
             description = string("description").orEmpty(),
             sellerName = string("seller_name").orEmpty(),
             contact = string("contact").orEmpty(),
             ownerUid = string("owner_user_id").orEmpty(),
             photoUrl = photoUrl,
-            status = runCatching { BookListingStatus.valueOf(string("status").orEmpty()) }.getOrDefault(BookListingStatus.AVAILABLE),
+            status = runCatching { BookListingStatus.valueOf(string("status").orEmpty()) }
+                .getOrDefault(BookListingStatus.AVAILABLE),
             createdAt = createdAtMillis,
             imagePath = imagePath,
         )
@@ -204,11 +214,14 @@ class SupabaseBookListingRepository @Inject constructor(
                 bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte() -> "image/jpeg"
 
                 // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
-                bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() && bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte() -> "image/png"
+                bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() &&
+                    bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte() -> "image/png"
 
                 // WebP magic bytes: RIFF....WEBP
-                bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() &&
-                    bytes[8] == 'W'.code.toByte() && bytes[9] == 'E'.code.toByte() && bytes[10] == 'B'.code.toByte() && bytes[11] == 'P'.code.toByte() -> "image/webp"
+                bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() &&
+                    bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() &&
+                    bytes[8] == 'W'.code.toByte() && bytes[9] == 'E'.code.toByte() &&
+                    bytes[10] == 'B'.code.toByte() && bytes[11] == 'P'.code.toByte() -> "image/webp"
 
                 else -> error("Invalid image format. Only JPEG, PNG, and WebP are allowed.")
             }
@@ -229,7 +242,10 @@ class SupabaseBookListingRepository @Inject constructor(
             return validateImageBytes(bytes)
         }
 
-        internal suspend fun readAndValidateImage(context: Context, uriString: String): Pair<ByteArray, String> = withContext(Dispatchers.IO) {
+        internal suspend fun readAndValidateImage(
+            context: Context,
+            uriString: String,
+        ): Pair<ByteArray, String> = withContext(Dispatchers.IO) {
             val uri = Uri.parse(uriString)
             val stream = context.contentResolver.openInputStream(uri)
                 ?: error("Cannot open image file: $uriString")
