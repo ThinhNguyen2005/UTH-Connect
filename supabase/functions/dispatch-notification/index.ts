@@ -178,12 +178,12 @@ function toSourceNotification(payload: WebhookPayload) {
   }
 
   if (payload.table === "housing_posts") {
-    if (payload.type !== "INSERT" || row.status !== "ACTIVE") return null;
-    const price = Number(row.price ?? 0);
+    if (payload.type !== "INSERT" || row.status !== "OPEN") return null;
+    const price = Number(row.monthly_rent_vnd ?? 0);
     return {
       sourceId: requiredString(row.id), recipientId: null, excludeUserId: stringValue(row.author_id),
       title: requiredString(row.title), summary: "Có bài đăng trọ mới.",
-      content: [stringValue(row.description), stringValue(row.location), price > 0 ? `${price.toLocaleString("vi-VN")} VND` : ""].filter(Boolean).join("\n"),
+      content: [stringValue(row.description), stringValue(row.address_label), price > 0 ? `${price.toLocaleString("vi-VN")} VND` : ""].filter(Boolean).join("\n"),
       category: "GENERAL", author: "Ghép trọ UTH",
       targetType: "HOUSING", targetId: requiredString(row.id),
       publishedAt: stringValue(row.created_at) || new Date().toISOString(),
