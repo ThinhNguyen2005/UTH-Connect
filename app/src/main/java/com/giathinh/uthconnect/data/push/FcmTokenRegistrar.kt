@@ -30,6 +30,7 @@ class FcmTokenRegistrar @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val registrationMutex = Mutex()
+    private val registrationStateLock = Any()
 
     @Volatile private var registrationEnabled = false
 
@@ -42,27 +43,34 @@ class FcmTokenRegistrar @Inject constructor(
     init {
         connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                if (registrationEnabled && client.userIdOrNull != null) registerForSignedInUser()
+                val shouldRegister = synchronized(registrationStateLock) {
+                    registrationEnabled && client.userIdOrNull != null
+                }
+                if (shouldRegister) registerForSignedInUser()
             }
         })
     }
 
     /** Queues token registration after login or session restoration without delaying the UI. */
     fun registerForSignedInUser() {
-        registrationEnabled = true
-        registrationJob?.cancel()
-        registrationJob = scope.launch {
-            retryRegistration {
-                registerToken(FirebaseMessaging.getInstance().token.await())
+        synchronized(registrationStateLock) {
+            registrationEnabled = true
+            registrationJob?.cancel()
+            registrationJob = scope.launch {
+                retryRegistration {
+                    registerToken(FirebaseMessaging.getInstance().token.await())
+                }
             }
         }
     }
 
     /** Queues a token rotation update received by FirebaseMessagingService. */
     fun onTokenRefreshed(token: String) {
-        if (!registrationEnabled) return
-        registrationJob?.cancel()
-        registrationJob = scope.launch { retryRegistration { registerToken(token) } }
+        synchronized(registrationStateLock) {
+            if (!registrationEnabled) return
+            registrationJob?.cancel()
+            registrationJob = scope.launch { retryRegistration { registerToken(token) } }
+        }
     }
 
     /** Deletes this installation's token row before sign-out while auth credentials remain valid. */
@@ -71,11 +79,15 @@ class FcmTokenRegistrar @Inject constructor(
         restoreOnFailure: Boolean = true,
         requestTimeoutMs: Int? = null,
     ) {
-        registrationEnabled = false
-        registrationJob?.cancel()
-        registrationJob?.join()
-        registrationJob = null
         try {
+            val jobToJoin = synchronized(registrationStateLock) {
+                registrationEnabled = false
+                val job = registrationJob
+                registrationJob = null
+                job?.cancel()
+                job
+            }
+            jobToJoin?.join()
             registrationMutex.withLock {
                 val userId = client.userIdOrNull?.let(::urlEncode) ?: return@withLock
                 val deviceId = urlEncode(deviceId())

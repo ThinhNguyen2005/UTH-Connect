@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.repository.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -41,6 +42,8 @@ class NotificationViewModel @Inject constructor(
     private data class CompletedReadMutation(val ids: Set<String>, val succeeded: Boolean)
     private val completedReadMutations = mutableListOf<CompletedReadMutation>()
     private var nextReadMutationVersion = 0L
+    private var inboxLoadGeneration = 0L
+    private var inboxLoadJob: Job? = null
 
     init {
         loadNotifications()
@@ -101,12 +104,15 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun loadNotifications(isRefresh: Boolean = false) {
+        val generation = ++inboxLoadGeneration
+        inboxLoadJob?.cancel()
         val requestReadVersion = nextReadMutationVersion
         val completedMutationsAtStart = completedReadMutations.size
         _uiState.update { it.copy(isLoading = !isRefresh, isRefreshing = isRefresh) }
-        viewModelScope.launch {
+        inboxLoadJob = viewModelScope.launch {
             notificationRepository.getInbox()
                 .catch { error ->
+                    if (generation != inboxLoadGeneration) return@catch
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -116,6 +122,7 @@ class NotificationViewModel @Inject constructor(
                     }
                 }
                 .collect { list ->
+                    if (generation != inboxLoadGeneration) return@collect
                     val serverReadIds = list
                         .filter { item -> item.readAt != null }
                         .map { item -> item.id }
@@ -129,15 +136,15 @@ class NotificationViewModel @Inject constructor(
                         } else {
                             // Keep optimistic mutations created after this GET started;
                             // an older response must not erase a newer read action.
-                            val succeededIds = completedAfterStart
-                                .filter { mutation -> mutation.succeeded }
-                                .flatMap { mutation -> mutation.ids }
-                                .toSet()
-                            val failedIds = completedAfterStart
-                                .filterNot { mutation -> mutation.succeeded }
-                                .flatMap { mutation -> mutation.ids }
-                                .toSet()
-                            (it.readNotificationIds + serverReadIds + succeededIds) - failedIds
+                            val latestMutationById = linkedMapOf<String, Boolean>()
+                            completedAfterStart.forEach { mutation ->
+                                mutation.ids.forEach { id -> latestMutationById[id] = mutation.succeeded }
+                            }
+                            latestMutationById.entries.fold(
+                                it.readNotificationIds + serverReadIds,
+                            ) { ids, (id, succeeded) ->
+                                if (succeeded) ids + id else ids - id
+                            }
                         }
                         it.copy(
                             isLoading = false,
