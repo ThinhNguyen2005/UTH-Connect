@@ -76,7 +76,8 @@ export default function PortalHomePage() {
 
       const { data: houseData } = await supabaseBrowserClient
         .from("housing_posts")
-        .select("id, title, price, campus, room_type")
+        .select("id, title, monthly_rent_vnd, campus, type")
+        .eq("status", "OPEN")
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -300,7 +301,7 @@ export default function PortalHomePage() {
                         {h.campus}
                       </span>
                       <span className="font-bold text-emerald-700 tabular-nums">
-                        {new Intl.NumberFormat("vi-VN").format(h.price)} đ
+                        {new Intl.NumberFormat("vi-VN").format(h.monthly_rent_vnd)} đ
                       </span>
                     </div>
                     <div className="text-xs font-medium text-slate-800 line-clamp-1">
