@@ -18,6 +18,11 @@ import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val MIN_STUDENT_ID_LENGTH = 8
+private const val MAX_STUDENT_ID_LENGTH = 12
+private const val HTTP_BAD_REQUEST = 400
+private const val HTTP_UNAUTHORIZED = 401
+
 @Singleton
 class SupabaseAuthRepository @Inject constructor(
     private val client: SupabaseRestClient,
@@ -29,7 +34,7 @@ class SupabaseAuthRepository @Inject constructor(
         val trimmed = identifier.trim()
         val email = if ('@' in trimmed) {
             trimmed
-        } else if (trimmed.all { it.isDigit() } && trimmed.length in 8..12) {
+        } else if (trimmed.all { it.isDigit() } && trimmed.length in MIN_STUDENT_ID_LENGTH..MAX_STUDENT_ID_LENGTH) {
             "$trimmed@ut.edu.vn"
         } else {
             trimmed
@@ -38,7 +43,7 @@ class SupabaseAuthRepository @Inject constructor(
         try {
             client.signIn(email, password)
         } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@suspendResult null
+            if (e.status == HTTP_BAD_REQUEST || e.status == HTTP_UNAUTHORIZED) return@suspendResult null
             throw e
         }
 
@@ -73,14 +78,19 @@ class SupabaseAuthRepository @Inject constructor(
     }
 
     private suspend fun ownProfileRow(): JsonObject? = client.table(
-        "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url,phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",
+        "profiles?select=student_id,student_id_verified,email,display_name,class_name,major,faculty,avatar_url," +
+            "phone_number,personal_email,current_address,role&id=eq.${urlEncode(uuid(client.userId))}",
     ).jsonArray.singleOrNull()?.jsonObject
 
-    override suspend fun authenticateWithGoogle(idToken: String, rawNonce: String): Result<StudentProfile> = suspendResult {
+    override suspend fun authenticateWithGoogle(
+        idToken: String,
+        rawNonce: String,
+    ): Result<StudentProfile> = suspendResult {
         google.exchange(idToken, rawNonce)
         val row = ownProfileRow()
         val email = row?.string("email").orEmpty()
-        val isUtEmail = email.endsWith("@ut.edu.vn", ignoreCase = true) || email.endsWith("@uth.edu.vn", ignoreCase = true)
+        val isUtEmail = email.endsWith("@ut.edu.vn", ignoreCase = true) ||
+            email.endsWith("@uth.edu.vn", ignoreCase = true)
         if (!isUtEmail) {
             client.signOut()
             throw DomainRestrictionException(email)
@@ -141,11 +151,17 @@ class SupabaseAuthRepository @Inject constructor(
         client.recoverPassword(email)
     }
 
-    override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = suspendResult {
+    override suspend fun completePasswordReset(
+        email: String,
+        otp: String,
+        newPassword: String,
+    ): Result<Unit> = suspendResult {
         client.resetPasswordWithOtp(email, otp, newPassword)
     }
 
-    override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = suspendResult {
+    override suspend fun submitVerificationRequest(
+        studentId: String,
+    ): Result<VerificationRequestResult> = suspendResult {
         val response = client.rpc(
             "submit_student_verification_request",
             buildJsonObject { put("p_student_id", studentId) },
@@ -186,13 +202,17 @@ class SupabaseAuthRepository @Inject constructor(
         ownProfile().takeIf { it.studentId == studentId }
     }
 
-    override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = suspendResult {
+    override suspend fun changePassword(
+        studentId: String,
+        oldPassword: String,
+        newPassword: String,
+    ): Result<Boolean> = suspendResult {
         val profile = ownProfile()
         check(profile.studentId == studentId) { "Not signed in as this student" }
         try {
             if (!client.verifyCurrentPassword(profile.email, oldPassword)) return@suspendResult false
         } catch (e: SupabaseHttpException) {
-            if (e.status == 400 || e.status == 401) return@suspendResult false
+            if (e.status == HTTP_BAD_REQUEST || e.status == HTTP_UNAUTHORIZED) return@suspendResult false
             throw e
         }
         client.updatePassword(newPassword)

@@ -69,6 +69,8 @@ fun ScheduleEvent.canOpenTicketAt(now: LocalDateTime): Boolean = registration !=
     !now.isAfter(endAt.plusMinutes(TICKET_CHECK_IN_GRACE_MINUTES))
 
 private const val TICKET_CHECK_IN_GRACE_MINUTES = 30L
+private const val AFTERNOON_START_HOUR = 12
+private const val EVENING_START_HOUR = 18
 
 enum class EventRegistration { CHECKED_IN, REGISTERED, NOT_REGISTERED }
 enum class EventAccent { SUCCESS, PRIMARY, WARNING }
@@ -83,8 +85,8 @@ enum class SchedulePeriod {
     companion object {
         /** Maps a 24-hour clock value to its schedule period. */
         fun fromHour(hour: Int) = when {
-            hour < 12 -> MORNING
-            hour < 18 -> AFTERNOON
+            hour < AFTERNOON_START_HOUR -> MORNING
+            hour < EVENING_START_HOUR -> AFTERNOON
             else -> EVENING
         }
     }

@@ -157,7 +157,10 @@ private fun EventCard(
             Text(event.orgName, style = MaterialTheme.typography.labelMedium)
             Text(eventDateFormatter.format(Instant.ofEpochMilli(event.startAt)))
             Text("${event.location} · ${event.campus}", style = MaterialTheme.typography.bodyMedium)
-            Text("Trạng thái: ${event.status.name} · Đã đăng ký: ${event.registeredCount}${if (event.capacity > 0) "/${event.capacity}" else ""}")
+            Text(
+                "Trạng thái: ${event.status.name} · Đã đăng ký: ${event.registeredCount}" +
+                    if (event.capacity > 0) "/${event.capacity}" else "",
+            )
             if (registered) {
                 Text("Đã đăng ký · Vé có trong tab Vé của tôi", color = MaterialTheme.colorScheme.primary)
                 OutlinedButton(onClick = onCancel, enabled = !busy) { Text("Hủy đăng ký") }
@@ -174,11 +177,17 @@ private fun EventCard(
                             Text("Xuất bản")
                         }
 
-                        EventStatus.PUBLISHED -> Button(onClick = { onSetStatus(EventStatus.HAPPENING) }, enabled = !busy) {
+                        EventStatus.PUBLISHED -> Button(
+                            onClick = { onSetStatus(EventStatus.HAPPENING) },
+                            enabled = !busy,
+                        ) {
                             Text("Bắt đầu")
                         }
 
-                        EventStatus.HAPPENING -> Button(onClick = { onSetStatus(EventStatus.COMPLETED) }, enabled = !busy) {
+                        EventStatus.HAPPENING -> Button(
+                            onClick = { onSetStatus(EventStatus.COMPLETED) },
+                            enabled = !busy,
+                        ) {
                             Text("Kết thúc")
                         }
 
@@ -224,9 +233,12 @@ internal fun defaultEventWindow(zone: ZoneId): Pair<LocalDateTime, LocalDateTime
     return start to start.plusMinutes(120)
 }
 
-internal fun parseEditableDateTime(text: String): LocalDateTime? = runCatching { LocalDateTime.parse(text, editableDateFormatter) }.getOrNull()
+internal fun parseEditableDateTime(text: String): LocalDateTime? = runCatching {
+    LocalDateTime.parse(text, editableDateFormatter)
+}.getOrNull()
 
-internal fun editableDateTime(millis: Long, zone: ZoneId): String = Instant.ofEpochMilli(millis).atZone(zone).toLocalDateTime().format(editableDateFormatter)
+internal fun editableDateTime(millis: Long, zone: ZoneId): String = Instant.ofEpochMilli(millis)
+    .atZone(zone).toLocalDateTime().format(editableDateFormatter)
 
 @Composable
 private fun EventEditorDialog(
@@ -268,16 +280,48 @@ private fun EventEditorDialog(
         title = { Text(if (event == null) "Tạo bản nháp sự kiện" else "Chỉnh sửa sự kiện") },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = UthDimens.Spacing.Xxl * 15).verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(max = UthDimens.Spacing.Xxl * 15)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
             ) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Tên sự kiện") }, singleLine = true)
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Tên sự kiện") },
+                    singleLine = true,
+                )
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Mô tả") })
-                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Địa điểm") }, singleLine = true)
-                OutlinedTextField(value = campus, onValueChange = { campus = it }, label = { Text("Cơ sở") }, singleLine = true)
-                OutlinedTextField(value = startsAt, onValueChange = { startsAt = it }, label = { Text("Bắt đầu (dd/MM/yyyy HH:mm)") }, singleLine = true)
-                OutlinedTextField(value = endsAt, onValueChange = { endsAt = it }, label = { Text("Kết thúc (dd/MM/yyyy HH:mm)") }, singleLine = true)
-                OutlinedTextField(value = capacity, onValueChange = { capacity = it }, label = { Text("Sức chứa (0 = không giới hạn)") }, singleLine = true)
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Địa điểm") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = campus,
+                    onValueChange = { campus = it },
+                    label = { Text("Cơ sở") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = startsAt,
+                    onValueChange = { startsAt = it },
+                    label = { Text("Bắt đầu (dd/MM/yyyy HH:mm)") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = endsAt,
+                    onValueChange = { endsAt = it },
+                    label = { Text("Kết thúc (dd/MM/yyyy HH:mm)") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = capacity,
+                    onValueChange = { capacity = it },
+                    label = { Text("Sức chứa (0 = không giới hạn)") },
+                    singleLine = true,
+                )
                 if (showWindow) {
                     val now = LocalDateTime.now(localZone)
                     val minutesToOpen = ChronoUnit.MINUTES.between(now, openFrom)
@@ -336,19 +380,21 @@ private fun EventEditorDialog(
                     event == null && startsTooSoon -> errFuture
                     else -> null
                 }
-                if (validationError == null && start != null && end != null && count != null) {
-                    onSave(
-                        EventDraft(
-                            title.trim(),
-                            description.trim(),
-                            location.trim(),
-                            campus.trim(),
-                            start.atZone(localZone).toInstant().toEpochMilli(),
-                            end.atZone(localZone).toInstant().toEpochMilli(),
-                            count,
-                        ),
-                    )
-                }
+                if (validationError != null) return@Button
+                val validStart = start ?: return@Button
+                val validEnd = end ?: return@Button
+                val validCapacity = count ?: return@Button
+                onSave(
+                    EventDraft(
+                        title.trim(),
+                        description.trim(),
+                        location.trim(),
+                        campus.trim(),
+                        validStart.atZone(localZone).toInstant().toEpochMilli(),
+                        validEnd.atZone(localZone).toInstant().toEpochMilli(),
+                        validCapacity,
+                    ),
+                )
             }, enabled = !busy) { Text("Lưu") }
         },
         dismissButton = { OutlinedButton(onClick = onDismiss, enabled = !busy) { Text("Đóng") } },

@@ -43,7 +43,7 @@ class ProfileViewModelTest {
             get() {
                 if (failNextProfileRead) {
                     failNextProfileRead = false
-                    throw IllegalStateException("Simulated profile storage failure")
+                    error("Simulated profile storage failure")
                 }
                 return state
             }
@@ -64,7 +64,7 @@ class ProfileViewModelTest {
         override suspend fun signOut() {
             if (failNextLogout) {
                 failNextLogout = false
-                throw IllegalStateException("Simulated storage failure")
+                error("Simulated storage failure")
             }
             state.value = StudentSession(isRestoring = false)
         }

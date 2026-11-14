@@ -475,7 +475,10 @@ private val PreviewModules = listOf(
 )
 
 @Composable
-private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) {
+private fun UtilitiesStatePreview(
+    state: UtilitiesUiState,
+    darkTheme: Boolean = false,
+) = UthPreview(darkTheme = darkTheme) {
     UtilitiesScreen(
         uiState = state,
         onAction = {},
@@ -484,27 +487,38 @@ private fun UtilitiesStatePreview(state: UtilitiesUiState, darkTheme: Boolean = 
 
 @Preview(name = "content light", showBackground = true)
 @Composable
-private fun UtilitiesContentPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = PreviewModules),
+)
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
-private fun UtilitiesContentDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules), darkTheme = true)
+private fun UtilitiesContentDarkPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = PreviewModules),
+    darkTheme = true,
+)
 
 // Font scale 1.5: lưới 2 cột phải wrapping chứ không cắt nhãn (docs/UI-UX.md mục phóng to chữ);
 // khu 3 cột tự hạ về 2 cột theo Layout.ServiceGridColumnsLargeText.
 @Preview(name = "content large text", showBackground = true, fontScale = 1.5f)
 @Composable
-private fun UtilitiesContentLargeTextPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentLargeTextPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = PreviewModules),
+)
 
 // Màn hẹp nhất còn hỗ trợ: bề ngang chữ của ô 3 cột xuống ~66dp, cả hai khu phải còn
 // đọc được (nhãn gãy dòng có dấu "…", hai card cùng hàng bằng đáy).
 @Preview(name = "content narrow", showBackground = true, widthDp = 320, heightDp = 640)
 @Composable
-private fun UtilitiesContentNarrowPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentNarrowPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = PreviewModules),
+)
 
 @Preview(name = "content narrow large text", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
 @Composable
-private fun UtilitiesContentNarrowLargeTextPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = PreviewModules))
+private fun UtilitiesContentNarrowLargeTextPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = PreviewModules),
+)
 
 @Preview(name = "loading light", showBackground = true)
 @Composable
@@ -520,7 +534,10 @@ private fun UtilitiesEmptyPreview() = UtilitiesStatePreview(UtilitiesUiState(isL
 
 @Preview(name = "empty dark", showBackground = true)
 @Composable
-private fun UtilitiesEmptyDarkPreview() = UtilitiesStatePreview(UtilitiesUiState(isLoading = false, modules = emptyList()), darkTheme = true)
+private fun UtilitiesEmptyDarkPreview() = UtilitiesStatePreview(
+    UtilitiesUiState(isLoading = false, modules = emptyList()),
+    darkTheme = true,
+)
 
 @Preview(name = "error light", showBackground = true)
 @Composable

@@ -36,7 +36,7 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
             val bytes = Base64.decode(encoded, Base64.NO_WRAP)
             require(bytes.size > IV_LENGTH)
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, IV_LENGTH)))
+            cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_BITS, bytes.copyOfRange(0, IV_LENGTH)))
             val parts = cipher.doFinal(bytes.copyOfRange(IV_LENGTH, bytes.size)).toString(Charsets.UTF_8).split('\n', limit = 2)
             require(parts.size == 2 && parts.all(String::isNotBlank))
             SavedSession(parts[0], parts[1])
@@ -71,5 +71,6 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
         const val KEY_ALIAS = "uth_connect_refresh_token_v1"
         const val KEY_SESSION = "encrypted_refresh_session"
         const val IV_LENGTH = 12
+        const val GCM_TAG_BITS = 128
     }
 }
