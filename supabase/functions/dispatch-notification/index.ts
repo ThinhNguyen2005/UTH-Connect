@@ -55,6 +55,7 @@ const CLEANUP_BUDGET_MS = 5_000;
 class DispatchDeadlineError extends Error {}
 
 type FcmResult = "SENT" | "FAILED" | "UNREGISTERED" | "PERMANENT_FAILURE";
+type ContinuationResult = "SENT" | "FAILED" | "TIMED_OUT" | "SKIPPED";
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
@@ -69,27 +70,49 @@ Deno.serve(async (request) => {
     const deadline = Date.now() + MAX_INVOCATION_MS;
     if (payload.type === "DISPATCH_PENDING") {
       const incompleteFanouts = await supabaseRest<DispatchProgress[]>(
-        `notification_dispatch_progress?select=dedupe_key,source_payload,recovery_attempts&fanout_complete=eq.false&fanout_failed=eq.false&source_payload=not.is.null&or=(recovery_retry_at.is.null,recovery_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=updated_at.asc&limit=10`,
+        `notification_dispatch_progress?select=dedupe_key,source_payload,recovery_attempts,last_recipient_id&fanout_complete=eq.false&fanout_failed=eq.false&source_payload=not.is.null&or=(recovery_retry_at.is.null,recovery_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=updated_at.asc&limit=10`,
         {},
         deadline,
       );
       for (const progress of incompleteFanouts) {
         if (progress.source_payload) {
-          const continuationSent = await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
-          if (continuationSent === null) continue;
-          const attempts = (progress.recovery_attempts ?? 0) + 1;
-          const terminal = attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
-          await supabaseRest(`notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false`, {
-            method: "PATCH",
-            body: JSON.stringify({
-              recovery_attempts: attempts,
-              recovery_retry_at: terminal
-                ? null
-                : new Date(Date.now() + FANOUT_RECOVERY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
-              fanout_failed: terminal,
-              updated_at: new Date().toISOString(),
-            }),
-          }, deadline);
+          const continuationResult = await queueContinuation(
+            payload.continuationDepth ?? 0,
+            progress.source_payload,
+          );
+          if (continuationResult === "SKIPPED") continue;
+          const currentProgress = await supabaseRest<DispatchProgress[]>(
+            `notification_dispatch_progress?select=last_recipient_id,fanout_complete&dedupe_key=eq.${
+              encodeURIComponent(progress.dedupe_key)
+            }&limit=1`,
+            {},
+            deadline,
+          );
+          const latestProgress = currentProgress[0];
+          if (!latestProgress || latestProgress.fanout_complete) continue;
+          const cursorAdvanced = latestProgress.last_recipient_id !== progress.last_recipient_id;
+          let attempts = progress.recovery_attempts ?? 0;
+          if (cursorAdvanced || continuationResult === "SENT") attempts = 0;
+          else if (continuationResult === "FAILED") attempts++;
+          if (continuationResult === "TIMED_OUT" && !cursorAdvanced) continue;
+          const terminal = continuationResult === "FAILED" && attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
+          await supabaseRest(
+            `notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false`,
+            {
+              method: "PATCH",
+              body: JSON.stringify({
+                recovery_attempts: attempts,
+                recovery_retry_at: terminal
+                  ? null
+                  : new Date(
+                    Date.now() + FANOUT_RECOVERY_DELAY_MS * 2 ** (Math.max(attempts, 1) - 1),
+                  ).toISOString(),
+                fanout_failed: terminal,
+                updated_at: new Date().toISOString(),
+              }),
+            },
+            deadline,
+          );
         }
       }
 
@@ -361,16 +384,16 @@ async function secretsEqual(left: string, right: string): Promise<boolean> {
   return difference === 0;
 }
 
-async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<boolean | null> {
+async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<ContinuationResult> {
   if (depth >= MAX_CONTINUATION_DEPTH) {
     console.warn("notification dispatch continuation limit reached", depth);
-    return null;
+    return "SKIPPED";
   }
   const baseUrl = Deno.env.get("SUPABASE_URL");
   const secret = Deno.env.get("WEBHOOK_SHARED_SECRET");
   if (!baseUrl || !secret) {
     console.warn("notification dispatch continuation is not configured");
-    return null;
+    return "SKIPPED";
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CONTINUATION_TIMEOUT_MS);
@@ -390,11 +413,13 @@ async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayl
     });
     if (!response.ok) {
       console.warn("notification dispatch continuation failed", response.status);
+      return "FAILED";
     }
-    return true;
+    return "SENT";
   } catch (error) {
+    if (controller.signal.aborted) return "TIMED_OUT";
     console.warn("notification dispatch continuation request failed", error);
-    return true;
+    return "FAILED";
   } finally {
     clearTimeout(timeout);
   }
@@ -434,6 +459,10 @@ function toSourceNotification(payload: WebhookEventPayload) {
   }
 
   if (payload.type === "DELETE") return null;
+  if (payload.type === "UPDATE" && payload.old_record) {
+    const previousPublishedAt = Date.parse(stringValue(payload.old_record.published_at));
+    if (!Number.isNaN(previousPublishedAt) && previousPublishedAt <= Date.now()) return null;
+  }
   const publishedAt = stringValue(row.published_at);
   if (publishedAt && Date.parse(publishedAt) > Date.now()) return null;
   const sourceCategory = stringValue(row.category);

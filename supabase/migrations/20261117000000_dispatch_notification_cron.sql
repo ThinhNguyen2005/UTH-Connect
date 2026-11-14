@@ -25,6 +25,10 @@ begin
     return;
   end if;
 
+  if function_url !~* '^https://' then
+    raise exception 'dispatch-notification scheduler URL must use HTTPS';
+  end if;
+
   perform net.http_post(
     url := rtrim(function_url, '/') || '/dispatch-notification',
     headers := jsonb_build_object(

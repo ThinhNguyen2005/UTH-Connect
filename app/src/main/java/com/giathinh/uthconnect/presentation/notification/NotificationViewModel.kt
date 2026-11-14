@@ -49,6 +49,7 @@ class NotificationViewModel @Inject constructor(
     private var nextReadMutationVersion = 0L
     private var inboxLoadGeneration = 0L
     private var inboxLoadJob: Job? = null
+    private var detailLoadGeneration = 0L
 
     init {
         loadNotifications()
@@ -175,6 +176,7 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun loadDetail(notificationId: String) {
+        val generation = ++detailLoadGeneration
         _uiState.update {
             it.copy(
                 detailId = notificationId,
@@ -186,7 +188,7 @@ class NotificationViewModel @Inject constructor(
         viewModelScope.launch {
             notificationRepository.getInboxNotification(notificationId).fold(
                 onSuccess = { detail ->
-                    if (_uiState.value.detailId != notificationId) return@fold
+                    if (generation != detailLoadGeneration || _uiState.value.detailId != notificationId) return@fold
                     _uiState.update { it.copy(detail = detail, isDetailLoading = false) }
                     if (detail != null) {
                         val version = markReadOptimistically(listOf(notificationId))
@@ -199,7 +201,7 @@ class NotificationViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    if (_uiState.value.detailId != notificationId) return@fold
+                    if (generation != detailLoadGeneration || _uiState.value.detailId != notificationId) return@fold
                     _uiState.update { it.copy(isDetailLoading = false, errorMessage = error.localizedMessage) }
                 },
             )

@@ -128,15 +128,17 @@ class PreferencesSessionRepository @Inject constructor(
                 }
             } == true
             if (!cleanupCompleted) Log.w(TAG, "Push device cleanup timed out; local sign-out will continue")
-            try {
-                client.setRememberSession(false)
-            } finally {
+            withContext(kotlinx.coroutines.NonCancellable) {
                 try {
-                    auth.signOut()
+                    client.setRememberSession(false)
                 } finally {
-                    _session.value = StudentSession(isRestoring = false)
-                    // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
-                    check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+                    try {
+                        auth.signOut()
+                    } finally {
+                        _session.value = StudentSession(isRestoring = false)
+                        // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
+                        check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+                    }
                 }
             }
         }

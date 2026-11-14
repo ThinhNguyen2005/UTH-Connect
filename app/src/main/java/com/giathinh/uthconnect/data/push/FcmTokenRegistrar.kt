@@ -96,10 +96,12 @@ class FcmTokenRegistrar @Inject constructor(
     fun onTokenRefreshed(token: String) {
         synchronized(registrationStateLock) {
             if (registrationEnabled) {
+                val rotationPending = preferences.getBoolean(KEY_ROTATION_PENDING, false)
+                if (rotationPending && registrationJob?.isActive == true) return
                 val userId = client.userIdOrNull ?: return
                 val generation = ++registrationGeneration
                 pendingRetryJob?.cancel()
-                registrationJob?.cancel()
+                if (!rotationPending) registrationJob?.cancel()
                 registrationJob = scope.launch {
                     retryRegistration(generation, userId) { registerToken(token) }
                 }
