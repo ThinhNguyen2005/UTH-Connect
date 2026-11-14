@@ -231,16 +231,12 @@ class SupabaseRestClient @Inject constructor() {
     /** Inserts a row through PostgREST and returns the server response. */
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
-<<<<<<< HEAD
+    /** Deletes matching rows through PostgREST. */
     suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
 
     /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
     suspend fun upsertTable(path: String, body: JsonObject): JsonElement =
         authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
-
-=======
-    /** Deletes matching rows through PostgREST. */
-    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
 
     /** Uploads binary data to Supabase Storage using the authenticated session. */
     suspend fun uploadStorage(
@@ -307,7 +303,6 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Invokes an authenticated Postgres RPC function. */
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
     /** Updates the password for the currently authenticated user. */
@@ -316,17 +311,13 @@ class SupabaseRestClient @Inject constructor() {
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
-<<<<<<< HEAD
+    /** Sends an authenticated request after obtaining a valid access token. */
     private suspend fun authorized(
         path: String,
         method: String,
         body: JsonObject? = null,
         prefer: String? = null,
     ): JsonElement {
-=======
-    /** Sends an authenticated request after obtaining a valid access token. */
-    private suspend fun authorized(path: String, method: String, body: JsonObject? = null): JsonElement {
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
         val accessToken = freshToken()
         return send(path, method, body, accessToken, prefer)
     }

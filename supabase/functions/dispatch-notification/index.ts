@@ -83,25 +83,25 @@ Deno.serve(async (request) => {
       const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
       // Phân trang devices để không bỏ sót token khi tổng thiết bị vượt 1.000 hàng
       // Phân trang devices bằng keyset để không bỏ sót token
-      const allDevices: Array<{ id: string; user_id: string; token: string }> = [];
+      const allDevices: Array<{ device_id: string; user_id: string; token: string }> = [];
       const pageSize = 1000;
       let lastDeviceId: string | undefined = undefined;
       
       while (true) {
         const queryParams = [
-          "select=id,user_id,token",
+          "select=device_id,user_id,token",
           `user_id=in.(${userIds.join(",")})`,
-          "order=id.asc",
+          "order=device_id.asc",
           `limit=${pageSize}`
         ];
-        if (lastDeviceId) queryParams.push(`id=gt.${lastDeviceId}`);
+        if (lastDeviceId) queryParams.push(`device_id=gt.${lastDeviceId}`);
 
-        const page = await supabaseRest<Array<{ id: string; user_id: string; token: string }>>(
+        const page = await supabaseRest<Array<{ device_id: string; user_id: string; token: string }>>(
           `notification_devices?${queryParams.join("&")}`,
         );
         allDevices.push(...page);
         if (page.length < pageSize) break;
-        lastDeviceId = page[page.length - 1].id;
+        lastDeviceId = page[page.length - 1].device_id;
       }
       const tokensByUser = new Map<string, string[]>();
       for (const device of allDevices) {
@@ -234,7 +234,7 @@ async function recipientIds(recipientId: string | null, excludedUserId: string |
 }
 
 async function sendFcm(accessToken: string, token: string, row: InboxRow): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
-  const serviceAccount = JSON.parse(requiredEnv("FCM_SERVICE_ACCOUNT_JSON"));
+  const serviceAccount = JSON.parse(fcmServiceAccountJson());
   const messageBody = (row.summary || row.content).slice(0, 180);
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
@@ -267,7 +267,7 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
 
 async function getFcmAccessToken(): Promise<string> {
   if (fcmAccessToken && fcmAccessToken.expiresAt > Date.now() + 60_000) return fcmAccessToken.value;
-  const account = JSON.parse(requiredEnv("FCM_SERVICE_ACCOUNT_JSON"));
+  const account = JSON.parse(fcmServiceAccountJson());
   const now = Math.floor(Date.now() / 1000);
   const jwtHeader = base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const jwtClaims = base64Url(JSON.stringify({
@@ -348,6 +348,11 @@ function requiredEnv(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`Missing ${name} secret`);
   return value;
+}
+
+function fcmServiceAccountJson(): string {
+  return Deno.env.get("FCM_SERVICE_ACCOUNT_JSON")
+    ?? requiredEnv("FIREBASE_SERVICE_ACCOUNT");
 }
 
 function requiredString(value: unknown): string {

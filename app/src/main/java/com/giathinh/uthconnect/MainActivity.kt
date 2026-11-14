@@ -26,14 +26,11 @@ import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
 import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
-<<<<<<< HEAD
 import com.giathinh.uthconnect.data.push.PushIntentContract
-=======
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigFetchThrottledException
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
@@ -64,11 +61,8 @@ class MainActivity : ComponentActivity() {
      * là recompose ngay, không cần dựng lại activity.
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
-<<<<<<< HEAD
     private var pushNotificationId by mutableStateOf<String?>(null)
-=======
     private var appAvailability by mutableStateOf<AppAvailability?>(null)
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
 
     /**
      * Áp ngôn ngữ đã lưu **trước** khi dựng tài nguyên.
@@ -99,17 +93,6 @@ class MainActivity : ComponentActivity() {
         observeRemoteConfig()
         setContent {
             UTHConnectTheme(darkTheme = themeMode.resolveDarkTheme(isSystemInDarkTheme())) {
-<<<<<<< HEAD
-                UthApp(
-                    pushNotificationId = pushNotificationId,
-                    onPushNavigationHandled = { id ->
-                        if (pushNotificationId == id) {
-                            pushNotificationId = null
-                            intent?.removeExtra(PushIntentContract.NOTIFICATION_ID)
-                        }
-                    },
-                )
-=======
                 when (val state = appAvailability) {
                     null -> Box(
                         modifier = Modifier.fillMaxSize(),
@@ -118,16 +101,22 @@ class MainActivity : ComponentActivity() {
                         CircularProgressIndicator()
                     }
 
-                    AppAvailability.AVAILABLE -> UthApp()
+                    AppAvailability.AVAILABLE -> UthApp(
+                        pushNotificationId = pushNotificationId,
+                        onPushNavigationHandled = { id ->
+                            if (pushNotificationId == id) {
+                                pushNotificationId = null
+                                intent?.removeExtra(PushIntentContract.NOTIFICATION_ID)
+                            }
+                        },
+                    )
 
                     else -> AvailabilityScreen(state)
                 }
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
             }
         }
     }
 
-<<<<<<< HEAD
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -143,7 +132,9 @@ class MainActivity : ComponentActivity() {
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply { description = getString(R.string.notification_channel_updates_description) },
             )
-=======
+        }
+    }
+
     /**
      * Tải trạng thái gate đã lưu bền vững, sau đó thực thi fetch & activate Remote Config
      * trên luồng I/O ([Dispatchers.IO]) để tránh chặn UI Thread.
@@ -218,7 +209,6 @@ class MainActivity : ComponentActivity() {
 
         withContext(Dispatchers.Main) {
             appAvailability = newState
->>>>>>> b04c51a3ee7efb29f682d184c0234599b0b999e8
         }
     }
 
