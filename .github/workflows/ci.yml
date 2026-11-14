@@ -39,7 +39,7 @@ jobs:
           ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
           ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
           ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --build-cache
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,7 +59,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - run: ./gradlew detekt
+      - run: ./gradlew detekt --build-cache
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -80,10 +80,11 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Check formatting
-        run: ./gradlew spotlessCheck
+        run: ./gradlew spotlessCheck --build-cache
       - name: Record Spotless result
         if: always()
-        run: echo "Spotless job result: ${{ job.status }}" > spotless-result.txt
+        run: |
+          echo "Spotless job result: ${{ job.status }}" > spotless-result.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -119,7 +120,7 @@ jobs:
           ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
           ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
           ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --build-cache
       - uses: EnricoMi/publish-unit-test-result-action@v2
         if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
