@@ -3,6 +3,9 @@ package com.giathinh.uthconnect.domain.usecase
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import javax.inject.Inject
 
+private const val MIN_PASSWORD_LENGTH = 8
+private const val MAX_PASSWORD_LENGTH = 64
+
 sealed interface CompletePasswordResetOutcome {
     data object Success : CompletePasswordResetOutcome
     data class InvalidForm(val passwordError: String?, val confirmError: String?) : CompletePasswordResetOutcome
@@ -20,7 +23,7 @@ class CompletePasswordResetUseCase @Inject constructor(
         var passwordError: String? = null
         var confirmError: String? = null
 
-        val isStrong = trimmedPassword.length in 8..64 &&
+        val isStrong = trimmedPassword.length in MIN_PASSWORD_LENGTH..MAX_PASSWORD_LENGTH &&
             trimmedPassword.none(Char::isWhitespace) &&
             trimmedPassword.any(Char::isUpperCase) &&
             trimmedPassword.any(Char::isLowerCase) &&
