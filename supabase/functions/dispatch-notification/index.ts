@@ -21,6 +21,7 @@ type InboxRow = {
   target_type: string;
   target_id: string | null;
   push_device_cursor?: string | null;
+  push_attempts?: number;
 };
 
 type DispatchProgress = {
@@ -41,6 +42,8 @@ const PATCH_ID_BATCH_SIZE = 100;
 const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
 const MAX_CONTINUATION_DEPTH = 4;
+const MAX_PUSH_ATTEMPTS = 5;
+const PUSH_RETRY_DELAY_MS = 60_000;
 const CONTINUATION_TIMEOUT_MS = 2_000;
 const CLEANUP_BUDGET_MS = 5_000;
 
@@ -146,7 +149,7 @@ Deno.serve(async (request) => {
       }
       const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
-        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor&push_status=eq.PENDING&order=id.asc&limit=${pageSize}`,
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor,push_attempts&push_status=eq.PENDING&or=(push_retry_at.is.null,push_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=id.asc&limit=${pageSize}`,
         {},
         deadline,
       );
@@ -163,7 +166,6 @@ Deno.serve(async (request) => {
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
       const heldClaimIds = new Set(claimed.map((row) => row.id));
-      let batchFailed = false;
       try {
         ensureWithinDeadline(deadline);
         let accessToken: string | null = null;
@@ -211,16 +213,22 @@ Deno.serve(async (request) => {
           }
 
           if (rowFailed) {
+            const attempts = (row.push_attempts ?? 0) + 1;
+            const terminal = attempts >= MAX_PUSH_ATTEMPTS;
             await patchInboxRows(
               [row.id],
-              { push_status: "PENDING", push_claimed_at: null },
+              {
+                push_status: terminal ? "FAILED" : "PENDING",
+                push_attempts: attempts,
+                push_retry_at: terminal ? null : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
+                push_claimed_at: null,
+              },
               "&push_status=eq.PROCESSING",
               false,
               cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
-            pendingTotal++;
-            batchFailed = true;
+            if (!terminal) pendingTotal++;
           } else if (rowDeferred || devices.length === DEVICES_PER_ROW_BATCH) {
             await patchInboxRows(
               [row.id],
@@ -268,7 +276,7 @@ Deno.serve(async (request) => {
         throw error;
       }
 
-      if (pending.length < pageSize || batchFailed || deferred) break;
+      if (pending.length < pageSize || deferred) break;
     }
     // Keep the webhook retryable while durable PENDING work remains. A 2xx here
     // would acknowledge the delivery even though some recipients were not sent.
