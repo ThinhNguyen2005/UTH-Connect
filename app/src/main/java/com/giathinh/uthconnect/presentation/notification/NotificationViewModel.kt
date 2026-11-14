@@ -207,7 +207,7 @@ class NotificationViewModel @Inject constructor(
 
     private fun markReadOptimistically(ids: List<String>): Long {
         val version = ++nextReadMutationVersion
-        val previouslyRead = _uiState.value.readNotificationIds.intersect(ids.toSet())
+        val previouslyRead = serverConfirmedReadIds.intersect(ids.toSet())
         ids.forEach { id ->
             pendingReadIds += id
             readMutationVersions[id] = version
@@ -221,6 +221,7 @@ class NotificationViewModel @Inject constructor(
 
     private fun finishReadMutation(ids: List<String>, version: Long, succeeded: Boolean) {
         val ownedIds = ids.filter { readMutationVersions[it] == version }
+        if (succeeded) serverConfirmedReadIds += ids
         if (ownedIds.isEmpty()) return
         ownedIds.forEach { id ->
             pendingReadIds.remove(id)
