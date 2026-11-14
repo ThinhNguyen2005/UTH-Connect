@@ -19,10 +19,10 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `public.housing_posts`: `INSERT` (sends new listings with `status = OPEN`)
 
 The dispatcher claims inbox rows in small batches, limits each invocation's runtime
-and device fan-out, and writes each row's `SENT`/`PENDING` state before continuing.
-Rows left pending after a time or device limit are safe to resume on the next
-dispatch/retry invocation; interrupted `PROCESSING` claims are released after five
-minutes.
+and device fan-out, and persists a per-inbox device cursor after every successful
+device. Rows left pending after a time or device limit resume from that cursor on
+the next dispatch/retry invocation; interrupted `PROCESSING` claims are released
+after five minutes.
 
 The function rejects requests without the shared webhook header, filters unpublished
 events and non-open housing posts, writes an idempotent per-user inbox item, and claims

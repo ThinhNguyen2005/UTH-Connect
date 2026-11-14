@@ -14,20 +14,21 @@ type InboxRow = {
   content: string;
   target_type: string;
   target_id: string | null;
+  push_device_cursor?: string | null;
 };
 
 const encoder = new TextEncoder();
 let fcmAccessToken: { value: string; expiresAt: number } | null = null;
 const INBOX_BATCH_SIZE = 50;
 const MAX_ROWS_PER_INVOCATION = 250;
-const MAX_DEVICES_PER_BATCH = 2_000;
+const MAX_DEVICES_PER_INVOCATION = 2_000;
+const DEVICES_PER_ROW_BATCH = 100;
 const MAX_INVOCATION_MS = 20_000;
 const PATCH_ID_BATCH_SIZE = 100;
 const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
 
 class DispatchDeadlineError extends Error {}
-class DispatchDeferredError extends Error {}
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
@@ -88,7 +89,7 @@ Deno.serve(async (request) => {
       }
       const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
-        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id&push_status=eq.PENDING&order=id.asc&limit=${pageSize}`,
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor&push_status=eq.PENDING&order=id.asc&limit=${pageSize}`,
       );
       const ids = pending.map((row) => row.id);
       if (ids.length === 0) break;
@@ -104,67 +105,76 @@ Deno.serve(async (request) => {
       let batchFailed = false;
       try {
         ensureWithinDeadline(deadline);
-        const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
-        // Phân trang devices để không bỏ sót token, nhưng không cho một invocation
-        // kéo vô hạn thiết bị. Khi vượt giới hạn, toàn bộ batch được trả về PENDING
-        // để invocation tiếp theo xử lý lại mà không đánh dấu thiếu người nhận.
-        const allDevices: Array<{ device_id: string; user_id: string; token: string }> = [];
-        const devicePageSize = 500;
-        let lastDeviceId: string | undefined = undefined;
-
-        while (true) {
-          ensureWithinDeadline(deadline);
-          const queryParams = [
-            "select=device_id,user_id,token",
-            `user_id=in.(${userIds.join(",")})`,
-            "order=device_id.asc",
-            `limit=${devicePageSize}`,
-          ];
-          if (lastDeviceId) queryParams.push(`device_id=gt.${lastDeviceId}`);
-
-          const page = await supabaseRest<Array<{ device_id: string; user_id: string; token: string }>>(
-            `notification_devices?${queryParams.join("&")}`,
-          );
-          allDevices.push(...page);
-          if (allDevices.length > MAX_DEVICES_PER_BATCH) {
-            throw new DispatchDeferredError("Device batch limit reached");
-          }
-          if (page.length < devicePageSize) break;
-          lastDeviceId = page[page.length - 1].device_id;
-        }
-        const tokensByUser = new Map<string, string[]>();
-        for (const device of allDevices) {
-          tokensByUser.set(device.user_id, [...(tokensByUser.get(device.user_id) ?? []), device.token]);
-        }
-
-        const accessToken = await getFcmAccessToken();
+        let accessToken: string | null = null;
+        let processedDevices = 0;
         for (const row of claimed) {
-          ensureWithinDeadline(deadline);
-          const tokens = tokensByUser.get(row.recipient_id) ?? [];
-          let hasFailed = false;
-          let delivered = 0;
-          for (const token of tokens) {
-            ensureWithinDeadline(deadline);
-            const result = await sendFcmWithRetry(accessToken, token, row, deadline);
-            if (result === "SENT") {
-              delivered++;
-            } else if (result === "UNREGISTERED") {
-              await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(token)}`, { method: "DELETE" });
-            } else {
-              hasFailed = true;
-            }
+          if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
+            deferred = true;
+            break;
           }
-          await patchInboxRows(
-            [row.id],
-            { push_status: hasFailed ? "PENDING" : "SENT", push_claimed_at: null },
-            "&push_status=eq.PROCESSING",
+          ensureWithinDeadline(deadline);
+          const cursor = row.push_device_cursor
+            ? `&device_id=gt.${encodeURIComponent(row.push_device_cursor)}`
+            : "";
+          const devices = await supabaseRest<Array<{ device_id: string; token: string }>>(
+            `notification_devices?select=device_id,token&user_id=eq.${row.recipient_id}${cursor}&order=device_id.asc&limit=${DEVICES_PER_ROW_BATCH}`,
           );
-          processedRows++;
-          deliveredTotal += delivered;
-          if (hasFailed) {
+          let rowFailed = false;
+          let rowDeferred = false;
+          for (const device of devices) {
+            if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
+              rowDeferred = true;
+              break;
+            }
+            ensureWithinDeadline(deadline);
+            accessToken ??= await getFcmAccessToken();
+            const result = await sendFcmWithRetry(accessToken, device.token, row, deadline);
+            if (result === "SENT") {
+              deliveredTotal++;
+            } else if (result === "UNREGISTERED") {
+              await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" });
+            } else {
+              rowFailed = true;
+            }
+            if (rowFailed) break;
+            await patchInboxRows(
+              [row.id],
+              { push_device_cursor: device.device_id, push_claimed_at: new Date().toISOString() },
+              "&push_status=eq.PROCESSING",
+            );
+            processedDevices++;
+          }
+
+          if (rowFailed) {
+            await patchInboxRows(
+              [row.id],
+              { push_status: "PENDING", push_claimed_at: null },
+              "&push_status=eq.PROCESSING",
+            );
             pendingTotal++;
             batchFailed = true;
+          } else if (rowDeferred || devices.length === DEVICES_PER_ROW_BATCH) {
+            await patchInboxRows(
+              [row.id],
+              { push_status: "PENDING", push_claimed_at: null },
+              "&push_status=eq.PROCESSING",
+            );
+            deferred = true;
+          } else {
+            await patchInboxRows(
+              [row.id],
+              { push_status: "SENT", push_claimed_at: null, push_device_cursor: null },
+              "&push_status=eq.PROCESSING",
+            );
+            processedRows++;
           }
+        }
+        if (deferred) {
+          await patchInboxRows(
+            claimed.map((row) => row.id),
+            { push_status: "PENDING", push_claimed_at: null },
+            "&push_status=eq.PROCESSING",
+          );
         }
       } catch (error) {
         await patchInboxRows(
@@ -172,14 +182,14 @@ Deno.serve(async (request) => {
           { push_status: "PENDING", push_claimed_at: null },
           "&push_status=eq.PROCESSING",
         );
-        if (error instanceof DispatchDeadlineError || error instanceof DispatchDeferredError) {
+        if (error instanceof DispatchDeadlineError) {
           deferred = true;
           break;
         }
         throw error;
       }
 
-      if (pending.length < pageSize || batchFailed) break;
+      if (pending.length < pageSize || batchFailed || deferred) break;
     }
     if (deferred) return json({ delivered: deliveredTotal, pending: pendingTotal, deferred: true }, 202);
     if (deliveredTotal === 0 && pendingTotal === 0) return json({ delivered: 0, ignored: true });

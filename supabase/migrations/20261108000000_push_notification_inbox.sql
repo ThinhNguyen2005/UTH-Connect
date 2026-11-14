@@ -47,6 +47,7 @@ create table if not exists public.notification_inbox (
   read_at timestamptz,
   push_status text not null default 'PENDING' check (push_status in ('PENDING', 'PROCESSING', 'SENT')),
   push_claimed_at timestamptz,
+  push_device_cursor text,
   constraint notification_inbox_recipient_dedupe unique (recipient_id, dedupe_key)
 );
 create index if not exists notification_inbox_recipient_published_idx
