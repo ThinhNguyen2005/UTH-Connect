@@ -73,7 +73,8 @@ Deno.serve(async (request) => {
       );
       for (const progress of incompleteFanouts) {
         if (progress.source_payload) {
-          await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
+          const continuationSent = await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
+          if (continuationSent === null) continue;
           const attempts = (progress.recovery_attempts ?? 0) + 1;
           const terminal = attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
           await supabaseRest(`notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false`, {
@@ -345,16 +346,16 @@ async function secretsEqual(left: string, right: string): Promise<boolean> {
   return difference === 0;
 }
 
-async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<void> {
+async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<boolean | null> {
   if (depth >= MAX_CONTINUATION_DEPTH) {
     console.warn("notification dispatch continuation limit reached", depth);
-    return;
+    return null;
   }
   const baseUrl = Deno.env.get("SUPABASE_URL");
   const secret = Deno.env.get("WEBHOOK_SHARED_SECRET");
   if (!baseUrl || !secret) {
     console.warn("notification dispatch continuation is not configured");
-    return;
+    return null;
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CONTINUATION_TIMEOUT_MS);
@@ -375,8 +376,10 @@ async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayl
     if (!response.ok) {
       console.warn("notification dispatch continuation failed", response.status);
     }
+    return true;
   } catch (error) {
     console.warn("notification dispatch continuation request failed", error);
+    return true;
   } finally {
     clearTimeout(timeout);
   }
