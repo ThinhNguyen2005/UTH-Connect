@@ -54,16 +54,17 @@ Deno.serve(async (request) => {
 
   try {
     const payload = await request.json() as WebhookPayload;
+    const deadline = Date.now() + MAX_INVOCATION_MS;
     if (payload.type !== "DISPATCH_PENDING") {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
 
       if (payload.table === "housing_posts" && source.broadcastAuthorId) {
-        const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId);
+        const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId, deadline);
         if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
       }
 
-      const recipients = await recipientIds(source.recipientId, source.excludeUserId);
+      const recipients = await recipientIds(source.recipientId, source.excludeUserId, deadline);
       if (recipients.length === 0) return json({ delivered: 0, ignored: true });
 
       const dedupeKey = `${payload.table}:${source.sourceId}`;
@@ -83,6 +84,8 @@ Deno.serve(async (request) => {
       }));
       const progressRows = await supabaseRest<DispatchProgress[]>(
         `notification_dispatch_progress?select=dedupe_key,next_recipient_offset&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
+        {},
+        deadline,
       );
       const startOffset = Math.min(progressRows[0]?.next_recipient_offset ?? 0, rows.length);
       // Keep recipient fan-out inserts bounded so a large verified-user list does
@@ -94,12 +97,12 @@ Deno.serve(async (request) => {
             method: "POST",
             headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
             body: JSON.stringify(rows.slice(offset, nextOffset)),
-          });
+          }, deadline);
           await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
             method: "POST",
             headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
             body: JSON.stringify({ dedupe_key: dedupeKey, next_recipient_offset: nextOffset }),
-          });
+          }, deadline);
         }
       } catch (error) {
         await queueContinuation(payload.continuationDepth ?? 0, payload);
@@ -112,8 +115,8 @@ Deno.serve(async (request) => {
     await supabaseRest(
       `notification_inbox?push_status=eq.PROCESSING&push_claimed_at=lt.${new Date(Date.now() - 5 * 60_000).toISOString()}`,
       { method: "PATCH", body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }) },
+      deadline,
     );
-    const deadline = Date.now() + MAX_INVOCATION_MS;
     let deliveredTotal = 0;
     let pendingTotal = 0;
     let processedRows = 0;
@@ -130,6 +133,8 @@ Deno.serve(async (request) => {
       const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
         `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor&push_status=eq.PENDING&order=id.asc&limit=${pageSize}`,
+        {},
+        deadline,
       );
       const ids = pending.map((row) => row.id);
       if (ids.length === 0) break;
@@ -139,6 +144,7 @@ Deno.serve(async (request) => {
         { push_status: "PROCESSING", push_claimed_at: new Date().toISOString() },
         "&push_status=eq.PENDING",
         true,
+        deadline,
       );
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
@@ -159,6 +165,8 @@ Deno.serve(async (request) => {
             : "";
           const devices = await supabaseRest<Array<{ device_id: string; token: string }>>(
             `notification_devices?select=device_id,token&user_id=eq.${row.recipient_id}${cursor}&order=device_id.asc&limit=${DEVICES_PER_ROW_BATCH}`,
+            {},
+            deadline,
           );
           let rowFailed = false;
           let rowDeferred = false;
@@ -168,12 +176,12 @@ Deno.serve(async (request) => {
               break;
             }
             ensureWithinDeadline(deadline);
-            accessToken ??= await getFcmAccessToken();
+            accessToken ??= await getFcmAccessToken(deadline);
             const result = await sendFcmWithRetry(accessToken, device.token, row, deadline);
             if (result === "SENT") {
               deliveredTotal++;
             } else if (result === "UNREGISTERED") {
-              await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" });
+              await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" }, deadline);
             } else {
               rowFailed = true;
             }
@@ -182,6 +190,8 @@ Deno.serve(async (request) => {
               [row.id],
               { push_device_cursor: device.device_id, push_claimed_at: new Date().toISOString() },
               "&push_status=eq.PROCESSING",
+              false,
+              deadline,
             );
             processedDevices++;
           }
@@ -191,6 +201,8 @@ Deno.serve(async (request) => {
               [row.id],
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
+              false,
+              deadline,
             );
             heldClaimIds.delete(row.id);
             pendingTotal++;
@@ -200,6 +212,8 @@ Deno.serve(async (request) => {
               [row.id],
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
+              false,
+              deadline,
             );
             heldClaimIds.delete(row.id);
             deferred = true;
@@ -208,6 +222,8 @@ Deno.serve(async (request) => {
               [row.id],
               { push_status: "SENT", push_claimed_at: null, push_device_cursor: null },
               "&push_status=eq.PROCESSING",
+              false,
+              deadline,
             );
             heldClaimIds.delete(row.id);
             processedRows++;
@@ -218,6 +234,8 @@ Deno.serve(async (request) => {
             [...heldClaimIds],
             { push_status: "PENDING", push_claimed_at: null },
             "&push_status=eq.PROCESSING",
+            false,
+            deadline,
           );
           heldClaimIds.clear();
         }
@@ -226,6 +244,8 @@ Deno.serve(async (request) => {
           [...heldClaimIds],
           { push_status: "PENDING", push_claimed_at: null },
           "&push_status=eq.PROCESSING",
+          false,
+          deadline,
         );
         if (error instanceof DispatchDeadlineError) {
           deferred = true;
@@ -349,14 +369,14 @@ function toSourceNotification(payload: WebhookEventPayload) {
   };
 }
 
-async function claimHousingBroadcast(authorId: string, sourceId: string): Promise<boolean> {
+async function claimHousingBroadcast(authorId: string, sourceId: string, deadline: number): Promise<boolean> {
   return await supabaseRest<boolean>("rpc/claim_housing_notification_broadcast", {
     method: "POST",
     body: JSON.stringify({ p_author_id: authorId, p_source_id: sourceId }),
-  });
+  }, deadline);
 }
 
-async function recipientIds(recipientId: string | null, excludedUserId: string | null): Promise<string[]> {
+async function recipientIds(recipientId: string | null, excludedUserId: string | null, deadline: number): Promise<string[]> {
   if (recipientId) return [recipientId];
   // Phân trang để không bỏ sót hồ sơ khi vượt giới hạn 1.000 hàng mặc định của Supabase
   // Phân trang profiles bằng keyset để không bỏ sót hồ sơ
@@ -375,6 +395,8 @@ async function recipientIds(recipientId: string | null, excludedUserId: string |
 
     const page = await supabaseRest<Array<{ id: string }>>(
       `profiles?${queryParams.join("&")}`,
+      {},
+      deadline,
     );
     allProfiles.push(...page);
     if (page.length < pageSize) break;
@@ -383,7 +405,7 @@ async function recipientIds(recipientId: string | null, excludedUserId: string |
   return allProfiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
 }
 
-async function sendFcm(accessToken: string, token: string, row: InboxRow): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
+async function sendFcm(accessToken: string, token: string, row: InboxRow, deadline: number): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
   const serviceAccount = JSON.parse(fcmServiceAccountJson());
   const messageBody = (row.summary || row.content).slice(0, 180);
   const response = await fetch(
@@ -407,6 +429,7 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
           android: { priority: "HIGH" },
         },
       }),
+      signal: deadlineSignal(deadline),
     },
   );
   if (response.ok) return "SENT";
@@ -426,9 +449,10 @@ async function sendFcmWithRetry(
   for (let attempt = 0; attempt < FCM_MAX_ATTEMPTS; attempt++) {
     ensureWithinDeadline(deadline);
     try {
-      const result = await sendFcm(accessToken, token, row);
+      const result = await sendFcm(accessToken, token, row, deadline);
       if (result !== "FAILED" || attempt === FCM_MAX_ATTEMPTS - 1) return result;
     } catch (error) {
+      if (Date.now() >= deadline) throw new DispatchDeadlineError("FCM request deadline reached");
       console.error("FCM send request failed", error);
       if (attempt === FCM_MAX_ATTEMPTS - 1) return "FAILED";
     }
@@ -444,6 +468,7 @@ async function patchInboxRows(
   update: Record<string, unknown>,
   extraFilter = "",
   returnRows = false,
+  deadline?: number,
 ): Promise<InboxRow[]> {
   const updated: InboxRow[] = [];
   for (let offset = 0; offset < ids.length; offset += PATCH_ID_BATCH_SIZE) {
@@ -455,6 +480,7 @@ async function patchInboxRows(
         headers: returnRows ? { Prefer: "return=representation" } : undefined,
         body: JSON.stringify(update),
       },
+      deadline,
     );
     if (returnRows) updated.push(...response);
   }
@@ -467,7 +493,7 @@ function ensureWithinDeadline(deadline: number, additionalDelayMs = 0) {
   }
 }
 
-async function getFcmAccessToken(): Promise<string> {
+async function getFcmAccessToken(deadline: number): Promise<string> {
   if (fcmAccessToken && fcmAccessToken.expiresAt > Date.now() + 60_000) return fcmAccessToken.value;
   const account = JSON.parse(fcmServiceAccountJson());
   const now = Math.floor(Date.now() / 1000);
@@ -490,21 +516,28 @@ async function getFcmAccessToken(): Promise<string> {
   );
   const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, encoder.encode(signingInput));
   const assertion = `${signingInput}.${base64UrlBytes(new Uint8Array(signature))}`;
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion,
+      }),
+      signal: deadlineSignal(deadline),
+    });
+  } catch (error) {
+    if (Date.now() >= deadline) throw new DispatchDeadlineError("FCM OAuth deadline reached");
+    throw error;
+  }
   if (!response.ok) throw new Error(`FCM OAuth token request failed: ${response.status}`);
   const token = await response.json() as { access_token: string; expires_in: number };
   fcmAccessToken = { value: token.access_token, expiresAt: Date.now() + token.expires_in * 1000 };
   return token.access_token;
 }
 
-async function supabaseRest<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+async function supabaseRest<T = unknown>(path: string, init: RequestInit = {}, deadline?: number): Promise<T> {
   const url = requiredEnv("SUPABASE_URL").replace(/\/$/, "");
   const key = supabaseSecretKey();
   const headers = new Headers({
@@ -514,13 +547,24 @@ async function supabaseRest<T = unknown>(path: string, init: RequestInit = {}): 
   // Khóa sb_ không phải JWT — chỉ gửi qua apikey; JWT legacy mới cần Authorization Bearer
   if (!key.startsWith("sb_")) headers.set("Authorization", `Bearer ${key}`);
   new Headers(init.headers).forEach((value, name) => headers.set(name, value));
-  const response = await fetch(`${url}/rest/v1/${path}`, {
-    ...init,
-    headers,
-  });
-  if (!response.ok) throw new Error(`Supabase REST ${response.status}: ${(await response.text()).slice(0, 500)}`);
-  const body = await response.text();
-  return (body ? JSON.parse(body) : null) as T;
+  try {
+    const response = await fetch(`${url}/rest/v1/${path}`, {
+      ...init,
+      headers,
+      signal: deadline ? deadlineSignal(deadline) : init.signal,
+    });
+    if (!response.ok) throw new Error(`Supabase REST ${response.status}: ${(await response.text()).slice(0, 500)}`);
+    const body = await response.text();
+    return (body ? JSON.parse(body) : null) as T;
+  } catch (error) {
+    if (deadline && Date.now() >= deadline) throw new DispatchDeadlineError("Supabase REST deadline reached");
+    throw error;
+  }
+}
+
+function deadlineSignal(deadline: number): AbortSignal {
+  const remainingMs = Math.max(1, deadline - Date.now());
+  return AbortSignal.timeout(remainingMs);
 }
 
 function supabaseSecretKey(): string {
