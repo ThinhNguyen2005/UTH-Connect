@@ -74,22 +74,40 @@ class AuthViewModel @Inject constructor(
         signUp = SignUpUseCase(object : com.giathinh.uthconnect.domain.repository.AuthRepository {
             override suspend fun authenticate(identifier: String, password: String) = Result.success(null)
             override suspend fun findStudent(studentId: String) = Result.success(null)
-            override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
+            override suspend fun changePassword(
+                studentId: String,
+                oldPassword: String,
+                newPassword: String,
+            ) = Result.success(false)
         }),
         forgotPassword = ForgotPasswordUseCase(object : com.giathinh.uthconnect.domain.repository.AuthRepository {
             override suspend fun authenticate(identifier: String, password: String) = Result.success(null)
             override suspend fun findStudent(studentId: String) = Result.success(null)
-            override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
+            override suspend fun changePassword(
+                studentId: String,
+                oldPassword: String,
+                newPassword: String,
+            ) = Result.success(false)
         }),
-        completePasswordReset = CompletePasswordResetUseCase(object : com.giathinh.uthconnect.domain.repository.AuthRepository {
+        completePasswordReset = CompletePasswordResetUseCase(object :
+            com.giathinh.uthconnect.domain.repository.AuthRepository {
             override suspend fun authenticate(identifier: String, password: String) = Result.success(null)
             override suspend fun findStudent(studentId: String) = Result.success(null)
-            override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
+            override suspend fun changePassword(
+                studentId: String,
+                oldPassword: String,
+                newPassword: String,
+            ) = Result.success(false)
         }),
-        submitVerification = SubmitVerificationRequestUseCase(object : com.giathinh.uthconnect.domain.repository.AuthRepository {
+        submitVerification = SubmitVerificationRequestUseCase(object :
+            com.giathinh.uthconnect.domain.repository.AuthRepository {
             override suspend fun authenticate(identifier: String, password: String) = Result.success(null)
             override suspend fun findStudent(studentId: String) = Result.success(null)
-            override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String) = Result.success(false)
+            override suspend fun changePassword(
+                studentId: String,
+                oldPassword: String,
+                newPassword: String,
+            ) = Result.success(false)
         }),
         supabaseRestClient = SupabaseRestClient(),
         getSettings = GetSettingsUseCase(NoopSettingsRepository),
@@ -183,9 +201,13 @@ class AuthViewModel @Inject constructor(
                 )
             }
 
-            AuthAction.DismissForgotPassword -> _uiState.update { it.copy(forgotDialogOpen = false, forgotError = null) }
+            AuthAction.DismissForgotPassword -> _uiState.update {
+                it.copy(forgotDialogOpen = false, forgotError = null)
+            }
 
-            is AuthAction.ForgotEmailChanged -> _uiState.update { it.copy(forgotEmail = action.value, forgotError = null) }
+            is AuthAction.ForgotEmailChanged -> _uiState.update {
+                it.copy(forgotEmail = action.value, forgotError = null)
+            }
 
             AuthAction.SubmitForgotPassword -> submitForgotPassword()
 
@@ -213,7 +235,8 @@ class AuthViewModel @Inject constructor(
                     screenStep = action.step,
                     resetOtp = if (action.step == AuthScreenStep.ResetPassword) it.resetOtp else "",
                     resetNewPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetNewPassword else "",
-                    resetConfirmPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else "",
+                    resetConfirmPassword =
+                    if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else "",
                     resetPasswordError = null,
                     failure = null,
                     identifierError = null,
@@ -237,7 +260,9 @@ class AuthViewModel @Inject constructor(
             AuthAction.ClearSetupNotice -> _uiState.update { it.copy(setupSuccessNotice = false) }
 
             // Student ID verification actions
-            is AuthAction.VerificationStudentIdChanged -> _uiState.update { it.copy(verificationStudentId = action.value) }
+            is AuthAction.VerificationStudentIdChanged -> _uiState.update {
+                it.copy(verificationStudentId = action.value)
+            }
 
             AuthAction.SubmitVerificationRequest -> submitVerificationRequest()
 
@@ -249,11 +274,17 @@ class AuthViewModel @Inject constructor(
                 )
             }
 
-            is AuthAction.ResetNewPasswordChanged -> _uiState.update { it.copy(resetNewPassword = action.value, resetPasswordError = null) }
+            is AuthAction.ResetNewPasswordChanged -> _uiState.update {
+                it.copy(resetNewPassword = action.value, resetPasswordError = null)
+            }
 
-            is AuthAction.ResetConfirmPasswordChanged -> _uiState.update { it.copy(resetConfirmPassword = action.value, resetPasswordError = null) }
+            is AuthAction.ResetConfirmPasswordChanged -> _uiState.update {
+                it.copy(resetConfirmPassword = action.value, resetPasswordError = null)
+            }
 
-            AuthAction.ToggleResetPasswordVisibility -> _uiState.update { it.copy(resetPasswordVisible = !it.resetPasswordVisible) }
+            AuthAction.ToggleResetPasswordVisibility -> _uiState.update {
+                it.copy(resetPasswordVisible = !it.resetPasswordVisible)
+            }
 
             AuthAction.SubmitResetPassword -> submitResetPassword()
 
@@ -270,7 +301,10 @@ class AuthViewModel @Inject constructor(
             return
         }
         val isNumericId = id.all { it.isDigit() } && id.length in MIN_STUDENT_ID_LENGTH..MAX_STUDENT_ID_LENGTH
-        val isUtEmail = (id.endsWith("@ut.edu.vn", ignoreCase = true) || id.endsWith("@uth.edu.vn", ignoreCase = true)) && id.indexOf('@') > 0
+        val isUtEmail = (
+            id.endsWith("@ut.edu.vn", ignoreCase = true) ||
+                id.endsWith("@uth.edu.vn", ignoreCase = true)
+            ) && id.indexOf('@') > 0
         if (!isNumericId && !isUtEmail) {
             _uiState.update { it.copy(identifierError = LoginFieldError.InvalidIdentifier) }
             return
@@ -351,7 +385,9 @@ class AuthViewModel @Inject constructor(
 
                     is SignUpOutcome.DomainRestriction -> {
                         _uiState.update { it.copy(isSigningIn = false, failure = AuthFailure.Unexpected) }
-                        eventChannel.send(AuthEvent.GeneralMessage("Chỉ chấp nhận email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)"))
+                        eventChannel.send(
+                            AuthEvent.GeneralMessage("Chỉ chấp nhận email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)"),
+                        )
                     }
 
                     is SignUpOutcome.Failure -> {
@@ -403,7 +439,10 @@ class AuthViewModel @Inject constructor(
                     }
 
                     ForgotPasswordOutcome.RateLimited -> _uiState.update {
-                        it.copy(isSendingForgot = false, forgotError = "Đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau.")
+                        it.copy(
+                            isSendingForgot = false,
+                            forgotError = "Đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau.",
+                        )
                     }
 
                     is ForgotPasswordOutcome.Failure -> _uiState.update {
@@ -442,7 +481,9 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isSubmittingVerification = false,
                             verificationStatus = VerificationStatus.PENDING,
-                            verificationNotice = "Yêu cầu xác minh MSSV $studentId đã được gửi thành công và đang chờ Ban quản trị duyệt.",
+                            verificationNotice =
+                            "Yêu cầu xác minh MSSV $studentId đã được gửi thành công " +
+                                "và đang chờ Ban quản trị duyệt.",
                         )
                     }
 
@@ -471,7 +512,9 @@ class AuthViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                _uiState.update { it.copy(isSubmittingVerification = false, verificationNotice = "Không thể gửi yêu cầu xác minh") }
+                _uiState.update {
+                    it.copy(isSubmittingVerification = false, verificationNotice = "Không thể gửi yêu cầu xác minh")
+                }
             }
         }
     }
@@ -502,7 +545,10 @@ class AuthViewModel @Inject constructor(
                     }
 
                     CompletePasswordResetOutcome.TokenExpired -> _uiState.update {
-                        it.copy(isResettingPassword = false, resetPasswordError = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.")
+                        it.copy(
+                            isResettingPassword = false,
+                            resetPasswordError = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.",
+                        )
                     }
 
                     is CompletePasswordResetOutcome.InvalidForm -> _uiState.update {
@@ -526,7 +572,9 @@ class AuthViewModel @Inject constructor(
 
     private fun resendVerificationEmail() {
         val snapshot = _uiState.value
-        val targetEmail = snapshot.registeredEmail.ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }.trim()
+        val targetEmail = snapshot.registeredEmail
+            .ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }
+            .trim()
         if (targetEmail.isBlank()) {
             viewModelScope.launch {
                 eventChannel.send(AuthEvent.GeneralMessage("Chưa có email sinh viên để gửi xác thực"))
@@ -538,7 +586,9 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 supabaseRestClient.resendSignupConfirmation(targetEmail)
-                eventChannel.send(AuthEvent.GeneralMessage("Đã yêu cầu gửi lại email xác minh. Vui lòng kiểm tra hộp thư."))
+                eventChannel.send(
+                    AuthEvent.GeneralMessage("Đã yêu cầu gửi lại email xác minh. Vui lòng kiểm tra hộp thư."),
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: com.giathinh.uthconnect.data.repository.SupabaseHttpException) {
@@ -612,7 +662,11 @@ class AuthViewModel @Inject constructor(
                     }
 
                     is SignInResult.InvalidForm -> _uiState.update {
-                        it.copy(isSigningIn = false, identifierError = outcome.identifier, passwordError = outcome.password)
+                        it.copy(
+                            isSigningIn = false,
+                            identifierError = outcome.identifier,
+                            passwordError = outcome.password,
+                        )
                     }
 
                     is SignInResult.VerificationRequired -> _uiState.update {
