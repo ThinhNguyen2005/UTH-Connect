@@ -138,11 +138,23 @@ class SupabaseAuthRepository @Inject constructor(
     }
 
     override suspend fun sendPasswordReset(email: String): Result<Unit> = suspendResult {
-        client.recoverPassword(email)
+        client.recoverPassword(
+            email = email,
+            redirectTo = "https://uth-connect-web-git-main-nguyenthinhk52005-5982.vercel.app/reset-password",
+        )
     }
 
-    override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = suspendResult {
-        client.resetPasswordWithOtp(email, otp, newPassword)
+    override suspend fun completePasswordReset(
+        email: String,
+        otp: String,
+        newPassword: String,
+        recoveryToken: String?,
+    ): Result<Unit> = suspendResult {
+        if (!recoveryToken.isNullOrBlank()) {
+            client.resetPasswordWithToken(recoveryToken, newPassword)
+        } else {
+            client.resetPasswordWithOtp(email, otp, newPassword)
+        }
     }
 
     override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = suspendResult {

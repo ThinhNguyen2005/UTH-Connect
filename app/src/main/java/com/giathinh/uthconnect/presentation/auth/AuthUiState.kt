@@ -75,6 +75,8 @@ data class AuthUiState(
     val isResettingPassword: Boolean = false,
     val resetPasswordError: String? = null,
     val resetSuccessNotice: Boolean = false,
+    val recoveryAccessToken: String? = null,
+    val showManualOtpField: Boolean = false,
 )
 
 /** One-off notification (not a navigation command; the signed-in gate is state driven). */

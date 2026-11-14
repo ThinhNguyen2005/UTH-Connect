@@ -31,6 +31,17 @@ export default function PortalHomePage() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const type = params.get("type");
+      const error = params.get("error");
+      const errorCode = params.get("error_code");
+
+      if (type === "recovery" || errorCode || error) {
+        window.location.href = `/reset-password${window.location.hash}`;
+      }
+    }
   }, []);
 
   const role = user?.role || "student";

@@ -16,6 +16,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -113,6 +115,8 @@ class SupabaseRestClient @Inject constructor() {
         return parseCredentials(response).userId == currentUserId
     }
 
+    private fun urlEncode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+
     /** Creates an account and returns the authentication response. */
     suspend fun signUp(
         email: String,
@@ -141,9 +145,15 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Requests a password recovery message for the supplied email. */
-    suspend fun recoverPassword(email: String) {
+    suspend fun recoverPassword(email: String, redirectTo: String = "") {
         val payload = buildJsonObject { put("email", email) }
-        send("/auth/v1/recover", "POST", payload, bearer = null)
+        val path = if (redirectTo.isBlank()) {
+            "/auth/v1/recover"
+        } else {
+            val encodedRedirect = urlEncode(redirectTo)
+            "/auth/v1/recover?redirect_to=$encodedRedirect"
+        }
+        send(path, "POST", payload, bearer = null)
     }
 
     /**
@@ -170,6 +180,27 @@ class SupabaseRestClient @Inject constructor() {
             bearer = recoveryAccessToken,
         )
     }
+
+    /** Updates the user's password using a recovery access token obtained via deep link. */
+    suspend fun resetPasswordWithToken(recoveryAccessToken: String, password: String) {
+        send(
+            "/auth/v1/user",
+            "PUT",
+            buildJsonObject { put("password", password) },
+            bearer = recoveryAccessToken,
+        )
+    }
+
+    /** Verifies a token hash from email link (recovery or signup) and returns access token if present. */
+    suspend fun verifyEmailTokenHash(tokenHash: String, type: String): JsonObject = send(
+        "/auth/v1/verify",
+        "POST",
+        buildJsonObject {
+            put("type", type)
+            put("token_hash", tokenHash)
+        },
+        bearer = null,
+    ).jsonObject
 
     /** Sends a signup verification email, never a password-recovery email. */
     suspend fun resendSignupConfirmation(email: String) {

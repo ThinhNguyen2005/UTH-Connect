@@ -15,7 +15,12 @@ class CompletePasswordResetUseCaseTest {
         override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
         override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
-        override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = onComplete(email, otp, newPassword)
+        override suspend fun completePasswordReset(
+            email: String,
+            otp: String,
+            newPassword: String,
+            recoveryToken: String?,
+        ): Result<Unit> = onComplete(email, otp, newPassword)
     }
 
     @Test
@@ -72,5 +77,28 @@ class CompletePasswordResetUseCaseTest {
         )
         assertTrue(result is CompletePasswordResetOutcome.Failure)
         assertTrue(!called)
+    }
+
+    @Test
+    fun `dat lai mat khau thanh cong qua recovery token khong can otp`() = runBlocking {
+        var recordedToken: String? = null
+        val repo = object : AuthRepository {
+            override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+            override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
+            override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
+            override suspend fun completePasswordReset(
+                email: String,
+                otp: String,
+                newPassword: String,
+                recoveryToken: String?,
+            ): Result<Unit> {
+                recordedToken = recoveryToken
+                return Result.success(Unit)
+            }
+        }
+        val useCase = CompletePasswordResetUseCase(repo)
+        val result = useCase("student@ut.edu.vn", "", "StrongPassword123!", "StrongPassword123!", "valid-token")
+        assertEquals(CompletePasswordResetOutcome.Success, result)
+        assertEquals("valid-token", recordedToken)
     }
 }

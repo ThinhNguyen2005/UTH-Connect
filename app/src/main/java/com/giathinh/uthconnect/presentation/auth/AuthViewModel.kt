@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
 import javax.inject.Inject
 
 @HiltViewModel
@@ -245,10 +246,20 @@ class AuthViewModel @Inject constructor(
 
             AuthAction.ToggleResetPasswordVisibility -> _uiState.update { it.copy(resetPasswordVisible = !it.resetPasswordVisible) }
 
+            AuthAction.ToggleManualOtpInput -> _uiState.update { it.copy(showManualOtpField = !it.showManualOtpField) }
+
             AuthAction.SubmitResetPassword -> submitResetPassword()
 
             // Email verification actions
             AuthAction.ResendVerificationEmail -> resendVerificationEmail()
+
+            is AuthAction.HandleDeepLink -> AuthDeepLinkParser.handle(
+                target = AuthDeepLinkParser.parse(action.uriString),
+                client = supabaseRestClient,
+                uiState = _uiState,
+                events = eventChannel,
+                scope = viewModelScope,
+            )
         }
     }
 
@@ -473,26 +484,39 @@ class AuthViewModel @Inject constructor(
             try {
                 when (
                     val outcome = completePasswordReset(
-                        snapshot.forgotEmail,
-                        snapshot.resetOtp,
-                        snapshot.resetNewPassword,
-                        snapshot.resetConfirmPassword,
+                        email = snapshot.forgotEmail,
+                        otp = snapshot.resetOtp,
+                        password = snapshot.resetNewPassword,
+                        confirmPassword = snapshot.resetConfirmPassword,
+                        recoveryToken = snapshot.recoveryAccessToken,
                     )
                 ) {
-                    CompletePasswordResetOutcome.Success -> _uiState.update {
-                        it.copy(
-                            isResettingPassword = false,
-                            resetSuccessNotice = true,
-                            screenStep = AuthScreenStep.Password,
-                            resetNewPassword = "",
-                            resetConfirmPassword = "",
-                            resetOtp = "",
-                            forgotEmail = "",
+                    CompletePasswordResetOutcome.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                isResettingPassword = false,
+                                resetSuccessNotice = true,
+                                screenStep = AuthScreenStep.Password,
+                                resetNewPassword = "",
+                                resetConfirmPassword = "",
+                                resetOtp = "",
+                                recoveryAccessToken = null,
+                                setupSuccessNotice = true,
+                                forgotEmail = "",
+                            )
+                        }
+                        eventChannel.send(
+                            AuthEvent.GeneralMessage(
+                                "Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.",
+                            ),
                         )
                     }
 
                     CompletePasswordResetOutcome.TokenExpired -> _uiState.update {
-                        it.copy(isResettingPassword = false, resetPasswordError = "Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu mã mới.")
+                        it.copy(
+                            isResettingPassword = false,
+                            resetPasswordError = "Liên kết hoặc mã OTP đã hết hạn. Vui lòng gửi lại yêu cầu mới.",
+                        )
                     }
 
                     is CompletePasswordResetOutcome.InvalidForm -> _uiState.update {
