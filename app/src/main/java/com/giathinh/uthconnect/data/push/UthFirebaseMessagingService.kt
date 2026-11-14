@@ -85,7 +85,9 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
         try {
             if (supabaseClient.userIdOrNull == null) {
                 supabaseClient.attachSecureStore(secureSessionStore)
-                withTimeoutOrNull(SESSION_RESTORE_TIMEOUT_MS) { supabaseClient.restoreSavedSession() }
+                withTimeoutOrNull(SESSION_RESTORE_TIMEOUT_MS) {
+                    supabaseClient.restoreSavedSession(SESSION_RESTORE_TIMEOUT_MS.toInt())
+                }
             }
             supabaseClient.userIdOrNull
         } catch (_: Exception) {

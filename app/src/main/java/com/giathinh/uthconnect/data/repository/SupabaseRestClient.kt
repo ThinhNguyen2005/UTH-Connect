@@ -3,6 +3,8 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,6 +23,7 @@ import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 private const val STORAGE_READ_TIMEOUT_MS = 60_000
+private const val NANOS_PER_MILLISECOND = 1_000_000L
 
 @Singleton
 class SupabaseRestClient @Inject constructor() {
@@ -42,12 +45,13 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Restores a persisted session, clearing it only when the refresh token is rejected. */
-    suspend fun restoreSavedSession(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun restoreSavedSession(requestTimeoutMs: Int? = null): Boolean = withContext(Dispatchers.IO) {
         refreshMutex.withLock {
             val saved = sessionStore?.load() ?: return@withLock false
             if (credentials != null) return@withLock true
             try {
-                val updated = refreshSession(saved.userId, saved.refreshToken)
+                val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
+                val updated = refreshSession(saved.userId, saved.refreshToken, deadlineNanos)
                 // Persist rotation before making the new access token available.
                 sessionStore?.save(updated.userId, updated.refreshToken)
                 rememberSession = true
@@ -365,16 +369,17 @@ class SupabaseRestClient @Inject constructor() {
         allowAnonymous: Boolean = false,
         requestTimeoutMs: Int? = null,
     ): JsonElement {
+        val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
         val accessToken = if (allowAnonymous) {
-            freshTokenOrNull(requestTimeoutMs)
+            freshTokenOrNull(deadlineNanos)
         } else {
-            freshToken(requestTimeoutMs)
+            freshToken(deadlineNanos)
         }
-        return send(path, method, body, bearer = accessToken, prefer = prefer, requestTimeoutMs = requestTimeoutMs)
+        return send(path, method, body, bearer = accessToken, prefer = prefer, deadlineNanos = deadlineNanos)
     }
 
-    private suspend fun freshTokenOrNull(requestTimeoutMs: Int? = null): String? = try {
-        freshToken(requestTimeoutMs)
+    private suspend fun freshTokenOrNull(deadlineNanos: Long? = null): String? = try {
+        freshToken(deadlineNanos)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (_: Exception) {
@@ -412,14 +417,14 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Returns the current access token, refreshing it when it is close to expiration. */
-    private suspend fun freshToken(requestTimeoutMs: Int? = null): String {
+    private suspend fun freshToken(deadlineNanos: Long? = null): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
         return refreshMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {
-                val updated = refreshSession(latest.userId, latest.refreshToken, requestTimeoutMs)
+                val updated = refreshSession(latest.userId, latest.refreshToken, deadlineNanos)
                 if (rememberSession) sessionStore?.save(updated.userId, updated.refreshToken)
                 credentials = updated
                 updated.accessToken
@@ -441,7 +446,7 @@ class SupabaseRestClient @Inject constructor() {
     private suspend fun refreshSession(
         expectedUserId: String,
         refreshToken: String,
-        requestTimeoutMs: Int? = null,
+        deadlineNanos: Long? = null,
     ): Credentials {
         val updated = parseCredentials(
             send(
@@ -449,7 +454,7 @@ class SupabaseRestClient @Inject constructor() {
                 "POST",
                 buildJsonObject { put("refresh_token", refreshToken) },
                 bearer = null,
-                requestTimeoutMs = requestTimeoutMs,
+                deadlineNanos = deadlineNanos,
             ).jsonObject,
         )
         check(updated.userId == expectedUserId) { "Session user changed" }
@@ -475,13 +480,19 @@ class SupabaseRestClient @Inject constructor() {
         body: JsonObject? = null,
         bearer: String?,
         prefer: String? = null,
-        requestTimeoutMs: Int? = null,
+        deadlineNanos: Long? = null,
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
+        val cancellationHandle = currentCoroutineContext()[Job]?.invokeOnCompletion { connection.disconnect() }
         try {
             configureRequestMethod(connection, method, path, prefer)
-            val timeoutMs = requestTimeoutMs?.coerceAtLeast(1) ?: 15_000
+            val timeoutMs = deadlineNanos?.let { deadline ->
+                ((deadline - System.nanoTime()) / NANOS_PER_MILLISECOND)
+                    .coerceAtLeast(1L)
+                    .coerceAtMost(Int.MAX_VALUE.toLong())
+                    .toInt()
+            } ?: 15_000
             connection.connectTimeout = timeoutMs
             connection.readTimeout = timeoutMs
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
@@ -504,6 +515,7 @@ class SupabaseRestClient @Inject constructor() {
             }
             if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
         } finally {
+            cancellationHandle?.dispose()
             connection.disconnect()
         }
     }
