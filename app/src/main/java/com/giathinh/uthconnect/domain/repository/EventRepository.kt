@@ -30,9 +30,13 @@ interface EventRepository {
     fun isRegistered(eventId: String, uid: String): Flow<Boolean>
 
     /** Supabase's authenticated RPCs derive user identity from the JWT. */
-    suspend fun registerCurrentUser(eventId: String): Result<Unit> = Result.failure(UnsupportedOperationException("Authenticated event registration unavailable"))
+    suspend fun registerCurrentUser(eventId: String): Result<Unit> = Result.failure(
+        UnsupportedOperationException("Authenticated event registration unavailable"),
+    )
 
-    suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = Result.failure(UnsupportedOperationException("Authenticated cancellation unavailable"))
+    suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = Result.failure(
+        UnsupportedOperationException("Authenticated cancellation unavailable"),
+    )
 
     fun currentUserRegistrations(): Flow<Set<String>> = kotlinx.coroutines.flow.flowOf(emptySet())
 
@@ -40,7 +44,11 @@ interface EventRepository {
 
     fun currentUserId(): String? = null
 
-    suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
+    suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = Result.failure(
+        UnsupportedOperationException("Event management unavailable"),
+    )
 
-    suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
+    suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = Result.failure(
+        UnsupportedOperationException("Event management unavailable"),
+    )
 }
