@@ -17,6 +17,7 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `supabase/migrations/20261118000000_notification_dispatch_recipient_cursor.sql`
    - `supabase/migrations/20261119000000_notification_push_retry_policy.sql`
    - `supabase/migrations/20261120000000_notification_dispatch_fanout_recovery.sql`
+   - `supabase/migrations/20261121000000_notification_fanout_recovery_retry.sql`
 2. Deploy the function with `supabase functions deploy dispatch-notification`.
 3. Store these values in Supabase Vault before the first scheduler run. While either value is missing, the scheduler logs a warning and skips the run:
    - `SUPABASE_FUNCTIONS_URL`: `https://<project-ref>.supabase.co/functions/v1`
@@ -45,6 +46,8 @@ Failed push rows retry with exponential delay up to five attempts, then move to
 retry time has not arrived.
 The scheduled `DISPATCH_PENDING` run also queues source payloads whose inbox
 fan-out has not completed, continuing from their saved recipient cursor.
+Recovery attempts use exponential backoff and stop after five attempts for a
+permanently failing source, allowing later fan-outs to be recovered.
 
 The function rejects requests without the shared webhook header, filters unpublished
 events and non-open housing posts, writes an idempotent per-user inbox item, and claims

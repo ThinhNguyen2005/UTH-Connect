@@ -30,6 +30,7 @@ type DispatchProgress = {
   last_recipient_id: string | null;
   source_payload?: WebhookEventPayload | null;
   fanout_complete?: boolean;
+  recovery_attempts?: number;
 };
 
 const encoder = new TextEncoder();
@@ -44,6 +45,8 @@ const PATCH_ID_BATCH_SIZE = 100;
 const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
 const MAX_CONTINUATION_DEPTH = 4;
+const MAX_FANOUT_RECOVERY_ATTEMPTS = 5;
+const FANOUT_RECOVERY_DELAY_MS = 60_000;
 const MAX_PUSH_ATTEMPTS = 5;
 const PUSH_RETRY_DELAY_MS = 60_000;
 const CONTINUATION_TIMEOUT_MS = 2_000;
@@ -64,12 +67,27 @@ Deno.serve(async (request) => {
     const deadline = Date.now() + MAX_INVOCATION_MS;
     if (payload.type === "DISPATCH_PENDING") {
       const incompleteFanouts = await supabaseRest<DispatchProgress[]>(
-        "notification_dispatch_progress?select=source_payload&fanout_complete=eq.false&source_payload=not.is.null&order=updated_at.asc&limit=10",
+        `notification_dispatch_progress?select=dedupe_key,source_payload,recovery_attempts&fanout_complete=eq.false&fanout_failed=eq.false&source_payload=not.is.null&or=(recovery_retry_at.is.null,recovery_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=updated_at.asc&limit=10`,
         {},
         deadline,
       );
       for (const progress of incompleteFanouts) {
-        if (progress.source_payload) await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
+        if (progress.source_payload) {
+          await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
+          const attempts = (progress.recovery_attempts ?? 0) + 1;
+          const terminal = attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
+          await supabaseRest(`notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              recovery_attempts: attempts,
+              recovery_retry_at: terminal
+                ? null
+                : new Date(Date.now() + FANOUT_RECOVERY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
+              fanout_failed: terminal,
+              updated_at: new Date().toISOString(),
+            }),
+          }, deadline);
+        }
       }
     } else {
       const source = toSourceNotification(payload);
