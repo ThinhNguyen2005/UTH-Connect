@@ -339,8 +339,8 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Updates the password for the currently authenticated user. */
-    suspend fun updatePassword(password: String): JsonElement {
-        val token = freshToken()
+    suspend fun updatePassword(password: String, expectedUserId: String): JsonElement {
+        val token = freshToken(expectedUserId = expectedUserId)
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
@@ -433,11 +433,13 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Returns the current access token, refreshing it when it is close to expiration. */
-    private suspend fun freshToken(deadlineNanos: Long? = null): String {
+    private suspend fun freshToken(deadlineNanos: Long? = null, expectedUserId: String? = null): String {
         val session = credentials ?: error("Supabase sign-in required")
+        expectedUserId?.let { check(session.userId == it) { "Supabase session changed" } }
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
         return sessionMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
+            expectedUserId?.let { check(latest.userId == it) { "Supabase session changed" } }
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {
                 val updated = refreshSession(latest.userId, latest.refreshToken, deadlineNanos)

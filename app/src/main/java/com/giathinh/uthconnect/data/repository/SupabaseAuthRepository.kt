@@ -187,6 +187,7 @@ class SupabaseAuthRepository @Inject constructor(
     }
 
     override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = suspendResult {
+        val expectedUserId = client.userId
         val profile = ownProfile()
         check(profile.studentId == studentId) { "Not signed in as this student" }
         try {
@@ -195,7 +196,7 @@ class SupabaseAuthRepository @Inject constructor(
             if (e.status == 400 || e.status == 401) return@suspendResult false
             throw e
         }
-        client.updatePassword(newPassword)
+        client.updatePassword(newPassword, expectedUserId)
         true
     }
 
