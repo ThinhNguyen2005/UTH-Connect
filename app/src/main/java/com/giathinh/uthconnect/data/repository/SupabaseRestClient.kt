@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
@@ -474,6 +475,7 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Performs one HTTP request and converts non-success responses to [SupabaseHttpException]. */
+    @OptIn(InternalCoroutinesApi::class)
     private suspend fun send(
         path: String,
         method: String,
@@ -484,7 +486,9 @@ class SupabaseRestClient @Inject constructor() {
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
-        val cancellationHandle = currentCoroutineContext()[Job]?.invokeOnCompletion { connection.disconnect() }
+        val cancellationHandle = currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true) {
+            connection.disconnect()
+        }
         try {
             configureRequestMethod(connection, method, path, prefer)
             val timeoutMs = deadlineNanos?.let { deadline ->
