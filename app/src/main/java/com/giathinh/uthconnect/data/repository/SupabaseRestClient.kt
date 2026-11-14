@@ -21,6 +21,14 @@ import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 private const val STORAGE_READ_TIMEOUT_MS = 60_000
+private const val REQUEST_TIMEOUT_MS = 15_000
+private const val TOKEN_REFRESH_WINDOW_MS = 30_000L
+private const val DEFAULT_TOKEN_LIFETIME_SECONDS = 3_600L
+private const val MILLISECONDS_PER_SECOND = 1_000L
+private const val HTTP_BAD_REQUEST = 400
+private const val HTTP_UNAUTHORIZED = 401
+private const val HTTP_NOT_FOUND = 404
+private val SUCCESSFUL_HTTP_STATUSES = 200..299
 
 @Singleton
 class SupabaseRestClient @Inject constructor() {
@@ -56,7 +64,7 @@ class SupabaseRestClient @Inject constructor() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: SupabaseHttpException) {
-                if (error.status == 400 || error.status == 401) {
+                if (error.status == HTTP_BAD_REQUEST || error.status == HTTP_UNAUTHORIZED) {
                     sessionStore?.clear()
                     rememberSession = false
                     false
@@ -265,17 +273,17 @@ class SupabaseRestClient @Inject constructor() {
         val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "POST"
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
+            connection.connectTimeout = REQUEST_TIMEOUT_MS
+            connection.readTimeout = REQUEST_TIMEOUT_MS
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             connection.setRequestProperty("Authorization", "Bearer $accessToken")
             connection.setRequestProperty("Content-Type", mimeType)
             connection.doOutput = true
             connection.outputStream.use { it.write(data) }
             val status = connection.responseCode
-            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
+            val response = (if (status in SUCCESSFUL_HTTP_STATUSES) connection.inputStream else connection.errorStream)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
+            if (status !in SUCCESSFUL_HTTP_STATUSES) {
                 val message = runCatching {
                     val error = json.parseToJsonElement(response).jsonObject
                     (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
@@ -297,12 +305,12 @@ class SupabaseRestClient @Inject constructor() {
         val connection = (URL(BuildConfig.SUPABASE_URL + endpoint).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "DELETE"
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
+            connection.connectTimeout = REQUEST_TIMEOUT_MS
+            connection.readTimeout = REQUEST_TIMEOUT_MS
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             connection.setRequestProperty("Authorization", "Bearer $accessToken")
             val status = connection.responseCode
-            if (status !in 200..299 && status != 404) {
+            if (status !in SUCCESSFUL_HTTP_STATUSES && status != HTTP_NOT_FOUND) {
                 val response = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 val message = runCatching {
                     val error = json.parseToJsonElement(response).jsonObject
@@ -332,7 +340,7 @@ class SupabaseRestClient @Inject constructor() {
         val connection = (URL(uploadUrl).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doOutput = true
-            connectTimeout = 15_000
+            connectTimeout = REQUEST_TIMEOUT_MS
             readTimeout = STORAGE_READ_TIMEOUT_MS
             setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Authorization", "Bearer $token")
@@ -343,7 +351,7 @@ class SupabaseRestClient @Inject constructor() {
         try {
             connection.outputStream.use { it.write(bytes) }
             val status = connection.responseCode
-            if (status !in 200..299) {
+            if (status !in SUCCESSFUL_HTTP_STATUSES) {
                 val errBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 throw SupabaseHttpException(status, errBody.ifBlank { "Storage upload failed ($status)" })
             }
@@ -409,10 +417,12 @@ class SupabaseRestClient @Inject constructor() {
     /** Returns the current access token, refreshing it when it is close to expiration. */
     private suspend fun freshToken(): String {
         val session = credentials ?: error("Supabase sign-in required")
-        if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
+        if (System.currentTimeMillis() < session.expiresAtMillis - TOKEN_REFRESH_WINDOW_MS) return session.accessToken
         return refreshMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
-            if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
+            if (System.currentTimeMillis() < latest.expiresAtMillis - TOKEN_REFRESH_WINDOW_MS) {
+                return@withLock latest.accessToken
+            }
             try {
                 val updated = refreshSession(latest.userId, latest.refreshToken)
                 if (rememberSession) sessionStore?.save(updated.userId, updated.refreshToken)
@@ -421,7 +431,7 @@ class SupabaseRestClient @Inject constructor() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: SupabaseHttpException) {
-                if (error.status == 400 || error.status == 401) {
+                if (error.status == HTTP_BAD_REQUEST || error.status == HTTP_UNAUTHORIZED) {
                     credentials = null
                     CrashIdentity.clear()
                     rememberSession = false
@@ -454,8 +464,8 @@ class SupabaseRestClient @Inject constructor() {
             ?: error("Auth response missing access token")
         val refresh = payload["refresh_token"]?.jsonPrimitive?.content
             ?: error("Auth response missing refresh token")
-        val expiresIn = payload["expires_in"]?.jsonPrimitive?.content?.toLongOrNull() ?: 3600L
-        return Credentials(id, access, refresh, System.currentTimeMillis() + expiresIn * 1000L)
+        val expiresIn = payload["expires_in"]?.jsonPrimitive?.content?.toLongOrNull() ?: DEFAULT_TOKEN_LIFETIME_SECONDS
+        return Credentials(id, access, refresh, System.currentTimeMillis() + expiresIn * MILLISECONDS_PER_SECOND)
     }
 
     /** Performs one HTTP request and converts non-success responses to [SupabaseHttpException]. */
@@ -478,8 +488,8 @@ class SupabaseRestClient @Inject constructor() {
                     connection.setRequestProperty("Prefer", "return=representation")
                 }
             }
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
+            connection.connectTimeout = REQUEST_TIMEOUT_MS
+            connection.readTimeout = REQUEST_TIMEOUT_MS
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             connection.setRequestProperty("Accept", "application/json")
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer $bearer")
@@ -489,9 +499,9 @@ class SupabaseRestClient @Inject constructor() {
                 connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             }
             val status = connection.responseCode
-            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
+            val response = (if (status in SUCCESSFUL_HTTP_STATUSES) connection.inputStream else connection.errorStream)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
+            if (status !in SUCCESSFUL_HTTP_STATUSES) {
                 val message = runCatching {
                     val error = json.parseToJsonElement(response).jsonObject
                     (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
