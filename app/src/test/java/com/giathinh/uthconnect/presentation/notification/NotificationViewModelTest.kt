@@ -3,16 +3,22 @@ package com.giathinh.uthconnect.presentation.notification
 import com.giathinh.uthconnect.domain.model.NotificationCategory
 import com.giathinh.uthconnect.domain.model.PostNotification
 import com.giathinh.uthconnect.domain.repository.NotificationRepository
+import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class NotificationViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
+
     @Test
     fun `old inbox response keeps a read mutation that previously succeeded`() = runTest {
         val notification = notification("notification-1")
