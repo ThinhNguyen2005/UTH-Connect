@@ -1,9 +1,15 @@
-type WebhookPayload = {
+type WebhookEventPayload = {
   type: "INSERT" | "UPDATE" | "DELETE";
   schema: string;
   table: string;
   record: Record<string, unknown> | null;
   old_record: Record<string, unknown> | null;
+  continuationDepth?: number;
+};
+
+type WebhookPayload = WebhookEventPayload | {
+  type: "DISPATCH_PENDING";
+  continuationDepth?: number;
 };
 
 type InboxRow = {
@@ -28,6 +34,8 @@ const MAX_INVOCATION_MS = 20_000;
 const PATCH_ID_BATCH_SIZE = 100;
 const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
+const MAX_CONTINUATION_DEPTH = 4;
+const CONTINUATION_TIMEOUT_MS = 2_000;
 
 class DispatchDeadlineError extends Error {}
 
@@ -41,40 +49,42 @@ Deno.serve(async (request) => {
 
   try {
     const payload = await request.json() as WebhookPayload;
-    const source = toSourceNotification(payload);
-    if (!source) return json({ delivered: 0, ignored: true });
+    if (payload.type !== "DISPATCH_PENDING") {
+      const source = toSourceNotification(payload);
+      if (!source) return json({ delivered: 0, ignored: true });
 
-    if (payload.table === "housing_posts" && source.broadcastAuthorId) {
-      const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId);
-      if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
-    }
+      if (payload.table === "housing_posts" && source.broadcastAuthorId) {
+        const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId);
+        if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
+      }
 
-    const recipients = await recipientIds(source.recipientId, source.excludeUserId);
-    if (recipients.length === 0) return json({ delivered: 0, ignored: true });
+      const recipients = await recipientIds(source.recipientId, source.excludeUserId);
+      if (recipients.length === 0) return json({ delivered: 0, ignored: true });
 
-    const dedupeKey = `${payload.table}:${source.sourceId}`;
-    const rows = recipients.map((recipientId) => ({
-      recipient_id: recipientId,
-      title: source.title,
-      summary: source.summary,
-      content: source.content,
-      category: source.category,
-      author: source.author,
-      target_type: source.targetType,
-      target_id: source.targetId,
-      source_table: payload.table,
-      source_id: source.sourceId,
-      dedupe_key: dedupeKey,
-      published_at: source.publishedAt,
-    }));
-    // Keep recipient fan-out inserts bounded so a large verified-user list does
-    // not exceed PostgREST request limits or get partially dropped as one body.
-    for (let offset = 0; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
-      await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
-        method: "POST",
-        headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify(rows.slice(offset, offset + INBOX_INSERT_BATCH_SIZE)),
-      });
+      const dedupeKey = `${payload.table}:${source.sourceId}`;
+      const rows = recipients.map((recipientId) => ({
+        recipient_id: recipientId,
+        title: source.title,
+        summary: source.summary,
+        content: source.content,
+        category: source.category,
+        author: source.author,
+        target_type: source.targetType,
+        target_id: source.targetId,
+        source_table: payload.table,
+        source_id: source.sourceId,
+        dedupe_key: dedupeKey,
+        published_at: source.publishedAt,
+      }));
+      // Keep recipient fan-out inserts bounded so a large verified-user list does
+      // not exceed PostgREST request limits or get partially dropped as one body.
+      for (let offset = 0; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
+        await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
+          method: "POST",
+          headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+          body: JSON.stringify(rows.slice(offset, offset + INBOX_INSERT_BATCH_SIZE)),
+        });
+      }
     }
 
     // Duplicate webhook deliveries can resume a pending push; a stale PROCESSING
@@ -209,6 +219,7 @@ Deno.serve(async (request) => {
     // Keep the webhook retryable while durable PENDING work remains. A 2xx here
     // would acknowledge the delivery even though some recipients were not sent.
     if (deferred || pendingTotal > 0) {
+      await queueContinuation(payload.continuationDepth ?? 0);
       return json({ delivered: deliveredTotal, pending: pendingTotal, deferred }, 503);
     }
     if (deliveredTotal === 0 && pendingTotal === 0) return json({ delivered: 0, ignored: true });
@@ -219,7 +230,40 @@ Deno.serve(async (request) => {
   }
 });
 
-function toSourceNotification(payload: WebhookPayload) {
+async function queueContinuation(depth: number): Promise<void> {
+  if (depth >= MAX_CONTINUATION_DEPTH) {
+    console.warn("notification dispatch continuation limit reached", depth);
+    return;
+  }
+  const baseUrl = Deno.env.get("SUPABASE_URL");
+  const secret = Deno.env.get("WEBHOOK_SHARED_SECRET");
+  if (!baseUrl || !secret) {
+    console.warn("notification dispatch continuation is not configured");
+    return;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CONTINUATION_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/functions/v1/dispatch-notification`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-webhook-secret": secret,
+      },
+      body: JSON.stringify({ type: "DISPATCH_PENDING", continuationDepth: depth + 1 }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      console.warn("notification dispatch continuation failed", response.status);
+    }
+  } catch (error) {
+    console.warn("notification dispatch continuation request failed", error);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function toSourceNotification(payload: WebhookEventPayload) {
   const row = payload.record;
   if (!row || payload.schema !== "public" || !["events", "notifications", "housing_posts"].includes(payload.table)) return null;
 

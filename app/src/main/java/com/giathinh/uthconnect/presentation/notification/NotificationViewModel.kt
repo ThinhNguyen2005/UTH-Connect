@@ -38,6 +38,8 @@ class NotificationViewModel @Inject constructor(
     private val readMutationMutex = Mutex()
     private val pendingReadIds = mutableSetOf<String>()
     private val readMutationVersions = mutableMapOf<String, Long>()
+    private data class CompletedReadMutation(val ids: Set<String>, val succeeded: Boolean)
+    private val completedReadMutations = mutableListOf<CompletedReadMutation>()
     private var nextReadMutationVersion = 0L
 
     init {
@@ -100,6 +102,7 @@ class NotificationViewModel @Inject constructor(
 
     private fun loadNotifications(isRefresh: Boolean = false) {
         val requestReadVersion = nextReadMutationVersion
+        val completedMutationsAtStart = completedReadMutations.size
         _uiState.update { it.copy(isLoading = !isRefresh, isRefreshing = isRefresh) }
         viewModelScope.launch {
             notificationRepository.getInbox()
@@ -118,12 +121,23 @@ class NotificationViewModel @Inject constructor(
                         .map { item -> item.id }
                         .toSet()
                     _uiState.update {
-                        val readIds = if (requestReadVersion == nextReadMutationVersion) {
+                        val completedAfterStart = completedReadMutations.drop(completedMutationsAtStart)
+                        val readIds = if (
+                            requestReadVersion == nextReadMutationVersion && completedAfterStart.isEmpty()
+                        ) {
                             serverReadIds
                         } else {
                             // Keep optimistic mutations created after this GET started;
                             // an older response must not erase a newer read action.
-                            it.readNotificationIds + serverReadIds
+                            val succeededIds = completedAfterStart
+                                .filter { mutation -> mutation.succeeded }
+                                .flatMap { mutation -> mutation.ids }
+                                .toSet()
+                            val failedIds = completedAfterStart
+                                .filterNot { mutation -> mutation.succeeded }
+                                .flatMap { mutation -> mutation.ids }
+                                .toSet()
+                            (it.readNotificationIds + serverReadIds + succeededIds) - failedIds
                         }
                         it.copy(
                             isLoading = false,
@@ -149,6 +163,7 @@ class NotificationViewModel @Inject constructor(
         viewModelScope.launch {
             notificationRepository.getInboxNotification(notificationId).fold(
                 onSuccess = { detail ->
+                    if (_uiState.value.detailId != notificationId) return@fold
                     _uiState.update { it.copy(detail = detail, isDetailLoading = false) }
                     if (detail != null) {
                         val version = markReadOptimistically(listOf(notificationId))
@@ -161,6 +176,7 @@ class NotificationViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
+                    if (_uiState.value.detailId != notificationId) return@fold
                     _uiState.update { it.copy(isDetailLoading = false, errorMessage = error.localizedMessage) }
                 },
             )
@@ -186,6 +202,7 @@ class NotificationViewModel @Inject constructor(
             pendingReadIds.remove(id)
             readMutationVersions.remove(id)
         }
+        completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
             _uiState.update { state ->
                 state.copy(readNotificationIds = state.readNotificationIds - ownedIds.toSet())

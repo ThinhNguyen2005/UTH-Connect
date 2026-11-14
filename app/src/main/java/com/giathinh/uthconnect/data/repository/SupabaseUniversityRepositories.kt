@@ -35,6 +35,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val universityZone = ZoneId.of("Asia/Ho_Chi_Minh")
+private const val NOTIFICATION_INBOX_PAGE_SIZE = 100
 
 private fun JsonObject.decimal(key: String): Float? = get(key)?.jsonPrimitive?.floatOrNull
 
@@ -170,9 +171,30 @@ class SupabaseNotificationRepository @Inject constructor(
 
     override fun getInbox(): Flow<List<PostNotification>> = flow {
         val userId = urlEncode(uuid(client.userId))
-        val rows = client.table(
-            "notification_inbox?select=*&recipient_id=eq.$userId&order=published_at.desc&limit=100",
-        ).jsonArray.map { it.jsonObject.toInboxNotification() }
+        val rows = buildList {
+            var cursorPublishedAt: String? = null
+            var cursorId: String? = null
+            while (true) {
+                val cursorFilter = if (cursorPublishedAt != null && cursorId != null) {
+                    val publishedAtCursor = requireNotNull(cursorPublishedAt)
+                    val idCursor = requireNotNull(cursorId)
+                    val publishedAt = urlEncode(publishedAtCursor)
+                    val id = urlEncode(idCursor)
+                    "&or=(published_at.lt.$publishedAt,and(published_at.eq.$publishedAt,id.lt.$id))"
+                } else {
+                    ""
+                }
+                val page = client.table(
+                    "notification_inbox?select=*&recipient_id=eq.$userId" +
+                        "&order=published_at.desc,id.desc&limit=$NOTIFICATION_INBOX_PAGE_SIZE$cursorFilter",
+                ).jsonArray
+                addAll(page.map { it.jsonObject.toInboxNotification() })
+                if (page.size < NOTIFICATION_INBOX_PAGE_SIZE) break
+                val last = page.last().jsonObject
+                cursorPublishedAt = requireNotNull(last.string("published_at"))
+                cursorId = requireNotNull(last.string("id"))
+            }
+        }
         emit(rows)
     }
 

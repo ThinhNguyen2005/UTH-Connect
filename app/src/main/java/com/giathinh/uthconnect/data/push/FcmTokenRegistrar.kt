@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.data.push
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import com.giathinh.uthconnect.data.repository.SupabaseRestClient
 import com.giathinh.uthconnect.data.repository.urlEncode
 import com.google.firebase.messaging.FirebaseMessaging
@@ -32,11 +34,17 @@ class FcmTokenRegistrar @Inject constructor(
     @Volatile private var registrationEnabled = false
 
     @Volatile private var registrationJob: Job? = null
-    private val installationId: String by lazy {
-        val preferences = context.getSharedPreferences("uth_push", Context.MODE_PRIVATE)
-        preferences.getString(KEY_INSTALLATION_ID, null) ?: UUID.randomUUID().toString().also { id ->
-            preferences.edit().putString(KEY_INSTALLATION_ID, id).apply()
-        }
+    private val preferences = context.getSharedPreferences("uth_push", Context.MODE_PRIVATE)
+    private val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+
+    @Volatile private var installationId: String? = null
+
+    init {
+        connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                if (registrationEnabled && client.userIdOrNull != null) registerForSignedInUser()
+            }
+        })
     }
 
     /** Queues token registration after login or session restoration without delaying the UI. */
@@ -59,7 +67,10 @@ class FcmTokenRegistrar @Inject constructor(
 
     /** Deletes this installation's token row before sign-out while auth credentials remain valid. */
     @Suppress("TooGenericExceptionCaught")
-    suspend fun unregisterCurrentUser(restoreOnFailure: Boolean = true) {
+    suspend fun unregisterCurrentUser(
+        restoreOnFailure: Boolean = true,
+        requestTimeoutMs: Int? = null,
+    ) {
         registrationEnabled = false
         registrationJob?.cancel()
         registrationJob?.join()
@@ -68,12 +79,17 @@ class FcmTokenRegistrar @Inject constructor(
             registrationMutex.withLock {
                 val userId = client.userIdOrNull?.let(::urlEncode) ?: return@withLock
                 val deviceId = urlEncode(deviceId())
-                client.deleteTable("notification_devices?device_id=eq.$deviceId&user_id=eq.$userId")
+                client.deleteTable(
+                    "notification_devices?device_id=eq.$deviceId&user_id=eq.$userId",
+                    requestTimeoutMs = requestTimeoutMs,
+                )
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            if (!restoreOnFailure) markIdentityRotationPending()
             if (restoreOnFailure) restoreRegistrationIfSessionActive()
             throw cancelled
         } catch (error: Exception) {
+            if (!restoreOnFailure) markIdentityRotationPending()
             if (restoreOnFailure) restoreRegistrationIfSessionActive()
             throw error
         }
@@ -84,14 +100,22 @@ class FcmTokenRegistrar @Inject constructor(
     }
 
     private suspend fun registerToken(token: String) {
-        if (token.isBlank()) return
         registrationMutex.withLock {
             if (!registrationEnabled) return
+            val effectiveToken = if (preferences.getBoolean(KEY_ROTATION_PENDING, false)) {
+                FirebaseMessaging.getInstance().deleteToken().await()
+                rotateInstallationId()
+                preferences.edit().putBoolean(KEY_ROTATION_PENDING, false).apply()
+                FirebaseMessaging.getInstance().token.await()
+            } else {
+                token
+            }
+            if (effectiveToken.isBlank()) return
             client.rpc(
                 "claim_notification_device",
                 buildJsonObject {
                     put("p_device_id", deviceId())
-                    put("p_token", token)
+                    put("p_token", effectiveToken)
                     put("p_platform", "ANDROID")
                 },
             )
@@ -117,10 +141,32 @@ class FcmTokenRegistrar @Inject constructor(
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
     }
 
-    private fun deviceId(): String = installationId
+    private fun deviceId(): String = currentInstallationId()
+
+    private fun markIdentityRotationPending() {
+        preferences.edit().putBoolean(KEY_ROTATION_PENDING, true).apply()
+    }
+
+    private fun rotateInstallationId() {
+        val nextId = UUID.randomUUID().toString()
+        check(preferences.edit().putString(KEY_INSTALLATION_ID, nextId).commit()) {
+            "Cannot rotate push installation ID"
+        }
+        installationId = nextId
+    }
+
+    private fun currentInstallationId(): String {
+        installationId?.let { return it }
+        val id = preferences.getString(KEY_INSTALLATION_ID, null) ?: UUID.randomUUID().toString().also {
+            preferences.edit().putString(KEY_INSTALLATION_ID, it).apply()
+        }
+        installationId = id
+        return id
+    }
 
     private companion object {
         const val KEY_INSTALLATION_ID = "installation_id"
+        const val KEY_ROTATION_PENDING = "rotation_pending"
         const val MAX_ATTEMPTS = 3
         const val RETRY_DELAY_MS = 1_000L
         const val TAG = "FcmTokenRegistrar"

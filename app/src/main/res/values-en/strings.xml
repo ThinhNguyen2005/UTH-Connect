@@ -918,6 +918,7 @@
     <string name="notification_title">Notifications</string>
     <string name="notification_back">Back</string>
     <string name="notification_mark_all_read">Mark all as read</string>
+    <string name="notification_refresh">Refresh notifications</string>
     <string name="notification_settings">Notification settings</string>
     <string name="notification_profile">User profile</string>
     <string name="notification_category_all">All (%1$d)</string>

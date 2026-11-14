@@ -80,6 +80,7 @@ fun NotificationScreen(
             NotificationTopBar(
                 onBack = { onAction(NotificationAction.Back) },
                 onMarkAllRead = { onAction(NotificationAction.MarkAllAsRead) },
+                onRefresh = { onAction(NotificationAction.Refresh) },
                 onOpenSettings = { onAction(NotificationAction.OpenSettings) },
                 onOpenProfile = { onAction(NotificationAction.OpenProfile) },
             )
@@ -143,6 +144,7 @@ fun NotificationScreen(
 private fun NotificationTopBar(
     onBack: () -> Unit,
     onMarkAllRead: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
@@ -168,6 +170,16 @@ private fun NotificationTopBar(
             }
         },
         actions = {
+            IconButton(
+                onClick = onRefresh,
+                modifier = Modifier.size(UthDimens.Size.MinTouchTarget),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.notification_refresh),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             IconButton(
                 onClick = onMarkAllRead,
                 modifier = Modifier.size(UthDimens.Size.MinTouchTarget),

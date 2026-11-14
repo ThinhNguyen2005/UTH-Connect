@@ -935,6 +935,7 @@
     <string name="notification_title">Thông Báo</string>
     <string name="notification_back">Quay lại</string>
     <string name="notification_mark_all_read">Đánh dấu đã đọc tất cả</string>
+    <string name="notification_refresh">Làm mới thông báo</string>
     <string name="notification_settings">Cài đặt thông báo</string>
     <string name="notification_profile">Hồ sơ cá nhân</string>
     <string name="notification_category_all">Tất cả (%1$d)</string>

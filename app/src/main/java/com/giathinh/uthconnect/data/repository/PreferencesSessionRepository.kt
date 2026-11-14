@@ -109,8 +109,16 @@ class PreferencesSessionRepository @Inject constructor(
             // the network is unavailable; a later login reclaims the installation row.
             val cleanupCompleted = withContext(kotlinx.coroutines.NonCancellable) {
                 withTimeoutOrNull(PUSH_CLEANUP_TIMEOUT_MS) {
+                    val deadlineNanos = System.nanoTime() + PUSH_CLEANUP_TIMEOUT_MS * NANOS_PER_MILLISECOND
                     try {
-                        fcmTokenRegistrar.unregisterCurrentUser(restoreOnFailure = false)
+                        val remainingMs = ((deadlineNanos - System.nanoTime()) / NANOS_PER_MILLISECOND)
+                            .coerceAtLeast(MIN_REQUEST_TIMEOUT_MS)
+                            .coerceAtMost(Int.MAX_VALUE.toLong())
+                            .toInt()
+                        fcmTokenRegistrar.unregisterCurrentUser(
+                            restoreOnFailure = false,
+                            requestTimeoutMs = remainingMs,
+                        )
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
@@ -139,5 +147,7 @@ class PreferencesSessionRepository @Inject constructor(
         const val KEY_BIO_ID = "biometric_student_id"
         const val TAG = "PreferencesSessionRepository"
         const val PUSH_CLEANUP_TIMEOUT_MS = 5_000L
+        const val NANOS_PER_MILLISECOND = 1_000_000L
+        const val MIN_REQUEST_TIMEOUT_MS = 1L
     }
 }
