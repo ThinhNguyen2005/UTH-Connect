@@ -102,6 +102,7 @@ Deno.serve(async (request) => {
       );
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
+      const heldClaimIds = new Set(claimed.map((row) => row.id));
       let batchFailed = false;
       try {
         ensureWithinDeadline(deadline);
@@ -151,6 +152,7 @@ Deno.serve(async (request) => {
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
             );
+            heldClaimIds.delete(row.id);
             pendingTotal++;
             batchFailed = true;
           } else if (rowDeferred || devices.length === DEVICES_PER_ROW_BATCH) {
@@ -159,6 +161,7 @@ Deno.serve(async (request) => {
               { push_status: "PENDING", push_claimed_at: null },
               "&push_status=eq.PROCESSING",
             );
+            heldClaimIds.delete(row.id);
             deferred = true;
           } else {
             await patchInboxRows(
@@ -166,19 +169,21 @@ Deno.serve(async (request) => {
               { push_status: "SENT", push_claimed_at: null, push_device_cursor: null },
               "&push_status=eq.PROCESSING",
             );
+            heldClaimIds.delete(row.id);
             processedRows++;
           }
         }
         if (deferred) {
           await patchInboxRows(
-            claimed.map((row) => row.id),
+            [...heldClaimIds],
             { push_status: "PENDING", push_claimed_at: null },
             "&push_status=eq.PROCESSING",
           );
+          heldClaimIds.clear();
         }
       } catch (error) {
         await patchInboxRows(
-          claimed.map((row) => row.id),
+          [...heldClaimIds],
           { push_status: "PENDING", push_claimed_at: null },
           "&push_status=eq.PROCESSING",
         );
