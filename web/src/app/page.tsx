@@ -31,15 +31,24 @@ export default function PortalHomePage() {
 
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== "undefined" && window.location.hash) {
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      const type = params.get("type");
-      const error = params.get("error");
-      const errorCode = params.get("error_code");
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      if (code) {
+        window.location.href = `/auth/callback${window.location.search}`;
+        return;
+      }
 
-      if (type === "recovery" || errorCode || error) {
-        window.location.href = `/reset-password${window.location.hash}`;
+      if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const type = params.get("type");
+        const error = params.get("error");
+        const errorCode = params.get("error_code");
+
+        if (type === "recovery" || errorCode || error) {
+          window.location.href = `/reset-password${window.location.hash}`;
+        }
       }
     }
   }, []);
@@ -87,7 +96,7 @@ export default function PortalHomePage() {
 
       const { data: houseData } = await supabaseBrowserClient
         .from("housing_posts")
-        .select("id, title, price, campus, room_type")
+        .select("id, title, monthly_rent_vnd, campus, type")
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -308,10 +317,10 @@ export default function PortalHomePage() {
                   <div key={h.id} className="p-3 rounded-lg bg-[#F8FAFC]">
                     <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
                       <span className="font-semibold text-slate-700 uppercase">
-                        {h.campus}
+                        {h.campus ? h.campus.replace(/_/g, " ") : "UTH"}
                       </span>
                       <span className="font-bold text-emerald-700 tabular-nums">
-                        {new Intl.NumberFormat("vi-VN").format(h.price)} đ
+                        {new Intl.NumberFormat("vi-VN").format(h.monthly_rent_vnd || h.price || 0)} đ
                       </span>
                     </div>
                     <div className="text-xs font-medium text-slate-800 line-clamp-1">

@@ -54,6 +54,17 @@ export async function GET(request: Request) {
         }
       }
       return NextResponse.redirect(`${baseUrl}${target}`);
+    } else {
+      if (type === "recovery" || next === "/reset-password") {
+        return NextResponse.redirect(
+          `${baseUrl}/reset-password#error=access_denied&error_code=otp_expired&error_description=${encodeURIComponent(
+            error.message
+          )}`
+        );
+      }
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=${encodeURIComponent(error.message)}`
+      );
     }
   }
 
