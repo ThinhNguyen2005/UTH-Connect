@@ -26,6 +26,7 @@ type InboxRow = {
 type DispatchProgress = {
   dedupe_key: string;
   next_recipient_offset: number;
+  last_recipient_id: string | null;
 };
 
 const encoder = new TextEncoder();
@@ -85,11 +86,17 @@ Deno.serve(async (request) => {
           published_at: source.publishedAt,
         }));
         const progressRows = await supabaseRest<DispatchProgress[]>(
-          `notification_dispatch_progress?select=dedupe_key,next_recipient_offset&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
+          `notification_dispatch_progress?select=dedupe_key,next_recipient_offset,last_recipient_id&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
           {},
           deadline,
         );
-        const startOffset = Math.min(progressRows[0]?.next_recipient_offset ?? 0, rows.length);
+        const lastRecipientId = progressRows[0]?.last_recipient_id;
+        // Continue by recipient identity, not by array offset. The verified
+        // profile list can shrink between invocations without skipping later IDs.
+        const nextRecipientIndex = lastRecipientId
+          ? rows.findIndex((row) => row.recipient_id > lastRecipientId)
+          : 0;
+        const startOffset = nextRecipientIndex === -1 ? rows.length : nextRecipientIndex;
         // Keep recipient fan-out inserts bounded so a large verified-user list does
         // not exceed PostgREST request limits or get partially dropped as one body.
         for (let offset = startOffset; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
@@ -102,7 +109,11 @@ Deno.serve(async (request) => {
           await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
             method: "POST",
             headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-            body: JSON.stringify({ dedupe_key: dedupeKey, next_recipient_offset: nextOffset }),
+            body: JSON.stringify({
+              dedupe_key: dedupeKey,
+              next_recipient_offset: nextOffset,
+              last_recipient_id: rows[nextOffset - 1]?.recipient_id ?? null,
+            }),
           }, deadline);
         }
       } catch (error) {
