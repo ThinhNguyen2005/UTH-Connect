@@ -574,6 +574,13 @@
     <string name="books_mark_available">Mark as available</string>
     <string name="books_condition_format">Condition: %1$s</string>
     <string name="books_exchange">Exchange</string>
+    <string name="books_photo_required">Please select at least 1 book cover photo</string>
+    <string name="books_uploading_photo">Uploading cover photo…</string>
+    <string name="books_saving_listing">Saving book listing…</string>
+    <string name="books_clear_search">Clear search</string>
+    <string name="books_seller_account_info">Seller account</string>
+    <string name="books_seller_auto_info">Seller info is automatically populated from your UTH session</string>
+    <string name="books_all_deal_types">All deals</string>
     <string name="attendance_open">Attendance list</string>
     <string name="attendance_title">Event attendance</string>
     <string name="attendance_summary">Checked in %1$d/%2$d · Not yet %3$d</string>

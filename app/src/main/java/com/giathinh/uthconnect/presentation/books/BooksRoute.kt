@@ -10,8 +10,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun BooksRoute(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onRequireSignIn: () -> Unit = onBack,
     viewModel: BooksViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    BooksScreen(uiState, viewModel::onAction, onBack, modifier)
+    BooksScreen(
+        uiState = uiState,
+        onAction = viewModel::onAction,
+        onBack = onBack,
+        modifier = modifier,
+        onRequireSignIn = onRequireSignIn,
+    )
 }

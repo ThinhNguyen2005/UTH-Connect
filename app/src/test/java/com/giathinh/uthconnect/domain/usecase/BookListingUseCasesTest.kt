@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.repository.BookListingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,6 +42,15 @@ class BookListingUseCasesTest {
     }
 
     @Test
+    fun `blank title is rejected before persistence`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).save(listing().copy(title = "   "))
+
+        assertTrue(result.isFailure)
+        assertFalse(repository.saved)
+    }
+
+    @Test
     fun `invalid contact is rejected`() = runTest {
         val repository = FakeBookListingRepository()
         val result = BookListingUseCases(repository).save(listing(contact = "not contact"))
@@ -67,6 +77,15 @@ class BookListingUseCasesTest {
         assertTrue(repository.updatedStatus)
     }
 
+    @Test
+    fun `delete delegates to repository with listing id`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).delete("book-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals("book-1", repository.deletedId)
+    }
+
     private fun listing(
         dealType: BookDealType = BookDealType.SALE,
         price: Long? = 1000,
@@ -86,6 +105,8 @@ class BookListingUseCasesTest {
     private class FakeBookListingRepository : BookListingRepository {
         var saved = false
         var updatedStatus = false
+        var deletedId: String? = null
+
         override fun currentUserId() = "test-user"
         override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
         override suspend fun saveListing(listing: BookListing): Result<Unit> {
@@ -96,7 +117,10 @@ class BookListingUseCasesTest {
             updatedStatus = true
             return Result.success(Unit)
         }
-        override suspend fun deleteListing(id: String): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteListing(id: String): Result<Unit> {
+            deletedId = id
+            return Result.success(Unit)
+        }
         override fun refresh() = Unit
     }
 }

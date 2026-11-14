@@ -40,9 +40,34 @@ class BooksUiStateTest {
         assertEquals(listOf(cheap), state.visibleListings)
     }
 
-    private fun listing(title: String, deal: BookDealType, status: BookListingStatus = BookListingStatus.AVAILABLE) = BookListing(
-        id = "$title-$deal", title = title, subject = "CS", condition = BookCondition.GOOD,
-        dealType = deal, priceVnd = 1000, description = "", sellerName = "Seller",
-        contact = "0901234567", status = status,
+    @Test
+    fun `newest sort orders listings by createdAt descending`() {
+        val older = listing("Book Older", BookDealType.SALE).copy(createdAt = 1000L)
+        val newer = listing("Book Newer", BookDealType.SALE).copy(createdAt = 2000L)
+
+        val state = BooksUiState(
+            isLoading = false,
+            listings = listOf(older, newer),
+            sort = BooksSort.NEWEST,
+        )
+
+        assertEquals(listOf(newer, older), state.visibleListings)
+    }
+
+    private fun listing(
+        title: String,
+        deal: BookDealType,
+        status: BookListingStatus = BookListingStatus.AVAILABLE,
+    ) = BookListing(
+        id = "$title-$deal",
+        title = title,
+        subject = "CS",
+        condition = BookCondition.GOOD,
+        dealType = deal,
+        priceVnd = 1000,
+        description = "",
+        sellerName = "Seller",
+        contact = "0901234567",
+        status = status,
     )
 }
