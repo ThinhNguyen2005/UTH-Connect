@@ -45,6 +45,9 @@ class FcmTokenRegistrar @Inject constructor(
     @Volatile private var registrationJob: Job? = null
 
     @Volatile private var pendingRetryJob: Job? = null
+
+    @Volatile private var restoreRetryJob: Job? = null
+
     private val preferences = context.getSharedPreferences("uth_push", Context.MODE_PRIVATE)
     private val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
 
@@ -57,7 +60,9 @@ class FcmTokenRegistrar @Inject constructor(
                 synchronized(registrationStateLock) {
                     if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
                         registerForSignedInUserLocked()
-                    } else if (restorePending && !signOutInProgress && registrationJob?.isActive != true) {
+                    } else if (restorePending && !signOutInProgress && registrationJob?.isActive != true &&
+                        restoreRetryJob?.isActive != true
+                    ) {
                         registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
                     }
                 }
@@ -76,8 +81,10 @@ class FcmTokenRegistrar @Inject constructor(
         val userId = client.userIdOrNull ?: return
         signOutInProgress = false
         registrationEnabled = true
+        restorePending = false
         val generation = ++registrationGeneration
         pendingRetryJob?.cancel()
+        restoreRetryJob?.cancel()
         registrationJob?.cancel()
         registrationJob = scope.launch {
             retryRegistration(generation, userId) {
@@ -104,7 +111,9 @@ class FcmTokenRegistrar @Inject constructor(
         }
         synchronized(registrationStateLock) {
             restorePending = true
-            if (registrationJob?.isActive != true) registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+            if (registrationJob?.isActive != true && restoreRetryJob?.isActive != true) {
+                registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+            }
         }
     }
 
@@ -124,12 +133,16 @@ class FcmTokenRegistrar @Inject constructor(
                 restorePending = false
                 val pendingJob = pendingRetryJob
                 pendingRetryJob = null
+                val restoreJob = restoreRetryJob
+                restoreRetryJob = null
                 job?.cancel()
                 pendingJob?.cancel()
-                job to pendingJob
+                restoreJob?.cancel()
+                Triple(job, pendingJob, restoreJob)
             }
             jobToJoin.first?.join()
             jobToJoin.second?.join()
+            jobToJoin.third?.join()
             registrationMutex.withLock {
                 val userId = client.userIdOrNull?.let(::urlEncode) ?: run {
                     if (!restoreOnFailure) markIdentityRotationPending()
@@ -242,7 +255,10 @@ class FcmTokenRegistrar @Inject constructor(
                 throw cancellation
             } catch (error: Exception) {
                 if (attempt == MAX_ATTEMPTS - 1) {
-                    restorePending = true
+                    synchronized(registrationStateLock) {
+                        restorePending = true
+                        scheduleRestoreRetryLocked()
+                    }
                     android.util.Log.w(TAG, "Unable to restore remembered session for FCM token", error)
                 } else {
                     delay(RETRY_DELAY_MS * (1L shl attempt))
@@ -250,6 +266,21 @@ class FcmTokenRegistrar @Inject constructor(
             }
         }
         return false
+    }
+
+    private fun scheduleRestoreRetryLocked() {
+        if (signOutInProgress || registrationEnabled || restoreRetryJob?.isActive == true) return
+        restoreRetryJob = scope.launch {
+            delay(PENDING_RETRY_DELAY_MS)
+            synchronized(registrationStateLock) {
+                restoreRetryJob = null
+                if (!signOutInProgress && !registrationEnabled && restorePending &&
+                    registrationJob?.isActive != true
+                ) {
+                    registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+                }
+            }
+        }
     }
 
     private fun deviceId(): String = currentInstallationId()
