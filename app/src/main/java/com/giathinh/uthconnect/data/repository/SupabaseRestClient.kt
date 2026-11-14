@@ -6,8 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -29,7 +27,7 @@ private const val NANOS_PER_MILLISECOND = 1_000_000L
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
-    private val refreshMutex = Mutex()
+    private val sessionMutex = SessionMutationGate()
 
     @Volatile private var sessionStore: SecureSessionStore? = null
 
@@ -47,7 +45,7 @@ class SupabaseRestClient @Inject constructor() {
 
     /** Restores a persisted session, clearing it only when the refresh token is rejected. */
     suspend fun restoreSavedSession(requestTimeoutMs: Int? = null): Boolean = withContext(Dispatchers.IO) {
-        refreshMutex.withLock {
+        sessionMutex.withLock {
             val saved = sessionStore?.load() ?: return@withLock false
             if (credentials != null) return@withLock true
             try {
@@ -73,34 +71,38 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Updates whether the current refresh token should be persisted across launches. */
-    fun setRememberSession(remember: Boolean) {
-        rememberSession = remember
-        if (remember) {
-            val current = credentials ?: error("No authenticated Supabase session")
-            sessionStore?.save(current.userId, current.refreshToken)
-        } else {
-            sessionStore?.clear()
+    suspend fun setRememberSession(remember: Boolean) {
+        sessionMutex.withLock {
+            rememberSession = remember
+            if (remember) {
+                val current = credentials ?: error("No authenticated Supabase session")
+                sessionStore?.save(current.userId, current.refreshToken)
+            } else {
+                sessionStore?.clear()
+            }
         }
     }
 
     /** Authenticates with Supabase and replaces any prior in-memory session. */
     suspend fun signIn(email: String, password: String) {
-        // A failed login must not accidentally leave the previous user's tokens active.
-        // Password confirmation is a separate flow and must preserve the current session on failure.
-        credentials = null
-        CrashIdentity.clear()
-        rememberSession = false
-        sessionStore?.clear()
-        val data = send(
-            "/auth/v1/token?grant_type=password",
-            "POST",
-            buildJsonObject {
-                put("email", email)
-                put("password", password)
-            },
-            bearer = null,
-        ).jsonObject
-        credentials = parseCredentials(data)
+        sessionMutex.withLock {
+            // A failed login must not accidentally leave the previous user's tokens active.
+            // Password confirmation is a separate flow and must preserve the current session on failure.
+            credentials = null
+            CrashIdentity.clear()
+            rememberSession = false
+            sessionStore?.clear()
+            val data = send(
+                "/auth/v1/token?grant_type=password",
+                "POST",
+                buildJsonObject {
+                    put("email", email)
+                    put("password", password)
+                },
+                bearer = null,
+            ).jsonObject
+            credentials = parseCredentials(data)
+        }
     }
 
     /** Validate the old password without replacing or rotating the active session. */
@@ -125,7 +127,7 @@ class SupabaseRestClient @Inject constructor() {
         displayName: String,
         faculty: String,
         redirectTo: String = "",
-    ): JsonObject {
+    ): JsonObject = sessionMutex.withLock {
         val encodedRedirect = urlEncode(redirectTo)
         val payload = buildJsonObject {
             put("email", email)
@@ -142,7 +144,7 @@ class SupabaseRestClient @Inject constructor() {
         if (response.containsKey("access_token") && response.containsKey("user")) {
             credentials = parseCredentials(response)
         }
-        return response
+        response
     }
 
     /** Requests a password recovery message for the supplied email. */
@@ -190,7 +192,7 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Clears the active credentials and any persisted refresh token. */
-    suspend fun signOut() {
+    suspend fun signOut() = sessionMutex.withLock {
         val old = credentials
         credentials = null
         CrashIdentity.clear()
@@ -215,6 +217,19 @@ class SupabaseRestClient @Inject constructor() {
      * The session repository subsequently applies the user's remember-me choice.
      */
     suspend fun attachSession(
+        userId: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresInSeconds: Long,
+    ) = withSessionMutation {
+        attachSessionLocked(userId, accessToken, refreshToken, expiresInSeconds)
+    }
+
+    /** Runs an external auth exchange in order with restores and other session changes. */
+    internal suspend fun <T> withSessionMutation(block: suspend () -> T): T = sessionMutex.withLock { block() }
+
+    /** Installs credentials while the caller already owns [sessionMutex]. */
+    internal fun attachSessionLocked(
         userId: String,
         accessToken: String,
         refreshToken: String,
@@ -421,7 +436,7 @@ class SupabaseRestClient @Inject constructor() {
     private suspend fun freshToken(deadlineNanos: Long? = null): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
-        return refreshMutex.withLock {
+        return sessionMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {

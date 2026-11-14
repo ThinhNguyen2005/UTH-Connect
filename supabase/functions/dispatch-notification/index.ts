@@ -54,6 +54,8 @@ const CLEANUP_BUDGET_MS = 5_000;
 
 class DispatchDeadlineError extends Error {}
 
+type FcmResult = "SENT" | "FAILED" | "UNREGISTERED" | "PERMANENT_FAILURE";
+
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
 
@@ -90,6 +92,17 @@ Deno.serve(async (request) => {
           }, deadline);
         }
       }
+
+      const dueNotifications = await supabaseRest<Array<{ source_payload: WebhookEventPayload }>>(
+        "rpc/claim_due_notification_fanouts",
+        { method: "POST", body: JSON.stringify({ p_limit: 10 }) },
+        deadline,
+      );
+      await Promise.all(
+        dueNotifications.map(({ source_payload: sourcePayload }) =>
+          queueContinuation(payload.continuationDepth ?? 0, sourcePayload)
+        ),
+      );
     } else {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
@@ -240,6 +253,8 @@ Deno.serve(async (request) => {
               deliveredTotal++;
             } else if (result === "UNREGISTERED") {
               await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" }, deadline);
+            } else if (result === "PERMANENT_FAILURE") {
+              console.warn("Skipping device after permanent FCM error", device.device_id);
             } else {
               rowFailed = true;
             }
@@ -476,7 +491,7 @@ async function recipientIds(recipientId: string | null, excludedUserId: string |
   return allProfiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
 }
 
-async function sendFcm(accessToken: string, token: string, row: InboxRow, deadline: number): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
+async function sendFcm(accessToken: string, token: string, row: InboxRow, deadline: number): Promise<FcmResult> {
   const serviceAccount = JSON.parse(fcmServiceAccountJson());
   const messageBody = (row.summary || row.content).slice(0, 180);
   const response = await fetch(
@@ -506,9 +521,28 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow, deadli
   if (response.ok) return "SENT";
   const errorBody = await response.text();
   console.error("FCM send failed", response.status, errorBody.slice(0, 500));
+  const fcmErrorCode = fcmSpecificErrorCode(errorBody);
   // Chỉ xóa token khi FCM xác nhận UNREGISTERED trong payload — tránh xóa nhầm khi 404 do cấu hình sai
-  if (errorBody.includes("UNREGISTERED")) return "UNREGISTERED";
+  if (fcmErrorCode === "UNREGISTERED" || errorBody.includes("UNREGISTERED")) return "UNREGISTERED";
+  if (fcmErrorCode === "INVALID_ARGUMENT" || fcmErrorCode === "SENDER_ID_MISMATCH") {
+    return "PERMANENT_FAILURE";
+  }
   return "FAILED";
+}
+
+export function fcmSpecificErrorCode(errorBody: string): string | null {
+  try {
+    const parsed = JSON.parse(errorBody) as {
+      error?: {
+        details?: Array<{ "@type"?: string; errorCode?: string }>;
+      };
+    };
+    return parsed.error?.details?.find(
+      (detail) => detail["@type"] === "type.googleapis.com/google.firebase.fcm.v1.FcmError",
+    )?.errorCode ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function sendFcmWithRetry(
@@ -516,7 +550,7 @@ async function sendFcmWithRetry(
   token: string,
   row: InboxRow,
   deadline: number,
-): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
+): Promise<FcmResult> {
   for (let attempt = 0; attempt < FCM_MAX_ATTEMPTS; attempt++) {
     ensureWithinDeadline(deadline);
     try {

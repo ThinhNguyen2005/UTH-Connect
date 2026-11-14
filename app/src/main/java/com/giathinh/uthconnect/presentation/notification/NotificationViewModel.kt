@@ -156,9 +156,10 @@ class NotificationViewModel @Inject constructor(
                                 }
                             }
                             latestMutationById.entries.fold(
-                                it.readNotificationIds + serverReadIds,
+                                it.readNotificationIds + serverReadIds + serverConfirmedReadIds,
                             ) { ids, (id, succeeded) ->
-                                if (succeeded || id in serverReadIds) ids + id else ids - id
+                                val isConfirmedRead = id in serverReadIds || id in serverConfirmedReadIds
+                                if (succeeded || isConfirmedRead) ids + id else ids - id
                             }
                         }
                         it.copy(

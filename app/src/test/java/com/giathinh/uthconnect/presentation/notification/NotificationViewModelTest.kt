@@ -50,6 +50,39 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `stale unread inbox keeps earlier success when a newer read mutation fails`() = runTest {
+        val notification = notification("notification-confirmed-read")
+        val firstPatch = CompletableDeferred<Unit>()
+        val secondPatch = CompletableDeferred<Unit>()
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(
+                listOf(
+                    Result.success(Unit),
+                    Result.failure(IllegalStateException("temporary")),
+                ),
+            ),
+            markGates = ArrayDeque(listOf(firstPatch, secondPatch)),
+            detail = notification,
+        )
+        val viewModel = NotificationViewModel(repository)
+
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+
+        firstPatch.complete(Unit)
+        advanceUntilIdle()
+        secondPatch.complete(Unit)
+        advanceUntilIdle()
+
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+    }
+
+    @Test
     fun `two failed detail read mutations restore an unread notification`() = runTest {
         val notification = notification("notification-2")
         val firstPatch = CompletableDeferred<Unit>()
@@ -88,7 +121,6 @@ class NotificationViewModelTest {
         publishedAt = 1_577_836_800_000L,
     )
 
-    @Suppress("MaxLineLength")
     private class FakeNotificationRepository(
         private val markResults: ArrayDeque<Result<Unit>>,
         private val markGates: ArrayDeque<CompletableDeferred<Unit>> = ArrayDeque(),
@@ -100,9 +132,13 @@ class NotificationViewModelTest {
             inbox.emit(items)
         }
 
-        override fun getNewsfeed(category: NotificationCategory): Flow<List<PostNotification>> = inbox
+        override fun getNewsfeed(
+            category: NotificationCategory,
+        ): Flow<List<PostNotification>> = inbox
 
-        override suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?> = Result.success(detail)
+        override suspend fun getNotificationDetail(
+            notificationId: String,
+        ): Result<PostNotification?> = Result.success(detail)
 
         override fun getInbox(): Flow<List<PostNotification>> = inbox
 
@@ -111,6 +147,8 @@ class NotificationViewModelTest {
             return markResults.removeFirst()
         }
 
-        override suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> = Result.success(detail)
+        override suspend fun getInboxNotification(
+            notificationId: String,
+        ): Result<PostNotification?> = Result.success(detail)
     }
 }

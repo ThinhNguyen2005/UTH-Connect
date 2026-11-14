@@ -45,25 +45,27 @@ class SupabaseGoogleExchange @Inject constructor(
      */
     suspend fun exchange(idToken: String, rawNonce: String) {
         require(BuildConfig.USE_SUPABASE) { "Google sign-in requires the Supabase backend" }
-        val session = try {
-            supabase.auth.signInWith(IDToken) {
-                this.idToken = idToken
-                provider = Google
-                nonce = rawNonce
+        client.withSessionMutation {
+            val session = try {
+                supabase.auth.signInWith(IDToken) {
+                    this.idToken = idToken
+                    provider = Google
+                    nonce = rawNonce
+                }
+                supabase.auth.currentSessionOrNull() ?: error("Google sign-in returned no Supabase session")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                // Exception text and stack traces may contain provider responses or sensitive claims.
+                Log.w(GOOGLE_EXCHANGE_LOG_TAG, "Google ID-token exchange rejected")
+                throw error
             }
-            supabase.auth.currentSessionOrNull() ?: error("Google sign-in returned no Supabase session")
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            // Exception text and stack traces may contain provider responses or sensitive claims.
-            Log.w(GOOGLE_EXCHANGE_LOG_TAG, "Google ID-token exchange rejected")
-            throw error
+            client.attachSessionLocked(
+                userId = session.user?.id ?: error("Supabase session has no user id"),
+                accessToken = session.accessToken,
+                refreshToken = session.refreshToken,
+                expiresInSeconds = session.expiresIn,
+            )
         }
-        client.attachSession(
-            userId = session.user?.id ?: error("Supabase session has no user id"),
-            accessToken = session.accessToken,
-            refreshToken = session.refreshToken,
-            expiresInSeconds = session.expiresIn,
-        )
     }
 }
