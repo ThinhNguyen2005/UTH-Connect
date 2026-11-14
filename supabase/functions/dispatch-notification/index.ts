@@ -62,29 +62,34 @@ Deno.serve(async (request) => {
       `notification_inbox?source_table=eq.${payload.table}&source_id=eq.${source.sourceId}&push_status=eq.PROCESSING&push_claimed_at=lt.${new Date(Date.now() - 5 * 60_000).toISOString()}`,
       { method: "PATCH", body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }) },
     );
-    const pending = await supabaseRest<InboxRow[]>(
-      `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id&source_table=eq.${payload.table}&source_id=eq.${source.sourceId}&push_status=eq.PENDING`,
-    );
-    const ids = pending.map((row) => row.id);
-    if (ids.length === 0) return json({ delivered: 0, ignored: true });
+    const pageSize = 1000;
+    let deliveredTotal = 0;
+    let pendingTotal = 0;
+    while (true) {
+      const pending = await supabaseRest<InboxRow[]>(
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id&source_table=eq.${payload.table}&source_id=eq.${source.sourceId}&push_status=eq.PENDING&limit=${pageSize}`,
+      );
+      const ids = pending.map((row) => row.id);
+      if (ids.length === 0) break;
 
-    const idFilter = ids.join(",");
-    const claimed = await supabaseRest<InboxRow[]>(
-      `notification_inbox?id=in.(${idFilter})&push_status=eq.PENDING`,
-      {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ push_status: "PROCESSING", push_claimed_at: new Date().toISOString() }),
-      },
-    );
-    if (claimed.length === 0) return json({ delivered: 0, duplicate: true });
+      const idFilter = ids.join(",");
+      const claimed = await supabaseRest<InboxRow[]>(
+        `notification_inbox?id=in.(${idFilter})&push_status=eq.PENDING`,
+        {
+          method: "PATCH",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ push_status: "PROCESSING", push_claimed_at: new Date().toISOString() }),
+        },
+      );
+      if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
-    try {
+      let batchFailed = false;
+      try {
       const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
       // Phân trang devices để không bỏ sót token khi tổng thiết bị vượt 1.000 hàng
       // Phân trang devices bằng keyset để không bỏ sót token
       const allDevices: Array<{ device_id: string; user_id: string; token: string }> = [];
-      const pageSize = 1000;
+      const devicePageSize = 1000;
       let lastDeviceId: string | undefined = undefined;
       
       while (true) {
@@ -92,7 +97,7 @@ Deno.serve(async (request) => {
           "select=device_id,user_id,token",
           `user_id=in.(${userIds.join(",")})`,
           "order=device_id.asc",
-          `limit=${pageSize}`
+          `limit=${devicePageSize}`
         ];
         if (lastDeviceId) queryParams.push(`device_id=gt.${lastDeviceId}`);
 
@@ -100,7 +105,7 @@ Deno.serve(async (request) => {
           `notification_devices?${queryParams.join("&")}`,
         );
         allDevices.push(...page);
-        if (page.length < pageSize) break;
+        if (page.length < devicePageSize) break;
         lastDeviceId = page[page.length - 1].device_id;
       }
       const tokensByUser = new Map<string, string[]>();
@@ -119,7 +124,7 @@ Deno.serve(async (request) => {
         }
         let hasFailed = false;
         for (const token of tokens) {
-          const result = await sendFcm(accessToken, token, row);
+          const result = await sendFcmWithRetry(accessToken, token, row);
           if (result === "SENT") {
             delivered++;
           } else if (result === "UNREGISTERED") {
@@ -145,14 +150,21 @@ Deno.serve(async (request) => {
           body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }),
         });
       }
-      return json({ delivered, pending: failedRows.length });
-    } catch (error) {
-      await supabaseRest(`notification_inbox?id=in.(${idFilter})&push_status=eq.PROCESSING`, {
-        method: "PATCH",
-        body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }),
-      });
-      throw error;
+        deliveredTotal += delivered;
+        pendingTotal += failedRows.length;
+        batchFailed = failedRows.length > 0;
+      } catch (error) {
+        await supabaseRest(`notification_inbox?id=in.(${idFilter})&push_status=eq.PROCESSING`, {
+          method: "PATCH",
+          body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }),
+        });
+        throw error;
+      }
+
+      if (batchFailed || pending.length < pageSize) break;
     }
+    if (deliveredTotal === 0 && pendingTotal === 0) return json({ delivered: 0, ignored: true });
+    return json({ delivered: deliveredTotal, pending: pendingTotal });
   } catch (error) {
     console.error("notification dispatch failed", error);
     return json({ error: "Notification dispatch failed" }, 500);
@@ -262,6 +274,19 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
   console.error("FCM send failed", response.status, errorBody.slice(0, 500));
   // Chỉ xóa token khi FCM xác nhận UNREGISTERED trong payload — tránh xóa nhầm khi 404 do cấu hình sai
   if (errorBody.includes("UNREGISTERED")) return "UNREGISTERED";
+  return "FAILED";
+}
+
+async function sendFcmWithRetry(
+  accessToken: string,
+  token: string,
+  row: InboxRow,
+): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await sendFcm(accessToken, token, row);
+    if (result !== "FAILED" || attempt === 2) return result;
+    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+  }
   return "FAILED";
 }
 

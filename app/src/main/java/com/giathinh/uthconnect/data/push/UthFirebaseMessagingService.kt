@@ -28,7 +28,9 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val notificationId = message.data[PushIntentContract.NOTIFICATION_ID].orEmpty()
-        val title = message.notification?.title ?: message.data[PushIntentContract.TITLE] ?: getString(R.string.notification_title)
+        val title = message.notification?.title
+            ?: message.data[PushIntentContract.TITLE]
+            ?: getString(R.string.notification_title)
         val body = message.notification?.body ?: message.data[PushIntentContract.BODY].orEmpty()
         if (body.isBlank()) return
         createChannel()
@@ -55,7 +57,13 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .build()
 
-        if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+        if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             NotificationManagerCompat.from(this).notify(notificationId.hashCode(), notification)
         }
     }

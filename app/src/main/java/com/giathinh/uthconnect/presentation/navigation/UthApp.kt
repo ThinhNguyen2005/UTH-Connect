@@ -15,8 +15,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -28,9 +28,6 @@ import androidx.navigation.compose.rememberNavController
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.UtilityModuleId
 import com.giathinh.uthconnect.presentation.announcement.AnnouncementDetailDestination
-import com.giathinh.uthconnect.presentation.notification.NotificationDestination
-import com.giathinh.uthconnect.presentation.notification.NotificationDetailDestination
-import com.giathinh.uthconnect.presentation.notification.notificationGraph
 import com.giathinh.uthconnect.presentation.announcement.announcementGraph
 import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
@@ -43,6 +40,9 @@ import com.giathinh.uthconnect.presentation.housing.HousingDestination
 import com.giathinh.uthconnect.presentation.housing.housingGraph
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
+import com.giathinh.uthconnect.presentation.notification.NotificationDestination
+import com.giathinh.uthconnect.presentation.notification.NotificationDetailDestination
+import com.giathinh.uthconnect.presentation.notification.notificationGraph
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute

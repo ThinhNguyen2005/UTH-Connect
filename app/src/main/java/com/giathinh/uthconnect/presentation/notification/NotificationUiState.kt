@@ -26,10 +26,19 @@ data class NotificationUiState(
     val filteredNotifications: List<PostNotification>
         get() = when (selectedCategory) {
             null, NotificationCategory.ALL -> notifications
+
             NotificationCategory.ACADEMIC ->
-                notifications.filter { it.category == NotificationCategory.ACADEMIC || it.category == NotificationCategory.EXAMINATION }
+                notifications.filter {
+                    it.category == NotificationCategory.ACADEMIC ||
+                        it.category == NotificationCategory.EXAMINATION
+                }
+
             NotificationCategory.GENERAL ->
-                notifications.filter { it.category == NotificationCategory.GENERAL || it.category == NotificationCategory.TUITION }
+                notifications.filter {
+                    it.category == NotificationCategory.GENERAL ||
+                        it.category == NotificationCategory.TUITION
+                }
+
             else -> notifications.filter { it.category == selectedCategory }
         }
 
@@ -57,15 +66,22 @@ data class NotificationUiState(
     val totalUnreadCount: Int
         get() = notifications.count { it.id !in readNotificationIds }
 
-    fun countForCategory(category: NotificationCategory?): Int {
-        return when (category) {
-            null, NotificationCategory.ALL -> notifications.size
-            NotificationCategory.ACADEMIC ->
-                notifications.count { it.category == NotificationCategory.ACADEMIC || it.category == NotificationCategory.EXAMINATION }
-            NotificationCategory.GENERAL ->
-                notifications.count { it.category == NotificationCategory.GENERAL || it.category == NotificationCategory.TUITION }
-            else -> notifications.count { it.category == category }
-        }
+    fun countForCategory(category: NotificationCategory?): Int = when (category) {
+        null, NotificationCategory.ALL -> notifications.size
+
+        NotificationCategory.ACADEMIC ->
+            notifications.count {
+                it.category == NotificationCategory.ACADEMIC ||
+                    it.category == NotificationCategory.EXAMINATION
+            }
+
+        NotificationCategory.GENERAL ->
+            notifications.count {
+                it.category == NotificationCategory.GENERAL ||
+                    it.category == NotificationCategory.TUITION
+            }
+
+        else -> notifications.count { it.category == category }
     }
 
     private fun isToday(timestampMs: Long): Boolean {

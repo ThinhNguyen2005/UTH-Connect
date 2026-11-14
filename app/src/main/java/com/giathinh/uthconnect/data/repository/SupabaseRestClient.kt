@@ -240,8 +240,8 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
 
     /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
-    suspend fun upsertTable(path: String, body: JsonObject): JsonElement =
-        authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
+    suspend fun upsertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
+
     /** Invokes an authenticated Postgres RPC function. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
 
@@ -473,16 +473,7 @@ class SupabaseRestClient @Inject constructor() {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
         try {
-            if (method == "PATCH") {
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-                connection.setRequestProperty("Prefer", prefer ?: "return=representation")
-            } else {
-                connection.requestMethod = method
-                if (method == "POST" && path.startsWith("/rest/v1/")) {
-                    connection.setRequestProperty("Prefer", prefer ?: "return=representation")
-                }
-            }
+            configureRequestMethod(connection, method, path, prefer)
             connection.connectTimeout = 15_000
             connection.readTimeout = 15_000
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
@@ -506,6 +497,25 @@ class SupabaseRestClient @Inject constructor() {
             if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun configureRequestMethod(
+        connection: HttpURLConnection,
+        method: String,
+        path: String,
+        prefer: String?,
+    ) {
+        val postgrestPrefer = prefer ?: "return=representation"
+        if (method == "PATCH") {
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+            connection.setRequestProperty("Prefer", postgrestPrefer)
+            return
+        }
+        connection.requestMethod = method
+        if (method == "POST" && path.startsWith("/rest/v1/")) {
+            connection.setRequestProperty("Prefer", postgrestPrefer)
         }
     }
 

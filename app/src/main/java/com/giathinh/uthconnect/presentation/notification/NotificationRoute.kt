@@ -10,9 +10,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.core.content.ContextCompat
 
 /**
  * Tầng kết nối Composable Route cho màn hình Thông Báo:
@@ -35,7 +35,10 @@ fun NotificationRoute(
     LaunchedEffect(Unit) {
         if (
             Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }

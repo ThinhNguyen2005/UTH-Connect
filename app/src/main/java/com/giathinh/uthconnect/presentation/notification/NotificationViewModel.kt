@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 sealed interface NotificationNavigationEvent {
@@ -33,6 +35,11 @@ class NotificationViewModel @Inject constructor(
     private val _events = MutableSharedFlow<NotificationNavigationEvent>()
     val events: SharedFlow<NotificationNavigationEvent> = _events.asSharedFlow()
 
+    private val readMutationMutex = Mutex()
+    private val pendingReadIds = mutableSetOf<String>()
+    private val readMutationVersions = mutableMapOf<String, Long>()
+    private var nextReadMutationVersion = 0L
+
     init {
         loadNotifications()
     }
@@ -42,52 +49,54 @@ class NotificationViewModel @Inject constructor(
             is NotificationAction.Back -> {
                 viewModelScope.launch { _events.emit(NotificationNavigationEvent.Back) }
             }
+
             is NotificationAction.OpenSettings -> {
                 viewModelScope.launch { _events.emit(NotificationNavigationEvent.OpenSettings) }
             }
+
             is NotificationAction.OpenProfile -> {
                 viewModelScope.launch { _events.emit(NotificationNavigationEvent.OpenProfile) }
             }
+
             is NotificationAction.SelectCategory -> {
                 _uiState.update { it.copy(selectedCategory = action.category) }
             }
+
             is NotificationAction.MarkAllAsRead -> {
-                val previousIds = _uiState.value.readNotificationIds
-                _uiState.update { state ->
-                    state.copy(readNotificationIds = state.notifications.map { it.id }.toSet())
-                }
+                val ids = _uiState.value.notifications.map { it.id }
+                val version = markReadOptimistically(ids)
                 viewModelScope.launch {
-                    val result = notificationRepository.markAllInboxNotificationsRead()
-                    if (result.isFailure) {
-                        // Khôi phục trạng thái optimistic nếu ghi thất bại
-                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                    val result = readMutationMutex.withLock {
+                        notificationRepository.markAllInboxNotificationsRead()
                     }
+                    finishReadMutation(ids, version, result.isSuccess)
                 }
             }
+
             is NotificationAction.ClickNotification -> {
-                val previousIds = _uiState.value.readNotificationIds
-                _uiState.update { state ->
-                    state.copy(readNotificationIds = state.readNotificationIds + action.notificationId)
-                }
+                val ids = listOf(action.notificationId)
+                val version = markReadOptimistically(ids)
                 viewModelScope.launch {
-                    val result = notificationRepository.markInboxNotificationRead(action.notificationId)
-                    if (result.isFailure) {
-                        // Khôi phục trạng thái optimistic nếu ghi thất bại
-                        _uiState.update { it.copy(readNotificationIds = previousIds) }
+                    val result = readMutationMutex.withLock {
+                        notificationRepository.markInboxNotificationRead(action.notificationId)
                     }
+                    finishReadMutation(ids, version, result.isSuccess)
                 }
                 viewModelScope.launch {
                     _events.emit(NotificationNavigationEvent.OpenDetail(action.notificationId))
                 }
             }
+
             is NotificationAction.Refresh -> {
                 loadNotifications(isRefresh = true)
             }
+
             is NotificationAction.LoadDetail -> loadDetail(action.notificationId)
         }
     }
 
     private fun loadNotifications(isRefresh: Boolean = false) {
+        val requestReadVersion = nextReadMutationVersion
         _uiState.update { it.copy(isLoading = !isRefresh, isRefreshing = isRefresh) }
         viewModelScope.launch {
             notificationRepository.getInbox()
@@ -101,12 +110,23 @@ class NotificationViewModel @Inject constructor(
                     }
                 }
                 .collect { list ->
+                    val serverReadIds = list
+                        .filter { item -> item.readAt != null }
+                        .map { item -> item.id }
+                        .toSet()
                     _uiState.update {
+                        val readIds = if (requestReadVersion == nextReadMutationVersion) {
+                            serverReadIds
+                        } else {
+                            // Keep optimistic mutations created after this GET started;
+                            // an older response must not erase a newer read action.
+                            it.readNotificationIds + serverReadIds
+                        }
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
                             notifications = list,
-                            readNotificationIds = list.filter { item -> item.readAt != null }.map { item -> item.id }.toSet(),
+                            readNotificationIds = readIds + pendingReadIds,
                             errorMessage = null,
                         )
                     }
@@ -115,23 +135,25 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun loadDetail(notificationId: String) {
-        _uiState.update { it.copy(detailId = notificationId, detail = null, isDetailLoading = true, errorMessage = null) }
+        _uiState.update {
+            it.copy(
+                detailId = notificationId,
+                detail = null,
+                isDetailLoading = true,
+                errorMessage = null,
+            )
+        }
         viewModelScope.launch {
             notificationRepository.getInboxNotification(notificationId).fold(
                 onSuccess = { detail ->
                     _uiState.update { it.copy(detail = detail, isDetailLoading = false) }
-                    // Đánh dấu đã đọc giống luồng ClickNotification
-                    val previousIds = _uiState.value.readNotificationIds
-                    _uiState.update { state ->
-                        state.copy(readNotificationIds = state.readNotificationIds + notificationId)
-                    }
-                    val result = notificationRepository.markInboxNotificationRead(notificationId)
-                    if (result.isFailure && notificationId !in previousIds) {
-                        // Chỉ gỡ ID hiện tại nếu notification chưa được đọc từ trước.
-                        _uiState.update { currentState ->
-                            currentState.copy(
-                                readNotificationIds = currentState.readNotificationIds - notificationId
-                            )
+                    if (detail != null) {
+                        val version = markReadOptimistically(listOf(notificationId))
+                        viewModelScope.launch {
+                            val result = readMutationMutex.withLock {
+                                notificationRepository.markInboxNotificationRead(notificationId)
+                            }
+                            finishReadMutation(listOf(notificationId), version, result.isSuccess)
                         }
                     }
                 },
@@ -139,6 +161,32 @@ class NotificationViewModel @Inject constructor(
                     _uiState.update { it.copy(isDetailLoading = false, errorMessage = error.localizedMessage) }
                 },
             )
+        }
+    }
+
+    private fun markReadOptimistically(ids: List<String>): Long {
+        val version = ++nextReadMutationVersion
+        ids.forEach { id ->
+            pendingReadIds += id
+            readMutationVersions[id] = version
+        }
+        _uiState.update { state ->
+            state.copy(readNotificationIds = state.readNotificationIds + ids)
+        }
+        return version
+    }
+
+    private fun finishReadMutation(ids: List<String>, version: Long, succeeded: Boolean) {
+        val ownedIds = ids.filter { readMutationVersions[it] == version }
+        if (ownedIds.isEmpty()) return
+        ownedIds.forEach { id ->
+            pendingReadIds.remove(id)
+            readMutationVersions.remove(id)
+        }
+        if (!succeeded) {
+            _uiState.update { state ->
+                state.copy(readNotificationIds = state.readNotificationIds - ownedIds.toSet())
+            }
         }
     }
 }

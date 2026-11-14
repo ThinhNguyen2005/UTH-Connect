@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.giathinh.uthconnect.presentation.notification
 
 import androidx.compose.foundation.background
@@ -17,8 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
@@ -97,8 +99,17 @@ fun NotificationScreen(
             if (uiState.detailId != null) {
                 when {
                     uiState.isDetailLoading -> NotificationLoadingState()
+
                     uiState.detail != null -> NotificationDetailContent(uiState.detail!!)
-                    else -> NotificationDetailUnavailable()
+
+                    uiState.errorMessage != null -> NotificationErrorState(
+                        message = uiState.errorMessage,
+                        onRetry = { onAction(NotificationAction.LoadDetail(uiState.detailId)) },
+                    )
+
+                    else -> NotificationDetailUnavailable(
+                        onRetry = { onAction(NotificationAction.LoadDetail(uiState.detailId)) },
+                    )
                 }
             } else if (uiState.isLoading) {
                 NotificationLoadingState()
@@ -109,11 +120,11 @@ fun NotificationScreen(
                 } else {
                     NotificationErrorState(
                         message = uiState.errorMessage,
-                        onRetry = { onAction(NotificationAction.Refresh) }
+                        onRetry = { onAction(NotificationAction.Refresh) },
                     )
                 }
             } else if (uiState.filteredNotifications.isEmpty()) {
-                NotificationEmptyState()
+                NotificationEmptyState(onRefresh = { onAction(NotificationAction.Refresh) })
             } else {
                 NotificationFeed(
                     uiState = uiState,
@@ -238,14 +249,20 @@ private fun NotificationFilterChipsRow(
 
         // Chip 3: Sự kiện
         NotificationFilterChip(
-            label = stringResource(R.string.notification_category_event, uiState.countForCategory(NotificationCategory.ACTIVITIES)),
+            label = stringResource(
+                R.string.notification_category_event,
+                uiState.countForCategory(NotificationCategory.ACTIVITIES),
+            ),
             isSelected = uiState.selectedCategory == NotificationCategory.ACTIVITIES,
             onClick = { onSelectCategory(NotificationCategory.ACTIVITIES) },
         )
 
         // Chip 4: Hệ thống — hiển thị cả GENERAL + TUITION
         NotificationFilterChip(
-            label = stringResource(R.string.notification_category_system, uiState.countForCategory(NotificationCategory.GENERAL)),
+            label = stringResource(
+                R.string.notification_category_system,
+                uiState.countForCategory(NotificationCategory.GENERAL),
+            ),
             isSelected = uiState.selectedCategory == NotificationCategory.GENERAL,
             onClick = { onSelectCategory(NotificationCategory.GENERAL) },
         )
@@ -334,13 +351,29 @@ private fun NotificationDetailContent(item: PostNotification) {
 }
 
 @Composable
-private fun NotificationDetailUnavailable() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun NotificationDetailUnavailable(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(UthDimens.Spacing.Xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
         Text(
             text = stringResource(R.string.notification_detail_unavailable),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+        Button(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(UthDimens.Size.IconBadge),
+            )
+            Spacer(modifier = Modifier.size(UthDimens.Spacing.Xs))
+            Text(text = stringResource(R.string.notification_retry))
+        }
     }
 }
 
@@ -407,7 +440,9 @@ private fun NotificationFeed(
                     title = stringResource(R.string.notification_section_today),
                     badgeText = if (uiState.todayNewCount > 0) {
                         stringResource(R.string.notification_new_count, uiState.todayNewCount)
-                    } else null,
+                    } else {
+                        null
+                    },
                 )
             }
 
@@ -502,7 +537,8 @@ private fun NotificationCardItem(
     isUnread: Boolean,
     onClick: () -> Unit,
 ) {
-    val isSuccessEvent = item.category == NotificationCategory.ACTIVITIES || item.title.contains("Check-in", ignoreCase = true)
+    val isSuccessEvent = item.category == NotificationCategory.ACTIVITIES ||
+        item.title.contains("Check-in", ignoreCase = true)
     val cardBackground = if (isUnread) {
         MaterialTheme.colorScheme.surface
     } else {
@@ -614,16 +650,19 @@ private fun NotificationIconBadge(
             iconColor = SuccessOnContainerLight
             iconVector = Icons.Filled.CheckCircle
         }
+
         category == NotificationCategory.ACADEMIC || category == NotificationCategory.EXAMINATION -> {
             bgColor = MaterialTheme.colorScheme.surfaceVariant
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             iconVector = Icons.Filled.DateRange
         }
+
         category == NotificationCategory.GENERAL -> {
             bgColor = MaterialTheme.colorScheme.surfaceVariant
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             iconVector = Icons.Filled.Notifications
         }
+
         else -> {
             bgColor = MaterialTheme.colorScheme.surfaceVariant
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -657,8 +696,15 @@ private fun NotificationCategoryTag(
 ) {
     val tagText = when (category) {
         NotificationCategory.ACTIVITIES -> stringResource(R.string.notification_tag_event)
-        NotificationCategory.ACADEMIC, NotificationCategory.EXAMINATION -> stringResource(R.string.notification_tag_academic)
-        NotificationCategory.TUITION, NotificationCategory.GENERAL -> stringResource(R.string.notification_tag_system)
+
+        NotificationCategory.ACADEMIC,
+        NotificationCategory.EXAMINATION,
+        -> stringResource(R.string.notification_tag_academic)
+
+        NotificationCategory.TUITION,
+        NotificationCategory.GENERAL,
+        -> stringResource(R.string.notification_tag_system)
+
         NotificationCategory.ALL -> stringResource(R.string.notification_tag_generic)
     }
 
@@ -686,7 +732,7 @@ private fun NotificationCategoryTag(
  * Màn hình rỗng khi không có thông báo nào.
  */
 @Composable
-private fun NotificationEmptyState() {
+private fun NotificationEmptyState(onRefresh: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -715,6 +761,16 @@ private fun NotificationEmptyState() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+            Button(onClick = onRefresh) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Spacer(modifier = Modifier.size(UthDimens.Spacing.Xs))
+                Text(text = stringResource(R.string.notification_retry))
+            }
         }
     }
 }
@@ -722,10 +778,8 @@ private fun NotificationEmptyState() {
 /**
  * Định dạng thời gian hiển thị: "08:30 hôm nay", "Hôm qua", hoặc "dd/MM/yyyy".
  */
-private fun formatNotificationTime(timestampMs: Long): String {
-    return java.text.DateFormat.getDateTimeInstance(
-        java.text.DateFormat.MEDIUM,
-        java.text.DateFormat.SHORT,
-        Locale.getDefault(),
-    ).format(Date(timestampMs))
-}
+private fun formatNotificationTime(timestampMs: Long): String = java.text.DateFormat.getDateTimeInstance(
+    java.text.DateFormat.MEDIUM,
+    java.text.DateFormat.SHORT,
+    Locale.getDefault(),
+).format(Date(timestampMs))

@@ -101,13 +101,13 @@ class PreferencesSessionRepository @Inject constructor(
 
     override suspend fun signOut() {
         mutex.withLock {
+            // Revoke the device row while the old access token is still valid. If this
+            // fails (for example while offline), keep the session so another attempt can
+            // complete cleanup instead of allowing the next user to inherit the token.
+            fcmTokenRegistrar.unregisterCurrentUser()
             client.setRememberSession(false)
-            try {
-                runCatching { fcmTokenRegistrar.unregisterCurrentUser() }
-                auth.signOut()
-            } finally {
-                _session.value = StudentSession(isRestoring = false)
-            }
+            auth.signOut()
+            _session.value = StudentSession(isRestoring = false)
             // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
             check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
         }

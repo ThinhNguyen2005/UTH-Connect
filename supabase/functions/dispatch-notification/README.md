@@ -16,10 +16,10 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    header `x-webhook-secret: <same WEBHOOK_SHARED_SECRET>`:
    - `public.events`: `INSERT` and `UPDATE` (sends only when an event first becomes `PUBLISHED`)
    - `public.notifications`: `INSERT` and `UPDATE` (sends published academic/system notices; an update only notifies when it publishes a previously scheduled row)
-   - `public.housing_posts`: `INSERT` (sends active new listings)
+   - `public.housing_posts`: `INSERT` (sends new listings with `status = OPEN`)
 
 The function rejects requests without the shared webhook header, filters unpublished
-events and inactive housing posts, writes an idempotent per-user inbox item, and claims
+events and non-open housing posts, writes an idempotent per-user inbox item, and claims
 pending rows before delivery so duplicate webhook invocations do not normally duplicate
 pushes. Users must have a verified profile to receive broadcast messages; a targeted
 school notification is sent only to its `recipient_id`.
@@ -33,7 +33,7 @@ the installation row from that user's active device list.
 
 To verify end to end, deploy the migration and function, add the secrets and webhooks,
 install the app on a Google Play services device, sign in and grant notification
-permission, then insert a published event or active housing listing. Also insert an
+permission, then insert a published event or an `OPEN` housing listing. Also insert an
 academic row in `public.notifications`. Confirm the inbox row and push, then tap the
 push with the app foregrounded, backgrounded, and its process removed. Android force-stop
 is a separate OS state and must be relaunched before FCM delivery resumes.

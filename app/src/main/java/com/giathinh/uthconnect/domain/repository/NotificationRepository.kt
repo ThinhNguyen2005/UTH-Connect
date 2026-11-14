@@ -25,6 +25,6 @@ interface NotificationRepository {
     suspend fun markAllInboxNotificationsRead(): Result<Unit> = Result.success(Unit)
 
     /** Loads one persistent inbox item for notification-tap navigation. */
-    suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> =
-        getNotificationDetail(notificationId)
+    @Suppress("MaxLineLength")
+    suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> = getNotificationDetail(notificationId)
 }

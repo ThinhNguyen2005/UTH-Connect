@@ -1,10 +1,10 @@
 package com.giathinh.uthconnect
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -23,10 +23,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.giathinh.uthconnect.core.designsystem.theme.UTHConnectTheme
+import com.giathinh.uthconnect.data.push.PushIntentContract
 import com.giathinh.uthconnect.domain.model.ThemeMode
 import com.giathinh.uthconnect.domain.repository.SettingsRepository
 import com.giathinh.uthconnect.presentation.navigation.UthApp
-import com.giathinh.uthconnect.data.push.PushIntentContract
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
