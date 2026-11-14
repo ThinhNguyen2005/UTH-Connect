@@ -38,6 +38,8 @@ class FcmTokenRegistrar @Inject constructor(
     @Volatile private var registrationEnabled = false
 
     @Volatile private var signOutInProgress = false
+
+    @Volatile private var restorePending = false
     private var registrationGeneration = 0L
 
     @Volatile private var registrationJob: Job? = null
@@ -55,6 +57,8 @@ class FcmTokenRegistrar @Inject constructor(
                 synchronized(registrationStateLock) {
                     if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
                         registerForSignedInUserLocked()
+                    } else if (restorePending && !signOutInProgress && registrationJob?.isActive != true) {
+                        registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
                     }
                 }
             }
@@ -99,12 +103,8 @@ class FcmTokenRegistrar @Inject constructor(
             if (signOutInProgress) return
         }
         synchronized(registrationStateLock) {
-            registrationJob = scope.launch {
-                restoreSavedSessionWithRetry()
-                synchronized(registrationStateLock) {
-                    if (client.userIdOrNull != null && !signOutInProgress) registerForSignedInUserLocked()
-                }
-            }
+            restorePending = true
+            if (registrationJob?.isActive != true) registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
         }
     }
 
@@ -121,6 +121,7 @@ class FcmTokenRegistrar @Inject constructor(
                 val job = registrationJob
                 registrationJob = null
                 registrationGeneration++
+                restorePending = false
                 val pendingJob = pendingRetryJob
                 pendingRetryJob = null
                 job?.cancel()
@@ -218,24 +219,37 @@ class FcmTokenRegistrar @Inject constructor(
         client.userIdOrNull == userId
 
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun restoreSavedSessionWithRetry() {
+    private suspend fun restoreAndRegisterIfAvailable() {
+        val restored = restoreSavedSessionWithRetry()
+        synchronized(registrationStateLock) {
+            if (restored && client.userIdOrNull != null && !signOutInProgress) {
+                registerForSignedInUserLocked()
+            }
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
+    private suspend fun restoreSavedSessionWithRetry(): Boolean {
         repeat(MAX_ATTEMPTS) { attempt ->
             synchronized(registrationStateLock) {
-                if (signOutInProgress || registrationEnabled) return
+                if (signOutInProgress || registrationEnabled) return false
             }
             try {
-                client.restoreSavedSession()
-                return
+                val restored = client.restoreSavedSession()
+                restorePending = false
+                return restored
             } catch (cancellation: kotlinx.coroutines.CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
                 if (attempt == MAX_ATTEMPTS - 1) {
+                    restorePending = true
                     android.util.Log.w(TAG, "Unable to restore remembered session for FCM token", error)
                 } else {
                     delay(RETRY_DELAY_MS * (1L shl attempt))
                 }
             }
         }
+        return false
     }
 
     private fun deviceId(): String = currentInstallationId()
