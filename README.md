@@ -613,23 +613,22 @@ Cấu hình URL và publishable key Supabase cho môi trường sử dụng; tha
 
 Workflow `.github/workflows/ci.yml` chạy song song bốn job `build-debug`, `detekt`, `spotless` và `unit-tests` cho PR/push vào `main` hoặc `develop`. Hai workflow kiểm tra cũ vẫn được giữ để chạy thủ công. Chạy kiểm tra chất lượng tại máy bằng `./gradlew detekt spotlessCheck testDebugUnitTest` (Windows: `.\gradlew.bat detekt spotlessCheck testDebugUnitTest`).
 
-Dự án thiết lập quy trình kiểm thử tự động qua workflow `.github/workflows/android-ci.yml`.
+Dự án chạy kiểm thử tự động qua workflow `.github/workflows/ci.yml`.
 
 #### 1. Trigger hoạt động
 - **Tự động kích hoạt khi push:** Các nhánh `main` và `develop`.
-- **Tự động kích hoạt khi tạo/cập nhật PR:** Pull Request nhắm vào nhánh `main`.
-- **Kích hoạt thủ công:** Qua `workflow_dispatch` trên tab Actions của GitHub.
+- **Tự động kích hoạt khi tạo/cập nhật PR:** Pull Request nhắm vào nhánh `main` hoặc `develop`.
+- **Kích hoạt thủ công:** Các workflow kiểm tra cũ hỗ trợ `workflow_dispatch` trên tab Actions.
 - **Concurrency:** Tự động hủy các run cũ của cùng nhánh/PR khi có commit mới (`cancel-in-progress: true`).
 
 #### 2. Các bước kiểm tra trên CI
 - **Môi trường:** `ubuntu-latest`, **JDK 21** (`temurin`), Gradle cache qua `gradle/actions/setup-gradle@v4`.
-- **Cấu hình & Bảo mật:** Nạp cấu hình Supabase/Firebase từ GitHub Secrets/Vars nếu có; fallback về file cấu hình mặc định cho PR an toàn.
-- **Biên dịch:** Chạy `./gradlew assembleDebug --stacktrace` để kiểm tra khả năng build của toàn bộ app.
-- **Kiểm thử đơn vị:** Chạy `./gradlew testDebugUnitTest --stacktrace` thực thi toàn bộ test suite.
+- **Cấu hình:** Dùng Secrets/Vars Supabase khi có, hoặc giá trị phát triển mặc định; chỉ nạp Firebase khi có đủ secret và project ID.
+- **Biên dịch:** Chạy `./gradlew assembleDebug --build-cache` để kiểm tra khả năng build của toàn bộ app.
+- **Kiểm thử đơn vị:** Chạy `./gradlew testDebugUnitTest --build-cache` thực thi toàn bộ test suite.
 - **Báo cáo & Artifacts:**
-  - Hiển thị kết quả kiểm thử trực tiếp trên GitHub Checks và PR qua action `EnricoMi/publish-unit-test-result-action@v2`.
-  - Tóm tắt số test Pass / Fail / Skip vào `$GITHUB_STEP_SUMMARY`.
-  - Tải lên artifacts lưu trữ: HTML test report (`unit-test-reports`), XML test results (`unit-test-results-xml`), và Debug APK (`app-debug-apk`).
+  - Bốn job hiển thị trạng thái độc lập trong GitHub Checks.
+  - Tải lên HTML/XML test report (`unit-test-reports`), Detekt (`detekt-reports`), Spotless (`spotless-result`) và Debug APK (`app-debug-apk`).
 - **Quy tắc trạng thái:** Workflow sẽ **FAILED** nếu bước Build hoặc bất kỳ Unit Test nào bị fail.
 
 #### 3. Chạy kiểm thử cục bộ (Local Development)
@@ -653,14 +652,12 @@ Dự án thiết lập quy trình kiểm thử tự động qua workflow `.githu
 
 #### 4. Hướng dẫn xem Log, Báo cáo và Tải Artifacts
 - **Xem trực tiếp trên Pull Request:**
-  - Tab **Checks** hoặc danh sách check ở cuối PR: xem trạng thái chi tiết của job `Build & Unit Test` và check `Unit Test Results`.
-  - Bot `github-actions[bot]` tự động comment bảng thống kê tổng số test passed/failed ngay trong PR.
+  - Tab **Checks** hoặc danh sách check ở cuối PR: xem trạng thái bốn job `build-debug`, `detekt`, `spotless` và `unit-tests`.
 - **Xem chi tiết trên GitHub Actions:**
   - Truy cập tab **Actions** trên GitHub, chọn workflow run tương ứng.
-  - Mục **Summary**: hiển thị bảng tổng kết số lượng test (`Total / Passed / Failures / Skipped`).
-  - Mục **Artifacts** (lưu trữ 14 ngày):
-    - `unit-test-reports`: Tải file zip chứa toàn bộ giao diện HTML báo cáo kiểm thử chi tiết.
-    - `unit-test-results-xml`: File XML chuẩn JUnit để tích hợp công cụ phân tích bên thứ ba.
+  - Mục **Artifacts**:
+    - `unit-test-reports`: Chứa HTML báo cáo và XML kết quả test.
+    - `detekt-reports` và `spotless-result`: Kết quả phân tích và kiểm tra định dạng.
     - `app-debug-apk`: File APK Debug đã biên dịch sẵn để cài đặt và kiểm thử trực tiếp trên máy thật.
 
 #### 5. Hướng dẫn cấu hình GitHub Secrets & Variables
@@ -671,12 +668,12 @@ Dự án thiết lập quy trình kiểm thử tự động qua workflow `.githu
 | `SUPABASE_URL` | Secret | Tùy chọn | URL endpoint Supabase (nếu thiếu, CI tự fallback về URL dev mặc định) |
 | `SUPABASE_PUBLISHABLE_KEY` | Secret | Tùy chọn | Publishable key `sb_publishable_...` (nếu thiếu, fallback về key dev mặc định) |
 | `GOOGLE_WEB_CLIENT_ID` | Secret | Tùy chọn | OAuth Web Client ID cho Supabase Google Auth |
-| `GOOGLE_SERVICES_JSON` | Secret | Tùy chọn | Toàn bộ nội dung file `google-services.json` (nếu có, CI sẽ inject; nếu không có, giữ file repo mặc định) |
+| `GOOGLE_SERVICES_JSON` | Secret | Tùy chọn | Nội dung `google-services.json`; CI chỉ inject khi có thêm biến `FIREBASE_PROJECT_ID`. Không inject thì build không xác minh cấu hình Firebase. |
 | `FIREBASE_PROJECT_ID` | Variable | Tùy chọn | Project ID của Firebase để đối chiếu an toàn với `GOOGLE_SERVICES_JSON` |
 
 > **Lưu ý với Pull Request từ Fork:**
 > - GitHub mặc định cấp token chỉ đọc (`read-only`) và không cho phép truy cập Secrets cho các PR từ fork ngoài để đảm bảo an toàn bảo mật.
-> - Workflow được thiết kế an toàn: Tự động fallback về cấu hình mặc định, đồng thời bỏ qua bước ghi comment/check khi không có quyền, giúp PR từ fork vẫn build và test thành công bình thường mà không bị lỗi `Resource not accessible by integration`.
+> - CI dùng quyền `contents: read`; kết quả test được tải lên artifact và không yêu cầu quyền ghi comment/check vào PR.
 
 ---
 
