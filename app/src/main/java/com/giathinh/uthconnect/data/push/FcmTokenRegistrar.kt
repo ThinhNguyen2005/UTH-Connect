@@ -60,9 +60,7 @@ class FcmTokenRegistrar @Inject constructor(
                 synchronized(registrationStateLock) {
                     if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
                         registerForSignedInUserLocked()
-                    } else if (restorePending && !signOutInProgress && registrationJob?.isActive != true &&
-                        restoreRetryJob?.isActive != true
-                    ) {
+                    } else if (canStartRestoreLocked()) {
                         registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
                     }
                 }
@@ -111,7 +109,7 @@ class FcmTokenRegistrar @Inject constructor(
         }
         synchronized(registrationStateLock) {
             restorePending = true
-            if (registrationJob?.isActive != true && restoreRetryJob?.isActive != true) {
+            if (canStartRestoreLocked()) {
                 registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
             }
         }
@@ -274,14 +272,15 @@ class FcmTokenRegistrar @Inject constructor(
             delay(PENDING_RETRY_DELAY_MS)
             synchronized(registrationStateLock) {
                 restoreRetryJob = null
-                if (!signOutInProgress && !registrationEnabled && restorePending &&
-                    registrationJob?.isActive != true
-                ) {
+                if (canStartRestoreLocked()) {
                     registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
                 }
             }
         }
     }
+
+    private fun canStartRestoreLocked(): Boolean = restorePending && !signOutInProgress &&
+        registrationJob?.isActive != true && restoreRetryJob?.isActive != true
 
     private fun deviceId(): String = currentInstallationId()
 

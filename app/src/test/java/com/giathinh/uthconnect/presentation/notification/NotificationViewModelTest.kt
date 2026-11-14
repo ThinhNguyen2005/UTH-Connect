@@ -44,7 +44,12 @@ class NotificationViewModelTest {
         val firstPatch = CompletableDeferred<Unit>()
         val secondPatch = CompletableDeferred<Unit>()
         val repository = FakeNotificationRepository(
-            markResults = ArrayDeque(listOf(Result.failure(IllegalStateException("first")), Result.failure(IllegalStateException("second")))),
+            markResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("first")),
+                    Result.failure(IllegalStateException("second")),
+                ),
+            ),
             markGates = ArrayDeque(listOf(firstPatch, secondPatch)),
             detail = notification,
         )
