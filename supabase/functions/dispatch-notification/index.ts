@@ -23,6 +23,11 @@ type InboxRow = {
   push_device_cursor?: string | null;
 };
 
+type DispatchProgress = {
+  dedupe_key: string;
+  next_recipient_offset: number;
+};
+
 const encoder = new TextEncoder();
 let fcmAccessToken: { value: string; expiresAt: number } | null = null;
 const INBOX_BATCH_SIZE = 50;
@@ -76,14 +81,29 @@ Deno.serve(async (request) => {
         dedupe_key: dedupeKey,
         published_at: source.publishedAt,
       }));
+      const progressRows = await supabaseRest<DispatchProgress[]>(
+        `notification_dispatch_progress?select=dedupe_key,next_recipient_offset&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
+      );
+      const startOffset = Math.min(progressRows[0]?.next_recipient_offset ?? 0, rows.length);
       // Keep recipient fan-out inserts bounded so a large verified-user list does
       // not exceed PostgREST request limits or get partially dropped as one body.
-      for (let offset = 0; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
-        await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
-          method: "POST",
-          headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-          body: JSON.stringify(rows.slice(offset, offset + INBOX_INSERT_BATCH_SIZE)),
-        });
+      try {
+        for (let offset = startOffset; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
+          const nextOffset = Math.min(offset + INBOX_INSERT_BATCH_SIZE, rows.length);
+          await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
+            method: "POST",
+            headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+            body: JSON.stringify(rows.slice(offset, nextOffset)),
+          });
+          await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify({ dedupe_key: dedupeKey, next_recipient_offset: nextOffset }),
+          });
+        }
+      } catch (error) {
+        await queueContinuation(payload.continuationDepth ?? 0, payload);
+        throw error;
       }
     }
 
@@ -242,7 +262,7 @@ async function secretsEqual(left: string, right: string): Promise<boolean> {
   return difference === 0;
 }
 
-async function queueContinuation(depth: number): Promise<void> {
+async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<void> {
   if (depth >= MAX_CONTINUATION_DEPTH) {
     console.warn("notification dispatch continuation limit reached", depth);
     return;
@@ -262,7 +282,11 @@ async function queueContinuation(depth: number): Promise<void> {
         "content-type": "application/json",
         "x-webhook-secret": secret,
       },
-      body: JSON.stringify({ type: "DISPATCH_PENDING", continuationDepth: depth + 1 }),
+      body: JSON.stringify(
+        sourcePayload
+          ? { ...sourcePayload, continuationDepth: depth + 1 }
+          : { type: "DISPATCH_PENDING", continuationDepth: depth + 1 },
+      ),
       signal: controller.signal,
     });
     if (!response.ok) {
