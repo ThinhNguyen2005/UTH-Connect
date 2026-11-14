@@ -59,7 +59,7 @@ class FcmTokenRegistrar @Inject constructor(
 
     /** Deletes this installation's token row before sign-out while auth credentials remain valid. */
     @Suppress("TooGenericExceptionCaught")
-    suspend fun unregisterCurrentUser() {
+    suspend fun unregisterCurrentUser(restoreOnFailure: Boolean = true) {
         registrationEnabled = false
         registrationJob?.cancel()
         registrationJob?.join()
@@ -71,10 +71,10 @@ class FcmTokenRegistrar @Inject constructor(
                 client.deleteTable("notification_devices?device_id=eq.$deviceId&user_id=eq.$userId")
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
-            restoreRegistrationIfSessionActive()
+            if (restoreOnFailure) restoreRegistrationIfSessionActive()
             throw cancelled
         } catch (error: Exception) {
-            restoreRegistrationIfSessionActive()
+            if (restoreOnFailure) restoreRegistrationIfSessionActive()
             throw error
         }
     }
@@ -87,15 +87,12 @@ class FcmTokenRegistrar @Inject constructor(
         if (token.isBlank()) return
         registrationMutex.withLock {
             if (!registrationEnabled) return
-            val userId = client.userId
-            client.upsertTable(
-                "notification_devices?on_conflict=device_id",
+            client.rpc(
+                "claim_notification_device",
                 buildJsonObject {
                     put("device_id", deviceId())
-                    put("user_id", userId)
                     put("token", token)
                     put("platform", "ANDROID")
-                    put("updated_at", java.time.Instant.now().toString())
                 },
             )
         }

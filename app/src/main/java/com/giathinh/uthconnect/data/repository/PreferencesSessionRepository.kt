@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.giathinh.uthconnect.data.push.FcmTokenRegistrar
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -99,12 +102,24 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun signOut() {
         mutex.withLock {
-            // Revoke the device row while the old access token is still valid. If this
-            // fails (for example while offline), keep the session so another attempt can
-            // complete cleanup instead of allowing the next user to inherit the token.
-            fcmTokenRegistrar.unregisterCurrentUser()
+            // Device cleanup is best effort. Local credentials must still be revoked when
+            // the network is unavailable; a later login reclaims the installation row.
+            val cleanupCompleted = withContext(kotlinx.coroutines.NonCancellable) {
+                withTimeoutOrNull(PUSH_CLEANUP_TIMEOUT_MS) {
+                    try {
+                        fcmTokenRegistrar.unregisterCurrentUser(restoreOnFailure = false)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Log.w(TAG, "Unable to revoke push device row", error)
+                    }
+                    true
+                }
+            } == true
+            if (!cleanupCompleted) Log.w(TAG, "Push device cleanup timed out; local sign-out will continue")
             try {
                 client.setRememberSession(false)
             } finally {
@@ -122,5 +137,7 @@ class PreferencesSessionRepository @Inject constructor(
     private companion object {
         const val KEY_ID = "remembered_student_id"
         const val KEY_BIO_ID = "biometric_student_id"
+        const val TAG = "PreferencesSessionRepository"
+        const val PUSH_CLEANUP_TIMEOUT_MS = 5_000L
     }
 }

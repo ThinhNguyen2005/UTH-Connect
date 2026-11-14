@@ -20,6 +20,7 @@ type InboxRow = {
 const encoder = new TextEncoder();
 let fcmAccessToken: { value: string; expiresAt: number } | null = null;
 const INBOX_BATCH_SIZE = 50;
+const INBOX_INSERT_BATCH_SIZE = 500;
 const MAX_ROWS_PER_INVOCATION = 250;
 const MAX_DEVICES_PER_INVOCATION = 2_000;
 const DEVICES_PER_ROW_BATCH = 100;
@@ -43,6 +44,11 @@ Deno.serve(async (request) => {
     const source = toSourceNotification(payload);
     if (!source) return json({ delivered: 0, ignored: true });
 
+    if (payload.table === "housing_posts" && source.broadcastAuthorId) {
+      const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId);
+      if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
+    }
+
     const recipients = await recipientIds(source.recipientId, source.excludeUserId);
     if (recipients.length === 0) return json({ delivered: 0, ignored: true });
 
@@ -61,11 +67,15 @@ Deno.serve(async (request) => {
       dedupe_key: dedupeKey,
       published_at: source.publishedAt,
     }));
-    await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
-      method: "POST",
-      headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify(rows),
-    });
+    // Keep recipient fan-out inserts bounded so a large verified-user list does
+    // not exceed PostgREST request limits or get partially dropped as one body.
+    for (let offset = 0; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
+      await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
+        method: "POST",
+        headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+        body: JSON.stringify(rows.slice(offset, offset + INBOX_INSERT_BATCH_SIZE)),
+      });
+    }
 
     // Duplicate webhook deliveries can resume a pending push; a stale PROCESSING
     // claim is released after five minutes if an Edge invocation was interrupted.
@@ -196,7 +206,11 @@ Deno.serve(async (request) => {
 
       if (pending.length < pageSize || batchFailed || deferred) break;
     }
-    if (deferred) return json({ delivered: deliveredTotal, pending: pendingTotal, deferred: true }, 202);
+    // Keep the webhook retryable while durable PENDING work remains. A 2xx here
+    // would acknowledge the delivery even though some recipients were not sent.
+    if (deferred || pendingTotal > 0) {
+      return json({ delivered: deliveredTotal, pending: pendingTotal, deferred }, 503);
+    }
     if (deliveredTotal === 0 && pendingTotal === 0) return json({ delivered: 0, ignored: true });
     return json({ delivered: deliveredTotal, pending: pendingTotal });
   } catch (error) {
@@ -219,6 +233,7 @@ function toSourceNotification(payload: WebhookPayload) {
       content: [stringValue(row.description), stringValue(row.location), stringValue(row.start_at)].filter(Boolean).join("\n"),
       category: "ACTIVITIES", author: stringValue(row.organizer_name) || "UTH Connect",
       targetType: "EVENT", targetId: requiredString(row.id),
+      broadcastAuthorId: null,
       publishedAt: stringValue(row.updated_at) || new Date().toISOString(),
     };
   }
@@ -232,6 +247,7 @@ function toSourceNotification(payload: WebhookPayload) {
       content: [stringValue(row.description), stringValue(row.address_label), price > 0 ? `${price.toLocaleString("vi-VN")} VND` : ""].filter(Boolean).join("\n"),
       category: "GENERAL", author: "Ghép trọ UTH",
       targetType: "HOUSING", targetId: requiredString(row.id),
+      broadcastAuthorId: nullableString(row.author_id),
       publishedAt: stringValue(row.created_at) || new Date().toISOString(),
     };
   }
@@ -248,8 +264,16 @@ function toSourceNotification(payload: WebhookPayload) {
     title: requiredString(row.title), summary: stringValue(row.summary), content: stringValue(row.content),
     category: academic ? "ACADEMIC" : "GENERAL", author: stringValue(row.author) || "Nhà trường",
     targetType: academic ? "ACADEMIC" : "SYSTEM", targetId: requiredString(row.id),
-      publishedAt: publishedAt || new Date().toISOString(),
+    broadcastAuthorId: null,
+    publishedAt: publishedAt || new Date().toISOString(),
   };
+}
+
+async function claimHousingBroadcast(authorId: string, sourceId: string): Promise<boolean> {
+  return await supabaseRest<boolean>("rpc/claim_housing_notification_broadcast", {
+    method: "POST",
+    body: JSON.stringify({ p_author_id: authorId, p_source_id: sourceId }),
+  });
 }
 
 async function recipientIds(recipientId: string | null, excludedUserId: string | null): Promise<string[]> {
@@ -290,9 +314,11 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
       body: JSON.stringify({
         message: {
           token,
-          notification: { title: row.title, body: messageBody },
+          // Data-only delivery keeps recipient validation inside the Android service;
+          // an FCM notification payload would be auto-displayed before that check.
           data: {
             notification_id: row.id,
+            recipient_id: row.recipient_id,
             target_type: row.target_type,
             target_id: row.target_id ?? "",
             title: row.title,

@@ -12,9 +12,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.giathinh.uthconnect.MainActivity
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.data.repository.SecureSessionStore
+import com.giathinh.uthconnect.data.repository.SupabaseRestClient
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /** Displays foreground FCM messages and forwards notification identity to the app's typed nav host. */
@@ -22,11 +27,17 @@ import javax.inject.Inject
 class UthFirebaseMessagingService : FirebaseMessagingService() {
     @Inject lateinit var tokenRegistrar: FcmTokenRegistrar
 
+    @Inject lateinit var supabaseClient: SupabaseRestClient
+
+    @Inject lateinit var secureSessionStore: SecureSessionStore
+
     override fun onNewToken(token: String) {
         tokenRegistrar.onTokenRefreshed(token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
+        val recipientId = message.data[PushIntentContract.RECIPIENT_ID].orEmpty()
+        if (recipientId.isBlank() || currentRecipientId() != recipientId) return
         val notificationId = message.data[PushIntentContract.NOTIFICATION_ID].orEmpty()
         val title = message.notification?.title
             ?: message.data[PushIntentContract.TITLE]
@@ -68,6 +79,20 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    /** Restores a remembered session so background FCM delivery can validate its recipient. */
+    @Suppress("TooGenericExceptionCaught")
+    private fun currentRecipientId(): String? = runBlocking(Dispatchers.IO) {
+        try {
+            if (supabaseClient.userIdOrNull == null) {
+                supabaseClient.attachSecureStore(secureSessionStore)
+                withTimeoutOrNull(SESSION_RESTORE_TIMEOUT_MS) { supabaseClient.restoreSavedSession() }
+            }
+            supabaseClient.userIdOrNull
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
@@ -80,12 +105,17 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
             )
         }
     }
+
+    private companion object {
+        const val SESSION_RESTORE_TIMEOUT_MS = 5_000L
+    }
 }
 
 /** Stable extra keys shared by FCM delivery and the activity's cold-start handler. */
 object PushIntentContract {
     const val CHANNEL_ID = "uth_updates"
     const val NOTIFICATION_ID = "notification_id"
+    const val RECIPIENT_ID = "recipient_id"
     const val TARGET_TYPE = "target_type"
     const val TARGET_ID = "target_id"
     const val TITLE = "title"
