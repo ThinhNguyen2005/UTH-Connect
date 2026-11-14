@@ -6,12 +6,9 @@ import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.giathinh.uthconnect.domain.repository.TicketCheckInOutcome
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
-/** Dữ liệu trình diễn cho CHECKIN-1; thay bằng nguồn sự kiện/đăng ký khi hợp đồng sẵn sàng. */
-@Singleton
-class MockTicketRepository @Inject constructor() : TicketRepository {
+/** Test fixture giả lập cho CHECKIN-1 và ScannerViewModelTest. */
+class MockTicketRepository : TicketRepository {
     private val attendances = mutableMapOf<String, Attendance>()
 
     override suspend fun getTickets(studentId: String): Result<List<Ticket>> = Result.success(

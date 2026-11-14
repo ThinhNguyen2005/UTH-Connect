@@ -158,8 +158,6 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
             modifier = Modifier.testTag("profile_name"),
         )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        Text(stringResource(R.string.auth_demo_profile), style = MaterialTheme.typography.labelSmall)
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
         if (student.uthVerified) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -511,9 +509,9 @@ private fun ProfileRow(label: String, value: String) {
     }
 }
 
-private val DemoStudent = StudentProfile(
+private val PreviewStudent = StudentProfile(
     "2023040123",
-    "demo@ut.edu.vn",
+    "student@ut.edu.vn",
     "Nguyễn Minh Anh",
     "CN23A",
     "Công nghệ thông tin",
@@ -525,31 +523,31 @@ private fun PreviewProfile(state: ProfileUiState, dark: Boolean = false) = UthPr
 
 @Preview(name = "Profile content light", showBackground = true)
 @Composable
-private fun ProfileContentLight() = PreviewProfile(ProfileUiState(false, DemoStudent))
+private fun ProfileContentLight() = PreviewProfile(ProfileUiState(false, PreviewStudent))
 
 @Preview(name = "Profile content dark", showBackground = true)
 @Composable
-private fun ProfileContentDark() = PreviewProfile(ProfileUiState(false, DemoStudent), true)
+private fun ProfileContentDark() = PreviewProfile(ProfileUiState(false, PreviewStudent), true)
 
 @Preview(name = "Profile organizer light", showBackground = true)
 @Composable
-private fun ProfileOrganizerLight() = PreviewProfile(ProfileUiState(false, DemoStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)))
+private fun ProfileOrganizerLight() = PreviewProfile(ProfileUiState(false, PreviewStudent.copy(role = UserRole.ORGANIZER, uthVerified = true)))
 
 @Preview(name = "Profile password light", showBackground = true)
 @Composable
-private fun ProfilePasswordLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword))
+private fun ProfilePasswordLight() = PreviewProfile(ProfileUiState(false, PreviewStudent, page = ProfilePage.ChangePassword))
 
 @Preview(name = "Profile password dark", showBackground = true)
 @Composable
-private fun ProfilePasswordDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.ChangePassword), true)
+private fun ProfilePasswordDark() = PreviewProfile(ProfileUiState(false, PreviewStudent, page = ProfilePage.ChangePassword), true)
 
 @Preview(name = "Profile contact light", showBackground = true)
 @Composable
-private fun ProfileContactLight() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact))
+private fun ProfileContactLight() = PreviewProfile(ProfileUiState(false, PreviewStudent, page = ProfilePage.EditContact))
 
 @Preview(name = "Profile contact dark", showBackground = true)
 @Composable
-private fun ProfileContactDark() = PreviewProfile(ProfileUiState(false, DemoStudent, page = ProfilePage.EditContact), true)
+private fun ProfileContactDark() = PreviewProfile(ProfileUiState(false, PreviewStudent, page = ProfilePage.EditContact), true)
 
 @Preview(name = "Profile empty light", showBackground = true)
 @Composable
@@ -557,4 +555,4 @@ private fun ProfileEmptyLight() = PreviewProfile(ProfileUiState(false))
 
 @Preview(name = "Profile logout confirmation", showBackground = true)
 @Composable
-private fun ProfileLogoutDialog() = PreviewProfile(ProfileUiState(false, DemoStudent, confirmLogout = true))
+private fun ProfileLogoutDialog() = PreviewProfile(ProfileUiState(false, PreviewStudent, confirmLogout = true))
