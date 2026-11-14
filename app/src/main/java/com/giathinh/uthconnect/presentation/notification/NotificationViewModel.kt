@@ -151,7 +151,9 @@ class NotificationViewModel @Inject constructor(
                             // an older response must not erase a newer read action.
                             val latestMutationById = linkedMapOf<String, Boolean>()
                             completedAfterStart.forEach { mutation ->
-                                mutation.ids.forEach { id -> latestMutationById[id] = mutation.succeeded }
+                                mutation.ids.forEach { id ->
+                                    latestMutationById[id] = latestMutationById[id] == true || mutation.succeeded
+                                }
                             }
                             latestMutationById.entries.fold(
                                 it.readNotificationIds + serverReadIds,
