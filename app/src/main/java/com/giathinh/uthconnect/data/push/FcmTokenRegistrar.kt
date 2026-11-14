@@ -41,6 +41,8 @@ class FcmTokenRegistrar @Inject constructor(
     private var registrationGeneration = 0L
 
     @Volatile private var registrationJob: Job? = null
+
+    @Volatile private var pendingRetryJob: Job? = null
     private val preferences = context.getSharedPreferences("uth_push", Context.MODE_PRIVATE)
     private val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
 
@@ -50,10 +52,11 @@ class FcmTokenRegistrar @Inject constructor(
         client.attachSecureStore(secureSessionStore)
         connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                val shouldRegister = synchronized(registrationStateLock) {
-                    registrationEnabled && client.userIdOrNull != null
+                synchronized(registrationStateLock) {
+                    if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
+                        registerForSignedInUserLocked()
+                    }
                 }
-                if (shouldRegister) registerForSignedInUser()
             }
         })
     }
@@ -61,15 +64,20 @@ class FcmTokenRegistrar @Inject constructor(
     /** Queues token registration after login or session restoration without delaying the UI. */
     fun registerForSignedInUser() {
         synchronized(registrationStateLock) {
-            val userId = client.userIdOrNull ?: return
-            signOutInProgress = false
-            registrationEnabled = true
-            val generation = ++registrationGeneration
-            registrationJob?.cancel()
-            registrationJob = scope.launch {
-                retryRegistration(generation, userId) {
-                    registerToken(FirebaseMessaging.getInstance().token.await())
-                }
+            registerForSignedInUserLocked()
+        }
+    }
+
+    private fun registerForSignedInUserLocked() {
+        val userId = client.userIdOrNull ?: return
+        signOutInProgress = false
+        registrationEnabled = true
+        val generation = ++registrationGeneration
+        pendingRetryJob?.cancel()
+        registrationJob?.cancel()
+        registrationJob = scope.launch {
+            retryRegistration(generation, userId) {
+                registerToken(FirebaseMessaging.getInstance().token.await())
             }
         }
     }
@@ -81,6 +89,7 @@ class FcmTokenRegistrar @Inject constructor(
             if (registrationEnabled) {
                 val userId = client.userIdOrNull ?: return
                 val generation = ++registrationGeneration
+                pendingRetryJob?.cancel()
                 registrationJob?.cancel()
                 registrationJob = scope.launch {
                     retryRegistration(generation, userId) { registerToken(token) }
@@ -92,7 +101,9 @@ class FcmTokenRegistrar @Inject constructor(
         synchronized(registrationStateLock) {
             registrationJob = scope.launch {
                 restoreSavedSessionWithRetry()
-                if (client.userIdOrNull != null && !signOutInProgress) registerForSignedInUser()
+                synchronized(registrationStateLock) {
+                    if (client.userIdOrNull != null && !signOutInProgress) registerForSignedInUserLocked()
+                }
             }
         }
     }
@@ -110,10 +121,14 @@ class FcmTokenRegistrar @Inject constructor(
                 val job = registrationJob
                 registrationJob = null
                 registrationGeneration++
+                val pendingJob = pendingRetryJob
+                pendingRetryJob = null
                 job?.cancel()
-                job
+                pendingJob?.cancel()
+                job to pendingJob
             }
-            jobToJoin?.join()
+            jobToJoin.first?.join()
+            jobToJoin.second?.join()
             registrationMutex.withLock {
                 val userId = client.userIdOrNull?.let(::urlEncode) ?: run {
                     if (!restoreOnFailure) markIdentityRotationPending()
@@ -185,10 +200,10 @@ class FcmTokenRegistrar @Inject constructor(
             }
         }
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
-        scope.launch {
+        pendingRetryJob = scope.launch {
             delay(PENDING_RETRY_DELAY_MS)
             synchronized(registrationStateLock) {
-                if (isRegistrationActiveLocked(generation, userId)) registerForSignedInUser()
+                if (isRegistrationActiveLocked(generation, userId)) registerForSignedInUserLocked()
             }
         }
     }
