@@ -96,8 +96,11 @@ Deno.serve(async (request) => {
           else if (continuationResult === "FAILED") attempts++;
           if (continuationResult === "TIMED_OUT" && !cursorAdvanced) continue;
           const terminal = continuationResult === "FAILED" && attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
+          const cursorFilter = latestProgress.last_recipient_id === null
+            ? "last_recipient_id=is.null"
+            : `last_recipient_id=eq.${encodeURIComponent(latestProgress.last_recipient_id)}`;
           await supabaseRest(
-            `notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false`,
+            `notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false&${cursorFilter}`,
             {
               method: "PATCH",
               body: JSON.stringify({
