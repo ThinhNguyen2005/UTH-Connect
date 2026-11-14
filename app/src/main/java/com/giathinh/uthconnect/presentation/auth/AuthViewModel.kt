@@ -42,6 +42,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val MAX_RESET_OTP_DIGITS = 8
+private const val MIN_STUDENT_ID_LENGTH = 8
+private const val MAX_STUDENT_ID_LENGTH = 12
+private const val AUTH_COOLDOWN_SECONDS = 60
+private const val MILLIS_PER_SECOND = 1_000L
+private const val HTTP_TOO_MANY_REQUESTS = 429
+
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val signIn: SignInUseCase,
@@ -236,7 +243,10 @@ class AuthViewModel @Inject constructor(
 
             // Reset password actions
             is AuthAction.ResetOtpChanged -> _uiState.update {
-                it.copy(resetOtp = action.value.take(8).filter(Char::isDigit), resetPasswordError = null)
+                it.copy(
+                    resetOtp = action.value.take(MAX_RESET_OTP_DIGITS).filter(Char::isDigit),
+                    resetPasswordError = null,
+                )
             }
 
             is AuthAction.ResetNewPasswordChanged -> _uiState.update { it.copy(resetNewPassword = action.value, resetPasswordError = null) }
@@ -259,7 +269,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(identifierError = LoginFieldError.Required) }
             return
         }
-        val isNumericId = id.all { it.isDigit() } && id.length in 8..12
+        val isNumericId = id.all { it.isDigit() } && id.length in MIN_STUDENT_ID_LENGTH..MAX_STUDENT_ID_LENGTH
         val isUtEmail = (id.endsWith("@ut.edu.vn", ignoreCase = true) || id.endsWith("@uth.edu.vn", ignoreCase = true)) && id.indexOf('@') > 0
         if (!isNumericId && !isUtEmail) {
             _uiState.update { it.copy(identifierError = LoginFieldError.InvalidIdentifier) }
@@ -412,9 +422,9 @@ class AuthViewModel @Inject constructor(
     private fun startRecoveryCooldown() {
         recoveryCooldownJob?.cancel()
         recoveryCooldownJob = viewModelScope.launch {
-            for (seconds in 60 downTo 1) {
+            for (seconds in AUTH_COOLDOWN_SECONDS downTo 1) {
                 _uiState.update { it.copy(forgotCooldownSeconds = seconds) }
-                delay(1_000)
+                delay(MILLIS_PER_SECOND)
             }
             _uiState.update { it.copy(forgotCooldownSeconds = 0) }
         }
@@ -532,7 +542,7 @@ class AuthViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: com.giathinh.uthconnect.data.repository.SupabaseHttpException) {
-                if (error.status == 429) {
+                if (error.status == HTTP_TOO_MANY_REQUESTS) {
                     _uiState.update { it.copy(failure = AuthFailure.RateLimited) }
                 } else {
                     cooldownJob?.cancel()
@@ -549,9 +559,9 @@ class AuthViewModel @Inject constructor(
     private fun startVerifyEmailCooldown() {
         cooldownJob?.cancel()
         cooldownJob = viewModelScope.launch {
-            for (sec in 60 downTo 1) {
+            for (sec in AUTH_COOLDOWN_SECONDS downTo 1) {
                 _uiState.update { it.copy(verifyEmailCooldownSeconds = sec) }
-                delay(1000L)
+                delay(MILLIS_PER_SECOND)
             }
             _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
         }
