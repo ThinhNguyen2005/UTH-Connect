@@ -28,6 +28,8 @@ type DispatchProgress = {
   dedupe_key: string;
   next_recipient_offset: number;
   last_recipient_id: string | null;
+  source_payload?: WebhookEventPayload | null;
+  fanout_complete?: boolean;
 };
 
 const encoder = new TextEncoder();
@@ -60,20 +62,40 @@ Deno.serve(async (request) => {
   try {
     const payload = await request.json() as WebhookPayload;
     const deadline = Date.now() + MAX_INVOCATION_MS;
-    if (payload.type !== "DISPATCH_PENDING") {
+    if (payload.type === "DISPATCH_PENDING") {
+      const incompleteFanouts = await supabaseRest<DispatchProgress[]>(
+        "notification_dispatch_progress?select=source_payload&fanout_complete=eq.false&source_payload=not.is.null&order=updated_at.asc&limit=10",
+        {},
+        deadline,
+      );
+      for (const progress of incompleteFanouts) {
+        if (progress.source_payload) await queueContinuation(payload.continuationDepth ?? 0, progress.source_payload);
+      }
+    } else {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
 
       try {
+        const dedupeKey = `${payload.table}:${source.sourceId}`;
+        await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({ dedupe_key: dedupeKey, source_payload: payload, fanout_complete: false }),
+        }, deadline);
         if (payload.table === "housing_posts" && source.broadcastAuthorId) {
           const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId, deadline);
-          if (!allowed) return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
+          if (!allowed) {
+            await markFanoutComplete(dedupeKey, deadline);
+            return json({ delivered: 0, ignored: true, rate_limited: true }, 429);
+          }
         }
 
         const recipients = await recipientIds(source.recipientId, source.excludeUserId, deadline);
-        if (recipients.length === 0) return json({ delivered: 0, ignored: true });
+        if (recipients.length === 0) {
+          await markFanoutComplete(dedupeKey, deadline);
+          return json({ delivered: 0, ignored: true });
+        }
 
-        const dedupeKey = `${payload.table}:${source.sourceId}`;
         const rows = recipients.map((recipientId) => ({
           recipient_id: recipientId,
           title: source.title,
@@ -119,6 +141,7 @@ Deno.serve(async (request) => {
             }),
           }, deadline);
         }
+        await markFanoutComplete(dedupeKey, deadline);
       } catch (error) {
         // Preserve the original source payload so a transient failure before or
         // during fan-out can resume from the saved recipient offset.
@@ -393,6 +416,13 @@ async function claimHousingBroadcast(authorId: string, sourceId: string, deadlin
   return await supabaseRest<boolean>("rpc/claim_housing_notification_broadcast", {
     method: "POST",
     body: JSON.stringify({ p_author_id: authorId, p_source_id: sourceId }),
+  }, deadline);
+}
+
+async function markFanoutComplete(dedupeKey: string, deadline: number): Promise<void> {
+  await supabaseRest(`notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(dedupeKey)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ fanout_complete: true, updated_at: new Date().toISOString() }),
   }, deadline);
 }
 
