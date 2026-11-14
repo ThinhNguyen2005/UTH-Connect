@@ -1,0 +1,136 @@
+name: Android quality checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Inject Firebase configuration when available
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EXPECTED_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && [ -n "$EXPECTED_FIREBASE_PROJECT_ID" ]; then
+            python3 .github/scripts/inject_google_services.py
+          fi
+      - name: Build debug APK
+        env:
+          ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
+          ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
+          ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+
+  detekt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - run: ./gradlew detekt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detekt-reports
+          path: app/build/reports/detekt/
+          if-no-files-found: warn
+
+  spotless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+      - name: Record Spotless result
+        if: always()
+        run: echo "Spotless job result: ${{ job.status }}" > spotless-result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spotless-result
+          path: spotless-result.txt
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Inject Firebase configuration when available
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EXPECTED_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && [ -n "$EXPECTED_FIREBASE_PROJECT_ID" ]; then
+            python3 .github/scripts/inject_google_services.py
+          fi
+      - name: Run unit tests
+        env:
+          ORG_GRADLE_PROJECT_supabaseUrl: ${{ secrets.SUPABASE_URL || 'https://bvxilfcctwmgmrwrncvd.supabase.co' }}
+          ORG_GRADLE_PROJECT_supabasePublishableKey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo' }}
+          ORG_GRADLE_PROJECT_googleWebClientId: ${{ secrets.GOOGLE_WEB_CLIENT_ID || '324596143171-hletvs7gnj8rurb5juet4hhs3qmm1nuk.apps.googleusercontent.com' }}
+        run: ./gradlew testDebugUnitTest
+      - uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          files: '**/build/test-results/**/*.xml'
+          check_name: Unit Test Results
+          comment_mode: always
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          if-no-files-found: warn

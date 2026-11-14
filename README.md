@@ -8,7 +8,7 @@
 
 [![Platform](https://img.shields.io/badge/platform-Android-green?style=flat-square)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-blue?style=flat-square&logo=kotlin)](https://kotlinlang.org)
-[![Android CI](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/android-ci.yml/badge.svg)](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/android-ci.yml)
+[![Android CI](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/ci.yml/badge.svg)](https://github.com/ThinhNguyen2005/UTH-Connect/actions/workflows/ci.yml)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.02.01-6da8f2?style=flat-square)](https://developer.android.com/jetpack/compose)
 [![Min SDK](https://img.shields.io/badge/minSdk-31-informational?style=flat-square)](https://developer.android.com/about/versions/12)
 [![Version](https://img.shields.io/badge/status-Pre--MVP-yellow?style=flat-square)](#11-lộ-trình-roadmap)
@@ -610,6 +610,8 @@ Android dùng Supabase Auth/PostgreSQL/Storage cho dữ liệu và Firebase cho 
 Cấu hình URL và publishable key Supabase cho môi trường sử dụng; tham khảo `supabase/README.md`.
 
 ### 8.4. Quy trình CI/CD (GitHub Actions)
+
+Workflow `.github/workflows/ci.yml` chạy song song bốn job `build-debug`, `detekt`, `spotless` và `unit-tests` cho PR/push vào `main` hoặc `develop`. Hai workflow kiểm tra cũ vẫn được giữ để chạy thủ công. Chạy kiểm tra chất lượng tại máy bằng `./gradlew detekt spotlessCheck testDebugUnitTest` (Windows: `.\gradlew.bat detekt spotlessCheck testDebugUnitTest`).
 
 Dự án thiết lập quy trình kiểm thử tự động qua workflow `.github/workflows/android-ci.yml`.
 
