@@ -189,6 +189,9 @@ object UthDimens {
         /** Chiều ngang pill của page indicator đang chọn (cao bằng [IndicatorDot]). */
         val IndicatorBar: Dp = 20.dp
 
+        /** Container icon của thẻ thông báo (36.dp). */
+        val NotificationIconContainer: Dp = 36.dp
+
         /** Khung xem trước bản đồ ở màn chi tiết Ghép trọ (deep-link Chỉ đường, không embed map). */
         val MapPreviewHeight: Dp = 160.dp
     }

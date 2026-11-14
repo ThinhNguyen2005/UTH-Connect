@@ -940,4 +940,33 @@
     <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
     <string name="campuses_directions_action">Chỉ đường</string>
+<!-- Man hinh Thong bao -->
+    <string name="notification_title">Thông Báo</string>
+    <string name="notification_back">Quay lại</string>
+    <string name="notification_mark_all_read">Đánh dấu đã đọc tất cả</string>
+    <string name="notification_refresh">Làm mới thông báo</string>
+    <string name="notification_settings">Cài đặt thông báo</string>
+    <string name="notification_profile">Hồ sơ cá nhân</string>
+    <string name="notification_category_all">Tất cả (%1$d)</string>
+    <string name="notification_category_study">Học tập &amp; TKB (%1$d)</string>
+    <string name="notification_category_event">Sự kiện (%1$d)</string>
+    <string name="notification_category_auction">Đấu giá (%1$d)</string>
+    <string name="notification_category_system">Hệ thống (%1$d)</string>
+    <string name="notification_section_today">Hôm nay</string>
+    <string name="notification_section_previous">Hôm qua &amp; Trước đó</string>
+    <string name="notification_new_count">%1$d mới</string>
+    <string name="notification_viewed">Đã xem</string>
+    <string name="notification_read">Đã đọc</string>
+    <string name="notification_unread">Chưa đọc</string>
+    <string name="notification_empty_title">Không có thông báo nào</string>
+    <string name="notification_empty_desc">Bạn sẽ nhận được các thông báo cập nhật về học tập, sự kiện tại đây.</string>
+    <string name="notification_detail_unavailable">Không tìm thấy thông báo này.</string>
+    <string name="notification_error_title">Không thể tải thông báo</string>
+    <string name="notification_retry">Thử lại</string>
+    <string name="notification_tag_event">Sự kiện</string>
+    <string name="notification_tag_academic">Học vụ</string>
+    <string name="notification_tag_system">Hệ thống</string>
+    <string name="notification_tag_generic">Thông báo</string>
+    <string name="notification_channel_updates">Cập nhật UTH Connect</string>
+    <string name="notification_channel_updates_description">Thông báo sự kiện, học vụ và cập nhật hệ thống</string>
 </resources>

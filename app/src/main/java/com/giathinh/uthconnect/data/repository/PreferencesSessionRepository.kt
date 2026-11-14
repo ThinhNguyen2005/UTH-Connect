@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
+import android.util.Log
+import com.giathinh.uthconnect.data.push.FcmTokenRegistrar
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionFailure
@@ -13,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +28,7 @@ class PreferencesSessionRepository @Inject constructor(
     private val client: SupabaseRestClient,
     private val supabaseAuth: SupabaseAuthRepository,
     private val secureStore: SecureSessionStore,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
 ) : SessionRepository {
     private val prefs = context.getSharedPreferences("uth_auth_demo", Context.MODE_PRIVATE)
     private val mutex = Mutex()
@@ -47,6 +52,7 @@ class PreferencesSessionRepository @Inject constructor(
                     profile = candidateProfile,
                     remembered = hasSession,
                 )
+                if (candidateProfile != null) fcmTokenRegistrar.registerForSignedInUser()
             } catch (cancelled: CancellationException) {
                 restored = false
                 throw cancelled
@@ -67,6 +73,7 @@ class PreferencesSessionRepository @Inject constructor(
                 remembered = remember,
             )
         }
+        fcmTokenRegistrar.registerForSignedInUser()
     }
 
     override suspend fun updateProfile(profile: StudentProfile) {
@@ -95,21 +102,52 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun signOut() {
         mutex.withLock {
-            client.setRememberSession(false)
+            // Device cleanup is best effort. Local credentials must still be revoked when
+            // the network is unavailable; a later login reclaims the installation row.
+            val cleanupCompleted = withContext(kotlinx.coroutines.NonCancellable) {
+                withTimeoutOrNull(PUSH_CLEANUP_TIMEOUT_MS) {
+                    val deadlineNanos = System.nanoTime() + PUSH_CLEANUP_TIMEOUT_MS * NANOS_PER_MILLISECOND
+                    try {
+                        val remainingMs = ((deadlineNanos - System.nanoTime()) / NANOS_PER_MILLISECOND)
+                            .coerceAtLeast(MIN_REQUEST_TIMEOUT_MS)
+                            .coerceAtMost(Int.MAX_VALUE.toLong())
+                            .toInt()
+                        fcmTokenRegistrar.unregisterCurrentUser(
+                            restoreOnFailure = false,
+                            requestTimeoutMs = remainingMs,
+                        )
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Log.w(TAG, "Unable to revoke push device row", error)
+                    }
+                    true
+                }
+            } == true
+            if (!cleanupCompleted) Log.w(TAG, "Push device cleanup timed out; local sign-out will continue")
             try {
-                auth.signOut()
+                client.setRememberSession(false)
             } finally {
-                _session.value = StudentSession(isRestoring = false)
+                try {
+                    auth.signOut()
+                } finally {
+                    _session.value = StudentSession(isRestoring = false)
+                    // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
+                    check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+                }
             }
-            // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
-            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
         }
     }
 
     private companion object {
         const val KEY_ID = "remembered_student_id"
         const val KEY_BIO_ID = "biometric_student_id"
+        const val TAG = "PreferencesSessionRepository"
+        const val PUSH_CLEANUP_TIMEOUT_MS = 5_000L
+        const val NANOS_PER_MILLISECOND = 1_000_000L
+        const val MIN_REQUEST_TIMEOUT_MS = 1L
     }
 }

@@ -15,6 +15,12 @@ data class PostNotification(
     val isPinned: Boolean = false,
     val attachmentUrl: String? = null,
     val imageUrl: String? = null,
+    /** Source type used to open the relevant detail when this item came from the push inbox. */
+    val targetType: String? = null,
+    /** Identifier of the event, housing post, or announcement represented by this item. */
+    val targetId: String? = null,
+    /** Null means unread; inbox rows persist this value on the server. */
+    val readAt: Long? = null,
 )
 
 enum class NotificationCategory {

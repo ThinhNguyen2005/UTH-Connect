@@ -14,4 +14,17 @@ interface NotificationRepository {
 
     /** Lấy chi tiết một thông báo */
     suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?>
+
+    /** Loads the signed-in user's persistent notification inbox. */
+    fun getInbox(): Flow<List<PostNotification>> = getNewsfeed(NotificationCategory.ALL)
+
+    /** Marks one inbox notification as read. */
+    suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> = Result.success(Unit)
+
+    /** Marks all inbox notifications as read. */
+    suspend fun markAllInboxNotificationsRead(): Result<Unit> = Result.success(Unit)
+
+    /** Loads one persistent inbox item for notification-tap navigation. */
+    @Suppress("MaxLineLength")
+    suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> = getNotificationDetail(notificationId)
 }

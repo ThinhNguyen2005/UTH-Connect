@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun HomeRoute(
     onOpenAnnouncement: (String) -> Unit,
+    onOpenNotifications: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -30,10 +31,10 @@ fun HomeRoute(
     HomeScreen(
         uiState = uiState,
         onAction = { action ->
-            if (action is HomeAction.OpenAnnouncement) {
-                onOpenAnnouncement(action.announcementId)
-            } else {
-                viewModel.onAction(action)
+            when (action) {
+                is HomeAction.OpenAnnouncement -> onOpenAnnouncement(action.announcementId)
+                is HomeAction.OpenNotifications -> onOpenNotifications()
+                else -> viewModel.onAction(action)
             }
         },
         modifier = modifier,

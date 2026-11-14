@@ -268,7 +268,10 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
     /** Deletes matching rows through PostgREST. */
-    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
+    suspend fun deleteTable(path: String, requestTimeoutMs: Int? = null): JsonElement = authorized("/rest/v1/$path", "DELETE", requestTimeoutMs = requestTimeoutMs)
+
+    /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
+    suspend fun upsertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
 
     /** Invokes an authenticated Postgres RPC function. */
     suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
@@ -389,18 +392,20 @@ class SupabaseRestClient @Inject constructor() {
         path: String,
         method: String,
         body: JsonObject? = null,
+        prefer: String? = null,
         allowAnonymous: Boolean = false,
+        requestTimeoutMs: Int? = null,
     ): JsonElement {
         val accessToken = if (allowAnonymous) {
-            freshTokenOrNull()
+            freshTokenOrNull(requestTimeoutMs)
         } else {
-            freshToken()
+            freshToken(requestTimeoutMs)
         }
-        return send(path, method, body, bearer = accessToken)
+        return send(path, method, body, bearer = accessToken, prefer = prefer, requestTimeoutMs = requestTimeoutMs)
     }
 
-    private suspend fun freshTokenOrNull(): String? = try {
-        freshToken()
+    private suspend fun freshTokenOrNull(requestTimeoutMs: Int? = null): String? = try {
+        freshToken(requestTimeoutMs)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (_: Exception) {
@@ -438,14 +443,14 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Returns the current access token, refreshing it when it is close to expiration. */
-    private suspend fun freshToken(): String {
+    private suspend fun freshToken(requestTimeoutMs: Int? = null): String {
         val session = credentials ?: error("Supabase sign-in required")
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
         return refreshMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {
-                val updated = refreshSession(latest.userId, latest.refreshToken)
+                val updated = refreshSession(latest.userId, latest.refreshToken, requestTimeoutMs)
                 if (rememberSession) sessionStore?.save(updated.userId, updated.refreshToken)
                 credentials = updated
                 updated.accessToken
@@ -464,13 +469,18 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Rotates a refresh token and rejects a response for a different authenticated user. */
-    private suspend fun refreshSession(expectedUserId: String, refreshToken: String): Credentials {
+    private suspend fun refreshSession(
+        expectedUserId: String,
+        refreshToken: String,
+        requestTimeoutMs: Int? = null,
+    ): Credentials {
         val updated = parseCredentials(
             send(
                 "/auth/v1/token?grant_type=refresh_token",
                 "POST",
                 buildJsonObject { put("refresh_token", refreshToken) },
                 bearer = null,
+                requestTimeoutMs = requestTimeoutMs,
             ).jsonObject,
         )
         check(updated.userId == expectedUserId) { "Session user changed" }
@@ -495,22 +505,16 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         bearer: String?,
+        prefer: String? = null,
+        requestTimeoutMs: Int? = null,
     ): JsonElement = withContext(Dispatchers.IO) {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
         val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
         try {
-            if (method == "PATCH") {
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-                connection.setRequestProperty("Prefer", "return=representation")
-            } else {
-                connection.requestMethod = method
-                if (method == "POST" && path.startsWith("/rest/v1/")) {
-                    connection.setRequestProperty("Prefer", "return=representation")
-                }
-            }
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
+            configureRequestMethod(connection, method, path, prefer)
+            val timeoutMs = requestTimeoutMs?.coerceAtLeast(1) ?: 15_000
+            connection.connectTimeout = timeoutMs
+            connection.readTimeout = timeoutMs
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             connection.setRequestProperty("Accept", "application/json")
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer $bearer")
@@ -532,6 +536,25 @@ class SupabaseRestClient @Inject constructor() {
             if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun configureRequestMethod(
+        connection: HttpURLConnection,
+        method: String,
+        path: String,
+        prefer: String?,
+    ) {
+        val postgrestPrefer = prefer ?: "return=representation"
+        if (method == "PATCH") {
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+            connection.setRequestProperty("Prefer", postgrestPrefer)
+            return
+        }
+        connection.requestMethod = method
+        if (method == "POST" && path.startsWith("/rest/v1/")) {
+            connection.setRequestProperty("Prefer", postgrestPrefer)
         }
     }
 
