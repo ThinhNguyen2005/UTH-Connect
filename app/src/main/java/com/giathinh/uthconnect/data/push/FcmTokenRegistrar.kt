@@ -167,26 +167,37 @@ class FcmTokenRegistrar @Inject constructor(
         if (client.userIdOrNull != null) registerForSignedInUser()
     }
 
+    @Suppress("TooGenericExceptionCaught", "ReturnCount", "ThrowsCount")
     private suspend fun registerToken(token: String) {
         registrationMutex.withLock {
             if (!registrationEnabled) return
-            val effectiveToken = if (preferences.getBoolean(KEY_ROTATION_PENDING, false)) {
-                FirebaseMessaging.getInstance().deleteToken().await()
-                rotateInstallationId()
-                preferences.edit().putBoolean(KEY_ROTATION_PENDING, false).apply()
-                FirebaseMessaging.getInstance().token.await()
-            } else {
-                token
+            var tokenToRegister = token
+            for (attempt in 0..OWNERSHIP_ROTATION_ATTEMPTS) {
+                if (preferences.getBoolean(KEY_ROTATION_PENDING, false)) {
+                    FirebaseMessaging.getInstance().deleteToken().await()
+                    rotateInstallationId()
+                    tokenToRegister = FirebaseMessaging.getInstance().token.await()
+                    preferences.edit().putBoolean(KEY_ROTATION_PENDING, false).apply()
+                }
+                if (tokenToRegister.isBlank()) return
+                try {
+                    client.rpc(
+                        "claim_notification_device",
+                        buildJsonObject {
+                            put("p_device_id", deviceId())
+                            put("p_token", tokenToRegister)
+                            put("p_platform", "ANDROID")
+                        },
+                    )
+                    return
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (error: Exception) {
+                    if (!error.message.orEmpty().contains(DEVICE_OWNERSHIP_REQUIRED)) throw error
+                    markIdentityRotationPending()
+                    if (attempt == OWNERSHIP_ROTATION_ATTEMPTS) throw error
+                }
             }
-            if (effectiveToken.isBlank()) return
-            client.rpc(
-                "claim_notification_device",
-                buildJsonObject {
-                    put("p_device_id", deviceId())
-                    put("p_token", effectiveToken)
-                    put("p_platform", "ANDROID")
-                },
-            )
         }
     }
 
@@ -311,6 +322,8 @@ class FcmTokenRegistrar @Inject constructor(
         const val MAX_ATTEMPTS = 3
         const val RETRY_DELAY_MS = 1_000L
         const val PENDING_RETRY_DELAY_MS = 30_000L
+        const val OWNERSHIP_ROTATION_ATTEMPTS = 1
+        const val DEVICE_OWNERSHIP_REQUIRED = "DEVICE_OWNERSHIP_REQUIRED"
         const val TAG = "FcmTokenRegistrar"
     }
 }

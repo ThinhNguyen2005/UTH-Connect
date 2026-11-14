@@ -88,6 +88,7 @@ class NotificationViewModelTest {
         publishedAt = 1_577_836_800_000L,
     )
 
+    @Suppress("MaxLineLength")
     private class FakeNotificationRepository(
         private val markResults: ArrayDeque<Result<Unit>>,
         private val markGates: ArrayDeque<CompletableDeferred<Unit>> = ArrayDeque(),
