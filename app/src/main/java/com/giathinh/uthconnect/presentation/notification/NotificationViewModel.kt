@@ -63,7 +63,11 @@ class NotificationViewModel @Inject constructor(
             }
 
             is NotificationAction.MarkAllAsRead -> {
-                val ids = _uiState.value.notifications.map { it.id }
+                val currentState = _uiState.value
+                val ids = currentState.notifications
+                    .map { it.id }
+                    .filterNot { it in currentState.readNotificationIds }
+                if (ids.isEmpty()) return
                 val version = markReadOptimistically(ids)
                 viewModelScope.launch {
                     val result = readMutationMutex.withLock {

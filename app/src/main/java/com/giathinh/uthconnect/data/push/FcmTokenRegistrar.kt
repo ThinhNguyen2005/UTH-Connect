@@ -58,16 +58,29 @@ class FcmTokenRegistrar @Inject constructor(
     }
 
     /** Deletes this installation's token row before sign-out while auth credentials remain valid. */
+    @Suppress("TooGenericExceptionCaught")
     suspend fun unregisterCurrentUser() {
         registrationEnabled = false
         registrationJob?.cancel()
         registrationJob?.join()
         registrationJob = null
-        registrationMutex.withLock {
-            val userId = client.userIdOrNull?.let(::urlEncode) ?: return@withLock
-            val deviceId = urlEncode(deviceId())
-            client.deleteTable("notification_devices?device_id=eq.$deviceId&user_id=eq.$userId")
+        try {
+            registrationMutex.withLock {
+                val userId = client.userIdOrNull?.let(::urlEncode) ?: return@withLock
+                val deviceId = urlEncode(deviceId())
+                client.deleteTable("notification_devices?device_id=eq.$deviceId&user_id=eq.$userId")
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            restoreRegistrationIfSessionActive()
+            throw cancelled
+        } catch (error: Exception) {
+            restoreRegistrationIfSessionActive()
+            throw error
         }
+    }
+
+    private fun restoreRegistrationIfSessionActive() {
+        if (client.userIdOrNull != null) registerForSignedInUser()
     }
 
     private suspend fun registerToken(token: String) {

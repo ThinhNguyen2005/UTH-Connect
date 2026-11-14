@@ -18,6 +18,16 @@ type InboxRow = {
 
 const encoder = new TextEncoder();
 let fcmAccessToken: { value: string; expiresAt: number } | null = null;
+const INBOX_BATCH_SIZE = 50;
+const MAX_ROWS_PER_INVOCATION = 250;
+const MAX_DEVICES_PER_BATCH = 2_000;
+const MAX_INVOCATION_MS = 20_000;
+const PATCH_ID_BATCH_SIZE = 100;
+const FCM_MAX_ATTEMPTS = 3;
+const FCM_RETRY_DELAY_MS = 500;
+
+class DispatchDeadlineError extends Error {}
+class DispatchDeferredError extends Error {}
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
@@ -59,110 +69,119 @@ Deno.serve(async (request) => {
     // Duplicate webhook deliveries can resume a pending push; a stale PROCESSING
     // claim is released after five minutes if an Edge invocation was interrupted.
     await supabaseRest(
-      `notification_inbox?source_table=eq.${payload.table}&source_id=eq.${source.sourceId}&push_status=eq.PROCESSING&push_claimed_at=lt.${new Date(Date.now() - 5 * 60_000).toISOString()}`,
+      `notification_inbox?push_status=eq.PROCESSING&push_claimed_at=lt.${new Date(Date.now() - 5 * 60_000).toISOString()}`,
       { method: "PATCH", body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }) },
     );
-    const pageSize = 1000;
+    const deadline = Date.now() + MAX_INVOCATION_MS;
     let deliveredTotal = 0;
     let pendingTotal = 0;
+    let processedRows = 0;
+    let deferred = false;
     while (true) {
+      if (Date.now() >= deadline) {
+        deferred = true;
+        break;
+      }
+      if (processedRows >= MAX_ROWS_PER_INVOCATION) {
+        deferred = true;
+        break;
+      }
+      const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
-        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id&source_table=eq.${payload.table}&source_id=eq.${source.sourceId}&push_status=eq.PENDING&limit=${pageSize}`,
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id&push_status=eq.PENDING&order=id.asc&limit=${pageSize}`,
       );
       const ids = pending.map((row) => row.id);
       if (ids.length === 0) break;
 
-      const idFilter = ids.join(",");
-      const claimed = await supabaseRest<InboxRow[]>(
-        `notification_inbox?id=in.(${idFilter})&push_status=eq.PENDING`,
-        {
-          method: "PATCH",
-          headers: { Prefer: "return=representation" },
-          body: JSON.stringify({ push_status: "PROCESSING", push_claimed_at: new Date().toISOString() }),
-        },
+      const claimed = await patchInboxRows(
+        ids,
+        { push_status: "PROCESSING", push_claimed_at: new Date().toISOString() },
+        "&push_status=eq.PENDING",
+        true,
       );
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
       let batchFailed = false;
       try {
-      const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
-      // Phân trang devices để không bỏ sót token khi tổng thiết bị vượt 1.000 hàng
-      // Phân trang devices bằng keyset để không bỏ sót token
-      const allDevices: Array<{ device_id: string; user_id: string; token: string }> = [];
-      const devicePageSize = 1000;
-      let lastDeviceId: string | undefined = undefined;
-      
-      while (true) {
-        const queryParams = [
-          "select=device_id,user_id,token",
-          `user_id=in.(${userIds.join(",")})`,
-          "order=device_id.asc",
-          `limit=${devicePageSize}`
-        ];
-        if (lastDeviceId) queryParams.push(`device_id=gt.${lastDeviceId}`);
+        ensureWithinDeadline(deadline);
+        const userIds = [...new Set(claimed.map((row) => row.recipient_id))];
+        // Phân trang devices để không bỏ sót token, nhưng không cho một invocation
+        // kéo vô hạn thiết bị. Khi vượt giới hạn, toàn bộ batch được trả về PENDING
+        // để invocation tiếp theo xử lý lại mà không đánh dấu thiếu người nhận.
+        const allDevices: Array<{ device_id: string; user_id: string; token: string }> = [];
+        const devicePageSize = 500;
+        let lastDeviceId: string | undefined = undefined;
 
-        const page = await supabaseRest<Array<{ device_id: string; user_id: string; token: string }>>(
-          `notification_devices?${queryParams.join("&")}`,
-        );
-        allDevices.push(...page);
-        if (page.length < devicePageSize) break;
-        lastDeviceId = page[page.length - 1].device_id;
-      }
-      const tokensByUser = new Map<string, string[]>();
-      for (const device of allDevices) {
-        tokensByUser.set(device.user_id, [...(tokensByUser.get(device.user_id) ?? []), device.token]);
-      }
+        while (true) {
+          ensureWithinDeadline(deadline);
+          const queryParams = [
+            "select=device_id,user_id,token",
+            `user_id=in.(${userIds.join(",")})`,
+            "order=device_id.asc",
+            `limit=${devicePageSize}`,
+          ];
+          if (lastDeviceId) queryParams.push(`device_id=gt.${lastDeviceId}`);
 
-      const accessToken = await getFcmAccessToken();
-      const failedRows: string[] = [];
-      let delivered = 0;
-      for (const row of claimed) {
-        const tokens = tokensByUser.get(row.recipient_id) ?? [];
-        if (tokens.length === 0) {
-          // Không có thiết bị — coi hàng là đã gửi (không có gì để gửi)
-          continue;
+          const page = await supabaseRest<Array<{ device_id: string; user_id: string; token: string }>>(
+            `notification_devices?${queryParams.join("&")}`,
+          );
+          allDevices.push(...page);
+          if (allDevices.length > MAX_DEVICES_PER_BATCH) {
+            throw new DispatchDeferredError("Device batch limit reached");
+          }
+          if (page.length < devicePageSize) break;
+          lastDeviceId = page[page.length - 1].device_id;
         }
-        let hasFailed = false;
-        for (const token of tokens) {
-          const result = await sendFcmWithRetry(accessToken, token, row);
-          if (result === "SENT") {
-            delivered++;
-          } else if (result === "UNREGISTERED") {
-            await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(token)}`, { method: "DELETE" });
-          } else {
-            // FAILED — đánh dấu hàng là chưa gửi để thử lại
-            hasFailed = true;
+        const tokensByUser = new Map<string, string[]>();
+        for (const device of allDevices) {
+          tokensByUser.set(device.user_id, [...(tokensByUser.get(device.user_id) ?? []), device.token]);
+        }
+
+        const accessToken = await getFcmAccessToken();
+        for (const row of claimed) {
+          ensureWithinDeadline(deadline);
+          const tokens = tokensByUser.get(row.recipient_id) ?? [];
+          let hasFailed = false;
+          let delivered = 0;
+          for (const token of tokens) {
+            ensureWithinDeadline(deadline);
+            const result = await sendFcmWithRetry(accessToken, token, row, deadline);
+            if (result === "SENT") {
+              delivered++;
+            } else if (result === "UNREGISTERED") {
+              await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(token)}`, { method: "DELETE" });
+            } else {
+              hasFailed = true;
+            }
+          }
+          await patchInboxRows(
+            [row.id],
+            { push_status: hasFailed ? "PENDING" : "SENT", push_claimed_at: null },
+            "&push_status=eq.PROCESSING",
+          );
+          processedRows++;
+          deliveredTotal += delivered;
+          if (hasFailed) {
+            pendingTotal++;
+            batchFailed = true;
           }
         }
-        if (hasFailed) failedRows.push(row.id);
-      }
-
-      const sentRows = claimed.map((row) => row.id).filter((id) => !failedRows.includes(id));
-      if (sentRows.length > 0) {
-        await supabaseRest(`notification_inbox?id=in.(${sentRows.join(",")})`, {
-          method: "PATCH",
-          body: JSON.stringify({ push_status: "SENT", push_claimed_at: null }),
-        });
-      }
-      if (failedRows.length > 0) {
-        await supabaseRest(`notification_inbox?id=in.(${failedRows.join(",")})`, {
-          method: "PATCH",
-          body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }),
-        });
-      }
-        deliveredTotal += delivered;
-        pendingTotal += failedRows.length;
-        batchFailed = failedRows.length > 0;
       } catch (error) {
-        await supabaseRest(`notification_inbox?id=in.(${idFilter})&push_status=eq.PROCESSING`, {
-          method: "PATCH",
-          body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }),
-        });
+        await patchInboxRows(
+          claimed.map((row) => row.id),
+          { push_status: "PENDING", push_claimed_at: null },
+          "&push_status=eq.PROCESSING",
+        );
+        if (error instanceof DispatchDeadlineError || error instanceof DispatchDeferredError) {
+          deferred = true;
+          break;
+        }
         throw error;
       }
 
-      if (batchFailed || pending.length < pageSize) break;
+      if (pending.length < pageSize || batchFailed) break;
     }
+    if (deferred) return json({ delivered: deliveredTotal, pending: pendingTotal, deferred: true }, 202);
     if (deliveredTotal === 0 && pendingTotal === 0) return json({ delivered: 0, ignored: true });
     return json({ delivered: deliveredTotal, pending: pendingTotal });
   } catch (error) {
@@ -281,13 +300,50 @@ async function sendFcmWithRetry(
   accessToken: string,
   token: string,
   row: InboxRow,
+  deadline: number,
 ): Promise<"SENT" | "FAILED" | "UNREGISTERED"> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const result = await sendFcm(accessToken, token, row);
-    if (result !== "FAILED" || attempt === 2) return result;
-    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+  for (let attempt = 0; attempt < FCM_MAX_ATTEMPTS; attempt++) {
+    ensureWithinDeadline(deadline);
+    try {
+      const result = await sendFcm(accessToken, token, row);
+      if (result !== "FAILED" || attempt === FCM_MAX_ATTEMPTS - 1) return result;
+    } catch (error) {
+      console.error("FCM send request failed", error);
+      if (attempt === FCM_MAX_ATTEMPTS - 1) return "FAILED";
+    }
+    const delayMs = FCM_RETRY_DELAY_MS * 2 ** attempt;
+    ensureWithinDeadline(deadline, delayMs);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   return "FAILED";
+}
+
+async function patchInboxRows(
+  ids: string[],
+  update: Record<string, unknown>,
+  extraFilter = "",
+  returnRows = false,
+): Promise<InboxRow[]> {
+  const updated: InboxRow[] = [];
+  for (let offset = 0; offset < ids.length; offset += PATCH_ID_BATCH_SIZE) {
+    const batch = ids.slice(offset, offset + PATCH_ID_BATCH_SIZE);
+    const response = await supabaseRest<InboxRow[]>(
+      `notification_inbox?id=in.(${batch.join(",")})${extraFilter}`,
+      {
+        method: "PATCH",
+        headers: returnRows ? { Prefer: "return=representation" } : undefined,
+        body: JSON.stringify(update),
+      },
+    );
+    if (returnRows) updated.push(...response);
+  }
+  return updated;
+}
+
+function ensureWithinDeadline(deadline: number, additionalDelayMs = 0) {
+  if (Date.now() + additionalDelayMs >= deadline) {
+    throw new DispatchDeadlineError("Notification dispatch time budget reached");
+  }
 }
 
 async function getFcmAccessToken(): Promise<string> {
@@ -355,8 +411,12 @@ function supabaseSecretKey(): string {
   return key;
 }
 
-function decodePem(pem: string): Uint8Array {
-  return Uint8Array.from(atob(pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "")), (char) => char.charCodeAt(0));
+function decodePem(pem: string): ArrayBuffer {
+  const bytes = Uint8Array.from(
+    atob(pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "")),
+    (char) => char.charCodeAt(0),
+  );
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
 function base64Url(value: string): string {

@@ -105,11 +105,17 @@ class PreferencesSessionRepository @Inject constructor(
             // fails (for example while offline), keep the session so another attempt can
             // complete cleanup instead of allowing the next user to inherit the token.
             fcmTokenRegistrar.unregisterCurrentUser()
-            client.setRememberSession(false)
-            auth.signOut()
-            _session.value = StudentSession(isRestoring = false)
-            // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
-            check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+            try {
+                client.setRememberSession(false)
+            } finally {
+                try {
+                    auth.signOut()
+                } finally {
+                    _session.value = StudentSession(isRestoring = false)
+                    // Explicit log-out REVOKES device remembered sign-in and biometric opt-in.
+                    check(prefs.edit().remove(KEY_ID).remove(KEY_BIO_ID).commit()) { "Cannot revoke session" }
+                }
+            }
         }
     }
 

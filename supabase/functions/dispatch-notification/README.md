@@ -18,6 +18,12 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `public.notifications`: `INSERT` and `UPDATE` (sends published academic/system notices; an update only notifies when it publishes a previously scheduled row)
    - `public.housing_posts`: `INSERT` (sends new listings with `status = OPEN`)
 
+The dispatcher claims inbox rows in small batches, limits each invocation's runtime
+and device fan-out, and writes each row's `SENT`/`PENDING` state before continuing.
+Rows left pending after a time or device limit are safe to resume on the next
+dispatch/retry invocation; interrupted `PROCESSING` claims are released after five
+minutes.
+
 The function rejects requests without the shared webhook header, filters unpublished
 events and non-open housing posts, writes an idempotent per-user inbox item, and claims
 pending rows before delivery so duplicate webhook invocations do not normally duplicate
