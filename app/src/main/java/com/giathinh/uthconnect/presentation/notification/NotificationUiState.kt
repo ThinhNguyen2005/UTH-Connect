@@ -14,6 +14,7 @@ data class NotificationUiState(
     val notifications: List<PostNotification> = emptyList(),
     val readNotificationIds: Set<String> = emptySet(),
     val errorMessage: String? = null,
+    val inboxErrorMessage: String? = null,
     val detailId: String? = null,
     val detail: PostNotification? = null,
     val isDetailLoading: Boolean = false,

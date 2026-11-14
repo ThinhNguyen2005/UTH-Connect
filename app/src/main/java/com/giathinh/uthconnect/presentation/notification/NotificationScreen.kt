@@ -82,7 +82,10 @@ fun NotificationScreen(
             NotificationTopBar(
                 onBack = { onAction(NotificationAction.Back) },
                 onMarkAllRead = { onAction(NotificationAction.MarkAllAsRead) },
-                onRefresh = { onAction(NotificationAction.Refresh) },
+                onRefresh = {
+                    uiState.detailId?.let { onAction(NotificationAction.LoadDetail(it)) }
+                        ?: onAction(NotificationAction.Refresh)
+                },
                 onOpenSettings = { onAction(NotificationAction.OpenSettings) },
                 onOpenProfile = { onAction(NotificationAction.OpenProfile) },
             )
@@ -114,21 +117,22 @@ fun NotificationScreen(
                         onRetry = { onAction(NotificationAction.LoadDetail(uiState.detailId)) },
                     )
                 }
-            } else if (uiState.isLoading) {
+            } else if (uiState.isLoading || (uiState.isRefreshing && uiState.notifications.isEmpty())) {
                 NotificationLoadingState()
-            } else if (uiState.errorMessage != null && uiState.notifications.isEmpty()) {
-                if (uiState.isRefreshing || uiState.isLoading) {
-                    // Hiển thị trạng thái đang tải thay cho giao diện lỗi/nút thử lại
-                    NotificationLoadingState() // Hoặc CircularProgressIndicator tuỳ vào component của bạn
-                } else {
-                    NotificationErrorState(
-                        message = uiState.errorMessage,
-                        onRetry = { onAction(NotificationAction.Refresh) },
-                    )
-                }
+            } else if (uiState.inboxErrorMessage != null && uiState.notifications.isEmpty()) {
+                NotificationErrorState(
+                    message = uiState.inboxErrorMessage,
+                    onRetry = { onAction(NotificationAction.Refresh) },
+                )
             } else if (uiState.filteredNotifications.isEmpty()) {
                 NotificationEmptyState(onRefresh = { onAction(NotificationAction.Refresh) })
             } else {
+                if (uiState.inboxErrorMessage != null) {
+                    NotificationInlineError(
+                        message = uiState.inboxErrorMessage,
+                        onRetry = { onAction(NotificationAction.Refresh) },
+                    )
+                }
                 NotificationFeed(
                     uiState = uiState,
                     onItemClick = { onAction(NotificationAction.ClickNotification(it)) },
@@ -337,6 +341,33 @@ private fun NotificationErrorState(
                 Spacer(modifier = Modifier.size(UthDimens.Spacing.Xs))
                 Text(text = stringResource(R.string.notification_retry))
             }
+        }
+    }
+}
+
+@Composable
+private fun NotificationInlineError(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Sm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = stringResource(R.string.notification_retry),
+            )
         }
     }
 }

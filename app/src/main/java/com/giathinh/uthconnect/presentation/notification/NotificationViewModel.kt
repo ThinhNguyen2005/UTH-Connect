@@ -129,7 +129,7 @@ class NotificationViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            errorMessage = error.localizedMessage,
+                            inboxErrorMessage = error.localizedMessage,
                         )
                     }
                 }
@@ -164,7 +164,7 @@ class NotificationViewModel @Inject constructor(
                             isRefreshing = false,
                             notifications = list,
                             readNotificationIds = readIds + pendingReadIds,
-                            errorMessage = null,
+                            inboxErrorMessage = null,
                         )
                     }
                 }

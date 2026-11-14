@@ -380,7 +380,7 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow): Promi
             title: row.title,
             body: messageBody,
           },
-          android: { priority: "HIGH", notification: { channel_id: "uth_updates" } },
+          android: { priority: "HIGH" },
         },
       }),
     },
