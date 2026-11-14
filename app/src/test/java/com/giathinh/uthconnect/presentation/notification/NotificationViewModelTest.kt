@@ -23,7 +23,12 @@ class NotificationViewModelTest {
     fun `old inbox response keeps a read mutation that previously succeeded`() = runTest {
         val notification = notification("notification-1")
         val repository = FakeNotificationRepository(
-            markResults = ArrayDeque(listOf(Result.success(Unit), Result.failure(IllegalStateException("temporary")))),
+            markResults = ArrayDeque(
+                listOf(
+                    Result.success(Unit),
+                    Result.failure(IllegalStateException("temporary")),
+                ),
+            ),
         )
         val viewModel = NotificationViewModel(repository)
 
