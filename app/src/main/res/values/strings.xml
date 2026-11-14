@@ -815,7 +815,7 @@
     <string name="housing_create_zalo_label">Link Zalo hoặc SĐT Zalo</string>
     <string name="housing_create_utilities_included">Điện nước đã bao gồm trong tiền phòng</string>
     <string name="housing_create_submit">Đăng tin ngay</string>
-    <string name="housing_create_success">Đăng tin phòng trọ thành công!</string>
+    <string name="housing_create_success">Đã gửi tin! Tin sẽ hiển thị sau khi được kiểm duyệt.</string>
     <string name="housing_create_error_title">Vui lòng nhập tiêu đề bài đăng</string>
     <string name="housing_create_error_title_length">Tiêu đề cần từ 5 đến 150 ký tự</string>
     <string name="housing_create_error_area">Diện tích phải là số lớn hơn 0</string>
@@ -928,6 +928,16 @@
     <string name="housing_filter_type_label">Loại tin</string>
     <string name="housing_posted_yesterday">Hôm qua, %1$s</string>
     <string name="housing_posted_days_ago">%1$d ngày trước</string>
+    <string name="housing_my_listings_title">Tin của tôi</string>
+    <string name="housing_my_listings_empty">Bạn chưa đăng tin nào.</string>
+    <string name="housing_my_listings_rejection">Lý do: %1$s</string>
+    <string name="housing_status_pending">Chờ duyệt</string>
+    <string name="housing_status_rejected">Bị từ chối</string>
+    <string name="housing_status_open">Đang hiện</string>
+    <string name="housing_status_fulfilled">Hết phòng</string>
+    <string name="housing_status_hidden">Bị ẩn</string>
+    <string name="housing_detail_rejected_title">Tin bị từ chối</string>
+    <string name="housing_detail_rejected_body">Lý do: %1$s. Hãy xóa tin và đăng lại sau khi sửa.</string>
     <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
     <string name="campuses_directions_action">Chỉ đường</string>

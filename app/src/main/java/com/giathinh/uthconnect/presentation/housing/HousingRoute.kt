@@ -30,6 +30,7 @@ fun HousingRoute(
     modifier: Modifier = Modifier,
     onListingClick: (String) -> Unit = {},
     onCreatePost: () -> Unit = {},
+    onMyListings: () -> Unit = {},
     viewModel: HousingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,6 +64,7 @@ fun HousingRoute(
             onNavigateBack = onNavigateBack,
             onListingClick = onListingClick,
             onCreatePost = onCreatePost,
+            onMyListings = onMyListings,
             modifier = Modifier.fillMaxSize(),
         )
         SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))

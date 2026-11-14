@@ -797,7 +797,7 @@
     <string name="housing_create_zalo_label">Zalo Link or Phone</string>
     <string name="housing_create_utilities_included">Utilities included in rent</string>
     <string name="housing_create_submit">Publish Listing</string>
-    <string name="housing_create_success">Housing listing published successfully!</string>
+    <string name="housing_create_success">Listing submitted! It will appear after review.</string>
     <string name="housing_create_error_title">Please enter a post title</string>
     <string name="housing_create_error_title_length">Title must be 5 to 150 characters</string>
     <string name="housing_create_error_area">Area must be a number greater than 0</string>
@@ -911,6 +911,16 @@
     <string name="housing_filter_type_label">Listing type</string>
     <string name="housing_posted_yesterday">Yesterday, %1$s</string>
     <string name="housing_posted_days_ago">%1$d days ago</string>
+    <string name="housing_my_listings_title">My listings</string>
+    <string name="housing_my_listings_empty">You haven\'t posted any listings yet.</string>
+    <string name="housing_my_listings_rejection">Reason: %1$s</string>
+    <string name="housing_status_pending">Pending review</string>
+    <string name="housing_status_rejected">Rejected</string>
+    <string name="housing_status_open">Live</string>
+    <string name="housing_status_fulfilled">Fulfilled</string>
+    <string name="housing_status_hidden">Hidden</string>
+    <string name="housing_detail_rejected_title">Listing rejected</string>
+    <string name="housing_detail_rejected_body">Reason: %1$s. Delete and re-post after fixing.</string>
     <string name="campuses_maps_unavailable">No map application found on your device.</string>
     <string name="campuses_call_unavailable">No phone application found on your device.</string>
     <string name="campuses_directions_action">Directions</string>

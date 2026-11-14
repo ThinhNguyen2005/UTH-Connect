@@ -1,6 +1,7 @@
 package com.giathinh.uthconnect.presentation.housing.create
 
 import com.giathinh.uthconnect.domain.model.HousingListing
+import com.giathinh.uthconnect.domain.model.HousingListingStatus
 import com.giathinh.uthconnect.domain.model.HousingListingType
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UthCampus
@@ -44,6 +45,8 @@ class CreateHousingPostViewModelTest {
         private val notFound: Result<HousingListing> = Result.failure(NoSuchElementException())
 
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(emptyList())
+
+        override suspend fun getMyListings(): Result<List<HousingListing>> = Result.success(emptyList())
 
         override suspend fun getListingById(id: String): Result<HousingListing> = notFound
 
@@ -205,6 +208,22 @@ class CreateHousingPostViewModelTest {
         assertEquals("2251001234", repo.createdListing?.hostStudentId)
         assertEquals("Sinh viên kiểm thử", repo.createdListing?.hostName)
         assertTrue(repo.createdListing?.verified == true)
+    }
+
+    @Test
+    fun `submit hop le - tin moi o trang thai PENDING cho kiem duyet`() = runTest {
+        val repo = FakeCreateHousingRepository()
+        val viewModel = viewModel(repo)
+
+        viewModel.onAction(CreateHousingPostAction.ChangeTitle("Phòng gác lửng gần CS1"))
+        viewModel.onAction(CreateHousingPostAction.ChangeRent("2500000"))
+        viewModel.onAction(CreateHousingPostAction.ChangeAddress("138 Võ Oanh, Bình Thạnh"))
+        viewModel.onAction(CreateHousingPostAction.ChangeContactPhone("0901234567"))
+
+        viewModel.onAction(CreateHousingPostAction.Submit)
+
+        assertEquals(CreateHousingPostEvent.PostCreated, viewModel.events.first())
+        assertEquals(HousingListingStatus.PENDING, repo.createdListing?.status)
     }
 
     @Test

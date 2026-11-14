@@ -336,7 +336,7 @@ class CreateHousingPostViewModel @Inject constructor(
         areaM2 = parseArea(state.areaInput),
         latitude = state.latitude,
         longitude = state.longitude,
-        status = HousingListingStatus.OPEN,
+        status = HousingListingStatus.PENDING,
         verified = host.uthVerified,
         verificationMethod = if (host.uthVerified) HostVerificationMethod.EMAIL_UTH else null,
     )

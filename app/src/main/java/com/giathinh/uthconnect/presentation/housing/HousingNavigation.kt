@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import com.giathinh.uthconnect.presentation.housing.create.CreateHousingPostRoute
 import com.giathinh.uthconnect.presentation.housing.detail.HousingDetailRoute
 import com.giathinh.uthconnect.presentation.housing.location.HousingLocationPickerRoute
+import com.giathinh.uthconnect.presentation.housing.mylistings.MyListingsRoute
 import kotlinx.serialization.Serializable
 
 /** Màn con của tab Tiện ích; bottom bar tự ẩn theo destination hiện tại. */
@@ -20,6 +21,9 @@ data object CreateHousingPostDestination
 
 @Serializable
 data object HousingLocationPickerDestination
+
+@Serializable
+data object MyListingsDestination
 
 /**
  * Khóa kết quả picker bản đồ ghi vào `savedStateHandle` của màn đăng tin
@@ -38,6 +42,18 @@ fun NavGraphBuilder.housingGraph(navController: NavHostController) {
             },
             onCreatePost = {
                 navController.navigate(CreateHousingPostDestination)
+            },
+            onMyListings = {
+                navController.navigate(MyListingsDestination)
+            },
+        )
+    }
+
+    composable<MyListingsDestination> {
+        MyListingsRoute(
+            onNavigateBack = { navController.popBackStack() },
+            onListingClick = { listingId ->
+                navController.navigate(HousingDetailDestination(listingId = listingId))
             },
         )
     }

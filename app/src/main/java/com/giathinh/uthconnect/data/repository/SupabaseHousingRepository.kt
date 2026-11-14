@@ -103,6 +103,12 @@ class SupabaseHousingRepository @Inject constructor(
         withRoadDistances(listOf(listing)).single()
     }
 
+    override suspend fun getMyListings(): Result<List<HousingListing>> = suspendResult {
+        client.table(
+            "housing_posts?select=*&author_id=eq.${urlEncode(client.userId)}&order=created_at.desc&limit=100",
+        ).jsonArray.map { it.jsonObject.toHousingListing() }
+    }
+
     override suspend fun createListing(listing: HousingListing): Result<HousingListing> = suspendResult {
         // Gửi lại sau lỗi mất response: ID giữ nguyên từ lần trước — tin đã commit
         // thì trả lại chính nó thay vì nhân đôi (đối chiếu trước cả khi upload ảnh).
@@ -562,6 +568,7 @@ class SupabaseHousingRepository @Inject constructor(
             longitude = if (hasRealLocation) longitude else 0.0,
             distanceToCampusM = if (hasRealLocation) CampusReference.distanceMeters(campus, latitude, longitude) else 0,
             status = HousingListingStatus.valueOf(string("status") ?: "OPEN"),
+            rejectionReason = string("rejection_reason"),
             verified = bool("verified"),
             verificationMethod = string("verification_method")?.let { HostVerificationMethod.valueOf(it) },
             areaM2 = (get("area_m2") as? JsonPrimitive)?.intOrNull,

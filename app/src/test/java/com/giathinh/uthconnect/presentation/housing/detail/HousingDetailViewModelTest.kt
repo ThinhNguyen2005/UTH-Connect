@@ -297,6 +297,46 @@ class HousingDetailViewModelTest {
         assertNull(repository.deletedId)
     }
 
+    @Test
+    fun `chu tin - tin REJECTED hien banner tu choi`() {
+        val state = HousingDetailUiState(
+            isLoading = false,
+            listing = sampleListing.copy(status = HousingListingStatus.REJECTED, rejectionReason = "Ảnh mờ"),
+            isOwner = true,
+        )
+        assertTrue(state.showRejectionBanner)
+    }
+
+    @Test
+    fun `khong phai chu tin - khong hien banner tu choi`() {
+        val state = HousingDetailUiState(
+            isLoading = false,
+            listing = sampleListing.copy(status = HousingListingStatus.REJECTED, rejectionReason = "Ảnh mờ"),
+            isOwner = false,
+        )
+        assertFalse(state.showRejectionBanner)
+    }
+
+    @Test
+    fun `tin PENDING - khong hien banner tu choi`() {
+        val state = HousingDetailUiState(
+            isLoading = false,
+            listing = sampleListing.copy(status = HousingListingStatus.PENDING),
+            isOwner = true,
+        )
+        assertFalse(state.showRejectionBanner)
+    }
+
+    @Test
+    fun `tin OPEN - khong hien banner tu choi`() {
+        val state = HousingDetailUiState(
+            isLoading = false,
+            listing = sampleListing.copy(status = HousingListingStatus.OPEN),
+            isOwner = true,
+        )
+        assertFalse(state.showRejectionBanner)
+    }
+
     private class FakeSessionRepository(studentId: String?) : SessionRepository {
         override val session: StateFlow<StudentSession> = MutableStateFlow(
             StudentSession(
@@ -331,6 +371,8 @@ class HousingDetailViewModelTest {
         var deletedId: String? = null
 
         override suspend fun getListings(): Result<List<HousingListing>> = Result.success(listOf(listing))
+
+        override suspend fun getMyListings(): Result<List<HousingListing>> = Result.success(listOf(listing))
 
         override suspend fun getListingById(id: String): Result<HousingListing> {
             val error = loadFailure
