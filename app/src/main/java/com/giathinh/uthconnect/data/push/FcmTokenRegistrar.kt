@@ -90,9 +90,9 @@ class FcmTokenRegistrar @Inject constructor(
             client.rpc(
                 "claim_notification_device",
                 buildJsonObject {
-                    put("device_id", deviceId())
-                    put("token", token)
-                    put("platform", "ANDROID")
+                    put("p_device_id", deviceId())
+                    put("p_token", token)
+                    put("p_platform", "ANDROID")
                 },
             )
         }

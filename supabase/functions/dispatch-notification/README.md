@@ -11,6 +11,7 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `supabase/migrations/20261114000000_notification_push_cursor.sql`
    - `supabase/migrations/20261115000000_notification_device_claim.sql`
    - `supabase/migrations/20261115010000_notification_broadcast_rate_limit.sql`
+   - `supabase/migrations/20261115020000_secure_notification_device_claim.sql`
 2. Deploy the function with `supabase functions deploy dispatch-notification`.
 3. Add these Edge Function secrets in Supabase project settings:
    - `WEBHOOK_SHARED_SECRET` (generate a long random value)
