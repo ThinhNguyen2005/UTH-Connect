@@ -336,19 +336,21 @@ private fun EventEditorDialog(
                     event == null && startsTooSoon -> errFuture
                     else -> null
                 }
-                if (validationError == null && start != null && end != null && count != null) {
-                    onSave(
-                        EventDraft(
-                            title.trim(),
-                            description.trim(),
-                            location.trim(),
-                            campus.trim(),
-                            start.atZone(localZone).toInstant().toEpochMilli(),
-                            end.atZone(localZone).toInstant().toEpochMilli(),
-                            count,
-                        ),
-                    )
-                }
+                if (validationError != null) return@Button
+                val validStart = start ?: return@Button
+                val validEnd = end ?: return@Button
+                val validCapacity = count ?: return@Button
+                onSave(
+                    EventDraft(
+                        title.trim(),
+                        description.trim(),
+                        location.trim(),
+                        campus.trim(),
+                        validStart.atZone(localZone).toInstant().toEpochMilli(),
+                        validEnd.atZone(localZone).toInstant().toEpochMilli(),
+                        validCapacity,
+                    ),
+                )
             }, enabled = !busy) { Text("Lưu") }
         },
         dismissButton = { OutlinedButton(onClick = onDismiss, enabled = !busy) { Text("Đóng") } },

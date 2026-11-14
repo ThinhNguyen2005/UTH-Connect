@@ -63,7 +63,7 @@ class FirestoreEventRepository @Inject constructor(
         firestore.runTransaction { transaction ->
             val eventDoc = transaction.get(eventRef)
             if (!eventDoc.exists()) {
-                throw IllegalStateException("Sự kiện không tồn tại")
+                error("Sự kiện không tồn tại")
             }
 
             val currentRegistered = eventDoc.getLong(FIELD_REGISTERED_COUNT)?.toInt() ?: 0
@@ -76,9 +76,7 @@ class FirestoreEventRepository @Inject constructor(
                 return@runTransaction
             }
 
-            if (capacity > 0 && currentRegistered >= capacity) {
-                throw IllegalStateException("Sự kiện đã hết số lượng đăng ký")
-            }
+            check(capacity <= 0 || currentRegistered < capacity) { "Sự kiện đã hết số lượng đăng ký" }
 
             transaction.update(eventRef, FIELD_REGISTERED_COUNT, currentRegistered + 1)
             val registrationData = mapOf(
