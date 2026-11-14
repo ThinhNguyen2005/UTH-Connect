@@ -40,6 +40,7 @@ class NotificationViewModel @Inject constructor(
     private val pendingReadIds = mutableSetOf<String>()
     private val readMutationVersions = mutableMapOf<String, Long>()
     private val readMutationPreviousStates = mutableMapOf<Long, Set<String>>()
+    private val serverConfirmedReadIds = mutableSetOf<String>()
     private data class CompletedReadMutation(
         val ids: Set<String>,
         val succeeded: Boolean,
@@ -138,6 +139,7 @@ class NotificationViewModel @Inject constructor(
                         .filter { item -> item.readAt != null }
                         .map { item -> item.id }
                         .toSet()
+                    serverConfirmedReadIds += serverReadIds
                     _uiState.update {
                         val completedAfterStart = completedReadMutations.drop(completedMutationsAtStart)
                         val readIds = if (
@@ -226,7 +228,10 @@ class NotificationViewModel @Inject constructor(
         completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
             _uiState.update { state ->
-                state.copy(readNotificationIds = (state.readNotificationIds - ownedIds.toSet()) + previous)
+                val serverConfirmed = serverConfirmedReadIds.intersect(ownedIds.toSet())
+                state.copy(
+                    readNotificationIds = (state.readNotificationIds - ownedIds.toSet()) + previous + serverConfirmed,
+                )
             }
         }
     }
