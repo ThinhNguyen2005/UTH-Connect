@@ -34,7 +34,7 @@ data class BooksUiState(
     val minimumPrice: String = "",
     val maximumPrice: String = "",
     val sort: BooksSort = BooksSort.NEWEST,
-    val includeSold: Boolean = false,
+    val includeSold: Boolean = true,
     val loadFailure: BooksFailure? = null,
     val saveFailure: BooksFailure? = null,
     val lastSavedId: String? = null,

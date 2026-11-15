@@ -40,7 +40,7 @@ class BooksViewModel @Inject constructor(
         viewModelScope.launch {
             sessionRepository.session.collect { currentSession ->
                 val profile = currentSession.profile
-                val currentUid = listings.currentUserId() ?: profile?.studentId
+                val currentUid = listings.currentUserId()
                 _uiState.update { state ->
                     state.copy(
                         currentProfile = profile,
@@ -55,6 +55,8 @@ class BooksViewModel @Inject constructor(
         when (action) {
             BooksAction.Retry -> observe()
 
+            BooksAction.RequireSignIn -> viewModelScope.launch { sessionRepository.requireSignIn() }
+
             BooksAction.ResetFilters -> _uiState.update {
                 it.copy(
                     query = "",
@@ -63,7 +65,7 @@ class BooksViewModel @Inject constructor(
                     minimumPrice = "",
                     maximumPrice = "",
                     sort = BooksSort.NEWEST,
-                    includeSold = false,
+                    includeSold = true,
                 )
             }
 
@@ -96,7 +98,7 @@ class BooksViewModel @Inject constructor(
     private fun observe() {
         observation?.cancel()
         observation = viewModelScope.launch {
-            val userUid = listings.currentUserId() ?: _uiState.value.currentProfile?.studentId
+            val userUid = listings.currentUserId()
             _uiState.update { it.copy(isLoading = true, loadFailure = null, currentUserUid = userUid) }
             listings.observeListings().catch { throwable ->
                 if (throwable is CancellationException) throw throwable
@@ -155,6 +157,11 @@ class BooksViewModel @Inject constructor(
     }
 
     private fun save(listing: BookListing) {
+        if (_uiState.value.isSaving) return
+        if (listings.currentUserId() == null) {
+            viewModelScope.launch { sessionRepository.requireSignIn() }
+            return
+        }
         val initialStep = if (listing.photoUri != null) {
             BookSaveStep.UPLOADING_IMAGE
         } else {
@@ -163,9 +170,6 @@ class BooksViewModel @Inject constructor(
         _uiState.update { it.copy(isSaving = true, saveStep = initialStep, saveFailure = null) }
         viewModelScope.launch {
             try {
-                if (listing.photoUri != null) {
-                    _uiState.update { it.copy(saveStep = BookSaveStep.SAVING_LISTING) }
-                }
                 listings.save(listing).fold(
                     onSuccess = {
                         _uiState.update {
@@ -174,10 +178,18 @@ class BooksViewModel @Inject constructor(
                                 saveStep = BookSaveStep.SUCCESS,
                                 saveFailure = null,
                                 lastSavedId = listing.id,
+                                query = "",
+                                filter = BooksFilter.ALL,
+                                condition = null,
+                                minimumPrice = "",
+                                maximumPrice = "",
+                                sort = BooksSort.NEWEST,
+                                includeSold = true,
                             )
                         }
                     },
                     onFailure = {
+                        if (listings.currentUserId() == null) sessionRepository.requireSignIn()
                         _uiState.update {
                             it.copy(
                                 isSaving = false,

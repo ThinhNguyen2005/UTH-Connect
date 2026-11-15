@@ -584,7 +584,8 @@
     <string name="books_condition_format">Condition: %1$s</string>
     <string name="books_exchange">Exchange</string>
     <string name="books_photo_required">Please select at least 1 book cover photo</string>
-    <string name="books_uploading_photo">Uploading cover photo…</string>
+    <string name="books_uploading_photo">Uploading photos…</string>
+    <string name="books_selected_photo_count">%1$d photos selected</string>
     <string name="books_saving_listing">Saving book listing…</string>
     <string name="books_clear_search">Clear search</string>
     <string name="books_seller_account_info">Seller account</string>

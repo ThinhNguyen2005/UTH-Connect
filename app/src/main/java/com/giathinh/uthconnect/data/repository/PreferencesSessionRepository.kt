@@ -95,6 +95,14 @@ class PreferencesSessionRepository @Inject constructor(
         }
     }
 
+    override suspend fun requireSignIn() {
+        mutex.withLock {
+            if (client.userIdOrNull == null) {
+                _session.value = StudentSession(isRestoring = false)
+            }
+        }
+    }
+
     override suspend fun signOut() {
         mutex.withLock {
             client.setRememberSession(false)

@@ -6,6 +6,7 @@ import com.giathinh.uthconnect.domain.model.BookListingStatus
 
 sealed interface BooksAction {
     data object Retry : BooksAction
+    data object RequireSignIn : BooksAction
     data object ResetFilters : BooksAction
     data class Search(val value: String) : BooksAction
     data class SetFilter(val value: BooksFilter) : BooksAction

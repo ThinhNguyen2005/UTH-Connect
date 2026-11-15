@@ -10,6 +10,7 @@ import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentSession
 import com.giathinh.uthconnect.domain.usecase.BookListingUseCases
 import com.giathinh.uthconnect.testing.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,39 @@ import org.junit.Test
 class BooksViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun `saving an image keeps progress visible and ignores repeated submissions`() {
+        val pending = CompletableDeferred<Result<Unit>>()
+        var attempts = 0
+        val repository = object : BookListingRepository {
+            override fun currentUserId() = "user-1"
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing): Result<Unit> {
+                attempts++
+                return pending.await()
+            }
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.success(Unit)
+            override suspend fun deleteListing(id: String) = Result.success(Unit)
+            override fun refresh() = Unit
+        }
+        val viewModel = BooksViewModel(BookListingUseCases(repository))
+        val listing = BookListing(
+            id = "book-1", title = "Kotlin", subject = "Programming", condition = BookCondition.GOOD,
+            dealType = BookDealType.SALE, priceVnd = 1000, description = "", sellerName = "Student",
+            contact = "student@example.edu", photoUri = "content://photo/1",
+        )
+
+        viewModel.onAction(BooksAction.Save(listing))
+        viewModel.onAction(BooksAction.Save(listing))
+
+        assertEquals(1, attempts)
+        assertTrue(viewModel.uiState.value.isSaving)
+        assertEquals(BookSaveStep.UPLOADING_IMAGE, viewModel.uiState.value.saveStep)
+        pending.complete(Result.success(Unit))
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertEquals(BookSaveStep.SUCCESS, viewModel.uiState.value.saveStep)
+    }
 
     @Test
     fun `failed save reports error and clears saving state`() {
@@ -136,7 +170,7 @@ class BooksViewModelTest {
     }
 
     @Test
-    fun `session profile automatically populates currentProfile and currentUserUid`() {
+    fun `profile without backend session does not become an authenticated uid`() {
         val sampleProfile = StudentProfile(
             studentId = "20230001",
             email = "student@uth.edu.vn",
@@ -167,7 +201,47 @@ class BooksViewModelTest {
         val viewModel = BooksViewModel(BookListingUseCases(bookRepo), sessionRepo)
 
         assertEquals(sampleProfile, viewModel.uiState.value.currentProfile)
-        assertEquals("20230001", viewModel.uiState.value.currentUserUid)
+        assertNull(viewModel.uiState.value.currentUserUid)
+    }
+
+    @Test
+    fun `saving without a backend session requests sign in and does not write`() {
+        var signInRequested = false
+        var saved = false
+        val sessionRepo = object : SessionRepository {
+            override val session: StateFlow<StudentSession> = MutableStateFlow(StudentSession(isRestoring = false))
+            override suspend fun restore() = Unit
+            override suspend fun start(profile: StudentProfile, remember: Boolean) = Unit
+            override suspend fun updateProfile(profile: StudentProfile) = Unit
+            override suspend fun enableBiometric(studentId: String) = Unit
+            override suspend fun disableBiometric() = Unit
+            override suspend fun signOut() = Unit
+            override suspend fun requireSignIn() {
+                signInRequested = true
+            }
+        }
+        val bookRepo = object : BookListingRepository {
+            override fun currentUserId(): String? = null
+            override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())
+            override suspend fun saveListing(listing: BookListing): Result<Unit> {
+                saved = true
+                return Result.success(Unit)
+            }
+            override suspend fun updateStatus(id: String, status: BookListingStatus) = Result.success(Unit)
+            override suspend fun deleteListing(id: String) = Result.success(Unit)
+            override fun refresh() = Unit
+        }
+        val viewModel = BooksViewModel(BookListingUseCases(bookRepo), sessionRepo)
+        val listing = BookListing(
+            id = "book", title = "Kotlin", subject = "IT", condition = BookCondition.GOOD,
+            dealType = BookDealType.SALE, priceVnd = 1000, description = "", sellerName = "Student",
+            contact = "student@example.edu", photoUri = "content://test/photo",
+        )
+
+        viewModel.onAction(BooksAction.Save(listing))
+
+        assertTrue(signInRequested)
+        assertFalse(saved)
     }
 
     @Test
@@ -185,7 +259,7 @@ class BooksViewModelTest {
         val sample = BookListing(
             id = "new-book-id", title = "Calculus", subject = "Math", condition = BookCondition.NEW,
             dealType = BookDealType.SALE, priceVnd = 45000, description = "Clean copy",
-            sellerName = "Student A", contact = "0987654321",
+            sellerName = "Student A", contact = "0987654321", photoUri = "content://test/photo",
         )
 
         viewModel.onAction(BooksAction.Save(sample))

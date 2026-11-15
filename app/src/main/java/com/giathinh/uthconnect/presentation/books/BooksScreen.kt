@@ -1,7 +1,6 @@
 package com.giathinh.uthconnect.presentation.books
 
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -92,7 +91,6 @@ import java.util.Locale
 import java.util.UUID
 
 private const val SEARCH_DEBOUNCE_MS = 300L
-private const val MAX_PHOTO_BYTES = 5L * 1024 * 1024
 private const val BOOK_TITLE_MAX_LENGTH = 160
 private const val BOOK_SUBJECT_MAX_LENGTH = 100
 private const val BOOK_DESC_MAX_LENGTH = 2000
@@ -152,7 +150,7 @@ fun BooksScreen(
                 onSortChange = { onAction(BooksAction.SetSort(it)) },
                 onToggleIncludeSold = { onAction(BooksAction.IncludeSold(!uiState.includeSold)) },
                 onCreateListing = {
-                    if (uiState.currentUserUid == null && uiState.currentProfile == null) {
+                    if (uiState.currentUserUid == null) {
                         onRequireSignIn()
                     } else {
                         editingId = null
@@ -161,7 +159,6 @@ fun BooksScreen(
                         showForm = true
                     }
                 },
-                canCreate = uiState.currentUserUid != null || uiState.currentProfile != null,
             )
         },
     ) { innerPadding ->
@@ -191,7 +188,7 @@ fun BooksScreen(
                 }
 
                 uiState.loadFailure != null -> {
-                    val authRequired = uiState.currentUserUid == null && uiState.currentProfile == null
+                    val authRequired = uiState.currentUserUid == null
                     UthEmptyState(
                         title = stringResource(
                             if (authRequired) R.string.books_auth_required_title else R.string.books_error_title,
@@ -361,7 +358,6 @@ private fun BooksPinnedTopBar(
     onSortChange: (BooksSort) -> Unit,
     onToggleIncludeSold: () -> Unit,
     onCreateListing: () -> Unit,
-    canCreate: Boolean,
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
 
@@ -405,7 +401,6 @@ private fun BooksPinnedTopBar(
                 UthPrimaryButton(
                     text = stringResource(R.string.books_create),
                     onClick = onCreateListing,
-                    enabled = canCreate,
                 )
             }
 
@@ -734,21 +729,14 @@ private fun ListingFormDialog(
     var dealType by rememberSaveable(initial?.id) { mutableStateOf(initial?.dealType ?: BookDealType.SALE) }
     var price by rememberSaveable(initial?.id) { mutableStateOf(initial?.priceVnd?.toString().orEmpty()) }
     var description by rememberSaveable(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }
-    var photoUri by rememberSaveable(initial?.id) { mutableStateOf(initial?.photoUri) }
-    var photoTooLarge by rememberSaveable { mutableStateOf(false) }
+    var photoUris by rememberSaveable(initial?.id) { mutableStateOf(arrayListOf<String>()) }
     var showValidationErrors by rememberSaveable { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val size = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                if (cursor.moveToFirst() && sizeIndex != -1) cursor.getLong(sizeIndex) else null
-            }
-            photoTooLarge = size != null && size >= MAX_PHOTO_BYTES
-            if (!photoTooLarge) photoUri = uri.toString()
+        ActivityResultContracts.PickMultipleVisualMedia(10),
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            photoUris = ArrayList(uris.map(Uri::toString))
         }
     }
 
@@ -757,8 +745,8 @@ private fun ListingFormDialog(
         ?: currentProfile?.studentId.orEmpty()
 
     val effectiveContact = initial?.contact?.takeIf { it.isNotBlank() }
-        ?: currentProfile?.phoneNumber?.takeIf { it.isNotBlank() }
-        ?: currentProfile?.email.orEmpty()
+        ?: currentProfile?.email?.takeIf { it.isNotBlank() }
+        ?: currentProfile?.phoneNumber.orEmpty()
 
     val effectiveOwnerUid = initial?.ownerUid?.takeIf { it.isNotBlank() }
         ?: currentUserUid
@@ -774,7 +762,7 @@ private fun ListingFormDialog(
 
     val priceValue = price.toLongOrNull()
     val priceError = dealType == BookDealType.SALE && (priceValue == null || priceValue <= 0)
-    val hasPhoto = !photoUri.isNullOrBlank() || !initial?.photoUrl.isNullOrBlank()
+    val hasPhoto = photoUris.isNotEmpty() || !initial?.photoUrl.isNullOrBlank()
     val photoError = !hasPhoto
 
     val isFormValid = !titleError && !subjectError && !descriptionError && !priceError && !photoError
@@ -886,10 +874,11 @@ private fun ListingFormDialog(
                 )
 
                 BookPhotoPickerSection(
-                    photoUri = photoUri,
+                    photoUri = photoUris.firstOrNull(),
+                    selectedCount = photoUris.size,
                     existingPhotoUrl = initial?.photoUrl,
                     saving = saving,
-                    photoTooLarge = photoTooLarge,
+                    photoTooLarge = false,
                     showError = showValidationErrors && photoError,
                     onPickPhoto = {
                         photoPicker.launch(
@@ -932,10 +921,13 @@ private fun ListingFormDialog(
                             contact = effectiveContact,
                             ownerUid = effectiveOwnerUid,
                             photoUrl = initial?.photoUrl,
-                            photoUri = photoUri,
+                            photoUri = photoUris.firstOrNull(),
                             status = initial?.status ?: BookListingStatus.AVAILABLE,
                             createdAt = initial?.createdAt ?: System.currentTimeMillis(),
                             imagePath = initial?.imagePath,
+                            imagePaths = initial?.imagePaths.orEmpty(),
+                            photoUris = photoUris,
+                            sellerAvatarUrl = currentProfile?.avatarUrl ?: initial?.sellerAvatarUrl,
                         ),
                     )
                 },
@@ -1029,6 +1021,7 @@ private fun SellerIdentitySection(
 @Composable
 private fun BookPhotoPickerSection(
     photoUri: String?,
+    selectedCount: Int,
     existingPhotoUrl: String?,
     saving: Boolean,
     photoTooLarge: Boolean,
@@ -1077,6 +1070,13 @@ private fun BookPhotoPickerSection(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.books_pick_photo))
+        }
+
+        if (selectedCount > 0) {
+            Text(
+                stringResource(R.string.books_selected_photo_count, selectedCount),
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         if (photoTooLarge) {

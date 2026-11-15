@@ -62,6 +62,7 @@ class GoogleIdTokenSource @Inject constructor() {
             val response = credentialManager.getCredential(activity, explicitRequest)
             return parseCredentialResponse(response, rawNonce)
         } catch (cancelled: GetCredentialCancellationException) {
+            Log.i(TAG, "Google credential selection was cancelled")
             return GoogleIdTokenResult.Cancelled
         } catch (noCred: NoCredentialException) {
             Log.w(
