@@ -2,7 +2,6 @@ package com.giathinh.uthconnect.data.repository
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.domain.model.BookCondition
 import com.giathinh.uthconnect.domain.model.BookDealType
@@ -10,14 +9,15 @@ import com.giathinh.uthconnect.domain.model.BookListing
 import com.giathinh.uthconnect.domain.model.BookListingStatus
 import com.giathinh.uthconnect.domain.repository.BookListingRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -30,6 +30,15 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal suspend fun uploadBookImagesThenSave(
+    uris: List<String>,
+    upload: suspend (String) -> String,
+    save: suspend (List<String>) -> Unit,
+) {
+    val paths = uris.map { upload(it) }
+    save(paths)
+}
 
 @Singleton
 class SupabaseBookListingRepository @Inject constructor(
@@ -60,30 +69,21 @@ class SupabaseBookListingRepository @Inject constructor(
             val listingId = uuid(listing.id)
             val existing = checkExistingOwnership(listingId, uid)
             val oldImagePath = existing?.string("image_path")
-            var newlyUploadedPath: String? = null
-
-            try {
-                if (listing.photoUri != null && !listing.photoUri.startsWith("http")) {
-                    newlyUploadedPath = uploadImage(context, uid, listingId, listing.photoUri)
-                }
-
-                val finalImagePath = newlyUploadedPath ?: listing.imagePath ?: oldImagePath
-                val payload = buildListingPayload(listing, listingId, uid, finalImagePath)
-
+            val selectedUris = (listing.photoUris + listOfNotNull(listing.photoUri))
+                .filter { !it.startsWith("http") }.distinct()
+            uploadBookImagesThenSave(
+                selectedUris,
+                { uri -> uploadImage(context, uid, listingId, uri) },
+            ) { uploaded ->
+                val retained = listing.imagePaths.ifEmpty { listOfNotNull(listing.imagePath ?: oldImagePath) }
+                val payload = buildListingPayload(listing, listingId, uid, (uploaded + retained).distinct())
                 if (existing != null) {
                     client.patchTable("book_listings?id=eq.${urlEncode(listingId)}", payload)
                 } else {
                     client.insertTable("book_listings", payload)
                 }
-
-                cleanupReplacedImage(newlyUploadedPath, oldImagePath)
-                refresh()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                compensateUploadFailure(newlyUploadedPath)
-                throw error
             }
+            refresh()
         }
     }
 
@@ -108,7 +108,7 @@ class SupabaseBookListingRepository @Inject constructor(
         listing: BookListing,
         listingId: String,
         uid: String,
-        finalImagePath: String?,
+        imagePaths: List<String>,
     ): JsonObject = buildJsonObject {
         put("id", listingId)
         put("owner_user_id", uuid(uid))
@@ -124,33 +124,19 @@ class SupabaseBookListingRepository @Inject constructor(
         put("description", listing.description.trim())
         put("seller_name", listing.sellerName.trim())
         put("contact", listing.contact.trim())
-        if (finalImagePath != null) {
-            put("image_path", finalImagePath)
+        if (imagePaths.isNotEmpty()) {
+            put("image_path", imagePaths.first())
         } else {
             put("image_path", JsonNull)
         }
+        put("image_paths", JsonArray(imagePaths.map(::JsonPrimitive)))
+        if (listing.sellerAvatarUrl != null) {
+            put("seller_avatar_url", listing.sellerAvatarUrl)
+        } else {
+            put("seller_avatar_url", JsonNull)
+        }
         put("status", listing.status.name)
         put("updated_at", Instant.now().toString())
-    }
-
-    private suspend fun cleanupReplacedImage(newPath: String?, oldPath: String?) {
-        if (newPath != null && !oldPath.isNullOrBlank() && oldPath != newPath) {
-            runCatching { client.deleteStorage(BUCKET_NAME, oldPath) }
-        }
-    }
-
-    private suspend fun compensateUploadFailure(newlyUploadedPath: String?) {
-        if (newlyUploadedPath != null) {
-            try {
-                client.deleteStorage(BUCKET_NAME, newlyUploadedPath)
-            } catch (cleanupFailure: Exception) {
-                Log.w(
-                    TAG,
-                    "Compensating storage cleanup failed for $newlyUploadedPath",
-                    cleanupFailure,
-                )
-            }
-        }
     }
 
     override suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> = withContext(Dispatchers.IO) {
@@ -189,12 +175,15 @@ class SupabaseBookListingRepository @Inject constructor(
 
     private fun JsonObject.toBookListing(): BookListing {
         val imagePath = string("image_path")
+        val imagePaths = (get("image_paths") as? JsonArray)?.mapNotNull {
+            (it as? JsonPrimitive)?.content?.takeIf(String::isNotBlank)
+        }.orEmpty().ifEmpty { listOfNotNull(imagePath) }
         val photoUrl = imagePath?.takeIf { it.isNotBlank() }?.let {
             "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/$BUCKET_NAME/$it"
         }
         val createdAtMillis = runCatching {
             Instant.parse(string("created_at")).toEpochMilli()
-        }.getOrDefault(System.currentTimeMillis())
+        }.getOrDefault(0L)
 
         val parsedCondition = runCatching {
             BookCondition.valueOf(string("condition").orEmpty())
@@ -223,11 +212,12 @@ class SupabaseBookListingRepository @Inject constructor(
             status = parsedStatus,
             createdAt = createdAtMillis,
             imagePath = imagePath,
+            imagePaths = imagePaths,
+            sellerAvatarUrl = string("seller_avatar_url"),
         )
     }
 
     companion object {
-        private const val TAG = "SupabaseBookListing"
         const val BUCKET_NAME = "book_listings"
         private const val MAX_PHOTO_BYTES = 5L * 1024 * 1024 // 5 MB
         private const val MIN_IMAGE_BYTES = 12

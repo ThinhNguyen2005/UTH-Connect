@@ -16,6 +16,9 @@ interface SessionRepository {
     /** Default implementation for backward compatibility; biometric login is removed from Auth UI. */
     suspend fun unlockWithBiometric() = Unit
 
+    /** Opens the sign-in gate when a backend session is no longer available. */
+    suspend fun requireSignIn() = Unit
+
     /** Removes both remembered and biometric sign-in grants for this device. */
     suspend fun signOut()
 }

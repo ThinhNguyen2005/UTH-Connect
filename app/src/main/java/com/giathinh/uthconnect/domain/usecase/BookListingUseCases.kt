@@ -31,6 +31,10 @@ class BookListingUseCases @Inject constructor(private val repository: BookListin
 
     private fun validateListing(listing: BookListing): Boolean {
         if (listing.id.isBlank()) return false
+        val hasNewImage = listing.photoUris.any { it.isNotBlank() } || !listing.photoUri.isNullOrBlank()
+        val hasExistingImage = !listing.photoUrl.isNullOrBlank() || !listing.imagePath.isNullOrBlank() ||
+            listing.imagePaths.isNotEmpty()
+        if (!hasNewImage && !hasExistingImage) return false
         if (!isTextLengthValid(listing.title, MAX_TITLE_LENGTH)) return false
         if (!isTextLengthValid(listing.subject, MAX_SUBJECT_LENGTH)) return false
         if (!isTextLengthValid(listing.sellerName, MAX_SELLER_LENGTH)) return false

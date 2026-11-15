@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +38,7 @@ fun AuthRoute(
     val scopes = rememberCoroutineScope()
     val googleIdTokens = rememberGoogleIdTokenSource()
     val snackbars = remember { SnackbarHostState() }
+    val signedInState = rememberSaveableStateHolder()
 
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->
@@ -78,7 +80,7 @@ fun AuthRoute(
             SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
         }
 
-        else -> signedInContent()
+        else -> signedInState.SaveableStateProvider("signed_in_${state.student?.studentId}") { signedInContent() }
     }
 }
 

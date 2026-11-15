@@ -610,7 +610,8 @@
     <string name="books_condition_format">Tình trạng: %1$s</string>
     <string name="books_exchange">Trao đổi</string>
     <string name="books_photo_required">Vui lòng chọn ít nhất 1 ảnh bìa sách</string>
-    <string name="books_uploading_photo">Đang tải ảnh bìa lên…</string>
+    <string name="books_uploading_photo">Đang tải ảnh lên…</string>
+    <string name="books_selected_photo_count">Đã chọn %1$d ảnh</string>
     <string name="books_saving_listing">Đang lưu bài đăng…</string>
     <string name="books_clear_search">Xóa tìm kiếm</string>
     <string name="books_seller_account_info">Tài khoản người đăng</string>

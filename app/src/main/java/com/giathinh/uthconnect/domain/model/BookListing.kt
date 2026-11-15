@@ -20,4 +20,7 @@ data class BookListing(
     val status: BookListingStatus = BookListingStatus.AVAILABLE,
     val createdAt: Long = System.currentTimeMillis(),
     val imagePath: String? = null,
+    val imagePaths: List<String> = emptyList(),
+    val photoUris: List<String> = emptyList(),
+    val sellerAvatarUrl: String? = null,
 )

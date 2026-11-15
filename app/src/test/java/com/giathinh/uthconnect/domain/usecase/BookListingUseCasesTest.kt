@@ -51,6 +51,15 @@ class BookListingUseCasesTest {
     }
 
     @Test
+    fun `listing without an image is rejected before persistence`() = runTest {
+        val repository = FakeBookListingRepository()
+        val result = BookListingUseCases(repository).save(listing().copy(photoUri = null))
+
+        assertTrue(result.isFailure)
+        assertFalse(repository.saved)
+    }
+
+    @Test
     fun `invalid contact is rejected`() = runTest {
         val repository = FakeBookListingRepository()
         val result = BookListingUseCases(repository).save(listing(contact = "not contact"))
@@ -100,6 +109,7 @@ class BookListingUseCasesTest {
         description = "",
         sellerName = "Student",
         contact = contact,
+        photoUri = "content://test/photo",
     )
 
     private class FakeBookListingRepository : BookListingRepository {
