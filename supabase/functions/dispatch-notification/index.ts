@@ -270,7 +270,7 @@ Deno.serve(async (request) => {
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
       const heldClaimIds = new Set(claimed.map((row) => row.id));
-      const attemptsSinceProgress = new Map<string, number>();
+      const attemptsSinceProgress = new Map<string, { attempts: number; cursor: string | null }>();
       try {
         ensureWithinDeadline(deadline);
         let accessToken: string | null = null;
@@ -293,6 +293,7 @@ Deno.serve(async (request) => {
           let rowDeferred = false;
           let rowAttempts = row.push_attempts ?? 0;
           let attemptCounted = false;
+          let cursorBeforeAttempt = row.push_device_cursor ?? null;
           for (const device of devices) {
             if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
               rowDeferred = true;
@@ -313,7 +314,10 @@ Deno.serve(async (request) => {
                   cleanupDeadline(),
                 );
                 attemptCounted = true;
-                attemptsSinceProgress.set(row.id, rowAttempts);
+                attemptsSinceProgress.set(row.id, {
+                  attempts: rowAttempts,
+                  cursor: cursorBeforeAttempt,
+                });
               });
             } catch (error) {
               if (!(error instanceof DispatchDeadlineError) || !attemptCounted) throw error;
@@ -344,6 +348,7 @@ Deno.serve(async (request) => {
             );
             rowAttempts = 0;
             attemptCounted = false;
+            cursorBeforeAttempt = device.device_id;
             attemptsSinceProgress.delete(row.id);
             processedDevices++;
           }
@@ -403,11 +408,13 @@ Deno.serve(async (request) => {
         }
       } catch (error) {
         const unattemptedIds: string[] = [];
-        const attemptedGroups = new Map<number, string[]>();
+        const attemptedRows = [...heldClaimIds]
+          .map((id) => ({ id, attempt: attemptsSinceProgress.get(id) }))
+          .filter((entry): entry is { id: string; attempt: { attempts: number; cursor: string | null } } =>
+            entry.attempt !== undefined
+          );
         for (const id of heldClaimIds) {
-          const attempts = attemptsSinceProgress.get(id) ?? 0;
-          if (attempts === 0) unattemptedIds.push(id);
-          else attemptedGroups.set(attempts, [...(attemptedGroups.get(attempts) ?? []), id]);
+          if (!attemptsSinceProgress.has(id)) unattemptedIds.push(id);
         }
         if (unattemptedIds.length > 0) {
           await patchInboxRows(
@@ -418,22 +425,54 @@ Deno.serve(async (request) => {
             cleanupDeadline(),
           );
         }
-        for (const [attempts, ids] of attemptedGroups) {
-          const terminal = attempts >= MAX_PUSH_ATTEMPTS;
-          await patchInboxRows(
-            ids,
-            {
-              push_status: terminal ? "FAILED" : "PENDING",
-              push_attempts: attempts,
-              push_retry_at: terminal
-                ? null
-                : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
-              push_claimed_at: null,
-            },
-            "&push_status=eq.PROCESSING",
-            false,
+        if (attemptedRows.length > 0) {
+          const ids = attemptedRows.map(({ id }) => id);
+          const latestRows = await supabaseRest<Array<{
+            id: string;
+            push_device_cursor: string | null;
+            push_attempts: number;
+          }>>(
+            `notification_inbox?select=id,push_device_cursor,push_attempts&id=in.(${ids.join(",")})&push_status=eq.PROCESSING`,
+            {},
             cleanupDeadline(),
           );
+          const latestById = new Map(latestRows.map((row) => [row.id, row]));
+          const recoveryGroups = new Map<string, {
+            ids: string[];
+            cursor: string | null;
+            attempts: number;
+            progressSaved: boolean;
+          }>();
+          for (const { id, attempt } of attemptedRows) {
+            const latest = latestById.get(id);
+            const cursor = latest?.push_device_cursor ?? null;
+            const progressSaved = cursor !== attempt.cursor;
+            const attempts = latest?.push_attempts ?? attempt.attempts;
+            const key = JSON.stringify([cursor, attempts, progressSaved]);
+            const group = recoveryGroups.get(key) ?? { ids: [], cursor, attempts, progressSaved };
+            group.ids.push(id);
+            recoveryGroups.set(key, group);
+          }
+          await Promise.all([...recoveryGroups.values()].map((group) => {
+            const terminal = !group.progressSaved && group.attempts >= MAX_PUSH_ATTEMPTS;
+            const cursorFilter = group.cursor === null
+              ? "&push_device_cursor=is.null"
+              : `&push_device_cursor=eq.${encodeURIComponent(group.cursor)}`;
+            return patchInboxRows(
+              group.ids,
+              {
+                push_status: terminal ? "FAILED" : "PENDING",
+                push_attempts: group.attempts,
+                push_retry_at: group.progressSaved || group.attempts === 0 || terminal
+                  ? null
+                  : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (group.attempts - 1)).toISOString(),
+                push_claimed_at: null,
+              },
+              `&push_status=eq.PROCESSING${cursorFilter}`,
+              false,
+              cleanupDeadline(),
+            );
+          }));
         }
         heldClaimIds.clear();
         if (error instanceof DispatchDeadlineError) {
