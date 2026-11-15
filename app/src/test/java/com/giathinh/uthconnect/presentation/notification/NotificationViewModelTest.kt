@@ -144,6 +144,35 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `successful individual reads clear a failed mark all after all ids are confirmed`() = runTest {
+        val first = notification("notification-a")
+        val second = notification("notification-b")
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(listOf(Result.success(Unit), Result.success(Unit))),
+            markAllResults = ArrayDeque(listOf(Result.failure(IllegalStateException("temporary")))),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(first, second))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.MarkAllAsRead)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+
+        viewModel.onAction(NotificationAction.ClickNotification(first.id))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+
+        viewModel.onAction(NotificationAction.ClickNotification(second.id))
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(first.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(second.id in viewModel.uiState.value.readNotificationIds)
+    }
+
+    @Test
     fun `failed individual read shows error and retries the mutation`() = runTest {
         val notification = notification("notification-mark-one")
         val repository = FakeNotificationRepository(

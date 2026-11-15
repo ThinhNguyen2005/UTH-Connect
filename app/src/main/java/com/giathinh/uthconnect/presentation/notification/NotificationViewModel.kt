@@ -271,7 +271,7 @@ class NotificationViewModel @Inject constructor(
         } else {
             failedReadMutations.entries.removeIf { (_, mutation) ->
                 (markAll && mutation.markAll) ||
-                    (mutation.ids.isNotEmpty() && mutation.ids.all { it in ids })
+                    (mutation.ids.isNotEmpty() && mutation.ids.all { it in serverConfirmedReadIds })
             }
             _uiState.update { it.copy(readMutationFailed = failedReadMutations.isNotEmpty()) }
         }
