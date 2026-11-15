@@ -140,7 +140,7 @@ class NotificationViewModel @Inject constructor(
                         val readIds = if (
                             requestReadVersion == nextReadMutationVersion && completedAfterStart.isEmpty()
                         ) {
-                            serverReadIds
+                            serverReadIds + serverConfirmedReadIds
                         } else {
                             // Keep optimistic mutations created after this GET started;
                             // an older response must not erase a newer read action.

@@ -231,6 +231,26 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `old unread inbox response keeps read state confirmed by detail`() = runTest {
+        val notification = notification("notification-detail-read-confirmation")
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(),
+            detail = notification.copy(readAt = 1_700_000_000_000L),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.Refresh)
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+    }
+
+    @Test
     fun `failed individual read shows error and retries the mutation`() = runTest {
         val notification = notification("notification-mark-one")
         val repository = FakeNotificationRepository(
