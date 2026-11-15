@@ -134,7 +134,7 @@ class NotificationViewModel @Inject constructor(
                         .filter { item -> item.readAt != null }
                         .map { item -> item.id }
                         .toSet()
-                    serverConfirmedReadIds += serverReadIds
+                    clearServerConfirmedReadFailures(serverReadIds)
                     _uiState.update {
                         val completedAfterStart = completedReadMutations.drop(completedMutationsAtStart)
                         val readIds = if (
@@ -162,10 +162,18 @@ class NotificationViewModel @Inject constructor(
                             isRefreshing = false,
                             notifications = list,
                             readNotificationIds = readIds + pendingReadIds,
+                            readMutationFailed = failedReadMutations.isNotEmpty(),
                             inboxErrorMessage = null,
                         )
                     }
                 }
+        }
+    }
+
+    private fun clearServerConfirmedReadFailures(serverReadIds: Set<String>) {
+        serverConfirmedReadIds += serverReadIds
+        failedReadMutations.entries.removeIf { (_, mutation) ->
+            mutation.ids.isNotEmpty() && mutation.ids.all { it in serverConfirmedReadIds }
         }
     }
 
@@ -185,17 +193,27 @@ class NotificationViewModel @Inject constructor(
                     if (generation != detailLoadGeneration || _uiState.value.detailId != notificationId) return@fold
                     _uiState.update { it.copy(detail = detail, isDetailLoading = false) }
                     if (detail != null) {
-                        val version = markReadOptimistically(listOf(notificationId))
-                        viewModelScope.launch {
-                            val result = readMutationMutex.withLock {
-                                notificationRepository.markInboxNotificationRead(notificationId)
+                        if (detail.readAt != null) {
+                            clearServerConfirmedReadFailures(setOf(notificationId))
+                            _uiState.update {
+                                it.copy(
+                                    readNotificationIds = it.readNotificationIds + notificationId,
+                                    readMutationFailed = failedReadMutations.isNotEmpty(),
+                                )
                             }
-                            finishReadMutation(
-                                listOf(notificationId),
-                                version,
-                                result,
-                                markAll = false,
-                            )
+                        } else {
+                            val version = markReadOptimistically(listOf(notificationId))
+                            viewModelScope.launch {
+                                val result = readMutationMutex.withLock {
+                                    notificationRepository.markInboxNotificationRead(notificationId)
+                                }
+                                finishReadMutation(
+                                    listOf(notificationId),
+                                    version,
+                                    result,
+                                    markAll = false,
+                                )
+                            }
                         }
                     }
                 },
@@ -260,12 +278,17 @@ class NotificationViewModel @Inject constructor(
         val previous = readMutationPreviousStates.remove(version).orEmpty().intersect(ownedIds.toSet())
         if (ownedIds.isNotEmpty()) completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
-            failedReadMutations[version] = FailedReadMutation(ids, markAll)
+            val unconfirmedIds = ids.filterNot { it in serverConfirmedReadIds }
+            if (unconfirmedIds.isNotEmpty()) {
+                failedReadMutations[version] = FailedReadMutation(unconfirmedIds, markAll)
+            } else {
+                failedReadMutations.remove(version)
+            }
             _uiState.update { state ->
                 val serverConfirmed = serverConfirmedReadIds.intersect(ownedIds.toSet())
                 state.copy(
                     readNotificationIds = (state.readNotificationIds - ownedIds.toSet()) + previous + serverConfirmed,
-                    readMutationFailed = true,
+                    readMutationFailed = failedReadMutations.isNotEmpty(),
                 )
             }
         } else {

@@ -173,6 +173,64 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `server confirmed read clears failed mutation and its error`() = runTest {
+        val notification = notification("notification-confirmed-by-refresh")
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(listOf(Result.failure(IllegalStateException("temporary")))),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.ClickNotification(notification.id))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+
+        viewModel.onAction(NotificationAction.Refresh)
+        advanceUntilIdle()
+        repository.emit(listOf(notification.copy(readAt = 1_700_000_000_000L)))
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+    }
+
+    @Test
+    fun `read detail confirms state and skips a redundant patch`() = runTest {
+        val notification = notification("notification-read-detail")
+        val patchGate = CompletableDeferred<Unit>()
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
+            markGates = ArrayDeque(listOf(patchGate)),
+            detail = notification.copy(readAt = 1_700_000_000_000L),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.ClickNotification(notification.id))
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markCallCount == 1)
+
+        patchGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markCallCount == 1)
+    }
+
+    @Test
     fun `failed individual read shows error and retries the mutation`() = runTest {
         val notification = notification("notification-mark-one")
         val repository = FakeNotificationRepository(
