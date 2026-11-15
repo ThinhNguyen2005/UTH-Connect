@@ -18,19 +18,19 @@ const post = {
   created_at: '2026-11-14T00:00:00Z', profiles: { display_name: 'Sinh viên' },
 };
 
-async function renderPage(file, rows = [post]) {
+async function renderPage(file, rows = [post], states = {}) {
   const effects = [];
   const filters = [];
   let stateIndex = 0;
   const query = {
-    select() { return this; }, order() { return this; },
+    select() { return this; }, order() { return this; }, maybeSingle() { return this; },
     eq(...args) { filters.push(args); return this; },
     then(resolve) { return Promise.resolve({ data: [post], error: null }).then(resolve); },
   };
   const mockReact = { ...React,
     useState(initial) {
       const index = stateIndex++;
-      return [index === 0 ? rows : index === 1 ? false : initial, () => {}];
+      return [Object.hasOwn(states, index) ? states[index] : index === 0 ? rows : index === 1 ? false : initial, () => {}];
     },
     useEffect(fn) { effects.push(fn); },
   };
@@ -41,44 +41,69 @@ async function renderPage(file, rows = [post]) {
   function load(name) {
     if (name === 'react') return mockReact;
     if (name === 'lucide-react') return new Proxy({}, { get: () => () => null });
-    if (name === '@/utils/supabase-client') return { supabaseBrowserClient: { from: () => query } };
+    if (name === '@/utils/supabase-client') return { supabaseBrowserClient: { from: () => query, rpc: () => Promise.resolve({ data: [], error: null }) } };
     if (name.includes('/layout/')) return new Proxy({}, { get: () => ({ children }) => children });
     if (name === 'next/link') return ({ children, ...props }) => React.createElement('a', props, children);
     return require(name);
   }
   new Function('require', 'module', 'exports', code)(load, module, module.exports);
-  const html = renderToStaticMarkup(React.createElement(module.exports.default));
+  const html = renderToStaticMarkup(React.createElement(module.exports.default, { params: { id: post.id } }));
   effects.forEach(fn => fn());
   await new Promise(resolve => setImmediate(resolve));
   return { html, filters };
 }
 
-for (const file of ['src/app/housing/page.tsx', 'src/app/admin/moderation/page.tsx']) {
+for (const file of ['src/app/housing/[id]/page.tsx', 'src/app/admin/moderation/page.tsx']) {
   test(`${file}: giá và thông tin chi tiết theo schema Android`, async () => {
-    const { html } = await renderPage(file);
+    const { html } = await renderPage(file, [post], file.includes('[id]') ? { 0: post } : { 3: post });
     assert.ok(html.includes('2.500.000'));
     assert.ok(!html.includes('NaN'));
-    for (const text of ['Xem chi tiết', 'Mô tả đầy đủ', 'Địa chỉ kiểm thử', '1.000.000', 'Về trước 23 giờ', 'Điều hòa']) {
+    for (const text of ['Mô tả đầy đủ', 'Địa chỉ kiểm thử', '1.000.000', 'Về trước 23 giờ', 'Điều hòa']) {
       assert.ok(html.includes(text), `Thiếu ${text}`);
     }
     assert.ok(!html.includes('javascript:'));
   });
 }
 
-test('Cổng sinh viên chỉ truy vấn tin OPEN và có sao chép số', async () => {
+test('Danh sách sinh viên chỉ truy vấn OPEN và dẫn sang trang riêng', async () => {
   const { html, filters } = await renderPage('src/app/housing/page.tsx');
   assert.deepEqual(filters, [['status', 'OPEN']]);
-  assert.ok(html.includes('Sao chép số'));
-  assert.ok(html.includes('0912345678'));
+  assert.ok(html.includes('href="/housing/test-post"'));
+  assert.ok(!html.includes('<details'));
+  assert.ok(!html.includes('Mô tả đầy đủ'));
+  assert.ok(html.includes('2.500.000'));
 });
 
-for (const file of ['src/app/housing/page.tsx', 'src/app/admin/moderation/page.tsx']) {
-  test(`${file}: danh sách trống và Zalo không an toàn`, async () => {
-    const empty = await renderPage(file, []);
-    assert.ok(empty.html.includes('Chưa có tin') || empty.html.includes('Không có tin'));
-    const unsafe = await renderPage(file, [{ ...post, contact_zalo_enabled: true }]);
+test('Admin mở chi tiết trong dialog và có thao tác quản trị', async () => {
+  const { html } = await renderPage('src/app/admin/moderation/page.tsx', [post], { 3: post });
+  assert.ok(html.includes('<dialog'));
+  assert.ok(!html.includes('<details'));
+  for (const text of ['Báo cáo', 'Ẩn tin', 'Xóa tin']) assert.ok(html.includes(text), text);
+});
+
+for (const file of ['src/app/housing/[id]/page.tsx', 'src/app/admin/moderation/page.tsx']) {
+  test(`${file}: Zalo không an toàn không được liên kết`, async () => {
+    const slot = file.includes('[id]') ? 0 : 3;
+    const unsafe = await renderPage(file, [post], { [slot]: { ...post, contact_zalo_enabled: true } });
     assert.ok(!unsafe.html.includes('javascript:'));
-    const valid = await renderPage(file, [{ ...post, contact_zalo_enabled: true, contact_zalo_url: 'https://zalo.me/0912345678' }]);
+    const valid = await renderPage(file, [post], { [slot]: { ...post, contact_zalo_enabled: true, contact_zalo_url: 'https://zalo.me/0912345678' } });
     assert.ok(valid.html.includes('href="https://zalo.me/0912345678"'));
   });
 }
+
+test('RPC quản trị luôn kiểm tra admin và không cấp quyền cho anon', () => {
+  const sql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261114111909_housing_admin_actions.sql'), 'utf8');
+  for (const [name, signature] of [['hide_housing_listing', 'uuid'], ['delete_housing_listing', 'uuid'], ['get_housing_reports', 'uuid']]) {
+    const body = sql.split(`function public.${name}(`)[1]?.split('$$;')[0];
+    assert.ok(body?.includes('auth.uid()') && body.includes('public.is_admin()'), `${name}: admin check`);
+    assert.ok(body.includes("set search_path = ''"), `${name}: fixed search path`);
+    assert.ok(sql.includes(`revoke all on function public.${name}(${signature}) from public, anon;`));
+  }
+  assert.ok(!sql.includes('delete from storage.objects'));
+});
+
+test('Trang chi tiết sinh viên lọc OPEN cả khi mở trực tiếp bằng ID', async () => {
+  const { html, filters } = await renderPage('src/app/housing/[id]/page.tsx', [], { 0: null });
+  assert.deepEqual(filters, [['id', 'test-post'], ['status', 'OPEN']]);
+  assert.ok(html.includes('Tin không còn hiển thị'));
+});
