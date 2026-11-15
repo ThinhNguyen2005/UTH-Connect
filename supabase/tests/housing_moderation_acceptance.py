@@ -268,6 +268,39 @@ def main():
             "housing_posts", post2, {"title": FIXTURE_PREFIX + "A10 resubmit"}),
             "HOUSING_OPEN_LIMIT")
 
+        for rpc in ("hide_housing_listing", "delete_housing_listing", "get_housing_reports"):
+            denied(f"A11 student cannot call {rpc}", lambda rpc=rpc: stranger.rpc(
+                rpc, p_listing_id=post2), "HOUSING_ADMIN_ONLY")
+            denied(f"A11 owner cannot call {rpc}", lambda rpc=rpc: author.rpc(
+                rpc, p_listing_id=post2), "HOUSING_ADMIN_ONLY")
+
+        report_post = row["id"]
+        admin.rpc("approve_housing_listing", p_listing_id=report_post)
+        stranger.rpc("report_housing_listing", p_listing_id=report_post,
+                     p_reason="A12 inaccurate information")
+        reports = admin.rpc("get_housing_reports", p_listing_id=report_post)
+        require(len(reports) == 1 and reports[0]["reason"] == "A12 inaccurate information",
+                "A12 admin reads report reasons")
+        require(set(reports[0]) == {"reason", "created_at"},
+                "A12 reporter identity not returned")
+        admin.rpc("hide_housing_listing", p_listing_id=report_post)
+        require(read_post(admin, report_post)["status"] == "HIDDEN_BY_REPORTS",
+                "A13 admin hides reported listing")
+        require(read_post(stranger, report_post) is None, "A13 hidden listing not public")
+        require(len(admin.rpc("get_housing_reports", p_listing_id=report_post)) == 1,
+                "A13 hide preserves report evidence")
+        author.patch("housing_posts", report_post, {"title": FIXTURE_PREFIX + "hidden edit"})
+        require(read_post(admin, report_post)["status"] == "HIDDEN_BY_REPORTS",
+                "A13 owner edit does not republish hidden listing")
+        denied("A13 cannot approve hidden listing", lambda: admin.rpc(
+            "approve_housing_listing", p_listing_id=report_post), "HOUSING_NOT_PENDING")
+        admin.rpc("delete_housing_listing", p_listing_id=report_post)
+        require(read_post(admin, report_post) is None, "A14 admin permanently deletes listing")
+        require(admin.rpc("get_housing_reports", p_listing_id=report_post) == [],
+                "A14 listing reports cascade on deletion")
+        denied("A14 missing listing", lambda: admin.rpc(
+            "hide_housing_listing", p_listing_id=report_post), "HOUSING_NOT_FOUND")
+
         print("ALL HOUSING MODERATION ACCEPTANCE CASES PASSED")
     finally:
         for post_id in created:
