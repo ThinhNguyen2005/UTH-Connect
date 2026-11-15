@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.data.repository
 import android.content.Context
 import android.util.Log
 import com.giathinh.uthconnect.data.push.FcmTokenRegistrar
+import com.giathinh.uthconnect.data.push.PushNotificationCoordinator
 import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import com.giathinh.uthconnect.domain.repository.SessionFailure
@@ -22,6 +23,7 @@ import javax.inject.Singleton
 
 /** Only student ID / biometric opt-in; never password, raw biometric, session token. */
 @Singleton
+@Suppress("LongParameterList")
 class PreferencesSessionRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val auth: AuthRepository,
@@ -29,6 +31,7 @@ class PreferencesSessionRepository @Inject constructor(
     private val supabaseAuth: SupabaseAuthRepository,
     private val secureStore: SecureSessionStore,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val pushNotificationCoordinator: PushNotificationCoordinator,
 ) : SessionRepository {
     private val prefs = context.getSharedPreferences("uth_auth_demo", Context.MODE_PRIVATE)
     private val mutex = Mutex()
@@ -52,7 +55,10 @@ class PreferencesSessionRepository @Inject constructor(
                     profile = candidateProfile,
                     remembered = hasSession,
                 )
-                if (candidateProfile != null) fcmTokenRegistrar.registerForSignedInUser()
+                if (candidateProfile != null) {
+                    pushNotificationCoordinator.sessionStarted(client.userIdOrNull)
+                    fcmTokenRegistrar.registerForSignedInUser()
+                }
             } catch (cancelled: CancellationException) {
                 restored = false
                 throw cancelled
@@ -72,6 +78,7 @@ class PreferencesSessionRepository @Inject constructor(
                 profile = profile,
                 remembered = remember,
             )
+            pushNotificationCoordinator.sessionStarted(client.userIdOrNull)
             fcmTokenRegistrar.registerForSignedInUser()
         }
     }
@@ -105,6 +112,7 @@ class PreferencesSessionRepository @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     override suspend fun signOut() {
         mutex.withLock {
+            pushNotificationCoordinator.signOutStarted()
             // Device cleanup is best effort. Local credentials must still be revoked when
             // the network is unavailable; a later login reclaims the installation row.
             val cleanupCompleted = withContext(kotlinx.coroutines.NonCancellable) {

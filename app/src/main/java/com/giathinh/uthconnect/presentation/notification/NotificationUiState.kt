@@ -13,6 +13,7 @@ data class NotificationUiState(
     val selectedCategory: NotificationCategory? = null,
     val notifications: List<PostNotification> = emptyList(),
     val readNotificationIds: Set<String> = emptySet(),
+    val readMutationFailed: Boolean = false,
     val errorMessage: String? = null,
     val inboxErrorMessage: String? = null,
     val detailId: String? = null,

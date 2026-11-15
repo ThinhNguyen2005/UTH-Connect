@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.giathinh.uthconnect.MainActivity
 import com.giathinh.uthconnect.R
@@ -30,6 +29,8 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
     @Inject lateinit var supabaseClient: SupabaseRestClient
 
     @Inject lateinit var secureSessionStore: SecureSessionStore
+
+    @Inject lateinit var pushNotificationCoordinator: PushNotificationCoordinator
 
     override fun onNewToken(token: String) {
         tokenRegistrar.onTokenRefreshed(token)
@@ -75,7 +76,12 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            NotificationManagerCompat.from(this).notify(notificationId.hashCode(), notification)
+            pushNotificationCoordinator.notifyForCurrentUser(
+                recipientId,
+                { supabaseClient.userIdOrNull },
+                notificationId.hashCode(),
+                notification,
+            )
         }
     }
 

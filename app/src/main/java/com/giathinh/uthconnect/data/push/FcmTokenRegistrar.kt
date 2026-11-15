@@ -86,7 +86,7 @@ class FcmTokenRegistrar @Inject constructor(
         registrationJob?.cancel()
         registrationJob = scope.launch {
             retryRegistration(generation, userId) {
-                registerToken(FirebaseMessaging.getInstance().token.await())
+                registerToken(FirebaseMessaging.getInstance().token.await(), userId)
             }
         }
     }
@@ -103,7 +103,7 @@ class FcmTokenRegistrar @Inject constructor(
                 pendingRetryJob?.cancel()
                 if (!rotationPending) registrationJob?.cancel()
                 registrationJob = scope.launch {
-                    retryRegistration(generation, userId) { registerToken(token) }
+                    retryRegistration(generation, userId) { registerToken(token, userId) }
                 }
                 return
             }
@@ -140,6 +140,7 @@ class FcmTokenRegistrar @Inject constructor(
                 restoreJob?.cancel()
                 Triple(job, pendingJob, restoreJob)
             }
+            FcmTokenRegistrationRetryWorker.cancel(context)
             jobToJoin.first?.join()
             jobToJoin.second?.join()
             jobToJoin.third?.join()
@@ -170,17 +171,19 @@ class FcmTokenRegistrar @Inject constructor(
     }
 
     @Suppress("TooGenericExceptionCaught", "ReturnCount", "ThrowsCount")
-    private suspend fun registerToken(token: String) {
+    private suspend fun registerToken(token: String, expectedUserId: String) {
         registrationMutex.withLock {
             if (!registrationEnabled) return
             var tokenToRegister = token
             for (attempt in 0..OWNERSHIP_ROTATION_ATTEMPTS) {
+                if (client.userIdOrNull != expectedUserId) return
                 if (preferences.getBoolean(KEY_ROTATION_PENDING, false)) {
                     FirebaseMessaging.getInstance().deleteToken().await()
                     rotateInstallationId()
                     tokenToRegister = FirebaseMessaging.getInstance().token.await()
                     preferences.edit().putBoolean(KEY_ROTATION_PENDING, false).apply()
                 }
+                if (client.userIdOrNull != expectedUserId) return
                 if (tokenToRegister.isBlank()) return
                 try {
                     client.rpc(
@@ -190,6 +193,7 @@ class FcmTokenRegistrar @Inject constructor(
                             put("p_token", tokenToRegister)
                             put("p_platform", "ANDROID")
                         },
+                        expectedUserId = expectedUserId,
                     )
                     return
                 } catch (cancellation: kotlinx.coroutines.CancellationException) {
@@ -214,6 +218,7 @@ class FcmTokenRegistrar @Inject constructor(
             if (!isRegistrationActive(generation, userId)) return
             try {
                 register()
+                FcmTokenRegistrationRetryWorker.cancel(context)
                 return
             } catch (cancellation: kotlinx.coroutines.CancellationException) {
                 throw cancellation
@@ -225,11 +230,57 @@ class FcmTokenRegistrar @Inject constructor(
             }
         }
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
+        try {
+            FcmTokenRegistrationRetryWorker.enqueue(context, userId)
+        } catch (error: Exception) {
+            android.util.Log.w(TAG, "Unable to enqueue durable FCM token registration retry", error)
+        }
         pendingRetryJob = scope.launch {
             delay(PENDING_RETRY_DELAY_MS)
             synchronized(registrationStateLock) {
                 if (isRegistrationActiveLocked(generation, userId)) registerForSignedInUserLocked()
             }
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
+    internal suspend fun retryRegistrationFromWorker(expectedUserId: String): FcmRegistrationRetryResult {
+        if (client.userIdOrNull == null) {
+            val restored = try {
+                client.restoreSavedSession()
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                android.util.Log.w(TAG, "Unable to restore session for durable FCM registration retry", error)
+                return FcmRegistrationRetryResult.RETRY
+            }
+            if (!restored) return FcmRegistrationRetryResult.STALE_SESSION
+        }
+
+        val generation = synchronized(registrationStateLock) {
+            if (signOutInProgress || client.userIdOrNull != expectedUserId) {
+                return FcmRegistrationRetryResult.STALE_SESSION
+            }
+            registrationEnabled = true
+            pendingRetryJob?.cancel()
+            pendingRetryJob = null
+            ++registrationGeneration
+        }
+
+        return try {
+            val token = FirebaseMessaging.getInstance().token.await()
+            if (!isRegistrationActive(generation, expectedUserId)) return FcmRegistrationRetryResult.STALE_SESSION
+            registerToken(token, expectedUserId)
+            if (isRegistrationActive(generation, expectedUserId)) {
+                FcmRegistrationRetryResult.COMPLETE
+            } else {
+                FcmRegistrationRetryResult.STALE_SESSION
+            }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            android.util.Log.w(TAG, "Durable FCM token registration retry failed", error)
+            FcmRegistrationRetryResult.RETRY
         }
     }
 

@@ -936,6 +936,7 @@
     <string name="notification_empty_desc">You will receive updates about classes and events here.</string>
     <string name="notification_detail_unavailable">This notification could not be found.</string>
     <string name="notification_error_title">Could not load notifications</string>
+    <string name="notification_read_update_failed">Could not update read status. Please try again.</string>
     <string name="notification_retry">Retry</string>
     <string name="notification_tag_event">Event</string>
     <string name="notification_tag_academic">Academic</string>

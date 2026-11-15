@@ -1,11 +1,20 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.BuildConfig
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.headers
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -23,10 +32,15 @@ import javax.inject.Singleton
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 private const val STORAGE_READ_TIMEOUT_MS = 60_000
 private const val NANOS_PER_MILLISECOND = 1_000_000L
+private const val DEFAULT_REQUEST_TIMEOUT_MS = 15_000L
 
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
+    private val httpClient = HttpClient(OkHttp) {
+        expectSuccess = false
+        install(HttpTimeout)
+    }
     private val sessionMutex = SessionMutationGate()
 
     @Volatile private var sessionStore: SecureSessionStore? = null
@@ -263,7 +277,16 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun upsertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
 
     /** Invokes an authenticated Postgres RPC function. */
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+    suspend fun rpc(
+        function: String,
+        params: JsonObject,
+        expectedUserId: String? = null,
+    ): JsonElement = authorized(
+        "/rest/v1/rpc/$function",
+        "POST",
+        params,
+        expectedUserId = expectedUserId,
+    )
 
     /** Upload nhị phân lên Storage; path phải thuộc thư mục `auth.uid()` để qua RLS. */
     suspend fun uploadStorageObject(bucket: String, path: String, bytes: ByteArray, contentType: String) {
@@ -384,12 +407,13 @@ class SupabaseRestClient @Inject constructor() {
         prefer: String? = null,
         allowAnonymous: Boolean = false,
         requestTimeoutMs: Int? = null,
+        expectedUserId: String? = null,
     ): JsonElement {
         val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
         val accessToken = if (allowAnonymous) {
             freshTokenOrNull(deadlineNanos)
         } else {
-            freshToken(deadlineNanos)
+            freshToken(deadlineNanos, expectedUserId)
         }
         return send(path, method, body, bearer = accessToken, prefer = prefer, deadlineNanos = deadlineNanos)
     }
@@ -492,7 +516,6 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Performs one HTTP request and converts non-success responses to [SupabaseHttpException]. */
-    @OptIn(InternalCoroutinesApi::class)
     private suspend fun send(
         path: String,
         method: String,
@@ -500,65 +523,63 @@ class SupabaseRestClient @Inject constructor() {
         bearer: String?,
         prefer: String? = null,
         deadlineNanos: Long? = null,
-    ): JsonElement = withContext(Dispatchers.IO) {
+    ): JsonElement {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
-        val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
-        val cancellationHandle = currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true) {
-            connection.disconnect()
+        val request = RestRequest(path, method, body, bearer, prefer, requestTimeoutMs(deadlineNanos))
+        val response = executeRequest(request)
+        val responseBody = response.bodyAsText()
+        val status = response.status.value
+        if (status !in 200..299) {
+            throw SupabaseHttpException(status, supabaseErrorMessage(responseBody, status))
         }
-        try {
-            configureRequestMethod(connection, method, path, prefer)
-            val timeoutMs = deadlineNanos?.let { deadline ->
-                ((deadline - System.nanoTime()) / NANOS_PER_MILLISECOND)
-                    .coerceAtLeast(1L)
-                    .coerceAtMost(Int.MAX_VALUE.toLong())
-                    .toInt()
-            } ?: 15_000
-            connection.connectTimeout = timeoutMs
-            connection.readTimeout = timeoutMs
-            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
-            connection.setRequestProperty("Accept", "application/json")
-            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer $bearer")
-            if (body != null) {
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            }
-            val status = connection.responseCode
-            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
-                ?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
-                val message = runCatching {
-                    val error = json.parseToJsonElement(response).jsonObject
-                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
-                }.getOrNull() ?: "Supabase HTTP $status"
-                throw SupabaseHttpException(status, message)
-            }
-            if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
-        } finally {
-            cancellationHandle?.dispose()
-            connection.disconnect()
+        return if (responseBody.isBlank()) JsonNull else json.parseToJsonElement(responseBody)
+    }
+
+    private suspend fun executeRequest(request: RestRequest) = httpClient.request(
+        BuildConfig.SUPABASE_URL + request.path,
+    ) {
+        method = HttpMethod(request.method)
+        timeout { requestTimeoutMillis = request.timeoutMs }
+        headers {
+            append("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            request.bearer?.let { append(HttpHeaders.Authorization, "Bearer $it") }
+            requestPrefer(request.method, request.path, request.prefer)
+                ?.let { append(HttpHeaders.Prefer, it) }
+        }
+        if (request.body != null) {
+            contentType(ContentType.Application.Json)
+            setBody(request.body.toString())
         }
     }
 
-    private fun configureRequestMethod(
-        connection: HttpURLConnection,
-        method: String,
-        path: String,
-        prefer: String?,
-    ) {
-        val postgrestPrefer = prefer ?: "return=representation"
-        if (method == "PATCH") {
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-            connection.setRequestProperty("Prefer", postgrestPrefer)
-            return
-        }
-        connection.requestMethod = method
-        if (method == "POST" && path.startsWith("/rest/v1/")) {
-            connection.setRequestProperty("Prefer", postgrestPrefer)
-        }
+    private fun requestTimeoutMs(deadlineNanos: Long?): Long = deadlineNanos?.let { deadline ->
+        ((deadline - System.nanoTime()) / NANOS_PER_MILLISECOND)
+            .coerceAtLeast(1L)
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+    } ?: DEFAULT_REQUEST_TIMEOUT_MS
+
+    private fun requestPrefer(method: String, path: String, prefer: String?): String? = prefer ?: when {
+        method == "PATCH" -> "return=representation"
+        method == "POST" && path.startsWith("/rest/v1/") -> "return=representation"
+        else -> null
     }
+
+    private fun supabaseErrorMessage(responseBody: String, status: Int): String = runCatching {
+        val error = json.parseToJsonElement(responseBody).jsonObject
+        (error["error_description"] ?: error["message"] ?: error["error"])
+            ?.jsonPrimitive
+            ?.content
+    }.getOrNull() ?: "Supabase HTTP $status"
+
+    private data class RestRequest(
+        val path: String,
+        val method: String,
+        val body: JsonObject?,
+        val bearer: String?,
+        val prefer: String?,
+        val timeoutMs: Long,
+    )
 
     private data class Credentials(
         val userId: String,

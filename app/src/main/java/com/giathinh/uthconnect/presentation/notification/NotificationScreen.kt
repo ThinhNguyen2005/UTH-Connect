@@ -106,7 +106,15 @@ fun NotificationScreen(
                 when {
                     uiState.isDetailLoading -> NotificationLoadingState()
 
-                    uiState.detail != null -> NotificationDetailContent(uiState.detail!!)
+                    uiState.detail != null -> {
+                        if (uiState.readMutationFailed) {
+                            NotificationInlineError(
+                                message = stringResource(R.string.notification_read_update_failed),
+                                onRetry = { onAction(NotificationAction.RetryReadMutations) },
+                            )
+                        }
+                        NotificationDetailContent(uiState.detail)
+                    }
 
                     uiState.errorMessage != null -> NotificationErrorState(
                         message = uiState.errorMessage,
@@ -120,13 +128,31 @@ fun NotificationScreen(
             } else if (uiState.isLoading || (uiState.isRefreshing && uiState.notifications.isEmpty())) {
                 NotificationLoadingState()
             } else if (uiState.inboxErrorMessage != null && uiState.notifications.isEmpty()) {
+                if (uiState.readMutationFailed) {
+                    NotificationInlineError(
+                        message = stringResource(R.string.notification_read_update_failed),
+                        onRetry = { onAction(NotificationAction.RetryReadMutations) },
+                    )
+                }
                 NotificationErrorState(
                     message = uiState.inboxErrorMessage,
                     onRetry = { onAction(NotificationAction.Refresh) },
                 )
             } else if (uiState.filteredNotifications.isEmpty()) {
+                if (uiState.readMutationFailed) {
+                    NotificationInlineError(
+                        message = stringResource(R.string.notification_read_update_failed),
+                        onRetry = { onAction(NotificationAction.RetryReadMutations) },
+                    )
+                }
                 NotificationEmptyState(onRefresh = { onAction(NotificationAction.Refresh) })
             } else {
+                if (uiState.readMutationFailed) {
+                    NotificationInlineError(
+                        message = stringResource(R.string.notification_read_update_failed),
+                        onRetry = { onAction(NotificationAction.RetryReadMutations) },
+                    )
+                }
                 if (uiState.inboxErrorMessage != null) {
                     NotificationInlineError(
                         message = uiState.inboxErrorMessage,

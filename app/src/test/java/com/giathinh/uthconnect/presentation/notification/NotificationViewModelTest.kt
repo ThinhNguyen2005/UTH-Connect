@@ -112,6 +112,69 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `failed mark all read shows error and retries the mutation`() = runTest {
+        val notification = notification("notification-mark-all")
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(),
+            markAllResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.MarkAllAsRead)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+        assertTrue(notification.id !in viewModel.uiState.value.readNotificationIds)
+        assertTrue(repository.markAllCallCount == 1)
+
+        viewModel.onAction(NotificationAction.RetryReadMutations)
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(repository.markAllCallCount == 2)
+    }
+
+    @Test
+    fun `failed individual read shows error and retries the mutation`() = runTest {
+        val notification = notification("notification-mark-one")
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.ClickNotification(notification.id))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+        assertTrue(notification.id !in viewModel.uiState.value.readNotificationIds)
+        assertTrue(repository.markCallCount == 1)
+
+        viewModel.onAction(NotificationAction.RetryReadMutations)
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(repository.markCallCount == 2)
+    }
+
+    @Test
     fun `stale same detail failure does not end the latest loading request`() = runTest {
         val notification = notification("notification-detail-generation")
         val staleResult = CompletableDeferred<Result<PostNotification?>>()
@@ -151,11 +214,16 @@ class NotificationViewModelTest {
 
     private class FakeNotificationRepository(
         private val markResults: ArrayDeque<Result<Unit>>,
+        private val markAllResults: ArrayDeque<Result<Unit>> = ArrayDeque(listOf(Result.success(Unit))),
         private val markGates: ArrayDeque<CompletableDeferred<Unit>> = ArrayDeque(),
         private val detail: PostNotification? = null,
         private val detailResults: ArrayDeque<CompletableDeferred<Result<PostNotification?>>> = ArrayDeque(),
     ) : NotificationRepository {
         private val inbox = MutableSharedFlow<List<PostNotification>>(extraBufferCapacity = 8)
+        var markCallCount = 0
+            private set
+        var markAllCallCount = 0
+            private set
 
         suspend fun emit(items: List<PostNotification>) {
             inbox.emit(items)
@@ -172,8 +240,14 @@ class NotificationViewModelTest {
         override fun getInbox(): Flow<List<PostNotification>> = inbox
 
         override suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> {
+            markCallCount++
             markGates.removeFirstOrNull()?.await()
             return markResults.removeFirst()
+        }
+
+        override suspend fun markAllInboxNotificationsRead(): Result<Unit> {
+            markAllCallCount++
+            return markAllResults.removeFirst()
         }
 
         override suspend fun getInboxNotification(

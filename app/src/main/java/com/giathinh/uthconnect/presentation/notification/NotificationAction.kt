@@ -29,4 +29,7 @@ sealed interface NotificationAction {
 
     /** Loads a notification opened directly from an FCM tap. */
     data class LoadDetail(val notificationId: String) : NotificationAction
+
+    /** Retries inbox read-status updates that previously failed. */
+    data object RetryReadMutations : NotificationAction
 }

@@ -91,10 +91,13 @@ Deno.serve(async (request) => {
           const latestProgress = currentProgress[0];
           if (!latestProgress || latestProgress.fanout_complete) continue;
           const cursorAdvanced = latestProgress.last_recipient_id !== progress.last_recipient_id;
+          const timedOutWithoutProgress = continuationResult === "TIMED_OUT" && !cursorAdvanced;
           let attempts = progress.recovery_attempts ?? 0;
           if (cursorAdvanced || continuationResult === "SENT") attempts = 0;
-          else if (continuationResult === "FAILED") attempts++;
-          if (continuationResult === "TIMED_OUT" && !cursorAdvanced) continue;
+          else if (continuationResult === "FAILED" || timedOutWithoutProgress) {
+            attempts = Math.min(attempts + 1, MAX_FANOUT_RECOVERY_ATTEMPTS);
+          }
+          // A timeout is ambiguous, so only a confirmed failed response can end recovery.
           const terminal = continuationResult === "FAILED" && attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
           const cursorFilter = latestProgress.last_recipient_id === null
             ? "last_recipient_id=is.null"
@@ -116,6 +119,8 @@ Deno.serve(async (request) => {
             },
             deadline,
           );
+          // Save the backoff, then leave room in this invocation for due push rows.
+          if (timedOutWithoutProgress) break;
         }
       }
 
@@ -230,7 +235,7 @@ Deno.serve(async (request) => {
       }
       const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
-        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor,push_attempts&push_status=eq.PENDING&or=(push_retry_at.is.null,push_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=id.asc&limit=${pageSize}`,
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor,push_attempts&push_status=eq.PENDING&${pushRetryDueFilter()}&order=id.asc&limit=${pageSize}`,
         {},
         deadline,
       );
@@ -240,7 +245,7 @@ Deno.serve(async (request) => {
       const claimed = await patchInboxRows(
         ids,
         { push_status: "PROCESSING", push_claimed_at: new Date().toISOString() },
-        "&push_status=eq.PENDING",
+        `&push_status=eq.PENDING&${pushRetryDueFilter()}`,
         true,
         cleanupDeadline(),
       );
@@ -628,6 +633,10 @@ function ensureWithinDeadline(deadline: number, additionalDelayMs = 0) {
   if (Date.now() + additionalDelayMs >= deadline) {
     throw new DispatchDeadlineError("Notification dispatch time budget reached");
   }
+}
+
+function pushRetryDueFilter(): string {
+  return `or=(push_retry_at.is.null,push_retry_at.lte.${encodeURIComponent(new Date().toISOString())})`;
 }
 
 async function getFcmAccessToken(deadline: number): Promise<string> {

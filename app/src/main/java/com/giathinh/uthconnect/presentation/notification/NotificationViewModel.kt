@@ -46,6 +46,11 @@ class NotificationViewModel @Inject constructor(
         val succeeded: Boolean,
     )
     private val completedReadMutations = mutableListOf<CompletedReadMutation>()
+    private data class FailedReadMutation(
+        val ids: List<String>,
+        val markAll: Boolean,
+    )
+    private val failedReadMutations = linkedMapOf<Long, FailedReadMutation>()
     private var nextReadMutationVersion = 0L
     private var inboxLoadGeneration = 0L
     private var inboxLoadJob: Job? = null
@@ -78,14 +83,7 @@ class NotificationViewModel @Inject constructor(
                 val ids = currentState.notifications
                     .map { it.id }
                     .filterNot { it in currentState.readNotificationIds }
-                val version = markReadOptimistically(ids)
-                viewModelScope.launch {
-                    val result = readMutationMutex.withLock {
-                        notificationRepository.markAllInboxNotificationsRead()
-                    }
-                    finishReadMutation(ids, version, result.isSuccess)
-                    if (result.isSuccess) loadNotifications(isRefresh = true)
-                }
+                startReadMutation(ids, markAll = true)
             }
 
             is NotificationAction.ClickNotification -> {
@@ -96,13 +94,7 @@ class NotificationViewModel @Inject constructor(
                     return
                 }
                 val ids = listOf(action.notificationId)
-                val version = markReadOptimistically(ids)
-                viewModelScope.launch {
-                    val result = readMutationMutex.withLock {
-                        notificationRepository.markInboxNotificationRead(action.notificationId)
-                    }
-                    finishReadMutation(ids, version, result.isSuccess)
-                }
+                startReadMutation(ids, markAll = false)
                 viewModelScope.launch {
                     _events.emit(NotificationNavigationEvent.OpenDetail(action.notificationId))
                 }
@@ -113,6 +105,8 @@ class NotificationViewModel @Inject constructor(
             }
 
             is NotificationAction.LoadDetail -> loadDetail(action.notificationId)
+
+            NotificationAction.RetryReadMutations -> retryFailedReadMutations()
         }
     }
 
@@ -196,7 +190,12 @@ class NotificationViewModel @Inject constructor(
                             val result = readMutationMutex.withLock {
                                 notificationRepository.markInboxNotificationRead(notificationId)
                             }
-                            finishReadMutation(listOf(notificationId), version, result.isSuccess)
+                            finishReadMutation(
+                                listOf(notificationId),
+                                version,
+                                result,
+                                markAll = false,
+                            )
                         }
                     }
                 },
@@ -222,23 +221,59 @@ class NotificationViewModel @Inject constructor(
         return version
     }
 
-    private fun finishReadMutation(ids: List<String>, version: Long, succeeded: Boolean) {
+    private fun startReadMutation(ids: List<String>, markAll: Boolean) {
+        val version = markReadOptimistically(ids)
+        viewModelScope.launch {
+            val result = readMutationMutex.withLock {
+                if (markAll) {
+                    notificationRepository.markAllInboxNotificationsRead()
+                } else {
+                    notificationRepository.markInboxNotificationRead(ids.single())
+                }
+            }
+            finishReadMutation(ids, version, result, markAll)
+            if (markAll && result.isSuccess) loadNotifications(isRefresh = true)
+        }
+    }
+
+    private fun retryFailedReadMutations() {
+        val failed = failedReadMutations.values.toList()
+        failedReadMutations.clear()
+        _uiState.update { it.copy(readMutationFailed = false) }
+        failed.forEach { mutation -> startReadMutation(mutation.ids, mutation.markAll) }
+    }
+
+    private fun finishReadMutation(
+        ids: List<String>,
+        version: Long,
+        result: Result<Unit>,
+        markAll: Boolean,
+    ) {
+        val succeeded = result.isSuccess
         val ownedIds = ids.filter { readMutationVersions[it] == version }
         if (succeeded) serverConfirmedReadIds += ids
-        if (ownedIds.isEmpty()) return
+        if (ownedIds.isEmpty() && ids.isNotEmpty()) return
         ownedIds.forEach { id ->
             pendingReadIds.remove(id)
             readMutationVersions.remove(id)
         }
         val previous = readMutationPreviousStates.remove(version).orEmpty().intersect(ownedIds.toSet())
-        completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
+        if (ownedIds.isNotEmpty()) completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
+            failedReadMutations[version] = FailedReadMutation(ids, markAll)
             _uiState.update { state ->
                 val serverConfirmed = serverConfirmedReadIds.intersect(ownedIds.toSet())
                 state.copy(
                     readNotificationIds = (state.readNotificationIds - ownedIds.toSet()) + previous + serverConfirmed,
+                    readMutationFailed = true,
                 )
             }
+        } else {
+            failedReadMutations.entries.removeIf { (_, mutation) ->
+                (markAll && mutation.markAll) ||
+                    (mutation.ids.isNotEmpty() && mutation.ids.all { it in ids })
+            }
+            _uiState.update { it.copy(readMutationFailed = failedReadMutations.isNotEmpty()) }
         }
     }
 }

@@ -953,6 +953,7 @@
     <string name="notification_empty_desc">Bạn sẽ nhận được các thông báo cập nhật về học tập, sự kiện tại đây.</string>
     <string name="notification_detail_unavailable">Không tìm thấy thông báo này.</string>
     <string name="notification_error_title">Không thể tải thông báo</string>
+    <string name="notification_read_update_failed">Không thể cập nhật trạng thái đã đọc. Vui lòng thử lại.</string>
     <string name="notification_retry">Thử lại</string>
     <string name="notification_tag_event">Sự kiện</string>
     <string name="notification_tag_academic">Học vụ</string>
