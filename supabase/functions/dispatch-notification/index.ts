@@ -26,7 +26,6 @@ type InboxRow = {
 
 type DispatchProgress = {
   dedupe_key: string;
-  next_recipient_offset: number;
   last_recipient_id: string | null;
   source_payload?: WebhookEventPayload | null;
   fanout_complete?: boolean;
@@ -153,73 +152,92 @@ Deno.serve(async (request) => {
           }
         }
 
-        const recipients = await recipientIds(source.recipientId, source.excludeUserId, deadline);
-        if (recipients.length === 0) {
-          await markFanoutComplete(dedupeKey, deadline);
-          return json({ delivered: 0, ignored: true });
-        }
-
-        const rows = recipients.map((recipientId) => ({
-          recipient_id: recipientId,
-          title: source.title,
-          summary: source.summary,
-          content: source.content,
-          category: source.category,
-          author: source.author,
-          target_type: source.targetType,
-          target_id: source.targetId,
-          source_table: payload.table,
-          source_id: source.sourceId,
-          dedupe_key: dedupeKey,
-          published_at: source.publishedAt,
-        }));
         const progressRows = await supabaseRest<DispatchProgress[]>(
-          `notification_dispatch_progress?select=dedupe_key,next_recipient_offset,last_recipient_id&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
+          `notification_dispatch_progress?select=dedupe_key,last_recipient_id&dedupe_key=eq.${encodeURIComponent(dedupeKey)}&limit=1`,
           {},
           deadline,
         );
-        const lastRecipientId = progressRows[0]?.last_recipient_id;
-        // Continue by recipient identity, not by array offset. The verified
-        // profile list can shrink between invocations without skipping later IDs.
-        const nextRecipientIndex = lastRecipientId
-          ? rows.findIndex((row) => row.recipient_id > lastRecipientId)
-          : 0;
-        const startOffset = nextRecipientIndex === -1 ? rows.length : nextRecipientIndex;
-        // Keep recipient fan-out inserts bounded so a large verified-user list does
-        // not exceed PostgREST request limits or get partially dropped as one body.
-        for (let offset = startOffset; offset < rows.length; offset += INBOX_INSERT_BATCH_SIZE) {
-          const nextOffset = Math.min(offset + INBOX_INSERT_BATCH_SIZE, rows.length);
+        let lastRecipientId = progressRows[0]?.last_recipient_id ?? null;
+        while (true) {
+          const recipients = await recipientIdPage(
+            source.recipientId,
+            source.excludeUserId,
+            lastRecipientId,
+            deadline,
+          );
+          if (recipients.length === 0) break;
+
+          const rows = recipients.map((recipientId) => ({
+            recipient_id: recipientId,
+            title: source.title,
+            summary: source.summary,
+            content: source.content,
+            category: source.category,
+            author: source.author,
+            target_type: source.targetType,
+            target_id: source.targetId,
+            source_table: payload.table,
+            source_id: source.sourceId,
+            dedupe_key: dedupeKey,
+            published_at: source.publishedAt,
+          }));
+
+          // Persist each bounded page before fetching the next one, so a later
+          // invocation resumes after the last successfully inserted recipient.
           await supabaseRest("notification_inbox?on_conflict=recipient_id,dedupe_key", {
             method: "POST",
             headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-            body: JSON.stringify(rows.slice(offset, nextOffset)),
+            body: JSON.stringify(rows),
           }, deadline);
+          lastRecipientId = recipients[recipients.length - 1];
           await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
             method: "POST",
             headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
             body: JSON.stringify({
               dedupe_key: dedupeKey,
-              next_recipient_offset: nextOffset,
-              last_recipient_id: rows[nextOffset - 1]?.recipient_id ?? null,
+              last_recipient_id: lastRecipientId,
             }),
           }, deadline);
+          if (recipients.length < INBOX_INSERT_BATCH_SIZE) break;
         }
         await markFanoutComplete(dedupeKey, deadline);
       } catch (error) {
-        // Preserve the original source payload so a transient failure before or
-        // during fan-out can resume from the saved recipient offset.
+        // Preserve the source payload so a later invocation resumes from the
+        // last recipient page whose inbox insert and cursor update both succeeded.
         await queueContinuation(payload.continuationDepth ?? 0, payload);
         throw error;
       }
     }
 
-    // Duplicate webhook deliveries can resume a pending push; a stale PROCESSING
-    // claim is released after five minutes if an Edge invocation was interrupted.
-    await supabaseRest(
-      `notification_inbox?push_status=eq.PROCESSING&push_claimed_at=lt.${new Date(Date.now() - 5 * 60_000).toISOString()}`,
-      { method: "PATCH", body: JSON.stringify({ push_status: "PENDING", push_claimed_at: null }) },
+    // Recover a bounded set of expired leases. Attempts are counted when an FCM
+    // request starts, so rows only claimed before interruption keep their budget.
+    const staleClaimCutoff = new Date(Date.now() - 5 * 60_000).toISOString();
+    const staleClaims = await supabaseRest<Array<{ id: string; push_attempts?: number }>>(
+      `notification_inbox?select=id,push_attempts&push_status=eq.PROCESSING&push_claimed_at=lt.${encodeURIComponent(staleClaimCutoff)}&order=push_claimed_at.asc&limit=${INBOX_BATCH_SIZE}`,
+      {},
       deadline,
     );
+    const staleGroups = new Map<number, string[]>();
+    for (const row of staleClaims) {
+      const attempts = row.push_attempts ?? 0;
+      staleGroups.set(attempts, [...(staleGroups.get(attempts) ?? []), row.id]);
+    }
+    for (const [attempts, ids] of staleGroups) {
+      const terminal = attempts >= MAX_PUSH_ATTEMPTS;
+      await patchInboxRows(
+        ids,
+        {
+          push_status: terminal ? "FAILED" : "PENDING",
+          push_retry_at: terminal || attempts === 0
+            ? null
+            : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
+          push_claimed_at: null,
+        },
+        `&push_status=eq.PROCESSING&push_claimed_at=lt.${encodeURIComponent(staleClaimCutoff)}`,
+        false,
+        cleanupDeadline(),
+      );
+    }
     let deliveredTotal = 0;
     let pendingTotal = 0;
     let processedRows = 0;
@@ -252,6 +270,7 @@ Deno.serve(async (request) => {
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
       const heldClaimIds = new Set(claimed.map((row) => row.id));
+      const attemptsSinceProgress = new Map<string, number>();
       try {
         ensureWithinDeadline(deadline);
         let accessToken: string | null = null;
@@ -272,6 +291,8 @@ Deno.serve(async (request) => {
           );
           let rowFailed = false;
           let rowDeferred = false;
+          let rowAttempts = row.push_attempts ?? 0;
+          let attemptCounted = false;
           for (const device of devices) {
             if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
               rowDeferred = true;
@@ -279,7 +300,27 @@ Deno.serve(async (request) => {
             }
             ensureWithinDeadline(deadline);
             accessToken ??= await getFcmAccessToken(deadline);
-            const result = await sendFcmWithRetry(accessToken, device.token, row, deadline);
+            let result: FcmResult;
+            try {
+              result = await sendFcmWithRetry(accessToken, device.token, row, deadline, async () => {
+                if (attemptCounted) return;
+                rowAttempts++;
+                await patchInboxRows(
+                  [row.id],
+                  { push_attempts: rowAttempts },
+                  "&push_status=eq.PROCESSING",
+                  false,
+                  cleanupDeadline(),
+                );
+                attemptCounted = true;
+                attemptsSinceProgress.set(row.id, rowAttempts);
+              });
+            } catch (error) {
+              if (!(error instanceof DispatchDeadlineError) || !attemptCounted) throw error;
+              rowFailed = true;
+              deferred = true;
+              break;
+            }
             if (result === "SENT") {
               deliveredTotal++;
             } else if (result === "UNREGISTERED") {
@@ -292,23 +333,31 @@ Deno.serve(async (request) => {
             if (rowFailed) break;
             await patchInboxRows(
               [row.id],
-              { push_device_cursor: device.device_id, push_claimed_at: new Date().toISOString() },
+              {
+                push_device_cursor: device.device_id,
+                push_claimed_at: new Date().toISOString(),
+                push_attempts: 0,
+              },
               "&push_status=eq.PROCESSING",
               false,
               cleanupDeadline(),
             );
+            rowAttempts = 0;
+            attemptCounted = false;
+            attemptsSinceProgress.delete(row.id);
             processedDevices++;
           }
 
           if (rowFailed) {
-            const attempts = (row.push_attempts ?? 0) + 1;
-            const terminal = attempts >= MAX_PUSH_ATTEMPTS;
+            const terminal = rowAttempts >= MAX_PUSH_ATTEMPTS;
             await patchInboxRows(
               [row.id],
               {
                 push_status: terminal ? "FAILED" : "PENDING",
-                push_attempts: attempts,
-                push_retry_at: terminal ? null : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
+                push_attempts: rowAttempts,
+                push_retry_at: terminal
+                  ? null
+                  : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1)).toISOString(),
                 push_claimed_at: null,
               },
               "&push_status=eq.PROCESSING",
@@ -316,16 +365,19 @@ Deno.serve(async (request) => {
               cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
+            attemptsSinceProgress.delete(row.id);
             if (!terminal) pendingTotal++;
+            if (deferred) break;
           } else if (rowDeferred || devices.length === DEVICES_PER_ROW_BATCH) {
             await patchInboxRows(
               [row.id],
-              { push_status: "PENDING", push_claimed_at: null },
+              { push_status: "PENDING", push_claimed_at: null, push_attempts: 0 },
               "&push_status=eq.PROCESSING",
               false,
               cleanupDeadline(),
             );
             heldClaimIds.delete(row.id);
+            attemptsSinceProgress.delete(row.id);
             deferred = true;
           } else {
             await patchInboxRows(
@@ -350,13 +402,40 @@ Deno.serve(async (request) => {
           heldClaimIds.clear();
         }
       } catch (error) {
-        await patchInboxRows(
-          [...heldClaimIds],
-          { push_status: "PENDING", push_claimed_at: null },
-          "&push_status=eq.PROCESSING",
-          false,
-          cleanupDeadline(),
-        );
+        const unattemptedIds: string[] = [];
+        const attemptedGroups = new Map<number, string[]>();
+        for (const id of heldClaimIds) {
+          const attempts = attemptsSinceProgress.get(id) ?? 0;
+          if (attempts === 0) unattemptedIds.push(id);
+          else attemptedGroups.set(attempts, [...(attemptedGroups.get(attempts) ?? []), id]);
+        }
+        if (unattemptedIds.length > 0) {
+          await patchInboxRows(
+            unattemptedIds,
+            { push_status: "PENDING", push_claimed_at: null },
+            "&push_status=eq.PROCESSING",
+            false,
+            cleanupDeadline(),
+          );
+        }
+        for (const [attempts, ids] of attemptedGroups) {
+          const terminal = attempts >= MAX_PUSH_ATTEMPTS;
+          await patchInboxRows(
+            ids,
+            {
+              push_status: terminal ? "FAILED" : "PENDING",
+              push_attempts: attempts,
+              push_retry_at: terminal
+                ? null
+                : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
+              push_claimed_at: null,
+            },
+            "&push_status=eq.PROCESSING",
+            false,
+            cleanupDeadline(),
+          );
+        }
+        heldClaimIds.clear();
         if (error instanceof DispatchDeadlineError) {
           deferred = true;
           break;
@@ -499,33 +578,31 @@ async function markFanoutComplete(dedupeKey: string, deadline: number): Promise<
   }, deadline);
 }
 
-async function recipientIds(recipientId: string | null, excludedUserId: string | null, deadline: number): Promise<string[]> {
-  if (recipientId) return [recipientId];
-  // Phân trang để không bỏ sót hồ sơ khi vượt giới hạn 1.000 hàng mặc định của Supabase
-  // Phân trang profiles bằng keyset để không bỏ sót hồ sơ
-  const allProfiles: Array<{ id: string }> = [];
-  const pageSize = 1000;
-  let lastProfileId: string | undefined = undefined;
-
-  while (true) {
-    const queryParams = [
-      "select=id",
-      "student_id_verified=eq.true",
-      "order=id.asc",
-      `limit=${pageSize}`
-    ];
-    if (lastProfileId) queryParams.push(`id=gt.${lastProfileId}`);
-
-    const page = await supabaseRest<Array<{ id: string }>>(
-      `profiles?${queryParams.join("&")}`,
-      {},
-      deadline,
-    );
-    allProfiles.push(...page);
-    if (page.length < pageSize) break;
-    lastProfileId = page[page.length - 1].id;
+async function recipientIdPage(
+  recipientId: string | null,
+  excludedUserId: string | null,
+  afterRecipientId: string | null,
+  deadline: number,
+): Promise<string[]> {
+  if (recipientId) {
+    return !afterRecipientId || recipientId > afterRecipientId ? [recipientId] : [];
   }
-  return allProfiles.map((profile) => profile.id).filter((id) => id !== excludedUserId);
+
+  const queryParams = [
+    "select=id",
+    "student_id_verified=eq.true",
+    "order=id.asc",
+    `limit=${INBOX_INSERT_BATCH_SIZE}`,
+  ];
+  if (afterRecipientId) queryParams.push(`id=gt.${encodeURIComponent(afterRecipientId)}`);
+  if (excludedUserId) queryParams.push(`id=neq.${encodeURIComponent(excludedUserId)}`);
+
+  const page = await supabaseRest<Array<{ id: string }>>(
+    `profiles?${queryParams.join("&")}`,
+    {},
+    deadline,
+  );
+  return page.map((profile) => profile.id);
 }
 
 async function sendFcm(accessToken: string, token: string, row: InboxRow, deadline: number): Promise<FcmResult> {
@@ -587,9 +664,11 @@ async function sendFcmWithRetry(
   token: string,
   row: InboxRow,
   deadline: number,
+  onAttemptStart: () => Promise<void>,
 ): Promise<FcmResult> {
   for (let attempt = 0; attempt < FCM_MAX_ATTEMPTS; attempt++) {
     ensureWithinDeadline(deadline);
+    await onAttemptStart();
     try {
       const result = await sendFcm(accessToken, token, row, deadline);
       if (result !== "FAILED" || attempt === FCM_MAX_ATTEMPTS - 1) return result;
