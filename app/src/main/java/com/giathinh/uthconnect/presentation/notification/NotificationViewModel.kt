@@ -270,7 +270,14 @@ class NotificationViewModel @Inject constructor(
         val succeeded = result.isSuccess
         val ownedIds = ids.filter { readMutationVersions[it] == version }
         if (succeeded) serverConfirmedReadIds += ids
-        if (ownedIds.isEmpty() && ids.isNotEmpty()) return
+        failedReadMutations.entries.removeIf { (_, mutation) ->
+            (succeeded && markAll && mutation.markAll) ||
+                (mutation.ids.isNotEmpty() && mutation.ids.all { it in serverConfirmedReadIds })
+        }
+        if (ownedIds.isEmpty() && ids.isNotEmpty()) {
+            _uiState.update { it.copy(readMutationFailed = failedReadMutations.isNotEmpty()) }
+            return
+        }
         ownedIds.forEach { id ->
             pendingReadIds.remove(id)
             readMutationVersions.remove(id)
@@ -279,7 +286,7 @@ class NotificationViewModel @Inject constructor(
         if (ownedIds.isNotEmpty()) completedReadMutations += CompletedReadMutation(ownedIds.toSet(), succeeded)
         if (!succeeded) {
             val unconfirmedIds = ids.filterNot { it in serverConfirmedReadIds }
-            if (unconfirmedIds.isNotEmpty()) {
+            if (unconfirmedIds.isNotEmpty() || markAll) {
                 failedReadMutations[version] = FailedReadMutation(unconfirmedIds, markAll)
             } else {
                 failedReadMutations.remove(version)
@@ -292,10 +299,6 @@ class NotificationViewModel @Inject constructor(
                 )
             }
         } else {
-            failedReadMutations.entries.removeIf { (_, mutation) ->
-                (markAll && mutation.markAll) ||
-                    (mutation.ids.isNotEmpty() && mutation.ids.all { it in serverConfirmedReadIds })
-            }
             _uiState.update { it.copy(readMutationFailed = failedReadMutations.isNotEmpty()) }
         }
     }

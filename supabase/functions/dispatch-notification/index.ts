@@ -53,7 +53,7 @@ const CLEANUP_BUDGET_MS = 5_000;
 
 class DispatchDeadlineError extends Error {}
 
-type FcmResult = "SENT" | "FAILED" | "UNREGISTERED" | "PERMANENT_FAILURE";
+type FcmResult = "SENT" | "FAILED" | "UNREGISTERED" | "PERMANENT_FAILURE" | { retryAt: number };
 type ContinuationResult = "SENT" | "FAILED" | "TIMED_OUT" | "SKIPPED";
 
 Deno.serve(async (request) => {
@@ -204,7 +204,10 @@ Deno.serve(async (request) => {
       } catch (error) {
         // Preserve the source payload so a later invocation resumes from the
         // last recipient page whose inbox insert and cursor update both succeeded.
-        await queueContinuation(payload.continuationDepth ?? 0, payload);
+        const continuationPayload = payload.table === "notifications"
+          ? { ...payload, old_record: null }
+          : payload;
+        await queueContinuation(payload.continuationDepth ?? 0, continuationPayload);
         throw error;
       }
     }
@@ -285,16 +288,19 @@ Deno.serve(async (request) => {
             ? `&device_id=gt.${encodeURIComponent(row.push_device_cursor)}`
             : "";
           const devices = await supabaseRest<Array<{ device_id: string; token: string }>>(
-            `notification_devices?select=device_id,token&user_id=eq.${row.recipient_id}${cursor}&order=device_id.asc&limit=${DEVICES_PER_ROW_BATCH}`,
+            `notification_devices?select=device_id,token&user_id=eq.${row.recipient_id}${cursor}&order=device_id.asc&limit=${DEVICES_PER_ROW_BATCH + 1}`,
             {},
             deadline,
           );
+          const hasMoreDevices = devices.length > DEVICES_PER_ROW_BATCH;
+          const devicesToProcess = devices.slice(0, DEVICES_PER_ROW_BATCH);
           let rowFailed = false;
           let rowDeferred = false;
+          let retryAt: number | null = null;
           let rowAttempts = row.push_attempts ?? 0;
           let attemptCounted = false;
           let cursorBeforeAttempt = row.push_device_cursor ?? null;
-          for (const device of devices) {
+          for (const [deviceIndex, device] of devicesToProcess.entries()) {
             if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
               rowDeferred = true;
               break;
@@ -325,14 +331,22 @@ Deno.serve(async (request) => {
               deferred = true;
               break;
             }
-            if (result === "SENT") {
+            if (typeof result !== "string") {
+              retryAt = result.retryAt;
+              rowFailed = true;
+            } else if (result === "SENT") {
               deliveredTotal++;
             } else if (result === "UNREGISTERED") {
               await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" }, deadline);
             } else if (result === "PERMANENT_FAILURE") {
               console.warn("Skipping device after permanent FCM error", device.device_id);
             } else {
-              rowFailed = true;
+              const isLastDevice = deviceIndex === devicesToProcess.length - 1;
+              if (isLastDevice && !hasMoreDevices) {
+                rowFailed = true;
+              } else {
+                console.warn("Skipping device after FCM retries were exhausted", device.device_id);
+              }
             }
             if (rowFailed) break;
             await patchInboxRows(
@@ -362,7 +376,9 @@ Deno.serve(async (request) => {
                 push_attempts: rowAttempts,
                 push_retry_at: terminal
                   ? null
-                  : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1)).toISOString(),
+                  : new Date(
+                    retryAt ?? Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1),
+                  ).toISOString(),
                 push_claimed_at: null,
               },
               "&push_status=eq.PROCESSING",
@@ -373,7 +389,7 @@ Deno.serve(async (request) => {
             attemptsSinceProgress.delete(row.id);
             if (!terminal) pendingTotal++;
             if (deferred) break;
-          } else if (rowDeferred || devices.length === DEVICES_PER_ROW_BATCH) {
+          } else if (rowDeferred || hasMoreDevices) {
             await patchInboxRows(
               [row.id],
               { push_status: "PENDING", push_claimed_at: null, push_attempts: 0 },
@@ -596,7 +612,7 @@ function toSourceNotification(payload: WebhookEventPayload) {
   return {
     sourceId: requiredString(row.id), recipientId: nullableString(row.recipient_id), excludeUserId: null,
     title: requiredString(row.title), summary: stringValue(row.summary), content: stringValue(row.content),
-    category: academic ? "ACADEMIC" : "GENERAL", author: stringValue(row.author) || "Nhà trường",
+    category: sourceCategory, author: stringValue(row.author) || "Nhà trường",
     targetType: academic ? "ACADEMIC" : "SYSTEM", targetId: requiredString(row.id),
     broadcastAuthorId: null,
     publishedAt: publishedAt || new Date().toISOString(),
@@ -680,7 +696,17 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow, deadli
   if (fcmErrorCode === "INVALID_ARGUMENT" || fcmErrorCode === "SENDER_ID_MISMATCH") {
     return "PERMANENT_FAILURE";
   }
+  const retryAt = parseRetryAfter(response.headers.get("Retry-After"));
+  if (retryAt !== null) return { retryAt };
   return "FAILED";
+}
+
+function parseRetryAfter(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const delaySeconds = Number(value);
+  if (Number.isFinite(delaySeconds) && delaySeconds >= 0) return now + delaySeconds * 1_000;
+  const retryAt = Date.parse(value);
+  return Number.isFinite(retryAt) ? Math.max(now, retryAt) : null;
 }
 
 export function fcmSpecificErrorCode(errorBody: string): string | null {
@@ -710,6 +736,18 @@ async function sendFcmWithRetry(
     await onAttemptStart();
     try {
       const result = await sendFcm(accessToken, token, row, deadline);
+      if (typeof result !== "string") {
+        const retryDelayMs = Math.max(
+          result.retryAt - Date.now(),
+          FCM_RETRY_DELAY_MS * 2 ** attempt,
+        );
+        const retryAt = Date.now() + retryDelayMs;
+        if (attempt === FCM_MAX_ATTEMPTS - 1 || Date.now() + retryDelayMs >= deadline) {
+          return { retryAt };
+        }
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        continue;
+      }
       if (result !== "FAILED" || attempt === FCM_MAX_ATTEMPTS - 1) return result;
     } catch (error) {
       if (Date.now() >= deadline) throw new DispatchDeadlineError("FCM request deadline reached");

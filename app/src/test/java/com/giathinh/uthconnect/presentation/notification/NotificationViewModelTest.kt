@@ -144,6 +144,34 @@ class NotificationViewModelTest {
     }
 
     @Test
+    fun `failed mark all before inbox loads is retained and retried`() = runTest {
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(),
+            markAllResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.MarkAllAsRead)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.notifications.isEmpty())
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markAllCallCount == 1)
+
+        viewModel.onAction(NotificationAction.RetryReadMutations)
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markAllCallCount == 2)
+    }
+
+    @Test
     fun `successful individual reads clear a failed mark all after all ids are confirmed`() = runTest {
         val first = notification("notification-a")
         val second = notification("notification-b")
@@ -279,6 +307,43 @@ class NotificationViewModelTest {
         assertTrue(!viewModel.uiState.value.readMutationFailed)
         assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
         assertTrue(repository.markCallCount == 2)
+    }
+
+    @Test
+    fun `stale successful read clears earlier failure before ownership return`() = runTest {
+        val notification = notification("notification-stale-read-success")
+        val initialFailureGate = CompletableDeferred<Unit>()
+        val staleSuccessGate = CompletableDeferred<Unit>()
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("initial failure")),
+                    Result.success(Unit),
+                    Result.failure(IllegalStateException("newer failure")),
+                ),
+            ),
+            markGates = ArrayDeque(listOf(initialFailureGate, staleSuccessGate)),
+            detail = notification,
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.ClickNotification(notification.id))
+        advanceUntilIdle()
+        initialFailureGate.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+
+        staleSuccessGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
     }
 
     @Test
