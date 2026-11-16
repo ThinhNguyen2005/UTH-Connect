@@ -273,8 +273,10 @@ class NotificationViewModel @Inject constructor(
         if (succeeded) serverConfirmedReadIds += ids
         failedReadMutations.entries.removeIf { (_, mutation) ->
             (succeeded && markAll && mutation.markAll) ||
-                (!mutation.markAll && mutation.ids.isNotEmpty() &&
-                    mutation.ids.all { it in serverConfirmedReadIds })
+                (
+                    !mutation.markAll && mutation.ids.isNotEmpty() &&
+                        mutation.ids.all { it in serverConfirmedReadIds }
+                    )
         }
         recordFailedReadMutation(ids, version, markAll, succeeded, ownedIds.isNotEmpty())
         if (ownedIds.isEmpty() && ids.isNotEmpty()) {
