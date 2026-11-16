@@ -42,7 +42,10 @@ begin
     'schema', 'public',
     'table', tg_table_name,
     'record', to_jsonb(new),
-    'old_record', case when tg_op = 'UPDATE' then to_jsonb(old) else null end
+    'old_record', case
+      when tg_op = 'UPDATE' and tg_table_name <> 'notifications' then to_jsonb(old)
+      else null
+    end
   );
 
   insert into public.notification_dispatch_progress (
