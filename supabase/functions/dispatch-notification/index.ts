@@ -141,7 +141,7 @@ Deno.serve(async (request) => {
         const dedupeKey = `${payload.table}:${source.sourceId}`;
         await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
           method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
           body: JSON.stringify({ dedupe_key: dedupeKey, source_payload: payload, fanout_complete: false }),
         }, deadline);
         if (payload.table === "housing_posts" && source.broadcastAuthorId) {
@@ -662,7 +662,7 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow, deadli
             recipient_id: row.recipient_id,
             target_type: row.target_type,
             target_id: row.target_id ?? "",
-            title: row.title,
+            title: row.title.slice(0, 120),
             body: messageBody,
           },
           android: { priority: "HIGH" },
