@@ -172,12 +172,54 @@ class NotificationViewModelTest {
     }
 
     @Test
-    fun `successful individual reads clear a failed mark all after all ids are confirmed`() = runTest {
+    fun `superseded mark all failure is retained for retry`() = runTest {
+        val notification = notification("notification-mark-all-superseded")
+        val markAllGate = CompletableDeferred<Unit>()
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(listOf(Result.success(Unit))),
+            markAllResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
+            markAllGates = ArrayDeque(listOf(markAllGate)),
+            detail = notification,
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.MarkAllAsRead)
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
+        markAllGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markAllCallCount == 1)
+
+        viewModel.onAction(NotificationAction.RetryReadMutations)
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markAllCallCount == 2)
+    }
+
+    @Test
+    fun `failed mark all stays retryable after individual reads are confirmed`() = runTest {
         val first = notification("notification-a")
         val second = notification("notification-b")
         val repository = FakeNotificationRepository(
             markResults = ArrayDeque(listOf(Result.success(Unit), Result.success(Unit))),
-            markAllResults = ArrayDeque(listOf(Result.failure(IllegalStateException("temporary")))),
+            markAllResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(Unit),
+                ),
+            ),
         )
         val viewModel = NotificationViewModel(repository)
         advanceUntilIdle()
@@ -195,9 +237,15 @@ class NotificationViewModelTest {
         viewModel.onAction(NotificationAction.ClickNotification(second.id))
         advanceUntilIdle()
 
-        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(viewModel.uiState.value.readMutationFailed)
         assertTrue(first.id in viewModel.uiState.value.readNotificationIds)
         assertTrue(second.id in viewModel.uiState.value.readNotificationIds)
+
+        viewModel.onAction(NotificationAction.RetryReadMutations)
+        advanceUntilIdle()
+
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markAllCallCount == 2)
     }
 
     @Test
@@ -388,6 +436,7 @@ class NotificationViewModelTest {
         private val markResults: ArrayDeque<Result<Unit>>,
         private val markAllResults: ArrayDeque<Result<Unit>> = ArrayDeque(listOf(Result.success(Unit))),
         private val markGates: ArrayDeque<CompletableDeferred<Unit>> = ArrayDeque(),
+        private val markAllGates: ArrayDeque<CompletableDeferred<Unit>> = ArrayDeque(),
         private val detail: PostNotification? = null,
         private val detailResults: ArrayDeque<CompletableDeferred<Result<PostNotification?>>> = ArrayDeque(),
     ) : NotificationRepository {
@@ -419,6 +468,7 @@ class NotificationViewModelTest {
 
         override suspend fun markAllInboxNotificationsRead(): Result<Unit> {
             markAllCallCount++
+            markAllGates.removeFirstOrNull()?.await()
             return markAllResults.removeFirst()
         }
 

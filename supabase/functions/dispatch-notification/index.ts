@@ -300,7 +300,7 @@ Deno.serve(async (request) => {
           let rowAttempts = row.push_attempts ?? 0;
           let attemptCounted = false;
           let cursorBeforeAttempt = row.push_device_cursor ?? null;
-          for (const [deviceIndex, device] of devicesToProcess.entries()) {
+          for (const device of devicesToProcess) {
             if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
               rowDeferred = true;
               break;
@@ -341,12 +341,7 @@ Deno.serve(async (request) => {
             } else if (result === "PERMANENT_FAILURE") {
               console.warn("Skipping device after permanent FCM error", device.device_id);
             } else {
-              const isLastDevice = deviceIndex === devicesToProcess.length - 1;
-              if (isLastDevice && !hasMoreDevices) {
-                rowFailed = true;
-              } else {
-                console.warn("Skipping device after FCM retries were exhausted", device.device_id);
-              }
+              rowFailed = true;
             }
             if (rowFailed) break;
             await patchInboxRows(
