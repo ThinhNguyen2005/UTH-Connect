@@ -55,17 +55,27 @@ class FcmTokenRegistrar @Inject constructor(
 
     init {
         client.attachSecureStore(secureSessionStore)
-        connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                synchronized(registrationStateLock) {
-                    if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
-                        registerForSignedInUserLocked()
-                    } else if (canStartRestoreLocked()) {
-                        registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+        registerNetworkCallback()
+    }
+
+    /** Registers the optional network monitor without failing singleton creation. */
+    @Suppress("TooGenericExceptionCaught")
+    private fun registerNetworkCallback() {
+        try {
+            connectivityManager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    synchronized(registrationStateLock) {
+                        if (registrationEnabled && !signOutInProgress && client.userIdOrNull != null) {
+                            registerForSignedInUserLocked()
+                        } else if (canStartRestoreLocked()) {
+                            registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+                        }
                     }
                 }
-            }
-        })
+            })
+        } catch (error: RuntimeException) {
+            android.util.Log.w(TAG, "Unable to register default network callback", error)
+        }
     }
 
     /** Queues token registration after login or session restoration without delaying the UI. */
@@ -92,7 +102,7 @@ class FcmTokenRegistrar @Inject constructor(
     }
 
     /** Queues a token rotation update received by FirebaseMessagingService. */
-    @Suppress("ReturnCount")
+    @Suppress("ReturnCount", "UNUSED_PARAMETER")
     fun onTokenRefreshed(token: String) {
         synchronized(registrationStateLock) {
             if (registrationEnabled) {
@@ -103,7 +113,10 @@ class FcmTokenRegistrar @Inject constructor(
                 pendingRetryJob?.cancel()
                 if (!rotationPending) registrationJob?.cancel()
                 registrationJob = scope.launch {
-                    retryRegistration(generation, userId) { registerToken(token, userId) }
+                    retryRegistration(generation, userId) {
+                        val currentToken = FirebaseMessaging.getInstance().token.await()
+                        registerToken(currentToken, userId)
+                    }
                 }
                 return
             }
@@ -230,15 +243,19 @@ class FcmTokenRegistrar @Inject constructor(
             }
         }
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
-        try {
+        val durableRetryQueued = try {
             FcmTokenRegistrationRetryWorker.enqueue(context, userId)
+            true
         } catch (error: Exception) {
             android.util.Log.w(TAG, "Unable to enqueue durable FCM token registration retry", error)
+            false
         }
-        pendingRetryJob = scope.launch {
-            delay(PENDING_RETRY_DELAY_MS)
-            synchronized(registrationStateLock) {
-                if (isRegistrationActiveLocked(generation, userId)) registerForSignedInUserLocked()
+        if (!durableRetryQueued) {
+            pendingRetryJob = scope.launch {
+                delay(PENDING_RETRY_DELAY_MS)
+                synchronized(registrationStateLock) {
+                    if (isRegistrationActiveLocked(generation, userId)) registerForSignedInUserLocked()
+                }
             }
         }
     }
@@ -269,10 +286,18 @@ class FcmTokenRegistrar @Inject constructor(
 
         return try {
             val token = FirebaseMessaging.getInstance().token.await()
-            if (!isRegistrationActive(generation, expectedUserId)) return FcmRegistrationRetryResult.STALE_SESSION
+            if (!isRegistrationActive(generation, expectedUserId)) {
+                return if (isRetrySessionCurrent(expectedUserId)) {
+                    FcmRegistrationRetryResult.RETRY
+                } else {
+                    FcmRegistrationRetryResult.STALE_SESSION
+                }
+            }
             registerToken(token, expectedUserId)
             if (isRegistrationActive(generation, expectedUserId)) {
                 FcmRegistrationRetryResult.COMPLETE
+            } else if (isRetrySessionCurrent(expectedUserId)) {
+                FcmRegistrationRetryResult.RETRY
             } else {
                 FcmRegistrationRetryResult.STALE_SESSION
             }
@@ -286,6 +311,10 @@ class FcmTokenRegistrar @Inject constructor(
 
     private fun isRegistrationActive(generation: Long, userId: String): Boolean = synchronized(registrationStateLock) {
         isRegistrationActiveLocked(generation, userId)
+    }
+
+    private fun isRetrySessionCurrent(userId: String): Boolean = synchronized(registrationStateLock) {
+        !signOutInProgress && client.userIdOrNull == userId
     }
 
     private fun isRegistrationActiveLocked(generation: Long, userId: String): Boolean = registrationEnabled &&
@@ -330,8 +359,21 @@ class FcmTokenRegistrar @Inject constructor(
         return false
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun scheduleRestoreRetryLocked() {
         if (signOutInProgress || registrationEnabled || restoreRetryJob?.isActive == true) return
+        val expectedUserId = secureSessionStore.load()?.userId
+        val durableRetryQueued = expectedUserId?.let { userId ->
+            try {
+                FcmTokenRegistrationRetryWorker.enqueue(context, userId)
+                true
+            } catch (error: Exception) {
+                android.util.Log.w(TAG, "Unable to enqueue durable FCM session restore retry", error)
+                false
+            }
+        } == true
+        if (durableRetryQueued) return
+
         restoreRetryJob = scope.launch {
             delay(PENDING_RETRY_DELAY_MS)
             synchronized(registrationStateLock) {

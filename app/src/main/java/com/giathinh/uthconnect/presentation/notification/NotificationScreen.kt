@@ -145,6 +145,12 @@ fun NotificationScreen(
                         onRetry = { onAction(NotificationAction.RetryReadMutations) },
                     )
                 }
+                if (uiState.inboxErrorMessage != null) {
+                    NotificationInlineError(
+                        message = uiState.inboxErrorMessage,
+                        onRetry = { onAction(NotificationAction.Refresh) },
+                    )
+                }
                 NotificationEmptyState(onRefresh = { onAction(NotificationAction.Refresh) })
             } else {
                 if (uiState.readMutationFailed) {

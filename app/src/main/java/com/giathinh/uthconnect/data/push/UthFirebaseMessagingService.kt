@@ -44,7 +44,6 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
             ?: message.data[PushIntentContract.TITLE]
             ?: getString(R.string.notification_title)
         val body = message.notification?.body ?: message.data[PushIntentContract.BODY].orEmpty()
-        if (body.isBlank()) return
         createChannel()
 
         val intent = Intent(this, MainActivity::class.java).apply {

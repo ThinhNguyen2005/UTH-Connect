@@ -36,8 +36,9 @@ class FcmTokenRegistrationRetryWorker(
             FcmTokenRegistrationRetryEntryPoint::class.java,
         ).fcmTokenRegistrar()
         return when (registrar.retryRegistrationFromWorker(expectedUserId)) {
-            FcmRegistrationRetryResult.COMPLETE, FcmRegistrationRetryResult.STALE_SESSION -> Result.success()
+            FcmRegistrationRetryResult.COMPLETE -> Result.success()
             FcmRegistrationRetryResult.RETRY -> Result.retry()
+            FcmRegistrationRetryResult.STALE_SESSION -> Result.success()
         }
     }
 
