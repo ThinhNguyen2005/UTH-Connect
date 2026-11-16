@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { supabaseBrowserClient } from "@/utils/supabase-client";
+import { deleteListingWithImages } from "@/utils/housingImages";
 
 const STATUS_LABEL: Record<string, string> = { PENDING: "Chờ duyệt", OPEN: "Đang hiện", REJECTED: "Bị từ chối", FULFILLED: "Hết phòng", HIDDEN_BY_REPORTS: "Bị ẩn" };
 const CAMPUS_LABEL: Record<string, string> = { CS1_QUANG_TRUNG: "CS1 Võ Oanh", CS2_THU_DUC: "CS2 Thủ Đức", CS3_TO_KY: "CS3 Tô Ký" };
@@ -87,13 +88,17 @@ export default function AdminModerationPage() {
     setBusy(true);
     setToast("");
     try {
-      const args = action === "reject" ? { p_listing_id: selected.id, p_reason: reason.trim() } : { p_listing_id: selected.id };
-      const { error } = await supabaseBrowserClient.rpc(`${action}_housing_listing`, args);
-      if (error) throw error;
+      if (action === "delete") {
+        await deleteListingWithImages(supabaseBrowserClient, selected.id, selected.images);
+      } else {
+        const args = action === "reject" ? { p_listing_id: selected.id, p_reason: reason.trim() } : { p_listing_id: selected.id };
+        const { error } = await supabaseBrowserClient.rpc(`${action}_housing_listing`, args);
+        if (error) throw error;
+      }
       setSelected(null);
       setIntent(null);
       drawer.current?.close();
-      setToast(action === "delete" ? "Đã xóa tin và các báo cáo liên quan." : action === "hide" ? "Đã ẩn tin khỏi bảng tin sinh viên." : action === "approve" ? "Đã duyệt tin." : "Đã từ chối tin.");
+      setToast(action === "delete" ? "Đã xóa tin, báo cáo và tệp ảnh." : action === "hide" ? "Đã ẩn tin khỏi bảng tin sinh viên." : action === "approve" ? "Đã duyệt tin." : "Đã từ chối tin.");
       await fetchPosts();
     } catch {
       setToast("Không thực hiện được thao tác. Hãy làm mới để kiểm tra trạng thái tin trước khi thử lại.");
@@ -159,8 +164,7 @@ export default function AdminModerationPage() {
             {p.rejection_reason && <p className="bg-red-50 p-4 rounded-xl text-sm break-words">Lý do từ chối: {p.rejection_reason}</p>}
           </div>
           <footer className="bg-white p-5 shrink-0 space-y-3">
-            {intent ? <div className="space-y-3"><p className="text-sm font-semibold">{intent === "delete" ? "Xóa vĩnh viễn tin và toàn bộ báo cáo? Không thể hoàn tác." : intent === "hide" ? "Ẩn tin khỏi bảng tin? Nội dung và báo cáo vẫn được giữ để kiểm tra." : "Nhập lý do từ chối để chủ tin có thể chỉnh sửa."}</p>
-              {intent === "delete" && <p className="text-xs text-slate-500">Tệp ảnh trong kho lưu trữ chưa bị xóa bởi thao tác này.</p>}
+            {intent ? <div className="space-y-3"><p className="text-sm font-semibold">{intent === "delete" ? "Xóa vĩnh viễn tin, toàn bộ báo cáo và tệp ảnh? Không thể hoàn tác." : intent === "hide" ? "Ẩn tin khỏi bảng tin? Nội dung và báo cáo vẫn được giữ để kiểm tra." : "Nhập lý do từ chối để chủ tin có thể chỉnh sửa."}</p>
               {intent === "reject" && <textarea aria-label="Lý do từ chối" value={reason} onChange={e => setReason(e.target.value)} rows={2} disabled={busy} className="w-full bg-slate-50 rounded-lg p-3 text-sm" />}
               <div className="flex justify-end gap-2"><button disabled={busy} onClick={() => setIntent(null)} className="px-4 py-2 rounded-lg bg-slate-100 text-sm">Hủy</button><button disabled={busy || (intent === "reject" && !reason.trim())} onClick={() => act(intent)} className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm disabled:opacity-50">{busy ? "Đang xử lý..." : "Xác nhận"}</button></div>
             </div> : <div className="flex flex-wrap gap-2">

@@ -42,6 +42,7 @@ async function renderPage(file, rows = [post], states = {}) {
     if (name === 'react') return mockReact;
     if (name === 'lucide-react') return new Proxy({}, { get: () => () => null });
     if (name === '@/utils/supabase-client') return { supabaseBrowserClient: { from: () => query, rpc: () => Promise.resolve({ data: [], error: null }) } };
+    if (name === '@/utils/housingImages') return loadHelper();
     if (name.includes('/layout/')) return new Proxy({}, { get: () => ({ children }) => children });
     if (name === 'next/link') return ({ children, ...props }) => React.createElement('a', props, children);
     return require(name);
@@ -106,4 +107,70 @@ test('Trang chi tiết sinh viên lọc OPEN cả khi mở trực tiếp bằng 
   const { html, filters } = await renderPage('src/app/housing/[id]/page.tsx', [], { 0: null });
   assert.deepEqual(filters, [['id', 'test-post'], ['status', 'OPEN']]);
   assert.ok(html.includes('Tin không còn hiển thị'));
+});
+
+function loadHelper() {
+  const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, 'src/utils/housingImages.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const module = { exports: {} };
+  new Function('require', 'module', 'exports', code)(require, module, module.exports);
+  return module.exports;
+}
+
+const IMG = 'https://bvxilfcctwmgmrwrncvd.supabase.co/storage/v1/object/public/housing-images';
+
+test('housingImagePaths chỉ tách object trong bucket housing-images của Supabase', () => {
+  const { housingImagePaths } = loadHelper();
+  assert.deepEqual(housingImagePaths([
+    `${IMG}/uid-a/11111111-1111-1111-1111-111111111111.jpg`,
+    `${IMG}/uid-b/22222222-2222-2222-2222-222222222222.jpg?width=100`,
+    'https://evil.com/object/public/housing-images/x.jpg',
+    'https://bvxilfcctwmgmrwrncvd.supabase.co/storage/v1/object/public/other-bucket/uid/c.jpg',
+  ]), ['uid-a/11111111-1111-1111-1111-111111111111.jpg', 'uid-b/22222222-2222-2222-2222-222222222222.jpg']);
+  assert.deepEqual(housingImagePaths([]), []);
+  assert.deepEqual(housingImagePaths(null), []);
+  assert.deepEqual(housingImagePaths(undefined), []);
+});
+
+test('deleteListingWithImages xóa ảnh TRƯỚC rồi mới xóa bản ghi', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: { from: bucket => ({ remove: async paths => { calls.push(['remove', bucket, paths]); return { error: null }; } }) },
+    rpc: async (fn, args) => { calls.push(['rpc', fn, args]); return { error: null }; },
+  };
+  await deleteListingWithImages(client, 'post-1', [`${IMG}/uid/a.jpg`]);
+  assert.deepEqual(calls, [
+    ['remove', 'housing-images', ['uid/a.jpg']],
+    ['rpc', 'delete_housing_listing', { p_listing_id: 'post-1' }],
+  ]);
+});
+
+test('deleteListingWithImages không xóa bản ghi nếu xóa ảnh thất bại', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: { from: () => ({ remove: async () => { calls.push('remove'); return { error: new Error('denied') }; } }) },
+    rpc: async () => { calls.push('rpc'); return { error: null }; },
+  };
+  await assert.rejects(() => deleteListingWithImages(client, 'p', [`${IMG}/uid/a.jpg`]));
+  assert.deepEqual(calls, ['remove']);
+});
+
+test('deleteListingWithImages tin không ảnh chỉ gọi rpc xóa bản ghi', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: { from: () => ({ remove: async () => { calls.push('remove'); return { error: null }; } }) },
+    rpc: async fn => { calls.push(fn); return { error: null }; },
+  };
+  await deleteListingWithImages(client, 'p', []);
+  assert.deepEqual(calls, ['delete_housing_listing']);
+});
+
+test('Admin xác nhận xóa tin nhắc xóa cả tệp ảnh, bỏ cảnh báo giữ ảnh', async () => {
+  const { html } = await renderPage('src/app/admin/moderation/page.tsx', [post], { 3: post, 9: 'delete' });
+  assert.ok(html.includes('tệp ảnh'));
+  assert.ok(!html.includes('chưa bị xóa'));
 });
