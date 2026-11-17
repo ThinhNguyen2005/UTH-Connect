@@ -15,6 +15,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -67,10 +68,12 @@ class SupabaseRestClient @Inject constructor() {
             try {
                 val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
                 val updated = refreshSession(saved.userId, saved.refreshToken, deadlineNanos)
-                // Persist rotation before making the new access token available.
-                sessionStore?.save(updated.userId, updated.refreshToken)
-                rememberSession = true
-                credentials = updated
+                // Once refresh succeeds, finish persisting the rotated token even if the caller timed out.
+                withContext(NonCancellable) {
+                    sessionStore?.save(updated.userId, updated.refreshToken)
+                    rememberSession = true
+                    credentials = updated
+                }
                 true
             } catch (cancelled: CancellationException) {
                 throw cancelled

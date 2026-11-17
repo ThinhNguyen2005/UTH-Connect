@@ -37,6 +37,15 @@ begin
     end if;
   end if;
 
+  if tg_table_name = 'notifications' and tg_op = 'UPDATE' then
+    update public.notification_dispatch_progress as progress
+       set source_payload = jsonb_set(progress.source_payload, '{record}', to_jsonb(new)),
+           updated_at = statement_timestamp()
+     where progress.dedupe_key = tg_table_name || ':' || new.id::text
+       and progress.fanout_complete = false
+       and progress.source_payload is not null;
+  end if;
+
   if not should_enqueue then
     return new;
   end if;
@@ -56,11 +65,13 @@ begin
     dedupe_key,
     source_payload,
     fanout_complete,
+    recovery_retry_at,
     updated_at
   ) values (
     tg_table_name || ':' || new.id::text,
     source_payload,
     false,
+    statement_timestamp() + interval '2 minutes',
     statement_timestamp()
   )
   on conflict (dedupe_key) do nothing;

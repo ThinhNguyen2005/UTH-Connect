@@ -96,7 +96,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
-        pushNotificationId = intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
+        val launchedFromHistory =
+            (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        pushNotificationId = if (savedInstanceState == null && !launchedFromHistory) {
+            intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
+        } else {
+            null
+        }
         enableEdgeToEdge()
         observeThemeMode()
         observeRemoteConfig()
