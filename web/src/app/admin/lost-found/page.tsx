@@ -537,7 +537,7 @@ export default function AdminLostFoundPage() {
               <span className="text-xs text-slate-500 font-medium">Trạng thái:</span>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as any)}
+                onChange={(e) => setSelectedStatus(e.target.value as "ALL" | "UNRESOLVED" | "RESOLVED")}
                 className="px-3 py-1.5 bg-[#F8FAFC] border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 text-slate-700"
               >
                 <option value="ALL">Tất cả trạng thái</option>

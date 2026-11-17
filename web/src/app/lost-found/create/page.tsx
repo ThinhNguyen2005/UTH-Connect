@@ -147,8 +147,9 @@ export default function CreateLostFoundPostPage() {
       }
 
       router.push("/lost-found");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Đã xảy ra lỗi khi tạo tin.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Đã xảy ra lỗi khi tạo tin.";
+      setErrorMsg(message);
     } finally {
       setLoading(false);
     }

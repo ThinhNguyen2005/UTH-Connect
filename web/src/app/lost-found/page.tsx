@@ -95,8 +95,9 @@ export default function LostFoundPage() {
       }
 
       setItems((data as LostFoundItem[]) || []);
-    } catch (err: any) {
-      setFetchError(err?.message || "Không thể tải danh sách đồ thất lạc từ máy chủ.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Không thể tải danh sách đồ thất lạc từ máy chủ.";
+      setFetchError(message);
     } finally {
       setLoading(false);
     }
