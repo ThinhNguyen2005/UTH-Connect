@@ -59,7 +59,7 @@ class MyListingsViewModel @Inject constructor(
         // Hủy yêu cầu cũ để kết quả về chậm không ghi đè lần tải mới hơn.
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = if (showLoading) true else it.isLoading, failure = null) }
+            _uiState.update { it.copy(isLoading = showLoading || it.listings.isEmpty(), failure = null) }
             getMyListings().fold(
                 onSuccess = { items -> _uiState.update { it.copy(isLoading = false, listings = items) } },
                 onFailure = { onLoadFailed() },

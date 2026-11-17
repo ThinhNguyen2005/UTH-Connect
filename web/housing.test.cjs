@@ -24,7 +24,10 @@ async function renderPage(file, rows = [post], states = {}) {
   let stateIndex = 0;
   const query = {
     select() { return this; }, order() { return this; }, maybeSingle() { return this; },
+    single() { return { then: resolve => Promise.resolve({ data: post, error: null }).then(resolve) }; },
     eq(...args) { filters.push(args); return this; },
+    gt(...args) { filters.push(args); return this; },
+    range() { return this; },
     then(resolve) { return Promise.resolve({ data: [post], error: null }).then(resolve); },
   };
   const mockReact = { ...React,
@@ -43,6 +46,7 @@ async function renderPage(file, rows = [post], states = {}) {
     if (name === 'lucide-react') return new Proxy({}, { get: () => () => null });
     if (name === '@/utils/supabase-client') return { supabaseBrowserClient: { from: () => query, rpc: () => Promise.resolve({ data: [], error: null }) } };
     if (name === '@/utils/housingImages') return loadHelper();
+    if (name === '@/utils/campusReference') return loadHelper('campusReference.ts');
     if (name.includes('/layout/')) return new Proxy({}, { get: () => ({ children }) => children });
     if (name === 'next/link') return ({ children, ...props }) => React.createElement('a', props, children);
     return require(name);
@@ -76,10 +80,12 @@ test('Danh sách sinh viên chỉ truy vấn OPEN và dẫn sang trang riêng', 
 });
 
 test('Admin mở chi tiết trong dialog và có thao tác quản trị', async () => {
-  const { html } = await renderPage('src/app/admin/moderation/page.tsx', [post], { 3: post });
+  const { html, filters } = await renderPage('src/app/admin/moderation/page.tsx', [post], { 3: post });
   assert.ok(html.includes('<dialog'));
   assert.ok(!html.includes('<details'));
   for (const text of ['Báo cáo', 'Ẩn tin', 'Xóa tin']) assert.ok(html.includes(text), text);
+  assert.ok(filters.some(([column, value]) => column === 'status' && value === 'PENDING'));
+  assert.ok(filters.some(([column, value]) => column === 'report_count' && value === 0));
 });
 
 for (const file of ['src/app/housing/[id]/page.tsx', 'src/app/admin/moderation/page.tsx']) {
@@ -103,20 +109,36 @@ test('RPC quản trị luôn kiểm tra admin và không cấp quyền cho anon'
   assert.ok(!sql.includes('delete from storage.objects'));
 });
 
+test('Migration 20261117 kiểm tra updated_at và ràng buộc ownership/path trong trg_housing_url_guards', () => {
+  const sql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261117000000_housing_approval_revision.sql'), 'utf8');
+  assert.ok(sql.includes('p_reviewed_updated_at'));
+  assert.ok(sql.includes('HOUSING_LISTING_CHANGED'));
+  assert.ok(sql.includes('HOUSING_IMAGE_OWNERSHIP_INVALID'));
+  assert.ok(sql.includes('HOUSING_IMAGE_PATH_INVALID'));
+  assert.ok(sql.includes("new.author_id::text || '/'"));
+});
+
 test('Trang chi tiết sinh viên lọc OPEN cả khi mở trực tiếp bằng ID', async () => {
   const { html, filters } = await renderPage('src/app/housing/[id]/page.tsx', [], { 0: null });
   assert.deepEqual(filters, [['id', 'test-post'], ['status', 'OPEN']]);
   assert.ok(html.includes('Tin không còn hiển thị'));
 });
 
-function loadHelper() {
-  const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, 'src/utils/housingImages.ts'), 'utf8'), {
+function loadHelper(file = 'housingImages.ts') {
+  const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, 'src/utils', file), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const module = { exports: {} };
   new Function('require', 'module', 'exports', code)(require, module, module.exports);
   return module.exports;
 }
+
+test('isReferencePoint matches current and legacy campus references', () => {
+  const { isReferencePoint } = loadHelper('campusReference.ts');
+  assert.equal(isReferencePoint(10.8049, 106.7168), true);
+  assert.equal(isReferencePoint(10.8332, 106.6533), true);
+  assert.equal(isReferencePoint(10.805, 106.717), false);
+});
 
 const IMG = 'https://bvxilfcctwmgmrwrncvd.supabase.co/storage/v1/object/public/housing-images';
 
@@ -133,11 +155,37 @@ test('housingImagePaths chỉ tách object trong bucket housing-images của Sup
   assert.deepEqual(housingImagePaths(undefined), []);
 });
 
+test('housingImagePaths kiểm tra origin khớp expectedOrigin và từ chối domain khác', () => {
+  const { housingImagePaths } = loadHelper();
+  const validUrl = `${IMG}/uid-a/1.jpg`;
+  const otherOrigin = 'https://other-project.supabase.co/storage/v1/object/public/housing-images/uid-a/1.jpg';
+  
+  assert.deepEqual(housingImagePaths([validUrl], IMG), ['uid-a/1.jpg']);
+  assert.throws(() => housingImagePaths([otherOrigin], IMG), /HOUSING_IMAGE_ORIGIN_MISMATCH/);
+});
+
+test('housingImagePaths từ chối path chứa ..', () => {
+  const { housingImagePaths } = loadHelper();
+  const maliciousUrl = `${IMG}/uid-a/../../secret.jpg`;
+  assert.throws(() => housingImagePaths([maliciousUrl]), /HOUSING_IMAGE_PATH_INVALID/);
+});
+
+test('deleteListingWithImages từ chối xóa khi URL ảnh lệch supabaseUrl của client', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const client = {
+    supabaseUrl: 'https://bvxilfcctwmgmrwrncvd.supabase.co',
+    storage: { from: () => ({ remove: async () => ({ data: [], error: null }) }) },
+    rpc: async () => ({ error: null }),
+  };
+  const foreignUrl = 'https://foreign.supabase.co/storage/v1/object/public/housing-images/uid/a.jpg';
+  await assert.rejects(() => deleteListingWithImages(client, 'p', [foreignUrl]), /HOUSING_IMAGE_ORIGIN_MISMATCH/);
+});
+
 test('deleteListingWithImages xóa ảnh TRƯỚC rồi mới xóa bản ghi', async () => {
   const { deleteListingWithImages } = loadHelper();
   const calls = [];
   const client = {
-    storage: { from: bucket => ({ remove: async paths => { calls.push(['remove', bucket, paths]); return { error: null }; } }) },
+    storage: { from: bucket => ({ remove: async paths => { calls.push(['remove', bucket, paths]); return { data: paths.map(name => ({ name })), error: null }; } }) },
     rpc: async (fn, args) => { calls.push(['rpc', fn, args]); return { error: null }; },
   };
   await deleteListingWithImages(client, 'post-1', [`${IMG}/uid/a.jpg`]);
@@ -152,6 +200,17 @@ test('deleteListingWithImages không xóa bản ghi nếu xóa ảnh thất bạ
   const calls = [];
   const client = {
     storage: { from: () => ({ remove: async () => { calls.push('remove'); return { error: new Error('denied') }; } }) },
+    rpc: async () => { calls.push('rpc'); return { error: null }; },
+  };
+  await assert.rejects(() => deleteListingWithImages(client, 'p', [`${IMG}/uid/a.jpg`]));
+  assert.deepEqual(calls, ['remove']);
+});
+
+test('deleteListingWithImages giữ bản ghi nếu storage không xóa đủ ảnh', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: { from: () => ({ remove: async () => { calls.push('remove'); return { data: [], error: null }; } }) },
     rpc: async () => { calls.push('rpc'); return { error: null }; },
   };
   await assert.rejects(() => deleteListingWithImages(client, 'p', [`${IMG}/uid/a.jpg`]));

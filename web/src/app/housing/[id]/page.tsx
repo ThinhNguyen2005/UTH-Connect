@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { PortalLayout } from "@/components/layout/PortalLayout";
 import { supabaseBrowserClient } from "@/utils/supabase-client";
+import { isReferencePoint } from "@/utils/campusReference";
 
 const amenities: Record<string, string> = {
   MEZZANINE: "Gác lửng", AIR_CONDITIONER: "Điều hòa", MACHINE_WASH: "Máy giặt",
@@ -47,6 +48,8 @@ export default function HousingDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  const mapDestination = post && (isReferencePoint(post.latitude, post.longitude) ? post.address_label : post.latitude || post.longitude ? `${post.latitude},${post.longitude}` : post.address_label);
+
   return (
     <PortalLayout>
       <Link href="/housing" className="inline-block text-sm text-slate-600 mb-6 hover:underline">← Quay lại danh sách trọ</Link>
@@ -73,7 +76,7 @@ export default function HousingDetailPage({ params }: { params: { id: string } }
               <p className="text-sm text-slate-500">{types[post.type]} · {campuses[post.campus]}</p>
               <h1 className="text-2xl font-bold text-slate-900 mt-2 break-words">{post.title}</h1>
               <p className="text-slate-600 mt-3 break-words">{post.address_label}</p>
-              <a className="inline-block text-sm underline mt-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(post.latitude || post.longitude ? `${post.latitude},${post.longitude}` : post.address_label)}`}>Xem đường đi trên bản đồ</a>
+              <a className="inline-block text-sm underline mt-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapDestination)}`}>Xem đường đi trên bản đồ</a>
             </header>
             <section className="bg-white p-6 rounded-xl space-y-4">
               <h2 className="font-semibold text-lg">Thông tin phòng</h2>

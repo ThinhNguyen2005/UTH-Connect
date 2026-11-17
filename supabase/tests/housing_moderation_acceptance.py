@@ -188,7 +188,8 @@ def main():
 
         # A3/A4: non-admin cannot approve/reject.
         denied("A3 student approve", lambda: author.rpc(
-            "approve_housing_listing", p_listing_id=post1), "HOUSING_ADMIN_ONLY")
+            "approve_housing_listing", p_listing_id=post1,
+            p_reviewed_updated_at="2000-01-01T00:00:00Z"), "HOUSING_ADMIN_ONLY")
         denied("A4 student reject", lambda: author.rpc(
             "reject_housing_listing", p_listing_id=post1,
             p_reason="khong hop le"), "HOUSING_ADMIN_ONLY")
@@ -202,17 +203,27 @@ def main():
             "reject_housing_listing", p_listing_id=post1,
             p_reason="   "), "HOUSING_REASON_REQUIRED")
 
+        # A6: stale review cannot approve edited content; a fresh review can.
+        reviewed_updated_at = row["updated_at"]
+        author.patch("housing_posts", post1, {"title": FIXTURE_PREFIX + "A6 edited"})
+        denied("A6 stale approval", lambda: admin.rpc(
+            "approve_housing_listing", p_listing_id=post1,
+            p_reviewed_updated_at=reviewed_updated_at), "HOUSING_LISTING_CHANGED")
+
         # A6: approve must never raise the open limit (total OPEN+PENDING is
         # unchanged by approval). Approve post1, then a second pending post
         # while the author already holds one OPEN.
-        admin.rpc("approve_housing_listing", p_listing_id=post1)
+        row = read_post(admin, post1)
+        admin.rpc("approve_housing_listing", p_listing_id=post1,
+                  p_reviewed_updated_at=row["updated_at"])
         require(read_post(admin, post1)["status"] == "OPEN", "A6 approve -> OPEN")
         if active_count(author) < 2:
             row = author.insert("housing_posts", listing_payload("A6 second", author.user_id))[0]
             created.append(row["id"])
             post2 = row["id"]
             require(row["status"] == "PENDING", "A6 second insert PENDING")
-            admin.rpc("approve_housing_listing", p_listing_id=post2)
+            admin.rpc("approve_housing_listing", p_listing_id=post2,
+                      p_reviewed_updated_at=row["updated_at"])
             require(read_post(admin, post2)["status"] == "OPEN",
                     "A6 approve with 1 OPEN + 1 PENDING succeeds")
         else:
@@ -275,7 +286,8 @@ def main():
                 rpc, p_listing_id=post2), "HOUSING_ADMIN_ONLY")
 
         report_post = row["id"]
-        admin.rpc("approve_housing_listing", p_listing_id=report_post)
+        admin.rpc("approve_housing_listing", p_listing_id=report_post,
+                  p_reviewed_updated_at=row["updated_at"])
         stranger.rpc("report_housing_listing", p_listing_id=report_post,
                      p_reason="A12 inaccurate information")
         reports = admin.rpc("get_housing_reports", p_listing_id=report_post)
@@ -293,7 +305,8 @@ def main():
         require(read_post(admin, report_post)["status"] == "HIDDEN_BY_REPORTS",
                 "A13 owner edit does not republish hidden listing")
         denied("A13 cannot approve hidden listing", lambda: admin.rpc(
-            "approve_housing_listing", p_listing_id=report_post), "HOUSING_NOT_PENDING")
+            "approve_housing_listing", p_listing_id=report_post,
+            p_reviewed_updated_at=read_post(admin, report_post)["updated_at"]), "HOUSING_NOT_PENDING")
         admin.rpc("delete_housing_listing", p_listing_id=report_post)
         require(read_post(admin, report_post) is None, "A14 admin permanently deletes listing")
         require(admin.rpc("get_housing_reports", p_listing_id=report_post) == [],

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { supabaseBrowserClient } from "@/utils/supabase-client";
 import { deleteListingWithImages } from "@/utils/housingImages";
+import { isReferencePoint } from "@/utils/campusReference";
 
 const STATUS_LABEL: Record<string, string> = { PENDING: "Chờ duyệt", OPEN: "Đang hiện", REJECTED: "Bị từ chối", FULFILLED: "Hết phòng", HIDDEN_BY_REPORTS: "Bị ẩn" };
 const CAMPUS_LABEL: Record<string, string> = { CS1_QUANG_TRUNG: "CS1 Võ Oanh", CS2_THU_DUC: "CS2 Thủ Đức", CS3_TO_KY: "CS3 Tô Ký" };
@@ -15,6 +16,7 @@ const AMENITY_LABEL: Record<string, string> = {
   HOT_WATER: "Nước nóng", BALCONY: "Ban công", KEY_CARD: "Thẻ ra vào",
 };
 const GENDER_LABEL: Record<string, string> = { ANY: "Bất kỳ", MALE: "Nam", FEMALE: "Nữ" };
+const PAGE_SIZE = 50;
 type Action = "approve" | "reject" | "hide" | "delete";
 type Report = { reason: string; created_at: string };
 
@@ -30,24 +32,60 @@ export default function AdminModerationPage() {
   const [reason, setReason] = useState("");
   const [intent, setIntent] = useState<Action | null>(null);
   const [tab, setTab] = useState("pending");
+  const [pendingPosts, setPendingPosts] = useState<any[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingPage, setPendingPage] = useState(0);
+  const [reportedPosts, setReportedPosts] = useState<any[]>([]);
+  const [reportedCount, setReportedCount] = useState(0);
+  const [reportedPage, setReportedPage] = useState(0);
   const [imageIndex, setImageIndex] = useState(0);
   const drawer = useRef<HTMLDialogElement>(null);
   const mutationRunning = useRef(false);
 
-  async function fetchPosts() {
+  const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabaseBrowserClient.from("housing_posts")
-        .select("*, profiles:author_id(display_name, email)").order("created_at", { ascending: false });
-      if (error) throw error;
-      setPosts(data || []);
+      const [allResult, pendingResult, reportedResult] = await Promise.all([
+        supabaseBrowserClient.from("housing_posts")
+          .select("*, profiles:author_id(display_name, email)").order("created_at", { ascending: false }),
+        supabaseBrowserClient.from("housing_posts")
+          .select("*, profiles:author_id(display_name, email)", { count: "exact" })
+          .eq("status", "PENDING").order("created_at", { ascending: false })
+          .range(pendingPage * PAGE_SIZE, (pendingPage + 1) * PAGE_SIZE - 1),
+        supabaseBrowserClient.from("housing_posts")
+          .select("*, profiles:author_id(display_name, email)", { count: "exact" })
+          .gt("report_count", 0).order("created_at", { ascending: false })
+          .range(reportedPage * PAGE_SIZE, (reportedPage + 1) * PAGE_SIZE - 1),
+      ]);
+      if (allResult.error) throw allResult.error;
+      if (pendingResult.error) throw pendingResult.error;
+      if (reportedResult.error) throw reportedResult.error;
+      const lastPendingPage = Math.max(0, Math.ceil((pendingResult.count || 0) / PAGE_SIZE) - 1);
+      if (pendingPage > lastPendingPage) {
+        setPendingPage(lastPendingPage);
+        return;
+      }
+      const lastReportedPage = Math.max(0, Math.ceil((reportedResult.count || 0) / PAGE_SIZE) - 1);
+      if (reportedPage > lastReportedPage) {
+        setReportedPage(lastReportedPage);
+        return;
+      }
+      setPosts(allResult.data || []);
+      setPendingPosts(pendingResult.data || []);
+      setPendingCount(pendingResult.count || 0);
+      setReportedPosts(reportedResult.data || []);
+      setReportedCount(reportedResult.count || 0);
     } catch {
       setPosts([]);
+      setPendingPosts([]);
+      setPendingCount(0);
+      setReportedPosts([]);
+      setReportedCount(0);
       setToast("Không tải được tin trọ. Vui lòng thử làm mới.");
     } finally { setLoading(false); }
-  }
+  }, [pendingPage, reportedPage]);
 
-  useEffect(() => { void fetchPosts(); }, []);
+  useEffect(() => { void fetchPosts(); }, [fetchPosts]);
 
   useEffect(() => {
     if (!selected) return;
@@ -89,9 +127,12 @@ export default function AdminModerationPage() {
     setToast("");
     try {
       if (action === "delete") {
-        await deleteListingWithImages(supabaseBrowserClient, selected.id, selected.images);
+        const { data: current, error: readError } = await supabaseBrowserClient
+          .from("housing_posts").select("images").eq("id", selected.id).single();
+        if (readError) throw readError;
+        await deleteListingWithImages(supabaseBrowserClient, selected.id, current?.images);
       } else {
-        const args = action === "reject" ? { p_listing_id: selected.id, p_reason: reason.trim() } : { p_listing_id: selected.id };
+        const args = action === "reject" ? { p_listing_id: selected.id, p_reason: reason.trim() } : action === "approve" ? { p_listing_id: selected.id, p_reviewed_updated_at: selected.updated_at } : { p_listing_id: selected.id };
         const { error } = await supabaseBrowserClient.rpc(`${action}_housing_listing`, args);
         if (error) throw error;
       }
@@ -105,8 +146,9 @@ export default function AdminModerationPage() {
     } finally { mutationRunning.current = false; setBusy(false); }
   }
 
-  const visible = posts.filter(p => tab === "pending" ? p.status === "PENDING" : tab === "reported" ? p.report_count > 0 : true);
+  const visible = tab === "pending" ? pendingPosts : tab === "reported" ? reportedPosts : posts;
   const p = selected;
+  const mapDestination = p && (isReferencePoint(p.latitude, p.longitude) ? p.address_label : p.latitude || p.longitude ? `${p.latitude},${p.longitude}` : p.address_label);
   return (
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -115,10 +157,12 @@ export default function AdminModerationPage() {
       </div>
       {!selected && toast && <p role="status" className="bg-blue-50 p-3 rounded-lg text-sm mb-4">{toast}</p>}
       <div className="flex flex-wrap gap-2 mb-5">
-        {[["pending", `Chờ duyệt (${posts.filter(p => p.status === "PENDING").length})`], ["reported", `Có báo cáo (${posts.filter(p => p.report_count > 0).length})`], ["all", `Tất cả (${posts.length})`]].map(([value, label]) => (
+        {[["pending", `Chờ duyệt (${pendingCount})`], ["reported", `Có báo cáo (${reportedCount})`], ["all", `Tất cả (${posts.length})`]].map(([value, label]) => (
           <button key={value} onClick={() => setTab(value)} aria-pressed={tab === value} className={`px-4 py-2 rounded-lg text-sm ${tab === value ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>{label}</button>
         ))}
       </div>
+      {tab === "pending" && pendingCount > PAGE_SIZE && <nav aria-label="Trang chờ duyệt" className="flex items-center justify-end gap-3 mb-4 text-sm"><button disabled={pendingPage === 0 || loading} onClick={() => setPendingPage(page => page - 1)} className="rounded-lg bg-white px-3 py-2 disabled:opacity-50">Trước</button><span>Trang {pendingPage + 1} / {Math.ceil(pendingCount / PAGE_SIZE)}</span><button disabled={(pendingPage + 1) * PAGE_SIZE >= pendingCount || loading} onClick={() => setPendingPage(page => page + 1)} className="rounded-lg bg-white px-3 py-2 disabled:opacity-50">Tiếp</button></nav>}
+      {tab === "reported" && reportedCount > PAGE_SIZE && <nav aria-label="Trang tin có báo cáo" className="flex items-center justify-end gap-3 mb-4 text-sm"><button disabled={reportedPage === 0 || loading} onClick={() => setReportedPage(page => page - 1)} className="rounded-lg bg-white px-3 py-2 disabled:opacity-50">Trước</button><span>Trang {reportedPage + 1} / {Math.ceil(reportedCount / PAGE_SIZE)}</span><button disabled={(reportedPage + 1) * PAGE_SIZE >= reportedCount || loading} onClick={() => setReportedPage(page => page + 1)} className="rounded-lg bg-white px-3 py-2 disabled:opacity-50">Tiếp</button></nav>}
       <div className="bg-white rounded-xl overflow-x-auto shadow-subtle">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-slate-500"><tr><th className="p-4">Tin đăng</th><th className="p-4">Giá / tháng</th><th className="p-4">Trạng thái</th><th className="p-4">Báo cáo</th><th className="p-4"><span className="sr-only">Thao tác</span></th></tr></thead>
@@ -148,7 +192,7 @@ export default function AdminModerationPage() {
                 </button>)}</div>}
               </> : <p className="text-sm text-slate-500 bg-white p-5 rounded-xl">Chưa có ảnh phòng.</p>}
             </section>
-            <section className="bg-white rounded-xl p-5 space-y-3 text-sm"><h3 className="font-semibold">Thông tin phòng</h3><p className="text-xl font-bold tabular-nums">{new Intl.NumberFormat("vi-VN").format(p.monthly_rent_vnd)} đ / tháng</p><p className="break-words">{p.address_label} · {CAMPUS_LABEL[p.campus]}</p><a className="inline-block underline" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.latitude || p.longitude ? `${p.latitude},${p.longitude}` : p.address_label)}`}>Xem vị trí trên bản đồ</a>
+            <section className="bg-white rounded-xl p-5 space-y-3 text-sm"><h3 className="font-semibold">Thông tin phòng</h3><p className="text-xl font-bold tabular-nums">{new Intl.NumberFormat("vi-VN").format(p.monthly_rent_vnd)} đ / tháng</p><p className="break-words">{p.address_label} · {CAMPUS_LABEL[p.campus]}</p><a className="inline-block underline" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapDestination)}`}>Xem vị trí trên bản đồ</a>
               <dl className="grid grid-cols-2 gap-4 pt-2">
                 <div><dt className="text-slate-500">Tiền cọc</dt><dd className="mt-1 tabular-nums">{new Intl.NumberFormat("vi-VN").format(p.deposit_vnd)} đ</dd></div>
                 <div><dt className="text-slate-500">Diện tích</dt><dd className="mt-1">{p.area_m2 == null ? "Chưa cung cấp" : `${p.area_m2} m²`}</dd></div>
