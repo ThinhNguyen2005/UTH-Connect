@@ -28,13 +28,34 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const err = params.get("error");
-      const msg = params.get("message");
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
 
-      if (err === "auth_callback_failed") {
-        setErrorMessage("Đăng nhập Google không thành công hoặc phiên làm việc đã hết hạn.");
+      const type = hashParams.get("type");
+      if (type === "recovery") {
+        window.location.href = `/reset-password${window.location.hash}`;
+        return;
       }
-      if (msg === "check_email") {
+
+      const err = params.get("error") || hashParams.get("error");
+      const errCode = hashParams.get("error_code");
+      const errDesc = hashParams.get("error_description");
+      const msg = params.get("message");
+      const verified = params.get("verified");
+
+      if (errCode === "otp_expired") {
+        setErrorMessage("Liên kết xác thực hoặc đặt lại mật khẩu đã hết hạn. Vui lòng gửi lại yêu cầu.");
+      } else if (err === "auth_callback_failed") {
+        setErrorMessage("Đăng nhập Google không thành công hoặc phiên làm việc đã hết hạn.");
+      } else if (errDesc) {
+        setErrorMessage(decodeURIComponent(errDesc));
+      } else if (err) {
+        setErrorMessage(decodeURIComponent(err));
+      }
+
+      if (verified === "true") {
+        setSuccessMessage("Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ.");
+      } else if (msg === "check_email") {
         setSuccessMessage("Đăng ký thành công! Vui lòng kiểm tra email trường để xác nhận tài khoản.");
       }
     }
@@ -309,16 +330,12 @@ export default function LoginPage() {
                   >
                     Xác thực email...
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setErrorMessage("Vui lòng liên hệ Phòng CTSV hoặc quản trị viên để cấp lại mật khẩu.");
-                    }}
+                  <Link
+                    href="/forgot-password"
                     className="font-medium text-neutral-900 hover:underline text-xs"
                   >
-                    Forgot password?
-                  </a>
+                    Quên mật khẩu?
+                  </Link>
                 </div>
               </div>
             )}

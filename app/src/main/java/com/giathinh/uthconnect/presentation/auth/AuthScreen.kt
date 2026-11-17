@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.presentation.auth
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -56,6 +57,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -1107,34 +1109,106 @@ private fun ModernResetPasswordContent(
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
 
-        Text(
-            text = "Nhập mã OTP gửi tới ${uiState.forgotEmail}. Mã phải được Supabase xác minh trước khi đổi mật khẩu.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = extended.textSecondary,
-        )
+        if (uiState.recoveryAccessToken != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = textFieldShape,
+                color = extended.successContainer.copy(alpha = 0.5f),
+            ) {
+                Column(modifier = Modifier.padding(UthDimens.Spacing.Md)) {
+                    Text(
+                        text = stringResource(R.string.auth_recovery_email_verified_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = extended.onSuccessContainer,
+                    )
+                    Spacer(Modifier.height(UthDimens.Spacing.Xxs))
+                    Text(
+                        text = stringResource(R.string.auth_recovery_email_verified_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = extended.onSuccessContainer,
+                    )
+                }
+            }
+        } else {
+            // Card thông báo hướng dẫn mở email nhấn liên kết
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = textFieldShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+            ) {
+                Column(modifier = Modifier.padding(UthDimens.Spacing.Md)) {
+                    Text(
+                        text = stringResource(R.string.auth_recovery_link_sent_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(UthDimens.Spacing.Xxs))
+                    Text(
+                        text = stringResource(R.string.auth_recovery_link_sent_desc, uiState.forgotEmail),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        OutlinedTextField(
-            value = uiState.resetOtp,
-            onValueChange = { onAction(AuthAction.ResetOtpChanged(it)) },
-            modifier = Modifier.fillMaxWidth().testTag("auth_reset_otp"),
-            enabled = enabled && !uiState.isResettingPassword,
-            singleLine = true,
-            label = { Text("Mã xác minh OTP") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
-            shape = textFieldShape,
-        )
-        TextButton(
-            onClick = { onAction(AuthAction.ForgotPassword) },
-            enabled = enabled && uiState.forgotCooldownSeconds == 0 && !uiState.isResettingPassword,
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                if (uiState.forgotCooldownSeconds > 0) {
-                    "Gửi lại mã sau ${uiState.forgotCooldownSeconds}s"
-                } else {
-                    "Yêu cầu gửi lại mã"
-                },
+            TextButton(
+                onClick = { onAction(AuthAction.ForgotPassword) },
+                enabled = enabled && uiState.forgotCooldownSeconds == 0 && !uiState.isResettingPassword,
+            ) {
+                Text(
+                    if (uiState.forgotCooldownSeconds > 0) {
+                        stringResource(R.string.auth_resend_link_cooldown, uiState.forgotCooldownSeconds)
+                    } else {
+                        stringResource(R.string.auth_resend_email)
+                    },
+                )
+            }
+
+            if (uiState.recoveryAccessToken == null) {
+                TextButton(
+                    onClick = { onAction(AuthAction.ToggleManualOtpInput) },
+                ) {
+                    Text(
+                        text = if (uiState.showManualOtpField) {
+                            stringResource(R.string.auth_toggle_otp_hide)
+                        } else {
+                            stringResource(R.string.auth_toggle_otp_show)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+        }
+
+        if (uiState.recoveryAccessToken == null && uiState.showManualOtpField) {
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
+            OutlinedTextField(
+                value = uiState.resetOtp,
+                onValueChange = { onAction(AuthAction.ResetOtpChanged(it)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("auth_reset_otp"),
+                enabled = enabled && !uiState.isResettingPassword,
+                singleLine = true,
+                shape = textFieldShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = extended.surfaceSubtle,
+                    unfocusedContainerColor = extended.surfaceSubtle,
+                ),
+                label = { Text(stringResource(R.string.auth_reset_otp_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             )
         }
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
 
         OutlinedTextField(
             value = uiState.resetNewPassword,
@@ -1275,8 +1349,33 @@ private fun ModernVerifyEmailContent(
 
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
 
-        val cooldown = uiState.verifyEmailCooldownSeconds
+        val context = LocalContext.current
         Button(
+            onClick = {
+                val emailIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_APP_EMAIL)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(emailIntent) }
+            },
+            shape = UthDimens.Radius.LgShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = UthDimens.Size.ButtonHeight),
+        ) {
+            Text(
+                text = stringResource(R.string.auth_open_email_app),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+
+        val cooldown = uiState.verifyEmailCooldownSeconds
+        OutlinedButton(
             onClick = { onAction(AuthAction.ResendVerificationEmail) },
             enabled = enabled && cooldown == 0,
             shape = UthDimens.Radius.LgShape,

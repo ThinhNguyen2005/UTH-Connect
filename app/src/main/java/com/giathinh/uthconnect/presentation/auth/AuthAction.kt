@@ -44,8 +44,12 @@ sealed interface AuthAction {
     data class ResetNewPasswordChanged(val value: String) : AuthAction
     data class ResetConfirmPasswordChanged(val value: String) : AuthAction
     data object ToggleResetPasswordVisibility : AuthAction
+    data object ToggleManualOtpInput : AuthAction
     data object SubmitResetPassword : AuthAction
 
     /** Email confirmation actions */
     data object ResendVerificationEmail : AuthAction
+
+    /** Handles deep link intent uri from verification or password reset email */
+    data class HandleDeepLink(val uriString: String) : AuthAction
 }

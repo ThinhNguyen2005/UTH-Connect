@@ -22,6 +22,8 @@ type InboxRow = {
   target_id: string | null;
   push_device_cursor?: string | null;
   push_attempts?: number;
+  push_retry_device_id?: string | null;
+  push_delivered?: boolean;
 };
 
 type DispatchProgress = {
@@ -43,6 +45,7 @@ const MAX_INVOCATION_MS = 20_000;
 const PATCH_ID_BATCH_SIZE = 100;
 const FCM_MAX_ATTEMPTS = 3;
 const FCM_RETRY_DELAY_MS = 500;
+const FCM_RATE_LIMIT_RETRY_DELAY_MS = 60_000;
 const MAX_CONTINUATION_DEPTH = 4;
 const MAX_FANOUT_RECOVERY_ATTEMPTS = 5;
 const FANOUT_RECOVERY_DELAY_MS = 60_000;
@@ -171,13 +174,16 @@ Deno.serve(async (request) => {
     } else {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
+      const sourcePayload = payload.table === "notifications"
+        ? { ...payload, old_record: null }
+        : payload;
 
       try {
         const dedupeKey = `${payload.table}:${source.sourceId}`;
         await supabaseRest("notification_dispatch_progress?on_conflict=dedupe_key", {
           method: "POST",
           headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-          body: JSON.stringify({ dedupe_key: dedupeKey, source_payload: payload, fanout_complete: false }),
+          body: JSON.stringify({ dedupe_key: dedupeKey, source_payload: sourcePayload, fanout_complete: false }),
         }, deadline);
         if (payload.table === "housing_posts" && source.broadcastAuthorId) {
           const allowed = await claimHousingBroadcast(source.broadcastAuthorId, source.sourceId, deadline);
@@ -278,6 +284,7 @@ Deno.serve(async (request) => {
     let deliveredTotal = 0;
     let pendingTotal = 0;
     let processedRows = 0;
+    let processedDevices = 0;
     let deferred = false;
     while (true) {
       if (Date.now() >= deadline) {
@@ -290,7 +297,7 @@ Deno.serve(async (request) => {
       }
       const pageSize = Math.min(INBOX_BATCH_SIZE, MAX_ROWS_PER_INVOCATION - processedRows);
       const pending = await supabaseRest<InboxRow[]>(
-        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor,push_attempts&push_status=eq.PENDING&${pushRetryDueFilter()}&order=id.asc&limit=${pageSize}`,
+        `notification_inbox?select=id,recipient_id,title,summary,content,target_type,target_id,push_device_cursor,push_attempts,push_retry_device_id,push_delivered&push_status=eq.PENDING&${pushRetryDueFilter()}&order=id.asc&limit=${pageSize}`,
         {},
         deadline,
       );
@@ -307,11 +314,10 @@ Deno.serve(async (request) => {
       if (claimed.length === 0) return json({ delivered: deliveredTotal, duplicate: true });
 
       const heldClaimIds = new Set(claimed.map((row) => row.id));
-      const attemptsSinceProgress = new Map<string, { attempts: number; cursor: string | null }>();
+      const attemptsSinceProgress = new Map<string, { attempts: number; cursor: string | null; deviceId: string }>();
       try {
         ensureWithinDeadline(deadline);
         let accessToken: string | null = null;
-        let processedDevices = 0;
         for (const row of claimed) {
           if (processedDevices >= MAX_DEVICES_PER_INVOCATION) {
             deferred = true;
@@ -332,6 +338,8 @@ Deno.serve(async (request) => {
           let rowDeferred = false;
           let retryAt: number | null = null;
           let rowAttempts = row.push_attempts ?? 0;
+          let retryDeviceId = row.push_retry_device_id ?? null;
+          let rowHasDelivered = row.push_delivered ?? false;
           let attemptCounted = false;
           let cursorBeforeAttempt = row.push_device_cursor ?? null;
           for (const device of devicesToProcess) {
@@ -339,11 +347,28 @@ Deno.serve(async (request) => {
               rowDeferred = true;
               break;
             }
+            if (retryDeviceId !== device.device_id) {
+              if (rowAttempts > 0) {
+                await patchInboxRows(
+                  [row.id],
+                  { push_attempts: 0, push_retry_device_id: device.device_id },
+                  "&push_status=eq.PROCESSING",
+                  false,
+                  cleanupDeadline(),
+                );
+              }
+              rowAttempts = 0;
+              attemptCounted = false;
+              retryAt = null;
+              retryDeviceId = device.device_id;
+              attemptsSinceProgress.delete(row.id);
+            }
             if (rowAttempts >= MAX_PUSH_ATTEMPTS) {
               console.warn("Skipping device after FCM retries were exhausted", device.device_id);
               await persistDeviceProgress(row.id, device.device_id);
               rowAttempts = 0;
               attemptCounted = false;
+              retryDeviceId = null;
               cursorBeforeAttempt = device.device_id;
               attemptsSinceProgress.delete(row.id);
               processedDevices++;
@@ -351,6 +376,7 @@ Deno.serve(async (request) => {
             }
             ensureWithinDeadline(deadline);
             accessToken ??= await getFcmAccessToken(deadline);
+            processedDevices++;
             let result: FcmResult;
             try {
               result = await sendFcmWithRetry(accessToken, device.token, row, deadline, async () => {
@@ -358,7 +384,7 @@ Deno.serve(async (request) => {
                 rowAttempts++;
                 await patchInboxRows(
                   [row.id],
-                  { push_attempts: rowAttempts },
+                  { push_attempts: rowAttempts, push_retry_device_id: device.device_id },
                   "&push_status=eq.PROCESSING",
                   false,
                   cleanupDeadline(),
@@ -367,6 +393,7 @@ Deno.serve(async (request) => {
                 attemptsSinceProgress.set(row.id, {
                   attempts: rowAttempts,
                   cursor: cursorBeforeAttempt,
+                  deviceId: device.device_id,
                 });
               });
             } catch (error) {
@@ -380,6 +407,7 @@ Deno.serve(async (request) => {
               rowFailed = true;
             } else if (result === "SENT") {
               deliveredTotal++;
+              rowHasDelivered = true;
             } else if (result === "UNREGISTERED") {
               await supabaseRest(`notification_devices?token=eq.${encodeURIComponent(device.token)}`, { method: "DELETE" }, deadline);
             } else if (result === "PERMANENT_FAILURE") {
@@ -396,16 +424,15 @@ Deno.serve(async (request) => {
               cursorBeforeAttempt = device.device_id;
               retryAt = null;
               attemptsSinceProgress.delete(row.id);
-              processedDevices++;
               continue;
             }
             if (rowFailed) break;
-            await persistDeviceProgress(row.id, device.device_id);
+            await persistDeviceProgress(row.id, device.device_id, result === "SENT");
             rowAttempts = 0;
             attemptCounted = false;
+            retryDeviceId = null;
             cursorBeforeAttempt = device.device_id;
             attemptsSinceProgress.delete(row.id);
-            processedDevices++;
           }
 
           if (rowFailed) {
@@ -414,6 +441,7 @@ Deno.serve(async (request) => {
               {
                 push_status: "PENDING",
                 push_attempts: rowAttempts,
+                push_retry_device_id: retryDeviceId,
                 push_retry_at: new Date(
                   retryAt ?? Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1),
                 ).toISOString(),
@@ -439,9 +467,11 @@ Deno.serve(async (request) => {
             attemptsSinceProgress.delete(row.id);
             deferred = true;
           } else {
+            const noDevicesAtAll = devices.length === 0 && !row.push_device_cursor;
+            const finalStatus = rowHasDelivered || noDevicesAtAll ? "SENT" : "FAILED";
             await patchInboxRows(
               [row.id],
-              { push_status: "SENT", push_claimed_at: null, push_device_cursor: null },
+              { push_status: finalStatus, push_claimed_at: null, push_device_cursor: null },
               "&push_status=eq.PROCESSING",
               false,
               cleanupDeadline(),
@@ -464,7 +494,10 @@ Deno.serve(async (request) => {
         const unattemptedIds: string[] = [];
         const attemptedRows = [...heldClaimIds]
           .map((id) => ({ id, attempt: attemptsSinceProgress.get(id) }))
-          .filter((entry): entry is { id: string; attempt: { attempts: number; cursor: string | null } } =>
+          .filter((entry): entry is {
+            id: string;
+            attempt: { attempts: number; cursor: string | null; deviceId: string };
+          } =>
             entry.attempt !== undefined
           );
         for (const id of heldClaimIds) {
@@ -485,8 +518,9 @@ Deno.serve(async (request) => {
             id: string;
             push_device_cursor: string | null;
             push_attempts: number;
+            push_retry_device_id: string | null;
           }>>(
-            `notification_inbox?select=id,push_device_cursor,push_attempts&id=in.(${ids.join(",")})&push_status=eq.PROCESSING`,
+            `notification_inbox?select=id,push_device_cursor,push_attempts,push_retry_device_id&id=in.(${ids.join(",")})&push_status=eq.PROCESSING`,
             {},
             cleanupDeadline(),
           );
@@ -495,6 +529,7 @@ Deno.serve(async (request) => {
             ids: string[];
             cursor: string | null;
             attempts: number;
+            retryDeviceId: string | null;
             progressSaved: boolean;
           }>();
           for (const { id, attempt } of attemptedRows) {
@@ -502,8 +537,9 @@ Deno.serve(async (request) => {
             const cursor = latest?.push_device_cursor ?? null;
             const progressSaved = cursor !== attempt.cursor;
             const attempts = latest?.push_attempts ?? attempt.attempts;
-            const key = JSON.stringify([cursor, attempts, progressSaved]);
-            const group = recoveryGroups.get(key) ?? { ids: [], cursor, attempts, progressSaved };
+            const retryDeviceId = latest ? latest.push_retry_device_id : attempt.deviceId;
+            const key = JSON.stringify([cursor, attempts, retryDeviceId, progressSaved]);
+            const group = recoveryGroups.get(key) ?? { ids: [], cursor, attempts, retryDeviceId, progressSaved };
             group.ids.push(id);
             recoveryGroups.set(key, group);
           }
@@ -516,6 +552,7 @@ Deno.serve(async (request) => {
               {
                 push_status: "PENDING",
                 push_attempts: group.attempts,
+                push_retry_device_id: group.retryDeviceId,
                 push_retry_at: group.progressSaved || group.attempts === 0
                   ? null
                   : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (group.attempts - 1)).toISOString(),
@@ -739,6 +776,7 @@ async function sendFcm(accessToken: string, token: string, row: InboxRow, deadli
   }
   const retryAt = parseRetryAfter(response.headers.get("Retry-After"));
   if (retryAt !== null) return { retryAt };
+  if (response.status === 429) return { retryAt: Date.now() + FCM_RATE_LIMIT_RETRY_DELAY_MS };
   return "FAILED";
 }
 
@@ -836,13 +874,18 @@ function pushRetryDueFilter(): string {
   return `or=(push_retry_at.is.null,push_retry_at.lte.${encodeURIComponent(new Date().toISOString())})`;
 }
 
-async function persistDeviceProgress(rowId: string, deviceId: string): Promise<void> {
+async function persistDeviceProgress(
+  rowId: string,
+  deviceId: string,
+  delivered = false,
+): Promise<void> {
   await patchInboxRows(
     [rowId],
     {
       push_device_cursor: deviceId,
       push_claimed_at: new Date().toISOString(),
       push_attempts: 0,
+      ...(delivered ? { push_delivered: true } : {}),
     },
     "&push_status=eq.PROCESSING",
     false,

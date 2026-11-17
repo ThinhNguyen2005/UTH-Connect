@@ -38,31 +38,43 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val recipientId = message.data[PushIntentContract.RECIPIENT_ID].orEmpty()
-        if (recipientId.isBlank() || currentRecipientId() != recipientId) return
-        val notificationId = message.data[PushIntentContract.NOTIFICATION_ID].orEmpty()
-        val title = message.notification?.title
-            ?: message.data[PushIntentContract.TITLE]
-            ?: getString(R.string.notification_title)
-        val body = message.notification?.body ?: message.data[PushIntentContract.BODY].orEmpty()
-        createChannel()
+        if (recipientId.isBlank()) return
+        val payload = PushNotificationPayload(
+            recipientId = recipientId,
+            notificationId = message.data[PushIntentContract.NOTIFICATION_ID].orEmpty(),
+            title = message.notification?.title
+                ?: message.data[PushIntentContract.TITLE]
+                ?: getString(R.string.notification_title),
+            body = message.notification?.body ?: message.data[PushIntentContract.BODY].orEmpty(),
+            targetType = message.data[PushIntentContract.TARGET_TYPE].orEmpty(),
+            targetId = message.data[PushIntentContract.TARGET_ID].orEmpty(),
+        )
 
+        when (currentRecipientId()) {
+            null -> enqueueRetryForRememberedRecipient(payload)
+            recipientId -> displayMessage(payload)
+        }
+    }
+
+    private fun displayMessage(payload: PushNotificationPayload) {
+        createChannel()
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(PushIntentContract.NOTIFICATION_ID, notificationId)
-            putExtra(PushIntentContract.TARGET_TYPE, message.data[PushIntentContract.TARGET_TYPE])
-            putExtra(PushIntentContract.TARGET_ID, message.data[PushIntentContract.TARGET_ID])
+            putExtra(PushIntentContract.NOTIFICATION_ID, payload.notificationId)
+            putExtra(PushIntentContract.TARGET_TYPE, payload.targetType)
+            putExtra(PushIntentContract.TARGET_ID, payload.targetId)
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
-            notificationId.hashCode(),
+            payload.notificationId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(this, PushIntentContract.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentTitle(payload.title)
+            .setContentText(payload.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(payload.body))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
@@ -76,12 +88,24 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             pushNotificationCoordinator.notifyForCurrentUser(
-                recipientId,
+                payload.recipientId,
                 { supabaseClient.userIdOrNull },
-                notificationId.hashCode(),
+                payload.notificationId.hashCode(),
                 notification,
             )
         }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun enqueueRetryForRememberedRecipient(payload: PushNotificationPayload) {
+        val rememberedUserId = try {
+            secureSessionStore.load()?.userId
+        } catch (error: Exception) {
+            android.util.Log.w(TAG, "Unable to read remembered session for notification retry", error)
+            null
+        }
+        if (rememberedUserId != payload.recipientId) return
+        PushNotificationDisplayRetryWorker.enqueue(this, payload)
     }
 
     /** Restores a remembered session so background FCM delivery can validate its recipient. */
@@ -115,6 +139,7 @@ class UthFirebaseMessagingService : FirebaseMessagingService() {
 
     private companion object {
         const val SESSION_RESTORE_TIMEOUT_MS = 5_000L
+        const val TAG = "UthFcmMessageService"
     }
 }
 

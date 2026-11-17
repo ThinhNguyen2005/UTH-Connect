@@ -1,4 +1,7 @@
 complexity:
+  LargeClass:
+    active: true
+    threshold: 800
   LongMethod:
     active: true
     threshold: 60

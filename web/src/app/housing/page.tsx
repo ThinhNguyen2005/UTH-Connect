@@ -13,9 +13,9 @@ export default function HousingPostsPage() {
 
   const campuses = [
     { label: "Tất cả cơ sở", value: "ALL" },
-    { label: "Cơ sở 1 (Bình Thạnh)", value: "CS1" },
-    { label: "Cơ sở 2 (Quận 12)", value: "CS2" },
-    { label: "Cơ sở 3 (Thủ Đức)", value: "CS3" },
+    { label: "Cơ sở 1 (Bình Thạnh)", value: "CS1_QUANG_TRUNG" },
+    { label: "Cơ sở 2 (Quận 12)", value: "CS2_THU_DUC" },
+    { label: "Cơ sở 3 (Tô Ký)", value: "CS3_TO_KY" },
   ];
 
   useEffect(() => {
@@ -29,7 +29,9 @@ export default function HousingPostsPage() {
         .order("created_at", { ascending: false });
 
       if (selectedCampus !== "ALL") {
-        query = query.eq("campus", selectedCampus);
+        query = query.or(
+          `campus.eq.${selectedCampus},campus.eq.${selectedCampus.split("_")[0]}`
+        );
       }
 
       const { data, error } = await query;
@@ -111,14 +113,14 @@ export default function HousingPostsPage() {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2.5">
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                    {post.room_type === "roommate"
+                    {post.type === "LOOKING_FOR_ROOMMATE" || post.room_type === "roommate"
                       ? "Ở ghép"
-                      : post.room_type === "dormitory"
-                      ? "Ký túc xá"
-                      : "Cho thuê"}
+                      : post.type === "ROOM_FOR_RENT" || post.room_type === "dormitory"
+                      ? "Cho thuê"
+                      : "Tìm phòng"}
                   </span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                    {post.campus || "CS1"}
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 uppercase">
+                    {post.campus ? post.campus.split("_")[0] : "CS1"}
                   </span>
                 </div>
 
@@ -127,7 +129,7 @@ export default function HousingPostsPage() {
                 </h3>
 
                 <div className="text-base font-bold text-slate-900 mb-2 tabular-nums">
-                  {new Intl.NumberFormat("vi-VN").format(post.price)} đ
+                  {new Intl.NumberFormat("vi-VN").format(post.monthly_rent_vnd || post.price || 0)} đ
                   <span className="text-xs font-normal text-slate-400">/tháng</span>
                 </div>
 
@@ -137,7 +139,7 @@ export default function HousingPostsPage() {
 
                 <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-3">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{post.location || "Gần trường"}</span>
+                  <span className="truncate">{post.address_label || post.location || "Gần trường UTH"}</span>
                 </div>
               </div>
 
@@ -156,9 +158,13 @@ export default function HousingPostsPage() {
                       <Phone className="w-3.5 h-3.5 stroke-[1.5]" />
                     </a>
                   )}
-                  {post.contact_zalo && (
+                  {(post.contact_zalo_url || post.contact_zalo) && (
                     <a
-                      href={`https://zalo.me/${post.contact_zalo}`}
+                      href={
+                        post.contact_zalo_url
+                          ? post.contact_zalo_url
+                          : `https://zalo.me/${post.contact_zalo}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 text-slate-500 hover:text-slate-900 rounded-md transition"

@@ -19,10 +19,10 @@ interface NotificationRepository {
     fun getInbox(): Flow<List<PostNotification>> = getNewsfeed(NotificationCategory.ALL)
 
     /** Marks one inbox notification as read. */
-    suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> = Result.success(Unit)
+    suspend fun markInboxNotificationRead(notificationId: String): Result<Unit>
 
     /** Marks all inbox notifications as read. */
-    suspend fun markAllInboxNotificationsRead(): Result<Unit> = Result.success(Unit)
+    suspend fun markAllInboxNotificationsRead(): Result<Unit>
 
     /** Loads one persistent inbox item for notification-tap navigation. */
     @Suppress("MaxLineLength")

@@ -74,6 +74,7 @@ fun NotificationScreen(
     uiState: NotificationUiState,
     onAction: (NotificationAction) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSource: (String, String) -> Unit = { _, _ -> },
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -115,7 +116,10 @@ fun NotificationScreen(
                                 onRetry = { onAction(NotificationAction.RetryReadMutations) },
                             )
                         }
-                        NotificationDetailContent(uiState.detail)
+                        NotificationDetailContent(
+                            item = uiState.detail,
+                            onOpenSource = onOpenSource,
+                        )
                     }
 
                     uiState.errorMessage != null -> NotificationErrorState(
@@ -407,7 +411,10 @@ private fun NotificationInlineError(
 }
 
 @Composable
-private fun NotificationDetailContent(item: PostNotification) {
+private fun NotificationDetailContent(
+    item: PostNotification,
+    onOpenSource: (String, String) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -426,6 +433,14 @@ private fun NotificationDetailContent(item: PostNotification) {
             Text(item.summary, style = MaterialTheme.typography.titleMedium)
         }
         Text(item.content, style = MaterialTheme.typography.bodyLarge)
+        val sourceTarget = item.targetType
+            ?.takeIf { it == "EVENT" || it == "HOUSING" }
+            ?.let { type -> item.targetId?.takeIf(String::isNotBlank)?.let { id -> type to id } }
+        if (sourceTarget != null) {
+            Button(onClick = { onOpenSource(sourceTarget.first, sourceTarget.second) }) {
+                Text(stringResource(R.string.notification_open_source))
+            }
+        }
     }
 }
 

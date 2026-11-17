@@ -20,6 +20,8 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `supabase/migrations/20261121000000_notification_fanout_recovery_retry.sql`
    - `supabase/migrations/20261122000000_due_notification_fanout_recovery.sql`
    - `supabase/migrations/20261123000000_transactional_notification_dispatch_outbox.sql`
+   - `supabase/migrations/20261124000000_notification_push_delivery_progress.sql`
+   - `supabase/migrations/20261125000000_notification_push_retry_device.sql`
 2. Deploy the function with `supabase functions deploy dispatch-notification`.
 3. Store these values in Supabase Vault before the first scheduler run. While either value is missing, the scheduler logs a warning and skips the run:
    - `SUPABASE_FUNCTIONS_URL`: `https://<project-ref>.supabase.co/functions/v1`
@@ -38,9 +40,10 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    - `public.housing_posts`: `INSERT` (sends new listings with `status = OPEN`)
 
 The dispatcher claims inbox rows in small batches, limits each invocation's runtime
-and device fan-out, and persists a per-inbox device cursor after every successful
-device. Rows left pending after a time or device limit resume from that cursor on
-the next dispatch/retry invocation; interrupted `PROCESSING` claims are released
+and total device fan-out, and persists a per-inbox device cursor and successful-send
+state after every successful device. Rows left pending after a time or device limit
+resume from that cursor on the next dispatch/retry invocation; interrupted
+`PROCESSING` claims are released
 after five minutes. Source fan-out progress uses the last recipient ID as a keyset
 cursor, so changes to the verified profile list do not skip later recipients.
 Failed push rows retry with exponential delay up to five attempts, then move to
@@ -51,14 +54,20 @@ that have no fan-out progress yet, then queues their source payloads. This relea
 scheduled notices after `published_at` without requiring a second database webhook.
 It also queues source payloads whose inbox fan-out has not completed, continuing
 from their saved recipient cursor.
-Recovery attempts use exponential backoff and stop after five attempts for a
-permanently failing source, allowing later fan-outs to be recovered.
+Recovery attempts use exponential backoff and stop after five failed continuation
+responses for a permanently failing source, allowing later fan-outs to be recovered.
+Repeated continuation timeouts without cursor progress do not mark a source failed;
+they continue retrying with capped backoff. Monitor Edge Function logs and each
+progress row's `last_recipient_id` and `updated_at` when recovery is not advancing.
 
 Eligible new source changes also write a `notification_dispatch_progress` row in
 the same database transaction through the transactional outbox triggers. This
 preserves dispatch work if the database webhook or its first Edge Function request
 fails before the dispatcher can create progress. The six-minute scheduler resumes
-those rows. Sources created before this migration are not replayed automatically.
+those rows. Sources created before the transactional outbox migration are not replayed
+automatically. Notifications that were already due when the scheduled-notification
+recovery migration ran are marked complete to avoid replaying old notices; notices
+that were still scheduled for a future time can be dispatched when they become due.
 
 The function rejects requests without the shared webhook header, filters unpublished
 events and non-open housing posts, writes an idempotent per-user inbox item, and claims
@@ -74,8 +83,8 @@ registration happens after session restore/login and token rotation; sign-out re
 the installation row from that user's active device list.
 
 To verify end to end, deploy the migration and function, add the secrets and webhooks,
-install the app on a Google Play services device, sign in and grant notification
-permission, then insert a published event or an `OPEN` housing listing. Also insert an
+install the app on a Google Play services device, sign in, open Notification Center,
+and grant notification permission when prompted, then insert a published event or an `OPEN` housing listing. Also insert an
 academic row in `public.notifications`. Confirm the inbox row and push, then tap the
 push with the app foregrounded, backgrounded, and its process removed. Android force-stop
 is a separate OS state and must be relaunched before FCM delivery resumes.

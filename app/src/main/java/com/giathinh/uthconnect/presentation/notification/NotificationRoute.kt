@@ -11,7 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +27,7 @@ fun NotificationRoute(
     onOpenProfile: () -> Unit,
     onOpenDetail: (String) -> Unit,
     notificationId: String? = null,
+    onOpenSource: (String, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: NotificationViewModel = hiltViewModel(),
 ) {
@@ -69,5 +70,6 @@ fun NotificationRoute(
         uiState = uiState,
         onAction = viewModel::onAction,
         modifier = modifier,
+        onOpenSource = onOpenSource,
     )
 }

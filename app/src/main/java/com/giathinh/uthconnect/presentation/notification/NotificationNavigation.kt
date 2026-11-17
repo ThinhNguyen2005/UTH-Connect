@@ -4,6 +4,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.giathinh.uthconnect.presentation.events.EventSourceDestination
+import com.giathinh.uthconnect.presentation.housing.HousingDetailDestination
 import com.giathinh.uthconnect.presentation.navigation.ProfileDestination
 import com.giathinh.uthconnect.presentation.navigation.SettingsDestination
 import kotlinx.serialization.Serializable
@@ -32,6 +34,7 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
                 navController.navigate(ProfileDestination)
             },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
+            onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )
     }
     composable<NotificationDetailDestination> { entry ->
@@ -42,6 +45,14 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
             onOpenProfile = { navController.navigate(ProfileDestination) },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
             notificationId = args.notificationId,
+            onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )
+    }
+}
+
+private fun NavHostController.openNotificationSource(type: String, id: String) {
+    when (type) {
+        "EVENT" -> navigate(EventSourceDestination(id))
+        "HOUSING" -> navigate(HousingDetailDestination(listingId = id))
     }
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -68,6 +69,7 @@ class NotificationViewModelTest {
 
         advanceUntilIdle()
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
         advanceUntilIdle()
 
@@ -75,6 +77,8 @@ class NotificationViewModelTest {
         advanceUntilIdle()
         secondPatch.complete(Unit)
         advanceUntilIdle()
+
+        assertEquals(2, repository.markCallCount)
 
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -100,6 +104,7 @@ class NotificationViewModelTest {
         val viewModel = NotificationViewModel(repository)
 
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
+        advanceUntilIdle()
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
         advanceUntilIdle()
 
@@ -108,7 +113,36 @@ class NotificationViewModelTest {
         secondPatch.complete(Unit)
         advanceUntilIdle()
 
+        assertEquals(2, repository.markCallCount)
+
         assertTrue(notification.id !in viewModel.uiState.value.readNotificationIds)
+    }
+
+    @Test
+    fun `mark all confirms an ID with an individual read mutation pending`() = runTest {
+        val notification = notification("notification-mark-all-pending-read")
+        val individualReadGate = CompletableDeferred<Unit>()
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(listOf(Result.failure(IllegalStateException("temporary")))),
+            markAllResults = ArrayDeque(listOf(Result.success(Unit))),
+            markGates = ArrayDeque(listOf(individualReadGate)),
+        )
+        val viewModel = NotificationViewModel(repository)
+        advanceUntilIdle()
+        repository.emit(listOf(notification))
+        advanceUntilIdle()
+
+        viewModel.onAction(NotificationAction.ClickNotification(notification.id))
+        advanceUntilIdle()
+        viewModel.onAction(NotificationAction.MarkAllAsRead)
+        advanceUntilIdle()
+        individualReadGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(notification.id in viewModel.uiState.value.readNotificationIds)
+        assertTrue(!viewModel.uiState.value.readMutationFailed)
+        assertTrue(repository.markCallCount == 1)
+        assertTrue(repository.markAllCallCount == 1)
     }
 
     @Test
@@ -462,14 +496,16 @@ class NotificationViewModelTest {
 
         override suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> {
             markCallCount++
+            val result = markResults.removeFirst()
             markGates.removeFirstOrNull()?.await()
-            return markResults.removeFirst()
+            return result
         }
 
         override suspend fun markAllInboxNotificationsRead(): Result<Unit> {
             markAllCallCount++
+            val result = markAllResults.removeFirst()
             markAllGates.removeFirstOrNull()?.await()
-            return markAllResults.removeFirst()
+            return result
         }
 
         override suspend fun getInboxNotification(

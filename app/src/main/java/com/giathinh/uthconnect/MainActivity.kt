@@ -87,6 +87,12 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(newBase)
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pushNotificationId = intent.getStringExtra(PushIntentContract.NOTIFICATION_ID)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
@@ -123,12 +129,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        pushNotificationId = intent.getStringExtra(PushIntentContract.NOTIFICATION_ID)
     }
 
     private fun createNotificationChannel() {

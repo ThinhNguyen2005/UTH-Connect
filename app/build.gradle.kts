@@ -18,7 +18,6 @@ kotlin {
     }
 }
 
-val useMockData = providers.gradleProperty("useMockData").orElse("false").get().toBooleanStrict()
 val useSupabase = providers.gradleProperty("useSupabase").orElse("true").get().toBooleanStrict()
 val supabaseUrl = providers.gradleProperty("supabaseUrl").orElse("").get().trimEnd('/')
 val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").orElse("").get()
@@ -27,7 +26,7 @@ val supabasePublishableKey = providers.gradleProperty("supabasePublishableKey").
  * Google ID token. It is a public identifier, not a secret, so it can live in BuildConfig.
  */
 val googleWebClientId = providers.gradleProperty("googleWebClientId").orElse("").get()
-require(useSupabase && !useMockData) { "UTH Connect requires Supabase; demo/Firebase builds are disabled" }
+require(useSupabase) { "UTH Connect requires Supabase" }
 if (useSupabase) {
     require(supabaseUrl.startsWith("https://") && supabasePublishableKey.startsWith("sb_publishable_")) {
         "Supply -PsupabaseUrl=https://... -PsupabasePublishableKey=sb_publishable_..."
@@ -50,7 +49,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("boolean", "USE_MOCK_DATA", useMockData.toString())
         buildConfigField("boolean", "USE_SUPABASE", useSupabase.toString())
         buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabasePublishableKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")

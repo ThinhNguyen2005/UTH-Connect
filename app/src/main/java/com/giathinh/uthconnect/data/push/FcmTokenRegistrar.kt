@@ -105,7 +105,9 @@ class FcmTokenRegistrar @Inject constructor(
         var queuedUserId: String? = null
         while (true) {
             val userIdToQueue = registrationRetryUserId()
-            if (userIdToQueue != null && userIdToQueue != queuedUserId) {
+            if (userIdToQueue == null) {
+                queuedUserId = null
+            } else if (userIdToQueue != queuedUserId) {
                 enqueueDurableRegistrationRetry(userIdToQueue)
                 queuedUserId = userIdToQueue
             }
@@ -248,7 +250,6 @@ class FcmTokenRegistrar @Inject constructor(
             if (!isRegistrationActive(generation, userId)) return
             try {
                 register()
-                FcmTokenRegistrationRetryWorker.cancel(context)
                 return
             } catch (cancellation: kotlinx.coroutines.CancellationException) {
                 throw cancellation

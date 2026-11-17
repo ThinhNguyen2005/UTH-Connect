@@ -80,9 +80,7 @@ class NotificationViewModel @Inject constructor(
 
             is NotificationAction.MarkAllAsRead -> {
                 val currentState = _uiState.value
-                val ids = currentState.notifications
-                    .map { it.id }
-                    .filterNot { it in currentState.readNotificationIds }
+                val ids = currentState.notifications.map { it.id }
                 startReadMutation(ids, markAll = true)
             }
 

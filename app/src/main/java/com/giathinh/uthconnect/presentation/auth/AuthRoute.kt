@@ -16,7 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.R
@@ -37,6 +37,15 @@ fun AuthRoute(
     val scopes = rememberCoroutineScope()
     val googleIdTokens = rememberGoogleIdTokenSource()
     val snackbars = remember { SnackbarHostState() }
+    val activity = findAuthActivity(context)
+
+    LaunchedEffect(activity?.intent) {
+        val uri = activity?.intent?.data
+        if (uri != null) {
+            viewModel.onAction(AuthAction.HandleDeepLink(uri.toString()))
+            activity.intent?.data = null
+        }
+    }
 
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->

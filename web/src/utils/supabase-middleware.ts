@@ -2,6 +2,25 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get("code");
+  const tokenHash = request.nextUrl.searchParams.get("token_hash");
+  const type = request.nextUrl.searchParams.get("type");
+
+  // Intercept auth PKCE code or token_hash arriving on pages other than /auth/callback (e.g. '/' or '/login')
+  if (
+    request.nextUrl.pathname !== "/auth/callback" &&
+    (code || (tokenHash && type))
+  ) {
+    const callbackUrl = new URL("/auth/callback", request.url);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      callbackUrl.searchParams.set(key, value);
+    });
+    if (!callbackUrl.searchParams.has("next") && request.nextUrl.pathname !== "/") {
+      callbackUrl.searchParams.set("next", request.nextUrl.pathname);
+    }
+    return NextResponse.redirect(callbackUrl);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
