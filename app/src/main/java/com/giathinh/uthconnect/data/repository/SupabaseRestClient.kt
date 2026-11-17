@@ -1,10 +1,20 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.BuildConfig
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.headers
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -23,11 +33,17 @@ import javax.inject.Singleton
 
 /** Minimal PostgREST/GoTrue transport. Only publishable keys are shipped in the APK. */
 private const val STORAGE_READ_TIMEOUT_MS = 60_000
+private const val NANOS_PER_MILLISECOND = 1_000_000L
+private const val DEFAULT_REQUEST_TIMEOUT_MS = 15_000L
 
 @Singleton
 class SupabaseRestClient @Inject constructor() {
     private val json = Json { ignoreUnknownKeys = true }
-    private val refreshMutex = Mutex()
+    private val httpClient = HttpClient(OkHttp) {
+        expectSuccess = false
+        install(HttpTimeout)
+    }
+    private val sessionMutex = SessionMutationGate()
 
     @Volatile private var sessionStore: SecureSessionStore? = null
 
@@ -44,12 +60,13 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Restores a persisted session, clearing it only when the refresh token is rejected. */
-    suspend fun restoreSavedSession(): Boolean = withContext(Dispatchers.IO) {
-        refreshMutex.withLock {
+    suspend fun restoreSavedSession(requestTimeoutMs: Int? = null): Boolean = withContext(Dispatchers.IO) {
+        sessionMutex.withLock {
             val saved = sessionStore?.load() ?: return@withLock false
             if (credentials != null) return@withLock true
             try {
-                val updated = refreshSession(saved.userId, saved.refreshToken)
+                val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
+                val updated = refreshSession(saved.userId, saved.refreshToken, deadlineNanos)
                 // Persist rotation before making the new access token available.
                 sessionStore?.save(updated.userId, updated.refreshToken)
                 rememberSession = true
@@ -70,34 +87,38 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Updates whether the current refresh token should be persisted across launches. */
-    fun setRememberSession(remember: Boolean) {
-        rememberSession = remember
-        if (remember) {
-            val current = credentials ?: error("No authenticated Supabase session")
-            sessionStore?.save(current.userId, current.refreshToken)
-        } else {
-            sessionStore?.clear()
+    suspend fun setRememberSession(remember: Boolean) {
+        sessionMutex.withLock {
+            rememberSession = remember
+            if (remember) {
+                val current = credentials ?: error("No authenticated Supabase session")
+                sessionStore?.save(current.userId, current.refreshToken)
+            } else {
+                sessionStore?.clear()
+            }
         }
     }
 
     /** Authenticates with Supabase and replaces any prior in-memory session. */
     suspend fun signIn(email: String, password: String) {
-        // A failed login must not accidentally leave the previous user's tokens active.
-        // Password confirmation is a separate flow and must preserve the current session on failure.
-        credentials = null
-        CrashIdentity.clear()
-        rememberSession = false
-        sessionStore?.clear()
-        val data = send(
-            "/auth/v1/token?grant_type=password",
-            "POST",
-            buildJsonObject {
-                put("email", email)
-                put("password", password)
-            },
-            bearer = null,
-        ).jsonObject
-        credentials = parseCredentials(data)
+        sessionMutex.withLock {
+            // A failed login must not accidentally leave the previous user's tokens active.
+            // Password confirmation is a separate flow and must preserve the current session on failure.
+            credentials = null
+            CrashIdentity.clear()
+            rememberSession = false
+            sessionStore?.clear()
+            val data = send(
+                "/auth/v1/token?grant_type=password",
+                "POST",
+                buildJsonObject {
+                    put("email", email)
+                    put("password", password)
+                },
+                bearer = null,
+            ).jsonObject
+            credentials = parseCredentials(data)
+        }
     }
 
     /** Validate the old password without replacing or rotating the active session. */
@@ -124,7 +145,7 @@ class SupabaseRestClient @Inject constructor() {
         displayName: String,
         faculty: String,
         redirectTo: String = "",
-    ): JsonObject {
+    ): JsonObject = sessionMutex.withLock {
         val encodedRedirect = urlEncode(redirectTo)
         val payload = buildJsonObject {
             put("email", email)
@@ -141,7 +162,7 @@ class SupabaseRestClient @Inject constructor() {
         if (response.containsKey("access_token") && response.containsKey("user")) {
             credentials = parseCredentials(response)
         }
-        return response
+        response
     }
 
     /** Requests a password recovery message for the supplied email. */
@@ -216,7 +237,7 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Clears the active credentials and any persisted refresh token. */
-    suspend fun signOut() {
+    suspend fun signOut() = sessionMutex.withLock {
         val old = credentials
         credentials = null
         CrashIdentity.clear()
@@ -245,6 +266,19 @@ class SupabaseRestClient @Inject constructor() {
         accessToken: String,
         refreshToken: String,
         expiresInSeconds: Long,
+    ) = withSessionMutation {
+        attachSessionLocked(userId, accessToken, refreshToken, expiresInSeconds)
+    }
+
+    /** Runs an external auth exchange in order with restores and other session changes. */
+    internal suspend fun <T> withSessionMutation(block: suspend () -> T): T = sessionMutex.withLock { block() }
+
+    /** Installs credentials while the caller already owns [sessionMutex]. */
+    internal fun attachSessionLocked(
+        userId: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresInSeconds: Long,
     ) {
         credentials = Credentials(
             userId = userId,
@@ -268,10 +302,22 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun insertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body)
 
     /** Deletes matching rows through PostgREST. */
-    suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
+    suspend fun deleteTable(path: String, requestTimeoutMs: Int? = null): JsonElement = authorized("/rest/v1/$path", "DELETE", requestTimeoutMs = requestTimeoutMs)
+
+    /** Inserts or updates a row using a PostgREST unique constraint as the conflict key. */
+    suspend fun upsertTable(path: String, body: JsonObject): JsonElement = authorized("/rest/v1/$path", "POST", body, "resolution=merge-duplicates,return=minimal")
 
     /** Invokes an authenticated Postgres RPC function. */
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+    suspend fun rpc(
+        function: String,
+        params: JsonObject,
+        expectedUserId: String? = null,
+    ): JsonElement = authorized(
+        "/rest/v1/rpc/$function",
+        "POST",
+        params,
+        expectedUserId = expectedUserId,
+    )
 
     /** Upload nhị phân lên Storage; path phải thuộc thư mục `auth.uid()` để qua RLS. */
     suspend fun uploadStorageObject(bucket: String, path: String, bytes: ByteArray, contentType: String) {
@@ -347,8 +393,8 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Updates the password for the currently authenticated user. */
-    suspend fun updatePassword(password: String): JsonElement {
-        val token = freshToken()
+    suspend fun updatePassword(password: String, expectedUserId: String? = null): JsonElement {
+        val token = freshToken(expectedUserId = expectedUserId)
         return send("/auth/v1/user", "PUT", buildJsonObject { put("password", password) }, bearer = token)
     }
 
@@ -389,18 +435,22 @@ class SupabaseRestClient @Inject constructor() {
         path: String,
         method: String,
         body: JsonObject? = null,
+        prefer: String? = null,
         allowAnonymous: Boolean = false,
+        requestTimeoutMs: Int? = null,
+        expectedUserId: String? = null,
     ): JsonElement {
+        val deadlineNanos = requestTimeoutMs?.let { System.nanoTime() + it * NANOS_PER_MILLISECOND }
         val accessToken = if (allowAnonymous) {
-            freshTokenOrNull()
+            freshTokenOrNull(deadlineNanos)
         } else {
-            freshToken()
+            freshToken(deadlineNanos, expectedUserId)
         }
-        return send(path, method, body, bearer = accessToken)
+        return send(path, method, body, bearer = accessToken, prefer = prefer, deadlineNanos = deadlineNanos)
     }
 
-    private suspend fun freshTokenOrNull(): String? = try {
-        freshToken()
+    private suspend fun freshTokenOrNull(deadlineNanos: Long? = null): String? = try {
+        freshToken(deadlineNanos)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (_: Exception) {
@@ -438,14 +488,16 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Returns the current access token, refreshing it when it is close to expiration. */
-    private suspend fun freshToken(): String {
+    private suspend fun freshToken(deadlineNanos: Long? = null, expectedUserId: String? = null): String {
         val session = credentials ?: error("Supabase sign-in required")
+        expectedUserId?.let { check(session.userId == it) { "Supabase session changed" } }
         if (System.currentTimeMillis() < session.expiresAtMillis - 30_000L) return session.accessToken
-        return refreshMutex.withLock {
+        return sessionMutex.withLock {
             val latest = credentials ?: error("Supabase session expired")
+            expectedUserId?.let { check(latest.userId == it) { "Supabase session changed" } }
             if (System.currentTimeMillis() < latest.expiresAtMillis - 30_000L) return@withLock latest.accessToken
             try {
-                val updated = refreshSession(latest.userId, latest.refreshToken)
+                val updated = refreshSession(latest.userId, latest.refreshToken, deadlineNanos)
                 if (rememberSession) sessionStore?.save(updated.userId, updated.refreshToken)
                 credentials = updated
                 updated.accessToken
@@ -464,13 +516,18 @@ class SupabaseRestClient @Inject constructor() {
     }
 
     /** Rotates a refresh token and rejects a response for a different authenticated user. */
-    private suspend fun refreshSession(expectedUserId: String, refreshToken: String): Credentials {
+    private suspend fun refreshSession(
+        expectedUserId: String,
+        refreshToken: String,
+        deadlineNanos: Long? = null,
+    ): Credentials {
         val updated = parseCredentials(
             send(
                 "/auth/v1/token?grant_type=refresh_token",
                 "POST",
                 buildJsonObject { put("refresh_token", refreshToken) },
                 bearer = null,
+                deadlineNanos = deadlineNanos,
             ).jsonObject,
         )
         check(updated.userId == expectedUserId) { "Session user changed" }
@@ -495,45 +552,65 @@ class SupabaseRestClient @Inject constructor() {
         method: String,
         body: JsonObject? = null,
         bearer: String?,
-    ): JsonElement = withContext(Dispatchers.IO) {
+        prefer: String? = null,
+        deadlineNanos: Long? = null,
+    ): JsonElement {
         require(BuildConfig.USE_SUPABASE) { "Supabase is disabled" }
-        val connection = (URL(BuildConfig.SUPABASE_URL + path).openConnection() as HttpURLConnection)
-        try {
-            if (method == "PATCH") {
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-                connection.setRequestProperty("Prefer", "return=representation")
-            } else {
-                connection.requestMethod = method
-                if (method == "POST" && path.startsWith("/rest/v1/")) {
-                    connection.setRequestProperty("Prefer", "return=representation")
-                }
-            }
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
-            connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
-            connection.setRequestProperty("Accept", "application/json")
-            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer $bearer")
-            if (body != null) {
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            }
-            val status = connection.responseCode
-            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)
-                ?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
-                val message = runCatching {
-                    val error = json.parseToJsonElement(response).jsonObject
-                    (error["error_description"] ?: error["message"] ?: error["error"])?.jsonPrimitive?.content
-                }.getOrNull() ?: "Supabase HTTP $status"
-                throw SupabaseHttpException(status, message)
-            }
-            if (response.isBlank()) JsonNull else json.parseToJsonElement(response)
-        } finally {
-            connection.disconnect()
+        val request = RestRequest(path, method, body, bearer, prefer, requestTimeoutMs(deadlineNanos))
+        val response = executeRequest(request)
+        val responseBody = response.bodyAsText()
+        val status = response.status.value
+        if (status !in 200..299) {
+            throw SupabaseHttpException(status, supabaseErrorMessage(responseBody, status))
+        }
+        return if (responseBody.isBlank()) JsonNull else json.parseToJsonElement(responseBody)
+    }
+
+    private suspend fun executeRequest(request: RestRequest) = httpClient.request(
+        BuildConfig.SUPABASE_URL + request.path,
+    ) {
+        method = HttpMethod(request.method)
+        timeout { requestTimeoutMillis = request.timeoutMs }
+        headers {
+            append("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            request.bearer?.let { append(HttpHeaders.Authorization, "Bearer $it") }
+            requestPrefer(request.method, request.path, request.prefer)
+                ?.let { append(HttpHeaders.Prefer, it) }
+        }
+        if (request.body != null) {
+            contentType(ContentType.Application.Json)
+            setBody(request.body.toString())
         }
     }
+
+    private fun requestTimeoutMs(deadlineNanos: Long?): Long = deadlineNanos?.let { deadline ->
+        ((deadline - System.nanoTime()) / NANOS_PER_MILLISECOND)
+            .coerceAtLeast(1L)
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+    } ?: DEFAULT_REQUEST_TIMEOUT_MS
+
+    private fun requestPrefer(method: String, path: String, prefer: String?): String? = prefer ?: when {
+        method == "PATCH" -> "return=representation"
+        method == "POST" && path.startsWith("/rest/v1/") -> "return=representation"
+        else -> null
+    }
+
+    private fun supabaseErrorMessage(responseBody: String, status: Int): String = runCatching {
+        val error = json.parseToJsonElement(responseBody).jsonObject
+        (error["error_description"] ?: error["message"] ?: error["error"])
+            ?.jsonPrimitive
+            ?.content
+    }.getOrNull() ?: "Supabase HTTP $status"
+
+    private data class RestRequest(
+        val path: String,
+        val method: String,
+        val body: JsonObject?,
+        val bearer: String?,
+        val prefer: String?,
+        val timeoutMs: Long,
+    )
 
     private data class Credentials(
         val userId: String,

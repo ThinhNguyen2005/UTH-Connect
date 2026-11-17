@@ -20,6 +20,8 @@ import kotlin.reflect.KClass
 
 @Serializable object UtilitiesDestination
 
+@Serializable object SettingsDestination
+
 @Serializable object ProfileDestination
 
 /**

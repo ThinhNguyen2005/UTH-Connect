@@ -13,6 +13,8 @@ import com.giathinh.uthconnect.presentation.scanner.QrScannerDialog
 @Composable
 fun EventsRoute(
     onOpenAttendance: (String) -> Unit,
+    focusedEventId: String? = null,
+    onNavigateBack: () -> Unit = {},
     viewModel: EventsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -25,6 +27,8 @@ fun EventsRoute(
         onSave = viewModel::saveEvent,
         onSetStatus = viewModel::setStatus,
         onOpenAttendance = onOpenAttendance,
+        focusedEventId = focusedEventId,
+        onNavigateBack = onNavigateBack,
         onScan = {
             // Bỏ tin nhắn của lượt đăng ký/lưu trước đó, nếu không máy quét sẽ tưởng
             // rằng vừa có một lượt điểm danh trả kết quả.

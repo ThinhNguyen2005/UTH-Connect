@@ -13,4 +13,5 @@
     <exclude domain="sharedpref" path="uth_auth_demo.xml" />
     <exclude domain="sharedpref" path="uth_auth_demo_account.xml" />
     <exclude domain="sharedpref" path="uth_secure_session.xml" />
+    <exclude domain="sharedpref" path="uth_push.xml" />
 </full-backup-content>

@@ -1,0 +1,91 @@
+# Push notification delivery
+
+The `dispatch-notification` Edge Function turns inserts into `public.notification_inbox`
+and sends each pending inbox row to the recipient's registered FCM devices. It supports
+Android FCM tokens now and stores a `WEB` platform value for later web clients.
+
+## Deploy
+
+1. Apply all migrations, in order:
+   - `supabase/migrations/20261108000000_push_notification_inbox.sql`
+   - `supabase/migrations/20261114000000_notification_push_cursor.sql`
+   - `supabase/migrations/20261114010000_sync_housing_and_notifications_contract.sql`
+   - `supabase/migrations/20261115000000_notification_device_claim.sql`
+   - `supabase/migrations/20261115010000_notification_broadcast_rate_limit.sql`
+   - `supabase/migrations/20261115020000_secure_notification_device_claim.sql`
+   - `supabase/migrations/20261116000000_notification_dispatch_progress.sql`
+   - `supabase/migrations/20261117000000_dispatch_notification_cron.sql`
+   - `supabase/migrations/20261118000000_notification_dispatch_recipient_cursor.sql`
+   - `supabase/migrations/20261119000000_notification_push_retry_policy.sql`
+   - `supabase/migrations/20261120000000_notification_dispatch_fanout_recovery.sql`
+   - `supabase/migrations/20261121000000_notification_fanout_recovery_retry.sql`
+   - `supabase/migrations/20261122000000_due_notification_fanout_recovery.sql`
+   - `supabase/migrations/20261123000000_transactional_notification_dispatch_outbox.sql`
+   - `supabase/migrations/20261124000000_notification_push_delivery_progress.sql`
+   - `supabase/migrations/20261125000000_notification_push_retry_device.sql`
+2. Deploy the function with `supabase functions deploy dispatch-notification`.
+3. Store these values in Supabase Vault before the first scheduler run. While either value is missing, the scheduler logs a warning and skips the run:
+   - `SUPABASE_FUNCTIONS_URL`: `https://<project-ref>.supabase.co/functions/v1`
+   - `WEBHOOK_SHARED_SECRET`: the same value configured for the Edge Function
+   The scheduler runs every 6 minutes, so stale `PROCESSING` claims older than
+   five minutes are released and remaining `PENDING` rows are retried even when
+   no new database webhook is emitted.
+4. Add these Edge Function secrets in Supabase project settings:
+   - `WEBHOOK_SHARED_SECRET` (generate a long random value)
+   - `FCM_SERVICE_ACCOUNT_JSON` (the Firebase service-account JSON; never commit it)
+5. In Supabase Database Webhooks, create HTTP `POST` webhooks to
+   `https://<project-ref>.supabase.co/functions/v1/dispatch-notification` with the
+   header `x-webhook-secret: <same WEBHOOK_SHARED_SECRET>`:
+   - `public.events`: `INSERT` and `UPDATE` (sends only when an event first becomes `PUBLISHED`)
+   - `public.notifications`: `INSERT` and `UPDATE` (sends published academic/system notices; an update only notifies when it publishes a previously scheduled row)
+   - `public.housing_posts`: `INSERT` and `UPDATE` (sends new listings when they become `OPEN`)
+
+The dispatcher claims inbox rows in small batches, limits each invocation's runtime
+and total device fan-out, and persists a per-inbox device cursor and successful-send
+state after every successful device. Rows left pending after a time or device limit
+resume from that cursor on the next dispatch/retry invocation; interrupted
+`PROCESSING` claims are released
+after five minutes. Source fan-out progress uses the last recipient ID as a keyset
+cursor, so changes to the verified profile list do not skip later recipients.
+Failed push rows retry with exponential delay up to five attempts, then move to
+`FAILED` so they cannot block later inbox rows. The dispatcher skips rows whose
+retry time has not arrived.
+The scheduled `DISPATCH_PENDING` run also claims due `public.notifications` rows
+that have no fan-out progress yet, then queues their source payloads. This releases
+scheduled notices after `published_at` without requiring a second database webhook.
+It also queues source payloads whose inbox fan-out has not completed, continuing
+from their saved recipient cursor.
+Recovery attempts use exponential backoff and stop after five failed continuation
+responses for a permanently failing source, allowing later fan-outs to be recovered.
+Repeated continuation timeouts without cursor progress do not mark a source failed;
+they continue retrying with capped backoff. Monitor Edge Function logs and each
+progress row's `last_recipient_id` and `updated_at` when recovery is not advancing.
+
+Eligible new source changes also write a `notification_dispatch_progress` row in
+the same database transaction through the transactional outbox triggers. This
+preserves dispatch work if the database webhook or its first Edge Function request
+fails before the dispatcher can create progress. The six-minute scheduler resumes
+those rows. Sources created before the transactional outbox migration are not replayed
+automatically. Notifications that were already due when the scheduled-notification
+recovery migration ran are marked complete to avoid replaying old notices; notices
+that were still scheduled for a future time can be dispatched when they become due.
+
+The function rejects requests without the shared webhook header, filters unpublished
+events and non-open housing posts, writes an idempotent per-user inbox item, and claims
+pending rows before delivery so duplicate webhook invocations do not normally duplicate
+pushes. Users must have a verified profile to receive broadcast messages; a targeted
+school notification is sent only to its `recipient_id`.
+
+## Android setup and verification
+
+The Android package is configured by `app/google-services.json`. On Android 13 and newer,
+the app asks for notification permission when the user opens Notification Center. Token
+registration happens after session restore/login and token rotation; sign-out removes
+the installation row from that user's active device list.
+
+To verify end to end, deploy the migration and function, add the secrets and webhooks,
+install the app on a Google Play services device, sign in, open Notification Center,
+and grant notification permission when prompted, then insert a published event or an `OPEN` housing listing. Also insert an
+academic row in `public.notifications`. Confirm the inbox row and push, then tap the
+push with the app foregrounded, backgrounded, and its process removed. Android force-stop
+is a separate OS state and must be relaunched before FCM delivery resumes.
