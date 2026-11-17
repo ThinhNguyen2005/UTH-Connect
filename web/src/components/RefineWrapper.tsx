@@ -52,6 +52,13 @@ export const RefineWrapper: React.FC<{ children: React.ReactNode }> = ({
             meta: { label: "Ghép trọ & KTX" },
           },
           {
+            name: "lost_found_items",
+            list: "/lost-found",
+            create: "/lost-found/create",
+            show: "/lost-found/:id",
+            meta: { label: "Đồ thất lạc" },
+          },
+          {
             name: "profiles",
             list: "/admin/users",
             meta: { label: "Thành viên" },

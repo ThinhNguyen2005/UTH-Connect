@@ -13,6 +13,7 @@ import {
   LogOut,
   ExternalLink,
   Lock,
+  PackageSearch,
 } from "lucide-react";
 import type { AppUserIdentity } from "@/providers/auth-provider";
 import { AdminGuard } from "@/components/auth/AdminGuard";
@@ -39,6 +40,11 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({
       name: "Kiểm duyệt Tin trọ",
       href: "/admin/moderation",
       icon: Home,
+    },
+    {
+      name: "Kiểm duyệt Đồ thất lạc",
+      href: "/admin/lost-found",
+      icon: PackageSearch,
     },
     {
       name: "Soạn thảo Thông báo",

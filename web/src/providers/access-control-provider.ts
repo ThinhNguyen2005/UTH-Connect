@@ -22,8 +22,8 @@ export const accessControlProvider: AccessControlProvider = {
         };
       }
 
-      // Can manage events and notifications
-      if (resource === "notifications" || resource === "events") {
+      // Can manage events, notifications, and lost & found desk
+      if (resource === "notifications" || resource === "events" || resource === "lost_found_items") {
         return { can: true };
       }
 
@@ -49,6 +49,15 @@ export const accessControlProvider: AccessControlProvider = {
       if (action === "list" || action === "show" || action === "create") return { can: true };
       if (action === "edit" || action === "delete") {
         // Handled by RLS on database or params.id check
+        return { can: true };
+      }
+    }
+
+    // Lost & Found Items: Can view, report (create), and manage own items
+    if (resource === "lost_found_items") {
+      if (action === "list" || action === "show" || action === "create") return { can: true };
+      if (action === "edit" || action === "delete") {
+        // Handled by RLS on database (owner_user_id check)
         return { can: true };
       }
     }
