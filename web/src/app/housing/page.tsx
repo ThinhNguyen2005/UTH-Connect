@@ -69,81 +69,17 @@ export default function HousingPostsPage() {
       ) : posts.length === 0 ? (
         <p className="py-12 text-center text-slate-500">Chưa có tin đã duyệt ở cơ sở này.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-white rounded-xl p-5 shadow-subtle flex flex-col justify-between hover:bg-[#F8FAFC]/50 transition"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2.5">
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                    {post.type === "LOOKING_FOR_ROOMMATE" || post.room_type === "roommate"
-                      ? "Ở ghép"
-                      : post.type === "ROOM_FOR_RENT" || post.room_type === "dormitory"
-                      ? "Cho thuê"
-                      : "Tìm phòng"}
-                  </span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 uppercase">
-                    {post.campus ? post.campus.split("_")[0] : "CS1"}
-                  </span>
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 mb-1.5 line-clamp-2">
-                  {post.title}
-                </h3>
-
-                <div className="text-base font-bold text-slate-900 mb-2 tabular-nums">
-                  {new Intl.NumberFormat("vi-VN").format(post.monthly_rent_vnd || post.price || 0)} đ
-                  <span className="text-xs font-normal text-slate-400">/tháng</span>
-                </div>
-
-                <p className="text-xs text-slate-500 line-clamp-3 mb-3 leading-relaxed">
-                  {post.description || "Chưa có mô tả chi tiết."}
-                </p>
-
-                <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-3">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{post.address_label || post.location || "Gần trường UTH"}</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <Link
-                  href={`/housing/${post.id}`}
-                  className="text-xs font-medium text-slate-700 hover:text-slate-900 hover:underline underline-offset-2 transition"
-                >
-                  Xem chi tiết →
-                </Link>
-
-                <div className="flex items-center gap-1">
-                  {post.contact_phone && (
-                    <a
-                      href={`tel:${post.contact_phone}`}
-                      className="p-1.5 text-slate-500 hover:text-slate-900 rounded-md transition"
-                      title="Gọi điện"
-                    >
-                      <Phone className="w-3.5 h-3.5 stroke-[1.5]" />
-                    </a>
-                  )}
-                  {(post.contact_zalo_url || post.contact_zalo) && (
-                    <a
-                      href={
-                        post.contact_zalo_url
-                          ? post.contact_zalo_url
-                          : `https://zalo.me/${post.contact_zalo}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 text-slate-500 hover:text-slate-900 rounded-md transition"
-                      title="Nhắn Zalo"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 stroke-[1.5]" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+          {posts.map(post => (
+            <article key={post.id} className="bg-white rounded-xl p-5 shadow-subtle min-w-0">
+              <p className="text-xs text-slate-500">{types[post.type]} · {campuses.find(c => c.value === post.campus)?.label}</p>
+              <h2 className="text-base font-bold text-slate-900 mt-2 break-words">{post.title}</h2>
+              <p className="text-lg font-bold text-slate-900 mt-2 tabular-nums">
+                {new Intl.NumberFormat("vi-VN").format(post.monthly_rent_vnd || post.price || 0)} đ <span className="text-sm font-normal">/tháng</span>
+              </p>
+              <p className="text-sm text-slate-600 mt-2 break-words">{post.address_label || post.location}</p>
+              <Link href={`/housing/${post.id}`} className="inline-block mt-4 px-3 py-2 rounded-lg bg-slate-100 text-sm font-medium hover:bg-slate-200">Xem chi tiết</Link>
+            </article>
           ))}
         </div>
       )}
