@@ -25,10 +25,17 @@ export default function ResetPasswordPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasSession, setHasSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [appRecoveryHash, setAppRecoveryHash] = useState("");
+
   useEffect(() => {
     let isMounted = true;
 
-    // Kiểm tra hash URL có lỗi từ Supabase không
+    // 1. Lưu hash ban đầu trước khi GoTrue client làm sạch URL
+    if (typeof window !== "undefined" && window.location.hash) {
+      setAppRecoveryHash(window.location.hash);
+    }
+
+    // 2. Kiểm tra hash URL có lỗi từ Supabase không
     if (typeof window !== "undefined") {
       const hash = window.location.hash.substring(1);
       const hashParams = new URLSearchParams(hash);
@@ -43,7 +50,7 @@ export default function ResetPasswordPage() {
           );
         } else {
           setErrorMessage(
-            errorDescription || "Liên kết đặt lại mật khẩu không hợp lệ."
+            decodeURIComponent(errorDescription || "Liên kết đặt lại mật khẩu không hợp lệ.")
           );
         }
         setIsCheckingSession(false);
@@ -232,7 +239,7 @@ export default function ResetPasswordPage() {
 
               <div className="pt-2 flex flex-col items-center gap-3">
                 <a
-                  href="uthconnect://auth/reset-password"
+                  href={`uthconnect://auth/reset-password${appRecoveryHash}`}
                   className="w-full text-center py-2 px-3 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors"
                 >
                   Mở trong ứng dụng UTH Connect trên điện thoại

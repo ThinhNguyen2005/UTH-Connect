@@ -38,11 +38,6 @@ export default function CreateHousingPostPage() {
       return;
     }
 
-    if (!Number.isFinite(price) || price <= 0) {
-      setErrorMsg("Giá phòng phải lớn hơn 0.");
-      return;
-    }
-
     setLoading(true);
 
     const resolvedCampus =
@@ -68,7 +63,7 @@ export default function CreateHousingPostPage() {
       author_id: user.id,
       title: title.trim(),
       description: description.trim(),
-      monthly_rent_vnd: price,
+      monthly_rent_vnd: Number(price) || 1000000,
       type: resolvedType,
       campus: resolvedCampus,
       address_label: location.trim() || "Gần cơ sở UTH",
@@ -162,7 +157,7 @@ export default function CreateHousingPostPage() {
                 >
                   <option value="CS1">Cơ sở 1 (Bình Thạnh)</option>
                   <option value="CS2">Cơ sở 2 (Quận 12)</option>
-                  <option value="CS3">Cơ sở 3 (Tô Ký)</option>
+                  <option value="CS3">Cơ sở 3 (Thủ Đức)</option>
                 </select>
               </div>
 
@@ -173,7 +168,7 @@ export default function CreateHousingPostPage() {
                 <input
                   type="number"
                   required
-                  min={1}
+                  min={0}
                   step={50000}
                   value={price}
                   onChange={(e) => setPrice(Number(e.target.value))}

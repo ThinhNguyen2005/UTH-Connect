@@ -48,9 +48,9 @@ export default function LoginPage() {
       } else if (err === "auth_callback_failed") {
         setErrorMessage("Đăng nhập Google không thành công hoặc phiên làm việc đã hết hạn.");
       } else if (errDesc) {
-        setErrorMessage(errDesc);
+        setErrorMessage(decodeURIComponent(errDesc));
       } else if (err) {
-        setErrorMessage(err);
+        setErrorMessage(decodeURIComponent(err));
       }
 
       if (verified === "true") {
