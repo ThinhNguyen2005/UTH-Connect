@@ -244,7 +244,7 @@ class FcmTokenRegistrar @Inject constructor(
         }
         android.util.Log.w(TAG, "FCM token registration deferred after retries", lastError)
         val durableRetryQueued = try {
-            FcmTokenRegistrationRetryWorker.enqueue(context, userId)
+            FcmTokenRegistrationRetryWorker.enqueue(context, userId).result.get()
             true
         } catch (error: Exception) {
             android.util.Log.w(TAG, "Unable to enqueue durable FCM token registration retry", error)
@@ -362,24 +362,38 @@ class FcmTokenRegistrar @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     private fun scheduleRestoreRetryLocked() {
         if (signOutInProgress || registrationEnabled || restoreRetryJob?.isActive == true) return
-        val expectedUserId = secureSessionStore.load()?.userId
-        val durableRetryQueued = expectedUserId?.let { userId ->
+        val expectedUserId = try {
+            secureSessionStore.load()?.userId
+        } catch (error: Exception) {
+            android.util.Log.w(TAG, "Unable to read remembered session for FCM retry", error)
+            null
+        }
+        val enqueueOperation = expectedUserId?.let { userId ->
             try {
                 FcmTokenRegistrationRetryWorker.enqueue(context, userId)
-                true
             } catch (error: Exception) {
                 android.util.Log.w(TAG, "Unable to enqueue durable FCM session restore retry", error)
-                false
+                null
             }
-        } == true
-        if (durableRetryQueued) return
+        }
 
         restoreRetryJob = scope.launch {
-            delay(PENDING_RETRY_DELAY_MS)
-            synchronized(registrationStateLock) {
-                restoreRetryJob = null
-                if (canStartRestoreLocked()) {
-                    registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+            val durableRetryQueued = enqueueOperation?.let { operation ->
+                try {
+                    operation.result.get()
+                    true
+                } catch (error: Exception) {
+                    android.util.Log.w(TAG, "Durable FCM session restore retry enqueue failed", error)
+                    false
+                }
+            } == true
+            if (!durableRetryQueued) {
+                delay(PENDING_RETRY_DELAY_MS)
+                synchronized(registrationStateLock) {
+                    restoreRetryJob = null
+                    if (canStartRestoreLocked()) {
+                        registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+                    }
                 }
             }
         }

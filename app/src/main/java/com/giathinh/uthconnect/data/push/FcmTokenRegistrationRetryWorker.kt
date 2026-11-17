@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import androidx.work.WorkerParameters
@@ -47,7 +48,7 @@ class FcmTokenRegistrationRetryWorker(
         private const val UNIQUE_WORK_NAME = "fcm-token-registration-retry"
         private const val INITIAL_DELAY_MS = 30_000L
 
-        fun enqueue(context: Context, expectedUserId: String) {
+        fun enqueue(context: Context, expectedUserId: String): Operation {
             val request = OneTimeWorkRequestBuilder<FcmTokenRegistrationRetryWorker>()
                 .setInputData(workDataOf(KEY_EXPECTED_USER_ID to expectedUserId))
                 .setConstraints(
@@ -62,7 +63,7 @@ class FcmTokenRegistrationRetryWorker(
                     TimeUnit.MILLISECONDS,
                 )
                 .build()
-            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+            return WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
                 UNIQUE_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
                 request,
