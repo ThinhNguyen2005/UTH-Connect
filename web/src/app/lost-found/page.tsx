@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useGetIdentity } from "@refinedev/core";
@@ -66,9 +66,12 @@ export default function LostFoundPage() {
   const isStaffOrAdmin =
     user?.role === "admin" || user?.role === "organizer" || user?.role === "lecturer";
 
+  const fetchRequestIdRef = useRef(0);
+
   const fetchItems = useCallback(async () => {
     if (!user) return;
 
+    const requestId = ++fetchRequestIdRef.current;
     setLoading(true);
     setFetchError(null);
 
@@ -90,16 +93,21 @@ export default function LostFoundPage() {
 
       const { data, error } = await query;
 
+      if (requestId !== fetchRequestIdRef.current) return;
+
       if (error) {
         throw new Error(error.message);
       }
 
       setItems((data as LostFoundItem[]) || []);
     } catch (err: unknown) {
+      if (requestId !== fetchRequestIdRef.current) return;
       const message = err instanceof Error ? err.message : "Không thể tải danh sách đồ thất lạc từ máy chủ.";
       setFetchError(message);
     } finally {
-      setLoading(false);
+      if (requestId === fetchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [user, selectedKind, selectedCategory, onlyUnresolved]);
 
@@ -119,10 +127,13 @@ export default function LostFoundPage() {
     }
 
     const canEdit =
-      user.id === item.user_id || user.role === "admin" || user.role === "organizer";
+      user.id === item.user_id ||
+      user.role === "admin" ||
+      user.role === "organizer" ||
+      user.role === "lecturer";
 
     if (!canEdit) {
-      alert("Chỉ người đăng tin hoặc Ban tổ chức / Quản trị viên mới có quyền cập nhật trạng thái.");
+      alert("Chỉ người đăng tin hoặc Ban tổ chức / Giảng viên / Quản trị viên mới có quyền cập nhật trạng thái.");
       return;
     }
 
@@ -142,9 +153,12 @@ export default function LostFoundPage() {
     } else if (!data || data.length === 0) {
       alert("Không thể cập nhật: Lệnh UPDATE bị chặn bởi chính sách RLS của Database (0 dòng được sửa). Chỉ chủ sở hữu hoặc Admin được cấp quyền mới có thể cập nhật.");
     } else {
-      setItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, is_resolved: nextState } : i))
-      );
+      setItems((prev) => {
+        if (onlyUnresolved && nextState) {
+          return prev.filter((i) => i.id !== item.id);
+        }
+        return prev.map((i) => (i.id === item.id ? { ...i, is_resolved: nextState } : i));
+      });
     }
   };
 
@@ -382,7 +396,11 @@ export default function LostFoundPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredItems.map((item) => {
                 const isOwner = user?.id === item.user_id;
-                const canManage = isOwner || user?.role === "admin" || user?.role === "organizer";
+                const canManage =
+                  isOwner ||
+                  user?.role === "admin" ||
+                  user?.role === "organizer" ||
+                  user?.role === "lecturer";
 
                 return (
                   <div

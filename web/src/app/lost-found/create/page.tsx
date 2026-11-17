@@ -92,11 +92,12 @@ export default function CreateLostFoundPostPage() {
     setLoading(true);
 
     try {
+      let uploadedFilePath: string | null = null;
       let uploadedImageUrl: string | null = null;
 
       // Upload image to Supabase Storage bucket 'lost-found' if selected
       if (imageFile) {
-        const fileExt = imageFile.name.split(".").pop() || "jpg";
+        const fileExt = imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
         const randomId = crypto.randomUUID();
         const filePath = `items/${user.id}/${randomId}.${fileExt}`;
 
@@ -111,6 +112,7 @@ export default function CreateLostFoundPostPage() {
           throw new Error(`Lỗi tải ảnh lên: ${uploadError.message}`);
         }
 
+        uploadedFilePath = filePath;
         const { data: publicUrlData } = supabaseBrowserClient.storage
           .from("lost-found")
           .getPublicUrl(filePath);
@@ -143,6 +145,12 @@ export default function CreateLostFoundPostPage() {
         });
 
       if (insertError) {
+        if (uploadedFilePath) {
+          // Xóa ảnh rác trên Storage nếu insert bản ghi thất bại
+          await supabaseBrowserClient.storage
+            .from("lost-found")
+            .remove([uploadedFilePath]);
+        }
         throw new Error(insertError.message);
       }
 

@@ -21,6 +21,7 @@ import {
   Square,
   MinusSquare,
   User,
+  AlertCircle,
 } from "lucide-react";
 import type { LostFoundItem } from "@/app/lost-found/page";
 
@@ -30,12 +31,13 @@ const CATEGORIES = [
   { id: "ELECTRONICS", label: "Đồ điện tử (Laptop, ĐT..)" },
   { id: "WALLET_PAPERS", label: "Ví & Giấy tờ" },
   { id: "PERSONAL_ITEMS", label: "Đồ dùng cá nhân" },
-  { id: "OTHERS", label: "Khác" },
+  { id: "OTHER", label: "Khác" },
 ] as const;
 
 export default function AdminLostFoundPage() {
   const [items, setItems] = useState<LostFoundItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Bộ lọc theo các mục riêng biệt
@@ -51,16 +53,25 @@ export default function AdminLostFoundPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const fetchRequestIdRef = React.useRef(0);
 
-  // Lấy dữ liệu từ Supabase
+  // Lấy dữ liệu từ Supabase (hỗ trợ tối đa 2.000 tin, chống race condition)
   const fetchItems = useCallback(async () => {
+    const requestId = ++fetchRequestIdRef.current;
     setLoading(true);
+    setFetchError(null);
+
     const { data, error } = await supabaseBrowserClient
       .from("lost_found_items")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(2000);
 
-    if (!error && data) {
+    if (requestId !== fetchRequestIdRef.current) return;
+
+    if (error) {
+      setFetchError(error.message);
+    } else if (data) {
       setItems(data as LostFoundItem[]);
     }
     setLoading(false);
@@ -655,7 +666,7 @@ export default function AdminLostFoundPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => handleBulkUpdateStatus(true)}
-              disabled={bulkActionLoading}
+              disabled={bulkActionLoading || updatingId !== null}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition active:scale-[0.98] disabled:opacity-50"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -664,7 +675,7 @@ export default function AdminLostFoundPage() {
 
             <button
               onClick={() => handleBulkUpdateStatus(false)}
-              disabled={bulkActionLoading}
+              disabled={bulkActionLoading || updatingId !== null}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition active:scale-[0.98] disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -673,7 +684,7 @@ export default function AdminLostFoundPage() {
 
             <button
               onClick={handleBulkDelete}
-              disabled={bulkActionLoading}
+              disabled={bulkActionLoading || updatingId !== null}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition active:scale-[0.98] disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -715,7 +726,22 @@ export default function AdminLostFoundPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
+              {fetchError ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-500" />
+                    <p className="font-semibold text-rose-600">Lỗi khi tải dữ liệu từ máy chủ</p>
+                    <p className="text-xs text-slate-500 mt-1">{fetchError}</p>
+                    <button
+                      onClick={fetchItems}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Thử lại</span>
+                    </button>
+                  </td>
+                </tr>
+              ) : loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-300" />
@@ -850,7 +876,7 @@ export default function AdminLostFoundPage() {
                       <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
                         <button
                           onClick={() => handleToggleResolved(item.id, item.is_resolved)}
-                          disabled={updatingId === item.id}
+                          disabled={updatingId === item.id || bulkActionLoading}
                           className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
                             item.is_resolved
                               ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -867,9 +893,10 @@ export default function AdminLostFoundPage() {
 
                         <button
                           onClick={() => handleDeleteItem(item.id, item.title)}
-                          disabled={updatingId === item.id}
+                          disabled={updatingId === item.id || bulkActionLoading}
                           className="px-2 py-1 bg-rose-50 text-rose-700 rounded text-[11px] font-semibold hover:bg-rose-100 transition"
                           title="Xóa tin vi phạm"
+                          aria-label={`Xóa tin ${item.title}`}
                         >
                           <Trash2 className="w-3.5 h-3.5 inline" />
                         </button>

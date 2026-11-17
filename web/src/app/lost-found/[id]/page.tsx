@@ -76,12 +76,14 @@ export default function LostFoundDetailPage() {
       .from("lost_found_items")
       .update({ is_resolved: nextState, updated_at: new Date().toISOString() })
       .eq("id", item.id)
-      .select();
+      .select("id");
 
     setActionLoading(false);
 
     if (error) {
       alert(`Lỗi khi cập nhật trạng thái: ${error.message}`);
+    } else if (!data || data.length === 0) {
+      alert("Bạn không có quyền cập nhật trạng thái tin này.");
     } else {
       setItem((prev) => (prev ? { ...prev, is_resolved: nextState } : null));
     }
@@ -94,15 +96,18 @@ export default function LostFoundDetailPage() {
 
     setActionLoading(true);
 
-    const { error } = await supabaseBrowserClient
+    const { data, error } = await supabaseBrowserClient
       .from("lost_found_items")
       .delete()
-      .eq("id", item.id);
+      .eq("id", item.id)
+      .select("id");
 
     setActionLoading(false);
 
     if (error) {
       alert(`Lỗi khi xóa tin: ${error.message}`);
+    } else if (!data || data.length === 0) {
+      alert("Bạn không có quyền xóa tin này.");
     } else {
       router.push("/lost-found");
     }
@@ -117,7 +122,8 @@ export default function LostFoundDetailPage() {
   const isOwner = user?.id === item?.user_id;
   const isOrganizer = user?.role === "organizer";
   const isAdmin = user?.role === "admin";
-  const canManage = isOwner || isAdmin || isOrganizer;
+  const isLecturer = user?.role === "lecturer";
+  const canManage = isOwner || isAdmin || isOrganizer || isLecturer;
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
