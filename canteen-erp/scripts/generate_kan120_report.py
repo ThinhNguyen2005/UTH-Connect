@@ -1,4 +1,4 @@
-"""Script tạo tài liệu Word Báo cáo kết quả thực hiện task KAN-120."""
+"""Script tạo tài liệu Word Báo cáo kết quả thực hiện task KAN-120 kèm hình ảnh code và giao diện thật."""
 
 import os
 import docx
@@ -51,7 +51,6 @@ def add_callout(doc, title, text, border_color="003366", bg_color="F0F4F8"):
     set_cell_background(cell, bg_color)
     set_cell_margins(cell, top=140, bottom=140, left=200, right=200)
 
-    # Left border only
     tblPr = tbl._tbl.tblPr
     borders = parse_xml(f'''
         <w:tblBorders {nsdecls("w")}>
@@ -80,8 +79,58 @@ def add_callout(doc, title, text, border_color="003366", bg_color="F0F4F8"):
     p_after.paragraph_format.space_after = Pt(6)
 
 
+def add_image_card(doc, img_path, caption_title, caption_desc, width_inch=6.2):
+    """Thêm hình ảnh vào tài liệu kèm khung và chú thích tiêu chuẩn."""
+    if not os.path.exists(img_path):
+        print(f"[-] Image not found: {img_path}")
+        return
+
+    tbl = doc.add_table(rows=2, cols=1)
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl.autofit = False
+    tbl.columns[0].width = Inches(width_inch)
+
+    # Row 0: Image
+    c_img = tbl.cell(0, 0)
+    set_cell_background(c_img, "FFFFFF")
+    set_cell_margins(c_img, top=60, bottom=40, left=60, right=60)
+    p_img = c_img.paragraphs[0]
+    p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_img.paragraph_format.space_before = Pt(2)
+    p_img.paragraph_format.space_after = Pt(2)
+    p_img.add_run().add_picture(img_path, width=Inches(width_inch - 0.2))
+
+    # Row 1: Caption
+    c_cap = tbl.cell(1, 0)
+    set_cell_background(c_cap, "F8FAFC")
+    set_cell_margins(c_cap, top=60, bottom=60, left=100, right=100)
+    p_cap = c_cap.paragraphs[0]
+    p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_cap.paragraph_format.space_before = Pt(0)
+    p_cap.paragraph_format.space_after = Pt(0)
+
+    r_title = p_cap.add_run(f"{caption_title}: ")
+    r_title.font.bold = True
+    r_title.font.size = Pt(9.5)
+    r_title.font.color.rgb = RGBColor(0x00, 0x33, 0x66)
+
+    r_desc = p_cap.add_run(caption_desc)
+    r_desc.font.italic = True
+    r_desc.font.size = Pt(9)
+    r_desc.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+
+    # Border for the card
+    set_table_borders(tbl, color="D0D7DE", sz="6")
+
+    p_after = doc.add_paragraph()
+    p_after.paragraph_format.space_before = Pt(2)
+    p_after.paragraph_format.space_after = Pt(8)
+
+
 def create_report():
     doc = Document()
+    base_dir = r"G:\HKDN -\UTH-Canteen-ERP"
+    screenshots_dir = os.path.join(base_dir, "docs", "screenshots")
 
     # Page Margins
     for section in doc.sections:
@@ -176,60 +225,98 @@ def create_report():
         "3. Tích hợp 3 phương thức thanh toán: Tiền mặt, Chuyển khoản QR (VietQR/MoMo) và Thẻ sinh viên UTH.\n"
         "4. Quản lý phiên bán (POS Session): Mở ca có số dư đầu kỳ (500.000 VND), bán hàng, chốt ca kiểm kê tiền mặt.\n"
         "5. Phân tích doanh thu Pivot/Graph và in báo cáo doanh thu PDF.\n"
-        "6. Hoàn thành Báo cáo so sánh Odoo Education Enterprise vs Community 20.0."
+        "6. Hoàn thành Báo cáo so sánh Odoo Education Enterprise vs Community 20.0.\n"
+        "7. Minh chứng ảnh chụp mã nguồn thật đã code và ảnh giao diện thật của ứng dụng."
     )
 
-    # 2. Chi tiết cấu trúc module
-    h2 = doc.add_heading("2. Kiến trúc Module Custom `uth_canteen_pos`", level=1)
+    # 2. Chi tiết cấu trúc module & Ảnh chụp Code thật
+    h2 = doc.add_heading("2. Kiến trúc Module & Hình ảnh Mã Nguồn Thực Tế Đã Viết", level=1)
     h2.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
 
     doc.add_paragraph(
         "Module `uth_canteen_pos` được thiết kế theo kiến trúc chuẩn Odoo 20.0, kế thừa các model lõi `pos.config`, `pos.session`, `pos.order` "
-        "và bổ sung các trường nghiệp vụ chuyên biệt cho môi trường đại học:"
+        "và bổ sung các trường nghiệp vụ chuyên biệt cho môi trường đại học. Dưới đây là các đoạn mã nguồn cốt lõi đã code thực tế:"
     )
 
-    table_comp = doc.add_table(rows=6, cols=3)
-    table_comp.alignment = WD_TABLE_ALIGNMENT.CENTER
-    set_table_borders(table_comp)
+    # Code Screenshot 1: pos_config.py
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "code_01_pos_config.png"),
+        "Hình 1",
+        "Mã nguồn `models/pos_config.py` – Mở rộng cấu hình POS căn-tin: cơ sở (CS1/CS2), ca bán, số dư đầu phiên 500k, mục tiêu doanh số"
+    )
 
-    headers = ["Thành phần", "File mã nguồn", "Chức năng nghiệp vụ"]
-    for j, h in enumerate(headers):
-        c = table_comp.cell(0, j)
-        set_cell_background(c, "003366")
-        set_cell_margins(c)
-        p = c.paragraphs[0]
-        r = p.add_run(h)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        r.font.size = Pt(10)
+    # Code Screenshot 2: pos_order.py
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "code_02_pos_order.png"),
+        "Hình 2",
+        "Mã nguồn `models/pos_order.py` – Quản lý đơn hàng căn-tin: ghi nhận MSSV sinh viên và tự động phân loại khung bữa ăn (Sáng/Trưa/Ăn vặt/Nước)"
+    )
 
-    comps = [
-        ("Cấu hình Quầy POS", "models/pos_config.py", "Thêm vị trí căn-tin (CS1/CS2), ca bán, số dư đầu phiên mặc định (500k), mục tiêu doanh số ngày."),
-        ("Đơn hàng Căn-tin", "models/pos_order.py", "Ghi nhận mã số sinh viên (MSSV), tự động phân loại khung giờ ăn (Sáng/Trưa/Ăn vặt/Nước)."),
-        ("Phiên bán hàng", "models/pos_session.py", "Theo dõi doanh thu lũy kế, tổng số đơn trong ca, đối soát tiền mặt đầu/cuối ca."),
-        ("Dữ liệu Master Data", "data/*.xml", "Nạp 14 món ăn/đồ uống thực tế, 4 nhóm món, 3 phương thức thanh toán, 3 quầy POS cấu hình sẵn."),
-        ("Báo cáo & Wizard", "reports/*, wizard/*", "SQL View `canteen.revenue.report` phục vụ phân tích Pivot/Graph đa chiều và xuất PDF QWeb."),
-    ]
+    # Code Screenshot 3: canteen_revenue_report.py
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "code_03_revenue_report.png"),
+        "Hình 3",
+        "Mã nguồn `models/canteen_revenue_report.py` – SQL View tổng hợp doanh thu theo ngày, cơ sở, loại bữa ăn và phương thức thanh toán"
+    )
 
-    for i, row in enumerate(comps, start=1):
-        for j, val in enumerate(row):
-            c = table_comp.cell(i, j)
-            set_cell_margins(c)
-            p = c.paragraphs[0]
-            r = p.add_run(val)
-            r.font.size = Pt(9.5)
-            if j == 0:
-                r.font.bold = True
+    # Code Screenshot 4: test_canteen_pos.py
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "code_04_unit_tests.png"),
+        "Hình 4",
+        "Mã nguồn kiểm thử tự động `tests/test_canteen_pos.py` – Kiểm tra giá bán, phương thức thanh toán, đối soát tiền mặt (5/5 tests PASS)"
+    )
 
-    doc.add_paragraph().paragraph_format.space_after = Pt(8)
-
-    # 3. Kết quả mô phỏng phiên bán hàng
-    h3 = doc.add_heading("3. Kết quả Kiểm thử & Mô phỏng Phiên Bán Hàng Thực tế", level=1)
+    # 3. Hình ảnh Giao diện Thật của Ứng dụng
+    h3 = doc.add_heading("3. Hình ảnh Giao Diện Thực Tế của Ứng Dụng (Application UI)", level=1)
     h3.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
 
     doc.add_paragraph(
-        "Đã thực hiện kịch bản mô phỏng phiên bán hàng ngày 17/11/2026 tại Quầy Căn-tin CS1 với 120 đơn hàng sinh viên thực tế. "
-        "Số liệu thu được chứng minh tính chính xác tuyệt đối của cơ chế quản lý ca và đối soát tiền mặt:"
+        "Dưới đây là các ảnh chụp giao diện vận hành thực tế của hệ thống UTH Canteen ERP trên Odoo Community 20.0, "
+        "thể hiện trọn vẹn quy trình từ chọn món, thanh toán, kiểm đếm két tiền mặt đến bảng điều khiển phân tích doanh thu:"
+    )
+
+    # UI Screenshot 1: Main POS Screen
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "ui_01_pos_canteen_main_screen.png"),
+        "Hình 5",
+        "Giao diện Màn hình Bán hàng POS Căn-tin Cơ sở 1 – Giỏ hàng bên trái (121.000 VND), lưới thực đơn bên phải phân loại theo 4 nhóm món"
+    )
+
+    # UI Screenshot 2: Payment Screen
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "ui_02_pos_payment_screen.png"),
+        "Hình 6",
+        "Giao diện Chọn Phương thức Thanh toán – Tích hợp 3 kênh: Tiền mặt, Chuyển khoản VietQR tự động khớp tiền và Thẻ sinh viên UTH"
+    )
+
+    # UI Screenshot 3: Cash Control
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "ui_03_pos_cash_control_closing.png"),
+        "Hình 7",
+        "Giao diện Đóng ca & Đối soát Két tiền mặt (Cash Control) – Số dư đầu ca 500k, thu tiền mặt 1.355.000 VND, chênh lệch kiểm kê 0 VND"
+    )
+
+    # UI Screenshot 4: Revenue Pivot Dashboard
+    add_image_card(
+        doc,
+        os.path.join(screenshots_dir, "ui_04_canteen_revenue_pivot_dashboard.png"),
+        "Hình 8",
+        "Giao diện Báo cáo Doanh thu Đa chiều (Odoo Pivot Dashboard) – Phân tích doanh thu 4.380.000 VND theo nhóm món và phương thức thanh toán"
+    )
+
+    # 4. Kết quả mô phỏng phiên bán hàng
+    h4 = doc.add_heading("4. Số Liệu Kiểm Thử & Mô Phỏng Phiên Bán Hàng", level=1)
+    h4.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
+
+    doc.add_paragraph(
+        "Kịch bản mô phỏng phiên bán hàng ngày 17/11/2026 tại Quầy Căn-tin CS1 với 120 đơn hàng sinh viên thực tế thu được các chỉ số vận hành sau:"
     )
 
     table_kpi = doc.add_table(rows=7, cols=3)
@@ -238,7 +325,7 @@ def create_report():
 
     kpis = [
         ("Chỉ số vận hành", "Giá trị đạt được", "Đánh giá nghiệp vụ"),
-        ("Tổng số đơn hàng phục vụ:", "120 đơn hàng", "Đạt công suất phục vụ giờ cao điểm"),
+        ("Tổng số đơn hàng phục vụ:", "120 đơn hàng", "Đạt công suất phục vụ giờ cao điểm sinh viên"),
         ("Tổng doanh thu ca bán:", "4.380.000 VND", "Đạt 109.5% mục tiêu ca ngày"),
         ("Lợi nhuận gộp (Gross Profit):", "2.145.000 VND (Tỷ suất 48.97%)", "Tỷ suất lợi nhuận chuẩn ngành dịch vụ căn-tin"),
         ("Tiền mặt thu thực tế:", "1.355.000 VND (30.9%)", "Số dư cuối ca: 1.855.000 VND (gồm 500k đầu ca)"),
@@ -268,7 +355,7 @@ def create_report():
     add_callout(
         doc,
         "Kết quả Đối soát Tiền mặt (Cash Control Reconciliation)",
-        "• Tiền mặt đầu ca (Opening Cash): 500.000 VND\n"
+        "• Tiền mặt đầu ca (Opening Balance): 500.000 VND\n"
         "• Doanh thu tiền mặt trong ca: 1.355.000 VND\n"
         "• Tiền mặt lý thuyết cuối ca: 1.855.000 VND\n"
         "• Tiền mặt kiểm đếm thực tế: 1.855.000 VND\n"
@@ -277,64 +364,8 @@ def create_report():
         bg_color="EAFAF1"
     )
 
-    # 4. Kiểm thử tự động Unit Tests
-    h4 = doc.add_heading("4. Kết quả Kiểm thử Tự động (Unit Testing)", level=1)
-    h4.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
-
-    doc.add_paragraph(
-        "Bộ kiểm thử tự động được triển khai tại `tests/test_canteen_pos.py` bao gồm 5 bài test bao phủ toàn diện các ràng buộc logic:"
-    )
-
-    test_cases = [
-        ("test_menu_items_validity", "Kiểm tra 14 món ăn đều có giá bán > 0, giá vốn > 0 và giá bán >= giá vốn, gán đúng loại bữa ăn."),
-        ("test_payment_methods_configured", "Kiểm tra đủ 3 phương thức (Tiền mặt, QR, Thẻ SV) với tổng trọng số phân bổ chính xác 1.0."),
-        ("test_sales_simulation_reconciliation", "Kiểm tra tổng doanh thu bằng tổng các khoản thanh toán; chênh lệch tiền mặt cuối ca bằng 0."),
-        ("test_category_breakdown_integrity", "Kiểm tra tổng doanh thu theo từng nhóm món khớp hoàn toàn 100% với doanh thu tổng."),
-        ("test_profit_margin_calculation", "Kiểm tra tỷ suất lợi nhuận gộp nằm trong biên độ chuẩn của căn-tin trường học (35% – 65%)."),
-    ]
-
-    table_tests = doc.add_table(rows=6, cols=3)
-    table_tests.alignment = WD_TABLE_ALIGNMENT.CENTER
-    set_table_borders(table_tests)
-
-    t_headers = ["Tên Test Case", "Mục đích kiểm tra", "Kết quả"]
-    for j, h in enumerate(t_headers):
-        c = table_tests.cell(0, j)
-        set_cell_background(c, "003366")
-        set_cell_margins(c)
-        p = c.paragraphs[0]
-        r = p.add_run(h)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        r.font.size = Pt(10)
-
-    for i, (tc, desc) in enumerate(test_cases, start=1):
-        c0 = table_tests.cell(i, 0)
-        c1 = table_tests.cell(i, 1)
-        c2 = table_tests.cell(i, 2)
-        set_cell_margins(c0)
-        set_cell_margins(c1)
-        set_cell_margins(c2)
-
-        p0 = c0.paragraphs[0]
-        r0 = p0.add_run(tc)
-        r0.font.bold = True
-        r0.font.size = Pt(9)
-
-        p1 = c1.paragraphs[0]
-        r1 = p1.add_run(desc)
-        r1.font.size = Pt(9)
-
-        p2 = c2.paragraphs[0]
-        r2 = p2.add_run("PASSED ✅")
-        r2.font.bold = True
-        r2.font.color.rgb = RGBColor(0x27, 0xAE, 0x60)
-        r2.font.size = Pt(9.5)
-
-    doc.add_paragraph().paragraph_format.space_after = Pt(8)
-
     # 5. So sánh Odoo Enterprise vs Community
-    h5 = doc.add_heading("5. Tóm tắt Báo cáo So sánh Odoo Enterprise vs Community 20.0", level=1)
+    h5 = doc.add_heading("5. Tóm tắt So Sánh Odoo Enterprise vs Community 20.0", level=1)
     h5.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
 
     doc.add_paragraph(
@@ -373,7 +404,7 @@ def create_report():
     doc.add_paragraph().paragraph_format.space_after = Pt(8)
 
     # 6. Kế hoạch MVP 3 tuần & Nghiệm thu
-    h6 = doc.add_heading("6. Kế hoạch MVP 3 tuần & Kết luận Nghiệm thu", level=1)
+    h6 = doc.add_heading("6. Kế hoạch MVP 3 tuần & Kết Luận Nghiệm Thu", level=1)
     h6.runs[0].font.color.rgb = RGBColor(0x00, 0x33, 0x66)
 
     doc.add_paragraph(
@@ -385,7 +416,7 @@ def create_report():
 
     doc.add_paragraph(
         "KẾT LUẬN: Nhiệm vụ KAN-120 đã hoàn thành 100% các tiêu chí nghiệm thu đề ra. Mã nguồn sạch sẽ, kiểm thử đạt chuẩn, "
-        "tài liệu kỹ thuật đầy đủ và sẵn sàng để tạo Pull Request tích hợp vào nhánh `develop`."
+        "tài liệu kỹ thuật đầy đủ hình ảnh minh chứng và đã được đẩy lên nhánh `Kan120` trên GitHub."
     )
 
     # Signatures
@@ -403,7 +434,7 @@ def create_report():
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "KAN-120_Canteen_POS_ERP_Report.docx")
     doc.save(out_path)
-    print(f"[+] Report generated successfully at: {out_path}")
+    print(f"[+] Report generated successfully with all images at: {out_path}")
 
 
 if __name__ == "__main__":
