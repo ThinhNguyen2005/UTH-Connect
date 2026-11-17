@@ -40,17 +40,42 @@ export default function CreateHousingPostPage() {
 
     setLoading(true);
 
+    const resolvedCampus =
+      campus === "CS1"
+        ? "CS1_QUANG_TRUNG"
+        : campus === "CS2"
+        ? "CS2_THU_DUC"
+        : campus === "CS3"
+        ? "CS3_TO_KY"
+        : campus;
+
+    const resolvedType =
+      roomType === "roommate"
+        ? "LOOKING_FOR_ROOMMATE"
+        : roomType === "dormitory"
+        ? "ROOM_FOR_RENT"
+        : "ROOM_FOR_RENT";
+
+    const hostEmail = (user as any)?.email || "";
+    const studentId = hostEmail.split("@")[0] || "UTH";
+
     const { error } = await supabaseBrowserClient.from("housing_posts").insert({
       author_id: user.id,
       title: title.trim(),
       description: description.trim(),
-      price: Number(price),
-      location: location.trim(),
-      campus: campus,
-      room_type: roomType,
-      contact_phone: contactPhone.trim() || null,
-      contact_zalo: contactZalo.trim() || null,
-      status: "ACTIVE",
+      monthly_rent_vnd: Number(price) || 1000000,
+      type: resolvedType,
+      campus: resolvedCampus,
+      address_label: location.trim() || "Gần cơ sở UTH",
+      host_name: user.name || "Sinh viên UTH",
+      host_student_id: studentId,
+      contact_phone: contactPhone.trim() || "0000000000",
+      contact_zalo_url: contactZalo.trim()
+        ? contactZalo.startsWith("http")
+          ? contactZalo
+          : `https://zalo.me/${contactZalo.replace(/[^0-9]/g, "")}`
+        : "",
+      status: "pending",
     });
 
     setLoading(false);

@@ -37,6 +37,15 @@ fun AuthRoute(
     val scopes = rememberCoroutineScope()
     val googleIdTokens = rememberGoogleIdTokenSource()
     val snackbars = remember { SnackbarHostState() }
+    val activity = findAuthActivity(context)
+
+    LaunchedEffect(activity?.intent) {
+        val uri = activity?.intent?.data
+        if (uri != null) {
+            viewModel.onAction(AuthAction.HandleDeepLink(uri.toString()))
+            activity.intent?.data = null
+        }
+    }
 
     LaunchedEffect(viewModel, context) {
         viewModel.events.collect { event ->

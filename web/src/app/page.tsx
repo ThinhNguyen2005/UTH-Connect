@@ -31,6 +31,26 @@ export default function PortalHomePage() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      if (code) {
+        window.location.href = `/auth/callback${window.location.search}`;
+        return;
+      }
+
+      if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const type = params.get("type");
+        const error = params.get("error");
+        const errorCode = params.get("error_code");
+
+        if (type === "recovery" || errorCode || error) {
+          window.location.href = `/reset-password${window.location.hash}`;
+        }
+      }
+    }
   }, []);
 
   const role = user?.role || "student";
@@ -298,10 +318,10 @@ export default function PortalHomePage() {
                   <Link href={`/housing/${h.id}`} key={h.id} className="block p-3 rounded-lg bg-[#F8FAFC] hover:bg-slate-100">
                     <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
                       <span className="font-semibold text-slate-700 uppercase">
-                        {h.campus}
+                        {h.campus ? h.campus.replace(/_/g, " ") : "UTH"}
                       </span>
                       <span className="font-bold text-emerald-700 tabular-nums">
-                        {new Intl.NumberFormat("vi-VN").format(h.monthly_rent_vnd)} đ
+                        {new Intl.NumberFormat("vi-VN").format(h.monthly_rent_vnd || h.price || 0)} đ
                       </span>
                     </div>
                     <div className="text-xs font-medium text-slate-800 line-clamp-1">
