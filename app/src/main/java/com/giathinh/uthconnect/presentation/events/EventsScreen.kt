@@ -61,8 +61,8 @@ fun EventsScreen(
 ) {
     val listState = rememberLazyListState()
     var scrolledToEventId by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(focusedEventId, state.events) {
-        if (focusedEventId != null && focusedEventId != scrolledToEventId) {
+    LaunchedEffect(focusedEventId, state.events, state.loading) {
+        if (!state.loading && focusedEventId != null && focusedEventId != scrolledToEventId) {
             val itemIndex = state.events.indexOfFirst { it.id == focusedEventId }
             if (itemIndex >= 0) {
                 listState.animateScrollToItem(itemIndex + 1)
