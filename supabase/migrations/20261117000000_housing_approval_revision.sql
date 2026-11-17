@@ -1,8 +1,8 @@
 begin;
 
-drop function public.approve_housing_listing(uuid);
+drop function if exists public.approve_housing_listing(uuid);
 
-create function public.approve_housing_listing(
+create or replace function public.approve_housing_listing(
     p_listing_id uuid,
     p_reviewed_updated_at timestamptz
 )
