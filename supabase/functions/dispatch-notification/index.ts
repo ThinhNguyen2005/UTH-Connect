@@ -665,8 +665,8 @@ function toSourceNotification(payload: WebhookEventPayload) {
   }
 
   if (payload.table === "housing_posts") {
-    const isPublished = ["OPEN", "approved"].includes(stringValue(row.status));
-    const wasPublished = ["OPEN", "approved"].includes(stringValue(payload.old_record?.status));
+    const isPublished = stringValue(row.status) === "OPEN";
+    const wasPublished = stringValue(payload.old_record?.status) === "OPEN";
     if (!["INSERT", "UPDATE"].includes(payload.type) || !isPublished) return null;
     if (payload.type === "UPDATE" && wasPublished) return null;
     const price = Number(row.monthly_rent_vnd ?? 0);
