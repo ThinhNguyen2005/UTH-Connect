@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- 1. Điểm tâm sáng -->
+        <record id="product_banh_mi_thit" model="product.product">
+            <field name="name">Bánh mì thịt chả UTH</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_breakfast')])]"/>
+            <field name="list_price">20000.0</field>
+            <field name="standard_price">12000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">BM01</field>
+        </record>
+
+        <record id="product_xoi_ga" model="product.product">
+            <field name="name">Xôi gà xé lạp xưởng</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_breakfast')])]"/>
+            <field name="list_price">25000.0</field>
+            <field name="standard_price">15000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">XG02</field>
+        </record>
+
+        <record id="product_bun_bo_hue" model="product.product">
+            <field name="name">Bún bò giò heo</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_breakfast')])]"/>
+            <field name="list_price">35000.0</field>
+            <field name="standard_price">22000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">BB03</field>
+        </record>
+
+        <!-- 2. Cơm trưa sinh viên -->
+        <record id="product_com_suon_trung" model="product.product">
+            <field name="name">Cơm tấm sườn trứng ốp la</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_lunch')])]"/>
+            <field name="list_price">30000.0</field>
+            <field name="standard_price">18000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CT01</field>
+        </record>
+
+        <record id="product_com_ga_xoi_mo" model="product.product">
+            <field name="name">Cơm đùi gà xối mỡ</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_lunch')])]"/>
+            <field name="list_price">32000.0</field>
+            <field name="standard_price">20000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CG02</field>
+        </record>
+
+        <record id="product_com_ca_kho" model="product.product">
+            <field name="name">Cơm cá hú kho tộ + Canh chua</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_lunch')])]"/>
+            <field name="list_price">28000.0</field>
+            <field name="standard_price">17000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CC03</field>
+        </record>
+
+        <record id="product_com_thit_kho_tau" model="product.product">
+            <field name="name">Cơm thịt kho tàu trứng cút</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_lunch')])]"/>
+            <field name="list_price">28000.0</field>
+            <field name="standard_price">16000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CTK04</field>
+        </record>
+
+        <!-- 3. Thức uống & Cà phê -->
+        <record id="product_ca_phe_den" model="product.product">
+            <field name="name">Cà phê đen đá</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_drinks')])]"/>
+            <field name="list_price">15000.0</field>
+            <field name="standard_price">6000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CPD01</field>
+        </record>
+
+        <record id="product_ca_phe_sua" model="product.product">
+            <field name="name">Cà phê sữa đá Sài Gòn</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_drinks')])]"/>
+            <field name="list_price">18000.0</field>
+            <field name="standard_price">8000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">CPS02</field>
+        </record>
+
+        <record id="product_tra_dao" model="product.product">
+            <field name="name">Trà đào cam sả</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_drinks')])]"/>
+            <field name="list_price">22000.0</field>
+            <field name="standard_price">9000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">TD03</field>
+        </record>
+
+        <record id="product_tra_sua" model="product.product">
+            <field name="name">Trà sữa trân châu UTH</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_drinks')])]"/>
+            <field name="list_price">25000.0</field>
+            <field name="standard_price">10000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">TS04</field>
+        </record>
+
+        <record id="product_nuoc_suoi" model="product.product">
+            <field name="name">Nước khoáng Aquafina 500ml</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_drinks')])]"/>
+            <field name="list_price">8000.0</field>
+            <field name="standard_price">4000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">NS05</field>
+        </record>
+
+        <!-- 4. Ăn vặt & Tráng miệng -->
+        <record id="product_banh_trang_tron" model="product.product">
+            <field name="name">Bánh tráng trộn bò khô trứng cút</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_snacks')])]"/>
+            <field name="list_price">20000.0</field>
+            <field name="standard_price">10000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">BTT01</field>
+        </record>
+
+        <record id="product_sua_chua" model="product.product">
+            <field name="name">Sữa chua nếp cẩm</field>
+            <field name="available_in_pos">True</field>
+            <field name="pos_categ_ids" eval="[(6, 0, [ref('pos_categ_snacks')])]"/>
+            <field name="list_price">15000.0</field>
+            <field name="standard_price">7000.0</field>
+            <field name="type">consu</field>
+            <field name="default_code">SC02</field>
+        </record>
+    </data>
+</odoo>

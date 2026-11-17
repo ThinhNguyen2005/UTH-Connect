@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Kanban Dashboard cho Căn-tin UTH -->
+    <record id="action_canteen_pos_dashboard" model="ir.actions.act_window">
+        <field name="name">Bảng điều khiển Quầy Căn-tin UTH</field>
+        <field name="res_model">pos.config</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="domain">[('is_canteen', '=', True)]</field>
+        <field name="context">{'default_is_canteen': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Bắt đầu phiên bán hàng mới cho quầy Căn-tin UTH!
+            </p>
+        </field>
+    </record>
+
+    <!-- Danh sách các phiên bán căn-tin -->
+    <record id="action_canteen_pos_sessions" model="ir.actions.act_window">
+        <field name="name">Phiên bán hàng Căn-tin</field>
+        <field name="res_model">pos.session</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('is_canteen_session', '=', True)]</field>
+        <field name="context">{'search_default_open': 1}</field>
+    </record>
+
+    <!-- Danh sách đơn hàng căn-tin -->
+    <record id="action_canteen_pos_orders" model="ir.actions.act_window">
+        <field name="name">Đơn hàng Căn-tin</field>
+        <field name="res_model">pos.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('is_canteen_order', '=', True)]</field>
+    </record>
+</odoo>

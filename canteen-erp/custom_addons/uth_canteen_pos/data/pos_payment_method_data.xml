@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- 1. Tiền mặt -->
+        <record id="pos_payment_method_cash" model="pos.payment.method">
+            <field name="name">Tiền mặt (Cash)</field>
+            <field name="is_cash_count">True</field>
+        </record>
+
+        <!-- 2. QR Ngân hàng / VietQR / MoMo -->
+        <record id="pos_payment_method_vietqr" model="pos.payment.method">
+            <field name="name">Chuyển khoản QR (VietQR / MoMo / ZaloPay)</field>
+            <field name="is_cash_count">False</field>
+        </record>
+
+        <!-- 3. Thẻ sinh viên UTH Smart Card -->
+        <record id="pos_payment_method_student_card" model="pos.payment.method">
+            <field name="name">Thẻ sinh viên UTH (Smart Card)</field>
+            <field name="is_cash_count">False</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Kế thừa pos.order form view -->
+    <record id="view_pos_order_canteen_form" model="ir.ui.view">
+        <field name="name">pos.order.canteen.form</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="is_canteen_order" invisible="1"/>
+                <field name="canteen_location" invisible="not is_canteen_order"/>
+                <field name="student_id_number" invisible="not is_canteen_order"/>
+                <field name="meal_type" invisible="not is_canteen_order"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Kế thừa pos.order tree view -->
+    <record id="view_pos_order_canteen_tree" model="ir.ui.view">
+        <field name="name">pos.order.canteen.tree</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="student_id_number" optional="show"/>
+                <field name="meal_type" optional="show"/>
+                <field name="canteen_location" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Kế thừa search view -->
+    <record id="view_pos_order_canteen_search" model="ir.ui.view">
+        <field name="name">pos.order.canteen.search</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='done']" position="after">
+                <separator/>
+                <filter string="Đơn Căn-tin UTH" name="canteen_orders" domain="[('is_canteen_order', '=', True)]"/>
+                <filter string="Thanh toán thẻ SV" name="student_card_orders" domain="[('student_id_number', '!=', False)]"/>
+                <group expand="0" string="Gom nhóm Căn-tin">
+                    <filter string="Bữa ăn (Sáng/Trưa/Ăn vặt)" name="group_meal_type" context="{'group_by': 'meal_type'}"/>
+                    <filter string="Địa điểm Căn-tin" name="group_canteen_location" context="{'group_by': 'canteen_location'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

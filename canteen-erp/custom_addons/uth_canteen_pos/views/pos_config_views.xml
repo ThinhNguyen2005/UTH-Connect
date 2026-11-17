@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Kế thừa pos.config form view để bổ sung cấu hình Căn-tin UTH -->
+    <record id="view_pos_config_canteen_form" model="ir.ui.view">
+        <field name="name">pos.config.canteen.form</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <h2>Cấu hình Căn-tin UTH</h2>
+                <group name="canteen_settings">
+                    <group string="Vị trí &amp; Ca bán">
+                        <field name="is_canteen"/>
+                        <field name="canteen_location" invisible="not is_canteen"/>
+                        <field name="shift_type" invisible="not is_canteen"/>
+                    </group>
+                    <group string="Quy định thanh toán &amp; Doanh số" invisible="not is_canteen">
+                        <field name="default_opening_balance"/>
+                        <field name="allow_student_card"/>
+                        <field name="daily_revenue_target"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Filter tìm kiếm riêng cho quầy Căn-tin -->
+    <record id="view_pos_config_canteen_search" model="ir.ui.view">
+        <field name="name">pos.config.canteen.search</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_config_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='inactive']" position="after">
+                <separator/>
+                <filter string="Quầy Căn-tin UTH" name="filter_canteen" domain="[('is_canteen', '=', True)]"/>
+                <group expand="0" string="Gom nhóm theo">
+                    <filter string="Địa điểm Căn-tin" name="group_canteen_location" context="{'group_by': 'canteen_location'}"/>
+                    <filter string="Ca bán hàng" name="group_shift_type" context="{'group_by': 'shift_type'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

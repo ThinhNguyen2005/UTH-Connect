@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_canteen_revenue_report_user,canteen.revenue.report.user,model_canteen_revenue_report,point_of_sale.group_pos_user,1,0,0,0
+access_canteen_revenue_report_manager,canteen.revenue.report.manager,model_canteen_revenue_report,point_of_sale.group_pos_manager,1,1,1,1
+access_canteen_revenue_wizard_user,canteen.revenue.wizard.user,model_canteen_revenue_wizard,point_of_sale.group_pos_user,1,1,1,1

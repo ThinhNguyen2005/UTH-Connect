@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_canteen_revenue_wizard_form" model="ir.ui.view">
+        <field name="name">canteen.revenue.wizard.form</field>
+        <field name="model">canteen.revenue.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Xuất Báo cáo Doanh thu Căn-tin UTH">
+                <group>
+                    <group string="Khoảng thời gian">
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group string="Bộ lọc nâng cao">
+                        <field name="canteen_location"/>
+                        <field name="meal_type"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_view_revenue_pivot" string="Xem Báo cáo Trực quan (Pivot/Graph)" type="object" class="btn-primary"/>
+                    <button name="action_print_revenue_pdf" string="In Báo cáo PDF" type="object" class="btn-secondary"/>
+                    <button string="Hủy" class="btn-link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_canteen_revenue_wizard" model="ir.actions.act_window">
+        <field name="name">Xuất Báo cáo Doanh thu Căn-tin</field>
+        <field name="res_model">canteen.revenue.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

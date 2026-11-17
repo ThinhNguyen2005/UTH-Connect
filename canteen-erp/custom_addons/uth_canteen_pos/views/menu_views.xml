@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Top-level Canteen ERP Menu -->
+    <menuitem id="menu_canteen_root"
+              name="Căn-tin UTH ERP"
+              sequence="20"
+              web_icon="uth_canteen_pos,static/description/icon.png"/>
+
+    <!-- Operations Submenu -->
+    <menuitem id="menu_canteen_operations"
+              name="Vận hành Căn-tin"
+              parent="menu_canteen_root"
+              sequence="10"/>
+
+    <menuitem id="menu_canteen_dashboard"
+              name="Bảng điều khiển Quầy POS"
+              parent="menu_canteen_operations"
+              action="action_canteen_pos_dashboard"
+              sequence="10"/>
+
+    <menuitem id="menu_canteen_sessions"
+              name="Quản lý Phiên bán hàng"
+              parent="menu_canteen_operations"
+              action="action_canteen_pos_sessions"
+              sequence="20"/>
+
+    <menuitem id="menu_canteen_orders"
+              name="Lịch sử Đơn hàng"
+              parent="menu_canteen_operations"
+              action="action_canteen_pos_orders"
+              sequence="30"/>
+
+    <!-- Products & Menu Submenu -->
+    <menuitem id="menu_canteen_products"
+              name="Món ăn &amp; Bảng giá"
+              parent="menu_canteen_root"
+              sequence="20"/>
+
+    <menuitem id="menu_canteen_product_list"
+              name="Danh sách Món ăn / Đồ uống"
+              parent="menu_canteen_products"
+              action="point_of_sale.product_template_action"
+              sequence="10"/>
+
+    <menuitem id="menu_canteen_categories"
+              name="Nhóm Món ăn POS"
+              parent="menu_canteen_products"
+              action="point_of_sale.product_pos_category_action"
+              sequence="20"/>
+
+    <!-- Reporting Submenu -->
+    <menuitem id="menu_canteen_reports"
+              name="Báo cáo Doanh thu"
+              parent="menu_canteen_root"
+              sequence="30"/>
+
+    <menuitem id="menu_canteen_revenue_pivot"
+              name="Phân tích Doanh thu Pivot/Graph"
+              parent="menu_canteen_reports"
+              action="action_canteen_revenue_report_pivot"
+              sequence="10"/>
+
+    <menuitem id="menu_canteen_revenue_wizard"
+              name="Xuất Báo cáo theo ngày/ca"
+              parent="menu_canteen_reports"
+              action="action_canteen_revenue_wizard"
+              sequence="20"/>
+</odoo>

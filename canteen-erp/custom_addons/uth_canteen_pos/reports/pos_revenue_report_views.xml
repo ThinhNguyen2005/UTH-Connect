@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Pivot View -->
+    <record id="view_canteen_revenue_report_pivot" model="ir.ui.view">
+        <field name="name">canteen.revenue.report.pivot</field>
+        <field name="model">canteen.revenue.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Phân tích Doanh thu Căn-tin UTH" sample="1">
+                <field name="date" interval="day" type="row"/>
+                <field name="category_id" type="row"/>
+                <field name="canteen_location" type="col"/>
+                <field name="meal_type" type="col"/>
+                <field name="total_amount" type="measure"/>
+                <field name="qty_sold" type="measure"/>
+                <field name="order_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View (Bar / Line chart) -->
+    <record id="view_canteen_revenue_report_graph" model="ir.ui.view">
+        <field name="name">canteen.revenue.report.graph</field>
+        <field name="model">canteen.revenue.report</field>
+        <field name="arch" type="xml">
+            <graph string="Biểu đồ Doanh thu Căn-tin UTH" type="bar" sample="1">
+                <field name="date" interval="day"/>
+                <field name="total_amount" type="measure"/>
+                <field name="canteen_location" type="row"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="view_canteen_revenue_report_tree" model="ir.ui.view">
+        <field name="name">canteen.revenue.report.tree</field>
+        <field name="model">canteen.revenue.report</field>
+        <field name="arch" type="xml">
+            <tree string="Doanh thu Căn-tin" create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="canteen_location"/>
+                <field name="meal_type"/>
+                <field name="product_id"/>
+                <field name="category_id"/>
+                <field name="payment_method_name"/>
+                <field name="qty_sold" sum="Tổng SL"/>
+                <field name="order_count" sum="Tổng đơn"/>
+                <field name="total_amount" sum="Tổng doanh thu" widget="monetary"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_canteen_revenue_report_search" model="ir.ui.view">
+        <field name="name">canteen.revenue.report.search</field>
+        <field name="model">canteen.revenue.report</field>
+        <field name="arch" type="xml">
+            <search string="Tìm kiếm Báo cáo Căn-tin">
+                <field name="date"/>
+                <field name="product_id"/>
+                <field name="category_id"/>
+                <filter string="Hôm nay" name="today" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Tuần này" name="this_week" domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Cơ sở 1 (Chính)" name="loc_main" domain="[('canteen_location', '=', 'main')]"/>
+                <filter string="Cơ sở 2" name="loc_sub1" domain="[('canteen_location', '=', 'sub1')]"/>
+                <group expand="1" string="Gom nhóm theo">
+                    <filter string="Ngày bán" name="group_date" context="{'group_by': 'date:day'}"/>
+                    <filter string="Khung bữa ăn" name="group_meal_type" context="{'group_by': 'meal_type'}"/>
+                    <filter string="Nhóm món ăn" name="group_category" context="{'group_by': 'category_id'}"/>
+                    <filter string="Phương thức thanh toán" name="group_payment" context="{'group_by': 'payment_method_name'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_canteen_revenue_report_pivot" model="ir.actions.act_window">
+        <field name="name">Phân tích Doanh thu Căn-tin</field>
+        <field name="res_model">canteen.revenue.report</field>
+        <field name="view_mode">pivot,graph,tree</field>
+        <field name="search_view_id" ref="view_canteen_revenue_report_search"/>
+        <field name="context">{'search_default_this_week': 1, 'search_default_group_date': 1}</field>
+    </record>
+</odoo>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- 1. Quầy Căn-tin chính CS1 -->
+        <record id="pos_config_canteen_cs1" model="pos.config">
+            <field name="name">Quầy Căn-tin CS1 - Cơm &amp; Thức ăn</field>
+            <field name="is_canteen">True</field>
+            <field name="canteen_location">main</field>
+            <field name="shift_type">all_day</field>
+            <field name="default_opening_balance">500000.0</field>
+            <field name="allow_student_card">True</field>
+            <field name="daily_revenue_target">8000000.0</field>
+            <field name="payment_method_ids" eval="[(6, 0, [
+                ref('pos_payment_method_cash'),
+                ref('pos_payment_method_vietqr'),
+                ref('pos_payment_method_student_card')
+            ])]"/>
+        </record>
+
+        <!-- 2. Quầy Cà phê & Thức uống CS1 -->
+        <record id="pos_config_canteen_drinks" model="pos.config">
+            <field name="name">Quầy Cà phê &amp; Trà sữa CS1</field>
+            <field name="is_canteen">True</field>
+            <field name="canteen_location">main</field>
+            <field name="shift_type">all_day</field>
+            <field name="default_opening_balance">300000.0</field>
+            <field name="allow_student_card">True</field>
+            <field name="daily_revenue_target">4000000.0</field>
+            <field name="payment_method_ids" eval="[(6, 0, [
+                ref('pos_payment_method_cash'),
+                ref('pos_payment_method_vietqr'),
+                ref('pos_payment_method_student_card')
+            ])]"/>
+        </record>
+
+        <!-- 3. Quầy Kiosk CS2 -->
+        <record id="pos_config_canteen_kiosk_cs2" model="pos.config">
+            <field name="name">Quầy Kiosk Căn-tin Cơ sở 2</field>
+            <field name="is_canteen">True</field>
+            <field name="canteen_location">sub1</field>
+            <field name="shift_type">all_day</field>
+            <field name="default_opening_balance">300000.0</field>
+            <field name="allow_student_card">True</field>
+            <field name="daily_revenue_target">3500000.0</field>
+            <field name="payment_method_ids" eval="[(6, 0, [
+                ref('pos_payment_method_cash'),
+                ref('pos_payment_method_vietqr'),
+                ref('pos_payment_method_student_card')
+            ])]"/>
+        </record>
+    </data>
+</odoo>
