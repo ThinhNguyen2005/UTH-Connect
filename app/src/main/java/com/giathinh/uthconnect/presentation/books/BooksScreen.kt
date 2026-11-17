@@ -131,6 +131,14 @@ fun BooksScreen(
                         )
                     }
                 }
+            }
+        }
+
+        stickyHeader(key = "books-search") {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
                 OutlinedTextField(
                     value = uiState.query,
                     onValueChange = { onAction(BooksAction.Search(it)) },
@@ -140,6 +148,11 @@ fun BooksScreen(
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                 )
+            }
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                 Text(
                     stringResource(R.string.books_deal_type),
                     style = MaterialTheme.typography.labelLarge,
@@ -356,21 +369,31 @@ fun BooksScreen(
                 )
             }
         } else if (!uiState.isLoading && uiState.loadFailure == null) {
-            items(uiState.visibleListings, key = { it.id }) { listing ->
-                ListingCard(
-                    listing = listing,
-                    canManage = listing.ownerUid == uiState.currentUserUid,
-                    isMutating = listing.id in uiState.mutatingIds,
-                    onOpen = { details = listing },
-                    onEdit = {
-                        editingId = listing.id
-                        newListingId = null
-                        saveFailed = false
-                        showForm = true
-                    },
-                    onDelete = { pendingDelete = listing },
-                    onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
-                )
+            items(uiState.visibleListings.chunked(2), key = { row -> row.first().id }) { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    row.forEach { listing ->
+                        ListingCard(
+                            listing = listing,
+                            modifier = Modifier.weight(1f),
+                            canManage = listing.ownerUid == uiState.currentUserUid,
+                            isMutating = listing.id in uiState.mutatingIds,
+                            onOpen = { details = listing },
+                            onEdit = {
+                                editingId = listing.id
+                                newListingId = null
+                                saveFailed = false
+                                showForm = true
+                            },
+                            onDelete = { pendingDelete = listing },
+                            onSetStatus = { status -> onAction(BooksAction.SetStatus(listing, status)) },
+                        )
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
         }
         item { Spacer(Modifier.height(UthDimens.Spacing.Xl)) }
@@ -531,6 +554,7 @@ fun BooksScreen(
 @Composable
 private fun ListingCard(
     listing: BookListing,
+    modifier: Modifier = Modifier,
     canManage: Boolean,
     isMutating: Boolean,
     onOpen: () -> Unit,
@@ -538,17 +562,17 @@ private fun ListingCard(
     onDelete: () -> Unit,
     onSetStatus: (BookListingStatus) -> Unit,
 ) {
-    UthCard(modifier = Modifier.fillMaxWidth(), onClick = onOpen) {
+    UthCard(modifier = modifier.fillMaxWidth(), onClick = onOpen, contentPadding = false) {
         if (listing.photoUrl != null) {
             AsyncImage(
                 listing.photoUrl,
                 contentDescription = listing.title,
-                modifier = Modifier.fillMaxWidth().height(176.dp),
+                modifier = Modifier.fillMaxWidth().height(120.dp),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Surface(
-                modifier = Modifier.fillMaxWidth().height(112.dp),
+                modifier = Modifier.fillMaxWidth().height(120.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.small,
             ) {
@@ -561,23 +585,23 @@ private fun ListingCard(
                 }
             }
         }
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    listing.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    listing.subject,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        Column(
+            modifier = Modifier.padding(UthDimens.Spacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+        ) {
+            Text(
+                listing.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                listing.subject,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             UthStatusBadge(
                 text = stringResource(
                     if (listing.status == BookListingStatus.AVAILABLE) {
@@ -588,25 +612,27 @@ private fun ListingCard(
                 ),
                 tone = if (listing.status == BookListingStatus.AVAILABLE) BadgeTone.Success else BadgeTone.Neutral,
             )
-        }
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        Text(
-            if (listing.dealType == BookDealType.SALE) {
-                priceText(listing.priceVnd)
-            } else {
-                stringResource(R.string.books_exchange)
-            },
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (canManage) {
-            Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs)) {
+            Text(
+                if (listing.dealType == BookDealType.SALE) {
+                    priceText(listing.priceVnd)
+                } else {
+                    stringResource(R.string.books_exchange)
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                stringResource(R.string.books_condition_format, stringResource(listing.condition.label)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (canManage) {
                 TextButton(
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
                     enabled = !isMutating,
                     onClick = {
                         val target = if (listing.status == BookListingStatus.AVAILABLE) {
@@ -625,19 +651,20 @@ private fun ListingCard(
                                 R.string.books_mark_available
                             },
                         ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                IconButton(
-                    enabled = !isMutating,
-                    onClick = onEdit,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
                 ) {
-                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit))
-                }
-                IconButton(
-                    enabled = !isMutating,
-                    onClick = onDelete,
-                ) {
-                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete))
+                    IconButton(enabled = !isMutating, onClick = onEdit) {
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.books_edit))
+                    }
+                    IconButton(enabled = !isMutating, onClick = onDelete) {
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.books_delete))
+                    }
                 }
             }
         }
