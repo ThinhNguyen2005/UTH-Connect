@@ -31,9 +31,10 @@ begin
     end if;
   elsif tg_table_name = 'housing_posts' then
     if tg_op = 'INSERT' then
-      should_enqueue := new.status = 'OPEN';
+      should_enqueue := new.status in ('OPEN', 'approved');
     else
-      should_enqueue := new.status = 'OPEN' and old.status is distinct from 'OPEN';
+      should_enqueue := new.status in ('OPEN', 'approved')
+        and old.status not in ('OPEN', 'approved');
     end if;
   end if;
 

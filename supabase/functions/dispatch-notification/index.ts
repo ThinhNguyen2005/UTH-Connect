@@ -665,8 +665,10 @@ function toSourceNotification(payload: WebhookEventPayload) {
   }
 
   if (payload.table === "housing_posts") {
-    if (!["INSERT", "UPDATE"].includes(payload.type) || row.status !== "OPEN") return null;
-    if (payload.type === "UPDATE" && payload.old_record?.status === "OPEN") return null;
+    const isPublished = ["OPEN", "approved"].includes(stringValue(row.status));
+    const wasPublished = ["OPEN", "approved"].includes(stringValue(payload.old_record?.status));
+    if (!["INSERT", "UPDATE"].includes(payload.type) || !isPublished) return null;
+    if (payload.type === "UPDATE" && wasPublished) return null;
     const price = Number(row.monthly_rent_vnd ?? 0);
     return {
       sourceId: requiredString(row.id), recipientId: null, excludeUserId: stringValue(row.author_id),
