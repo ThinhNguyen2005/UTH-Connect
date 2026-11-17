@@ -14,6 +14,7 @@ import {
   Pin,
   MapPin,
   Building2,
+  PackageSearch,
 } from "lucide-react";
 import type { AppUserIdentity } from "@/providers/auth-provider";
 
@@ -24,6 +25,7 @@ export default function PortalHomePage() {
     eventsCount: 0,
     notificationsCount: 0,
     housingCount: 0,
+    lostFoundCount: 0,
   });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
@@ -40,11 +42,12 @@ export default function PortalHomePage() {
     let isMounted = true;
 
     async function loadData() {
-      const [{ count: evtCount }, { count: notifCount }, { count: hCount }] =
+      const [{ count: evtCount }, { count: notifCount }, { count: hCount }, { count: lfCount }] =
         await Promise.all([
           supabaseBrowserClient.from("events").select("*", { count: "exact", head: true }),
           supabaseBrowserClient.from("notifications").select("*", { count: "exact", head: true }),
           supabaseBrowserClient.from("housing_posts").select("*", { count: "exact", head: true }),
+          supabaseBrowserClient.from("lost_found_items").select("*", { count: "exact", head: true }).eq("is_resolved", false),
         ]);
 
       if (!isMounted) return;
@@ -53,6 +56,7 @@ export default function PortalHomePage() {
         eventsCount: evtCount || 0,
         notificationsCount: notifCount || 0,
         housingCount: hCount || 0,
+        lostFoundCount: lfCount || 0,
       });
 
       const { data: notifData } = await supabaseBrowserClient
@@ -121,11 +125,18 @@ export default function PortalHomePage() {
             <Plus className="w-3.5 h-3.5" />
             <span>Đăng tin tìm trọ</span>
           </Link>
+          <Link
+            href="/lost-found"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-medium shadow-subtle transition active:scale-[0.98]"
+          >
+            <PackageSearch className="w-3.5 h-3.5" />
+            <span>Đồ thất lạc</span>
+          </Link>
         </div>
       </div>
 
       {/* KPI Tonal Row (No borders, pure white cards on slate 50) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-5 shadow-subtle flex items-center justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -163,6 +174,19 @@ export default function PortalHomePage() {
             <div className="text-[11px] text-slate-500 mt-0.5">Sinh viên đang tìm bạn</div>
           </div>
           <Home className="w-5 h-5 stroke-[1.5] text-slate-400" />
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-subtle flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Đồ thất lạc
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-0.5 tabular-nums">
+              {stats.lostFoundCount}
+            </div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Món đang chờ nhận lại</div>
+          </div>
+          <PackageSearch className="w-5 h-5 stroke-[1.5] text-slate-400" />
         </div>
       </div>
 

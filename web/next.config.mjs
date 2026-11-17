@@ -22,6 +22,13 @@ const nextConfig = {
       },
     ];
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Tăng timeout tải chunk cho Webpack dev server tránh lỗi ChunkLoadError trên Windows
+      config.output.chunkLoadTimeout = 300000;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

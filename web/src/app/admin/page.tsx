@@ -13,6 +13,7 @@ import {
   ArrowRight,
   UserCheck,
   AlertCircle,
+  PackageSearch,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -24,6 +25,7 @@ export default function AdminDashboardPage() {
     events: 0,
     housing: 0,
     notifications: 0,
+    lostFound: 0,
   });
 
   useEffect(() => {
@@ -36,12 +38,14 @@ export default function AdminDashboardPage() {
         { count: evtCount },
         { count: notifCount },
         { count: houseCount },
+        { count: lfCount },
       ] = await Promise.all([
         supabaseBrowserClient.from("profiles").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("profiles").select("*", { count: "exact", head: true }).eq("student_id_verified", true),
         supabaseBrowserClient.from("events").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("notifications").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("housing_posts").select("*", { count: "exact", head: true }),
+        supabaseBrowserClient.from("lost_found_items").select("*", { count: "exact", head: true }),
       ]);
 
       const { count: lecCount } = await supabaseBrowserClient
@@ -59,6 +63,7 @@ export default function AdminDashboardPage() {
         events: evtCount || 0,
         housing: houseCount || 0,
         notifications: notifCount || 0,
+        lostFound: lfCount || 0,
       });
     }
 
@@ -134,7 +139,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Bento Modules Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Module 1: Phân quyền */}
         <div className="bg-white rounded-xl p-6 shadow-subtle">
           <div className="flex items-center gap-2 mb-3">
@@ -191,6 +196,26 @@ export default function AdminDashboardPage() {
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"
           >
             <span>Soạn thảo thông báo</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Module 4: Kiểm duyệt & Bàn giao đồ thất lạc */}
+        <div className="bg-white rounded-xl p-6 shadow-subtle">
+          <div className="flex items-center gap-2 mb-3">
+            <PackageSearch className="w-4 h-4 stroke-[1.5] text-slate-600" />
+            <h3 className="text-sm font-bold text-slate-900">
+              Quản Lý Đồ Thất Lạc
+            </h3>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed mb-4">
+            Theo dõi {stats.lostFound} tin đăng tìm đồ và nhặt được đồ toàn trường. Xác nhận bàn giao và gỡ bỏ tin vi phạm.
+          </p>
+          <Link
+            href="/admin/lost-found"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"
+          >
+            <span>Bàn giao & Kiểm duyệt</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
