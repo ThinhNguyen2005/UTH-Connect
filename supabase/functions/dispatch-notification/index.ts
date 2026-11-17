@@ -49,6 +49,9 @@ const FANOUT_RECOVERY_DELAY_MS = 60_000;
 const MAX_PUSH_ATTEMPTS = 5;
 const PUSH_RETRY_DELAY_MS = 60_000;
 const CONTINUATION_TIMEOUT_MS = 2_000;
+const FANOUT_RECOVERY_BUDGET_MS = 7_000;
+const FANOUT_RECOVERY_STATE_RESERVE_MS = 4_000;
+const PUSH_DISPATCH_RESERVE_MS = 10_000;
 const CLEANUP_BUDGET_MS = 5_000;
 
 class DispatchDeadlineError extends Error {}
@@ -68,71 +71,103 @@ Deno.serve(async (request) => {
     const payload = await request.json() as WebhookPayload;
     const deadline = Date.now() + MAX_INVOCATION_MS;
     if (payload.type === "DISPATCH_PENDING") {
-      const incompleteFanouts = await supabaseRest<DispatchProgress[]>(
-        `notification_dispatch_progress?select=dedupe_key,source_payload,recovery_attempts,last_recipient_id&fanout_complete=eq.false&fanout_failed=eq.false&source_payload=not.is.null&or=(recovery_retry_at.is.null,recovery_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=updated_at.asc&limit=10`,
-        {},
-        deadline,
+      const fanoutRecoveryDeadline = Math.min(
+        deadline - PUSH_DISPATCH_RESERVE_MS,
+        Date.now() + FANOUT_RECOVERY_BUDGET_MS,
       );
-      for (const progress of incompleteFanouts) {
-        if (progress.source_payload) {
-          const continuationResult = await queueContinuation(
-            payload.continuationDepth ?? 0,
-            progress.source_payload,
-          );
-          if (continuationResult === "SKIPPED") continue;
-          const currentProgress = await supabaseRest<DispatchProgress[]>(
-            `notification_dispatch_progress?select=last_recipient_id,fanout_complete&dedupe_key=eq.${
-              encodeURIComponent(progress.dedupe_key)
-            }&limit=1`,
+      if (Date.now() < fanoutRecoveryDeadline) {
+        try {
+          const incompleteFanouts = await supabaseRest<DispatchProgress[]>(
+            `notification_dispatch_progress?select=dedupe_key,source_payload,recovery_attempts,last_recipient_id&fanout_complete=eq.false&fanout_failed=eq.false&source_payload=not.is.null&or=(recovery_retry_at.is.null,recovery_retry_at.lte.${encodeURIComponent(new Date().toISOString())})&order=updated_at.asc&limit=10`,
             {},
-            deadline,
+            fanoutRecoveryDeadline,
           );
-          const latestProgress = currentProgress[0];
-          if (!latestProgress || latestProgress.fanout_complete) continue;
-          const cursorAdvanced = latestProgress.last_recipient_id !== progress.last_recipient_id;
-          const timedOutWithoutProgress = continuationResult === "TIMED_OUT" && !cursorAdvanced;
-          let attempts = progress.recovery_attempts ?? 0;
-          if (cursorAdvanced || continuationResult === "SENT") attempts = 0;
-          else if (continuationResult === "FAILED" || timedOutWithoutProgress) {
-            attempts = Math.min(attempts + 1, MAX_FANOUT_RECOVERY_ATTEMPTS);
+          for (const progress of incompleteFanouts) {
+            if (Date.now() + FANOUT_RECOVERY_STATE_RESERVE_MS >= fanoutRecoveryDeadline) break;
+            if (!progress.source_payload) continue;
+
+            const continuationTimeoutMs = Math.min(
+              CONTINUATION_TIMEOUT_MS,
+              fanoutRecoveryDeadline - Date.now() - FANOUT_RECOVERY_STATE_RESERVE_MS,
+            );
+            if (continuationTimeoutMs <= 0) break;
+            const continuationResult = await queueContinuation(
+              payload.continuationDepth ?? 0,
+              progress.source_payload,
+              continuationTimeoutMs,
+            );
+            if (continuationResult === "SKIPPED") continue;
+            const currentProgress = await supabaseRest<DispatchProgress[]>(
+              `notification_dispatch_progress?select=last_recipient_id,fanout_complete&dedupe_key=eq.${
+                encodeURIComponent(progress.dedupe_key)
+              }&limit=1`,
+              {},
+              fanoutRecoveryDeadline,
+            );
+            const latestProgress = currentProgress[0];
+            if (!latestProgress || latestProgress.fanout_complete) continue;
+            const cursorAdvanced = latestProgress.last_recipient_id !== progress.last_recipient_id;
+            const timedOutWithoutProgress = continuationResult === "TIMED_OUT" && !cursorAdvanced;
+            let attempts = progress.recovery_attempts ?? 0;
+            if (cursorAdvanced || continuationResult === "SENT") attempts = 0;
+            else if (continuationResult === "FAILED" || timedOutWithoutProgress) {
+              attempts = Math.min(attempts + 1, MAX_FANOUT_RECOVERY_ATTEMPTS);
+            }
+            // A timeout is ambiguous, so only a confirmed failed response can end recovery.
+            const terminal = continuationResult === "FAILED" && attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
+            const cursorFilter = latestProgress.last_recipient_id === null
+              ? "last_recipient_id=is.null"
+              : `last_recipient_id=eq.${encodeURIComponent(latestProgress.last_recipient_id)}`;
+            await supabaseRest(
+              `notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false&${cursorFilter}`,
+              {
+                method: "PATCH",
+                body: JSON.stringify({
+                  recovery_attempts: attempts,
+                  recovery_retry_at: terminal
+                    ? null
+                    : new Date(
+                      Date.now() + FANOUT_RECOVERY_DELAY_MS * 2 ** (Math.max(attempts, 1) - 1),
+                    ).toISOString(),
+                  fanout_failed: terminal,
+                  updated_at: new Date().toISOString(),
+                }),
+              },
+              fanoutRecoveryDeadline,
+            );
+            // Leave the reserved budget for due sources and pending push rows.
+            if (timedOutWithoutProgress) break;
           }
-          // A timeout is ambiguous, so only a confirmed failed response can end recovery.
-          const terminal = continuationResult === "FAILED" && attempts >= MAX_FANOUT_RECOVERY_ATTEMPTS;
-          const cursorFilter = latestProgress.last_recipient_id === null
-            ? "last_recipient_id=is.null"
-            : `last_recipient_id=eq.${encodeURIComponent(latestProgress.last_recipient_id)}`;
-          await supabaseRest(
-            `notification_dispatch_progress?dedupe_key=eq.${encodeURIComponent(progress.dedupe_key)}&fanout_complete=eq.false&${cursorFilter}`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                recovery_attempts: attempts,
-                recovery_retry_at: terminal
-                  ? null
-                  : new Date(
-                    Date.now() + FANOUT_RECOVERY_DELAY_MS * 2 ** (Math.max(attempts, 1) - 1),
-                  ).toISOString(),
-                fanout_failed: terminal,
-                updated_at: new Date().toISOString(),
-              }),
-            },
-            deadline,
-          );
-          // Save the backoff, then leave room in this invocation for due push rows.
-          if (timedOutWithoutProgress) break;
+        } catch (error) {
+          if (!(error instanceof DispatchDeadlineError)) throw error;
+          console.warn("notification fan-out recovery budget reached; continuing with due notifications and push rows");
         }
       }
 
-      const dueNotifications = await supabaseRest<Array<{ source_payload: WebhookEventPayload }>>(
-        "rpc/claim_due_notification_fanouts",
-        { method: "POST", body: JSON.stringify({ p_limit: 10 }) },
-        deadline,
-      );
-      await Promise.all(
-        dueNotifications.map(({ source_payload: sourcePayload }) =>
-          queueContinuation(payload.continuationDepth ?? 0, sourcePayload)
-        ),
-      );
+      const dueNotificationDeadline = deadline - PUSH_DISPATCH_RESERVE_MS;
+      if (Date.now() < dueNotificationDeadline) {
+        try {
+          const dueNotifications = await supabaseRest<Array<{ source_payload: WebhookEventPayload }>>(
+            "rpc/claim_due_notification_fanouts",
+            { method: "POST", body: JSON.stringify({ p_limit: 10 }) },
+            dueNotificationDeadline,
+          );
+          const continuationTimeoutMs = Math.min(
+            CONTINUATION_TIMEOUT_MS,
+            dueNotificationDeadline - Date.now(),
+          );
+          if (continuationTimeoutMs > 0) {
+            await Promise.all(
+              dueNotifications.map(({ source_payload: sourcePayload }) =>
+                queueContinuation(payload.continuationDepth ?? 0, sourcePayload, continuationTimeoutMs)
+              ),
+            );
+          }
+        } catch (error) {
+          if (!(error instanceof DispatchDeadlineError)) throw error;
+          console.warn("due notification dispatch budget reached; continuing with pending push rows");
+        }
+      }
     } else {
       const source = toSourceNotification(payload);
       if (!source) return json({ delivered: 0, ignored: true });
@@ -521,7 +556,11 @@ async function secretsEqual(left: string, right: string): Promise<boolean> {
   return difference === 0;
 }
 
-async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayload): Promise<ContinuationResult> {
+async function queueContinuation(
+  depth: number,
+  sourcePayload?: WebhookEventPayload,
+  timeoutMs = CONTINUATION_TIMEOUT_MS,
+): Promise<ContinuationResult> {
   if (depth >= MAX_CONTINUATION_DEPTH) {
     console.warn("notification dispatch continuation limit reached", depth);
     return "SKIPPED";
@@ -533,7 +572,7 @@ async function queueContinuation(depth: number, sourcePayload?: WebhookEventPayl
     return "SKIPPED";
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CONTINUATION_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), Math.max(timeoutMs, 1));
   try {
     const response = await fetch(`${baseUrl.replace(/\/$/, "")}/functions/v1/dispatch-notification`, {
       method: "POST",

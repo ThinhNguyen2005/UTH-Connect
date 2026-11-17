@@ -3,6 +3,22 @@ create index if not exists notifications_scheduled_publish_idx
   on public.notifications (published_at, id)
   where published_at > created_at;
 
+-- Do not replay scheduled notifications that were already due before this
+-- recovery job was introduced. Future scheduled rows remain eligible.
+insert into public.notification_dispatch_progress (
+  dedupe_key,
+  fanout_complete,
+  updated_at
+)
+select
+  'notifications:' || notification.id::text,
+  true,
+  statement_timestamp()
+from public.notifications as notification
+where notification.published_at > notification.created_at
+  and notification.published_at <= statement_timestamp()
+on conflict (dedupe_key) do nothing;
+
 create or replace function public.claim_due_notification_fanouts(p_limit integer default 10)
 returns table(source_payload jsonb)
 language sql
