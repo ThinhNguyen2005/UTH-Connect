@@ -35,6 +35,42 @@ The CI YAML was parsed with SnakeYAML and checked locally for its two branch tri
 
 ## Outstanding work
 
+Follow-up: reformatted long expressions in the ticket, book, university and schedule repositories,
+event and notification models, timetable and housing use cases, Google nonce and contact validation.
+The changes retain the existing expressions and values. `assembleDebug`, `detekt` (with the existing
+baseline), `spotlessCheck` and `testDebugUnitTest` passed locally after these edits. A subsequent
+unbaselined Gradle scan using `scripts/kan111-unbaselined.init.gradle` reported 226 findings:
+110 MaxLineLength, 32 MagicNumber, 21 TooGenericExceptionCaught, 19 TooManyFunctions,
+11 ReturnCount, 11 CyclomaticComplexMethod, 8 LongMethod, 8 MatchingDeclarationName,
+3 SwallowedException, 2 UnusedPrivateProperty and 1 LongParameterList. Its scope and configuration
+must be checked before comparing this result directly with the earlier standalone CLI scan.
+The latest follow-up scan using the same Gradle audit method reports 155 findings: 72
+MaxLineLength, 21 TooGenericExceptionCaught, 19 TooManyFunctions, 11 ReturnCount,
+10 CyclomaticComplexMethod, 8 MatchingDeclarationName, 8 LongMethod, 3 SwallowedException,
+2 UnusedPrivateProperty and 1 LongParameterList. No MagicNumber findings were reported in this scan.
+This is not a measurement of overall task completion; baseline review, integration checks,
+branch protection and CI for the current uncommitted changes remain outstanding.
+
+The book listing save flow now retains an uploaded image if an error occurs after the database
+request starts, since a timeout or response error does not prove the write failed. This avoids
+removing an image that a committed listing may reference, at the cost of possible orphaned images.
+The ambiguous network outcome still requires integration testing against a controlled backend.
+PNG detection now checks the full eight-byte signature, with a test for a forged partial signature.
+Signature checking alone does not prove that the remaining file is a decodable or safe image.
+Newly uploaded JPEG, PNG and WebP images use a filename extension matching the detected MIME type.
+The Firestore sample-event seeder now propagates coroutine cancellation instead of returning it as
+an ordinary failure; unit tests cover cancellation and ordinary failures in the shared result helper.
+Firestore event operations and Firebase authentication operations use the same cancellation-aware
+helper. Cancellation of a client request does not guarantee that a remote write was rolled back.
+The lost-and-found upload path also retains the uploaded image once its database request starts;
+this requires controlled-backend integration testing for ambiguous network failures.
+
+GitHub Actions run 43576306526 for committed PR head `437c7c6bdc47173b4311a5cb8772a2d19e84572c`
+completed successfully for all four jobs. Their first-to-last log timestamps span about 3m26s
+for build-debug, 2m06s for unit-tests, 45s for spotless and 40s for detekt. These log spans
+exclude queue time and do not verify the overall workflow duration; they also predate subsequent
+uncommitted changes in this worktree.
+
 - Audit and safely resolve the remaining findings on this `main`-based branch, including stale entries associated with the refactored code. Regenerate and review the baseline only after the remaining fixes are complete.
 - Review the new CI workflow on GitHub. The old quality workflows are manually triggered; the release workflow still runs its existing checks on `main`, so that path has some duplicate Gradle validation. Release signing was not changed.
 - Run final verification, create the requested PR and measure GitHub Actions duration. `clean` removes build outputs and is prohibited by the current no-deletion policy; use `assembleDebug` without `clean` until the user changes that policy.

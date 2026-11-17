@@ -15,7 +15,10 @@ class SignUpUseCaseTest {
             Result.success(SignUpResult(needsEmailConfirmation = true, email = email))
         },
     ) = object : AuthRepository {
-        override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+        override suspend fun authenticate(
+            identifier: String,
+            password: String,
+        ): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
         override suspend fun changePassword(
             studentId: String,

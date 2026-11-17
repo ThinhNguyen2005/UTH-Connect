@@ -66,6 +66,10 @@ enum class ServerErrorCode(val token: String) {
          * Mã hoá một `Throwable` bất kỳ từ tầng data: ưu tiên mã server, rồi lỗi mạng,
          * cuối cùng là `Unknown` để giao diện còn có đường fallback về chuỗi gốc.
          */
-        fun of(error: Throwable?): ServerErrorCode = fromMessage(error?.message) ?: if (error is IOException) Network else Unknown
+        fun of(error: Throwable?): ServerErrorCode = fromMessage(error?.message) ?: if (error is IOException) {
+            Network
+        } else {
+            Unknown
+        }
     }
 }

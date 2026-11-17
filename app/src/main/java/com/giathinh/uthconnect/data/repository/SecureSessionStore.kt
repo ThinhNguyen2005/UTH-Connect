@@ -25,7 +25,10 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
         require(userId.isNotBlank() && refreshToken.isNotBlank())
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key())
-        val encoded = Base64.encodeToString(cipher.iv + cipher.doFinal("$userId\n$refreshToken".toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
+        val encoded = Base64.encodeToString(
+            cipher.iv + cipher.doFinal("$userId\n$refreshToken".toByteArray(Charsets.UTF_8)),
+            Base64.NO_WRAP,
+        )
         check(prefs.edit().putString(KEY_SESSION, encoded).commit()) { "Cannot persist encrypted session" }
     }
 
@@ -37,7 +40,8 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
             require(bytes.size > IV_LENGTH)
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_BITS, bytes.copyOfRange(0, IV_LENGTH)))
-            val parts = cipher.doFinal(bytes.copyOfRange(IV_LENGTH, bytes.size)).toString(Charsets.UTF_8).split('\n', limit = 2)
+            val parts = cipher.doFinal(bytes.copyOfRange(IV_LENGTH, bytes.size))
+                .toString(Charsets.UTF_8).split('\n', limit = 2)
             require(parts.size == 2 && parts.all(String::isNotBlank))
             SavedSession(parts[0], parts[1])
         } catch (error: Exception) {

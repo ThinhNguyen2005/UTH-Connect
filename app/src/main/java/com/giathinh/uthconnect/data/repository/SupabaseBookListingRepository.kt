@@ -69,11 +69,12 @@ class SupabaseBookListingRepository @Inject constructor(
 
             val oldImagePath = existing?.string("image_path")
             var newlyUploadedPath: String? = null
+            var writeStarted = false
 
             try {
                 if (listing.photoUri != null) {
                     val (imageBytes, mimeType) = readAndValidateImage(context, listing.photoUri)
-                    val objectPath = "$uid/$listingId/${UUID.randomUUID()}.jpg"
+                    val objectPath = "$uid/$listingId/${UUID.randomUUID()}.${imageExtension(mimeType)}"
                     client.uploadStorage(BUCKET_NAME, objectPath, mimeType, imageBytes)
                     newlyUploadedPath = objectPath
                 }
@@ -104,6 +105,9 @@ class SupabaseBookListingRepository @Inject constructor(
                     put("updated_at", Instant.now().toString())
                 }
 
+                // Once the request starts, a timeout or mapping error cannot tell us whether
+                // the server committed the row. Keep the image in that ambiguous case.
+                writeStarted = true
                 if (existing != null) {
                     client.patchTable("book_listings?id=eq.${urlEncode(listingId)}", payload)
                 } else {
@@ -117,8 +121,8 @@ class SupabaseBookListingRepository @Inject constructor(
 
                 refresh()
             } catch (error: Exception) {
-                // Compensating cleanup for newly uploaded photo when DB save fails
-                if (newlyUploadedPath != null) {
+                // Only clean up when no database write could have referenced the image.
+                if (!writeStarted && newlyUploadedPath != null) {
                     try {
                         client.deleteStorage(BUCKET_NAME, newlyUploadedPath)
                     } catch (cleanupFailure: Exception) {
@@ -204,24 +208,35 @@ class SupabaseBookListingRepository @Inject constructor(
     companion object {
         const val BUCKET_NAME = "book_listings"
         private const val MAX_PHOTO_BYTES = 5L * 1024 * 1024 // 5 MB
+        private const val MIN_IMAGE_HEADER_BYTES = 12
+        private const val WEBP_FORMAT_OFFSET = 8
+        private const val IMAGE_READ_BUFFER_BYTES = 8192
+        private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+        private val RIFF_SIGNATURE = "RIFF".toByteArray(Charsets.US_ASCII)
+        private val WEBP_SIGNATURE = "WEBP".toByteArray(Charsets.US_ASCII)
+
+        internal fun imageExtension(mimeType: String): String = when (mimeType) {
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> throw IllegalArgumentException("Unsupported image type")
+        }
 
         internal fun validateImageBytes(bytes: ByteArray): Pair<ByteArray, String> {
             require(bytes.size <= MAX_PHOTO_BYTES) { "Image exceeds maximum allowed size (5 MB)" }
-            require(bytes.size >= 12) { "File is too small to be a valid image" }
+            require(bytes.size >= MIN_IMAGE_HEADER_BYTES) { "File is too small to be a valid image" }
 
             val mimeType = when {
                 // JPEG magic bytes: FF D8 FF
                 bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte() -> "image/jpeg"
 
                 // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
-                bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() &&
-                    bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte() -> "image/png"
+                bytes.copyOfRange(0, PNG_SIGNATURE.size).contentEquals(PNG_SIGNATURE) -> "image/png"
 
                 // WebP magic bytes: RIFF....WEBP
-                bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() &&
-                    bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() &&
-                    bytes[8] == 'W'.code.toByte() && bytes[9] == 'E'.code.toByte() &&
-                    bytes[10] == 'B'.code.toByte() && bytes[11] == 'P'.code.toByte() -> "image/webp"
+                bytes.copyOfRange(0, RIFF_SIGNATURE.size).contentEquals(RIFF_SIGNATURE) &&
+                    bytes.copyOfRange(WEBP_FORMAT_OFFSET, WEBP_FORMAT_OFFSET + WEBP_SIGNATURE.size)
+                        .contentEquals(WEBP_SIGNATURE) -> "image/webp"
 
                 else -> error("Invalid image format. Only JPEG, PNG, and WebP are allowed.")
             }
@@ -229,7 +244,7 @@ class SupabaseBookListingRepository @Inject constructor(
         }
 
         internal fun readAndValidateStream(inputStream: InputStream): Pair<ByteArray, String> {
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(IMAGE_READ_BUFFER_BYTES)
             val output = ByteArrayOutputStream()
             var totalRead = 0L
             var bytesRead: Int

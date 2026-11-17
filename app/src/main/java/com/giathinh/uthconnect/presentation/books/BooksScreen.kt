@@ -23,7 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -117,7 +117,10 @@ fun BooksScreen(
             Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.books_back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.books_back),
+                        )
                     }
                     Column {
                         Text(stringResource(R.string.books_title), style = MaterialTheme.typography.headlineSmall)
@@ -865,14 +868,19 @@ private fun FormField(
     )
 }
 
+private const val MIN_CONTACT_PHONE_DIGITS = 8
+
 private fun isValidContact(value: String): Boolean {
     val contact = value.trim()
     return contact.matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) ||
-        (contact.matches(Regex("^[+()0-9\\s-]{8,20}$")) && contact.filter(Char::isDigit).length >= 8)
+        (
+            contact.matches(Regex("^[+()0-9\\s-]{8,20}$")) &&
+                contact.filter(Char::isDigit).length >= MIN_CONTACT_PHONE_DIGITS
+            )
 }
 
 @Composable
-private fun priceText(value: Long?): String = NumberFormat.getNumberInstance(Locale("vi", "VN"))
+private fun priceText(value: Long?): String = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"))
     .format(value ?: 0) + " ₫"
 
 private const val MAX_BOOK_PHOTO_BYTES = 5L * 1024 * 1024

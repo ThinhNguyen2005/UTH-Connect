@@ -39,6 +39,8 @@ enum class EventStatus {
     ;
 
     companion object {
-        fun fromString(value: String?): EventStatus = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: PUBLISHED
+        fun fromString(value: String?): EventStatus = entries.firstOrNull {
+            it.name.equals(value, ignoreCase = true)
+        } ?: PUBLISHED
     }
 }

@@ -15,8 +15,16 @@ class StudentContactValidator {
     private val emailPattern = Regex("[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+")
 
     fun validate(phone: String, email: String, address: String) = ContactValidation(
-        phoneError = if (phone.isNotBlank() && !phonePattern.matches(phone.trim())) ContactFieldError.InvalidPhone else null,
-        emailError = if (email.isNotBlank() && (email.length > 254 || !emailPattern.matches(email.trim()))) ContactFieldError.InvalidEmail else null,
+        phoneError = if (phone.isNotBlank() && !phonePattern.matches(phone.trim())) {
+            ContactFieldError.InvalidPhone
+        } else {
+            null
+        },
+        emailError = if (email.isNotBlank() && (email.length > 254 || !emailPattern.matches(email.trim()))) {
+            ContactFieldError.InvalidEmail
+        } else {
+            null
+        },
         addressError = if (address.length > 200) ContactFieldError.AddressTooLong else null,
     )
 }

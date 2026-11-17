@@ -1,0 +1,22 @@
+// Run with --no-configuration-cache to generate a distinct report on every invocation.
+// Reusing the configuration cache would reuse its captured timestamp and overwrite a report.
+if (gradle.startParameter.configurationCacheRequested) {
+    throw new GradleException("Run this audit with --no-configuration-cache to preserve previous reports")
+}
+gradle.projectsEvaluated {
+    allprojects {
+        tasks.matching { it.name == 'detekt' }.configureEach {
+            baseline.unsetConvention()
+            baseline.unset()
+            ignoreFailures = true
+            reports {
+                xml.required = false
+                html.required = false
+                txt.required = false
+                sarif.required = true
+                sarif.outputLocation = file("$buildDir/reports/kan111-unbaselined-${System.currentTimeMillis()}.sarif")
+                md.required = false
+            }
+        }
+    }
+}

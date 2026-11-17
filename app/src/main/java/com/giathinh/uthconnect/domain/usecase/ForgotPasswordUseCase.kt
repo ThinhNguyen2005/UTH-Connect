@@ -34,7 +34,9 @@ class ForgotPasswordUseCase @Inject constructor(
         }
 
         if (!validator.isUniversityEmail(email)) {
-            return ForgotPasswordOutcome.InvalidEmail("Vui lòng nhập đúng email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)")
+            return ForgotPasswordOutcome.InvalidEmail(
+                "Vui lòng nhập đúng email sinh viên (@ut.edu.vn hoặc @uth.edu.vn)",
+            )
         }
 
         return authRepository.sendPasswordReset(email).fold(
@@ -49,7 +51,8 @@ class ForgotPasswordUseCase @Inject constructor(
                         ForgotPasswordOutcome.RateLimited
 
                     else ->
-                        // Anti-enumeration: treat unknown backend responses as Success unless explicit network/rate limit
+                        // Anti-enumeration: treat unknown backend responses as Success
+                        // unless the response explicitly indicates a network error or rate limit.
                         ForgotPasswordOutcome.Success
                 }
             },

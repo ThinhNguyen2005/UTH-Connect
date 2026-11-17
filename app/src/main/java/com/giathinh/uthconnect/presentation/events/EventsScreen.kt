@@ -221,6 +221,9 @@ private const val CHECKIN_LATE_MINUTES = 30L
 
 /** Sự kiện mới phải bắt đầu tối thiểu chừng này giây nữa, khớp điều kiện `p_start_at > now()`. */
 private const val MIN_LEAD_SECONDS = 60L
+private const val DEFAULT_EVENT_LEAD_MINUTES = 60L
+private const val EVENT_TIME_STEP_MINUTES = 5L
+private const val DEFAULT_EVENT_DURATION_MINUTES = 120L
 
 /**
  * Mặc định của sự kiện mới: bắt đầu sau 60 phút (làm tròn lên bội số 5 phút), kéo dài 120 phút.
@@ -228,9 +231,11 @@ private const val MIN_LEAD_SECONDS = 60L
  * sang hôm sau, vé vẫn hợp lệ nhưng mọi lần quét đều nhận CHECKIN_NOT_OPEN không lời giải thích.
  */
 internal fun defaultEventWindow(zone: ZoneId): Pair<LocalDateTime, LocalDateTime> {
-    val base = LocalDateTime.now(zone).plusMinutes(60).truncatedTo(ChronoUnit.MINUTES)
-    val start = base.plusMinutes((5L - base.minute % 5L) % 5L)
-    return start to start.plusMinutes(120)
+    val base = LocalDateTime.now(zone).plusMinutes(DEFAULT_EVENT_LEAD_MINUTES).truncatedTo(ChronoUnit.MINUTES)
+    val start = base.plusMinutes(
+        (EVENT_TIME_STEP_MINUTES - base.minute % EVENT_TIME_STEP_MINUTES) % EVENT_TIME_STEP_MINUTES,
+    )
+    return start to start.plusMinutes(DEFAULT_EVENT_DURATION_MINUTES)
 }
 
 internal fun parseEditableDateTime(text: String): LocalDateTime? = runCatching {

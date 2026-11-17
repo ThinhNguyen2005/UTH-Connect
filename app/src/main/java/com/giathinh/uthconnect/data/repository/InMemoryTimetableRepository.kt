@@ -12,6 +12,9 @@ import java.time.Clock
 import java.time.LocalDateTime
 import java.util.UUID
 
+private const val FIRST_SESSION_HOUR = 7
+private const val SESSION_SPACING_HOURS = 6
+
 class InMemoryTimetableRepository(clock: Clock) : TimetableRepository {
     private val now = LocalDateTime.now(clock)
     private val today = now.toLocalDate()
@@ -20,7 +23,7 @@ class InMemoryTimetableRepository(clock: Clock) : TimetableRepository {
         Timetable(
             sessions = (0..4).map { index ->
                 val day = if (index < 2) today else tomorrow.plusDays(((index - 2) / 2).toLong())
-                val start = day.atTime(7 + (index % 2) * 6, 0)
+                val start = day.atTime(FIRST_SESSION_HOUR + (index % 2) * SESSION_SPACING_HOURS, 0)
                 ClassSession("session-$index", Course.entries[index % 3], start, start.plusHours(2), "B10$index")
             },
             deadlines = listOf(
@@ -34,7 +37,9 @@ class InMemoryTimetableRepository(clock: Clock) : TimetableRepository {
     override val timetable = state.asStateFlow()
     override fun addDeadline(course: Course, title: String, dueAt: LocalDateTime) {
         require(title.isNotBlank())
-        state.update { it.copy(deadlines = it.deadlines + Deadline(UUID.randomUUID().toString(), course, title.trim(), dueAt)) }
+        state.update {
+            it.copy(deadlines = it.deadlines + Deadline(UUID.randomUUID().toString(), course, title.trim(), dueAt))
+        }
     }
     override fun completeDeadline(id: String) {
         state.update { value ->

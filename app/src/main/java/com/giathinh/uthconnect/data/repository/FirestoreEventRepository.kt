@@ -46,7 +46,7 @@ class FirestoreEventRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
+    override suspend fun getEventDetail(eventId: String): Result<Event?> = suspendResult {
         val doc = firestore.collection(EVENTS_COLLECTION).document(eventId).get().await()
         if (doc.exists()) doc.toEvent() else null
     }
@@ -56,7 +56,7 @@ class FirestoreEventRepository @Inject constructor(
         uid: String,
         studentId: String,
         studentName: String,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = suspendResult {
         val eventRef = firestore.collection(EVENTS_COLLECTION).document(eventId)
         val registrationRef = eventRef.collection(REGISTRATIONS_COLLECTION).document(uid)
 
@@ -90,7 +90,7 @@ class FirestoreEventRepository @Inject constructor(
         }.await()
     }
 
-    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = runCatching {
+    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = suspendResult {
         val eventRef = firestore.collection(EVENTS_COLLECTION).document(eventId)
         val registrationRef = eventRef.collection(REGISTRATIONS_COLLECTION).document(uid)
 

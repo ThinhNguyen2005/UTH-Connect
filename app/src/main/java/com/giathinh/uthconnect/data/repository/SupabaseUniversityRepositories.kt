@@ -35,6 +35,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val universityZone = ZoneId.of("Asia/Ho_Chi_Minh")
+private const val MAX_PINNED_HOME_BANNERS = 5
 
 private fun JsonObject.decimal(key: String): Float? = get(key)?.jsonPrimitive?.floatOrNull
 
@@ -85,7 +86,14 @@ class SupabaseStudentGradeRepository @Inject constructor(
     override fun getCumulativeGpa(): Flow<Float> = flow {
         val grades = loadGrades().filter { it.credits > 0 && it.letterGrade.isNotBlank() }
         val totalCredits = grades.sumOf { it.credits }
-        emit(if (totalCredits == 0) 0f else grades.sumOf { it.totalScore4.toDouble() * it.credits }.div(totalCredits).toFloat())
+        emit(
+            if (totalCredits == 0) {
+                0f
+            } else {
+                grades.sumOf { it.totalScore4.toDouble() * it.credits }
+                    .div(totalCredits).toFloat()
+            },
+        )
     }
 }
 
@@ -178,7 +186,8 @@ class SupabaseAnnouncementRepository @Inject constructor(
         val notices = client.table("notifications?select=*&order=is_pinned.desc,published_at.desc&limit=50")
             .jsonArray.map { it.jsonObject.toUniversityNotification() }
         HomeFeed(
-            banners = notices.filter { it.isPinned }.take(5).map { HomeBanner(it.asAnnouncement()) },
+            banners = notices.filter { it.isPinned }.take(MAX_PINNED_HOME_BANNERS)
+                .map { HomeBanner(it.asAnnouncement()) },
             latest = notices.map { it.asAnnouncement() },
         )
     }

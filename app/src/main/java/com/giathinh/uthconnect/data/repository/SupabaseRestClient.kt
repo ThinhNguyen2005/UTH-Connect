@@ -28,6 +28,8 @@ private const val MILLISECONDS_PER_SECOND = 1_000L
 private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_NOT_FOUND = 404
+private const val HTTP_SUCCESS_MIN = 200
+private const val HTTP_SUCCESS_MAX = 299
 private val SUCCESSFUL_HTTP_STATUSES = 200..299
 
 @Singleton
@@ -141,7 +143,12 @@ class SupabaseRestClient @Inject constructor() {
                 },
             )
         }
-        val response = send(if (redirectTo.isBlank()) "/auth/v1/signup" else "/auth/v1/signup?redirect_to=$encodedRedirect", "POST", payload, bearer = null).jsonObject
+        val response = send(
+            if (redirectTo.isBlank()) "/auth/v1/signup" else "/auth/v1/signup?redirect_to=$encodedRedirect",
+            "POST",
+            payload,
+            bearer = null,
+        ).jsonObject
         if (response.containsKey("access_token") && response.containsKey("user")) {
             credentials = parseCredentials(response)
         }
@@ -248,7 +255,11 @@ class SupabaseRestClient @Inject constructor() {
     suspend fun deleteTable(path: String): JsonElement = authorized("/rest/v1/$path", "DELETE")
 
     /** Invokes an authenticated Postgres RPC function. */
-    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized("/rest/v1/rpc/$function", "POST", params)
+    suspend fun rpc(function: String, params: JsonObject): JsonElement = authorized(
+        "/rest/v1/rpc/$function",
+        "POST",
+        params,
+    )
 
     /** Upload nhị phân lên Storage; path phải thuộc thư mục `auth.uid()` để qua RLS. */
     suspend fun uploadStorageObject(bucket: String, path: String, bytes: ByteArray, contentType: String) {
@@ -395,7 +406,7 @@ class SupabaseRestClient @Inject constructor() {
         val connection = (URL(BuildConfig.SUPABASE_URL + "/storage/v1" + path).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = method
-            connection.connectTimeout = 15_000
+            connection.connectTimeout = REQUEST_TIMEOUT_MS
             connection.readTimeout = STORAGE_READ_TIMEOUT_MS
             connection.setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             connection.setRequestProperty("Authorization", "Bearer $accessToken")
@@ -405,7 +416,7 @@ class SupabaseRestClient @Inject constructor() {
                 connection.outputStream.use { it.write(body) }
             }
             val status = connection.responseCode
-            if (status !in 200..299) {
+            if (status !in HTTP_SUCCESS_MIN..HTTP_SUCCESS_MAX) {
                 val message = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 throw SupabaseHttpException(status, message.ifBlank { "Storage HTTP $status" })
             }

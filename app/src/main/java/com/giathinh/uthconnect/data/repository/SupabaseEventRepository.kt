@@ -51,7 +51,9 @@ class SupabaseEventRepository @Inject constructor(
 
     override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = revision.map {
         if (uid != client.userId) return@map false
-        client.table("registrations?select=status&event_id=eq.${urlEncode(uuid(eventId))}&user_id=eq.${urlEncode(uuid(uid))}")
+        client.table(
+            "registrations?select=status&event_id=eq.${urlEncode(uuid(eventId))}&user_id=eq.${urlEncode(uuid(uid))}",
+        )
             .jsonArray.any { row -> row.jsonObject.string("status") == "REGISTERED" }
     }
 
@@ -62,7 +64,10 @@ class SupabaseEventRepository @Inject constructor(
         studentName = "",
     )
 
-    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = cancelRegistration(eventId, client.userId)
+    override suspend fun cancelCurrentRegistration(eventId: String): Result<Unit> = cancelRegistration(
+        eventId,
+        client.userId,
+    )
 
     override fun currentUserRegistrations(): Flow<Set<String>> = revision.map {
         client.table("registrations?select=event_id&status=eq.REGISTERED&user_id=eq.${urlEncode(uuid(client.userId))}")

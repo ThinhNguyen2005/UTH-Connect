@@ -57,7 +57,11 @@ class DemoAuthRepository @Inject constructor(
     }
 
     /** Keep original V2 student preference keys unchanged for backwards compatibility. */
-    private fun key(base: StudentProfile, field: String): String = if (base.studentId == student.studentId) field else "organizer_$field"
+    private fun key(base: StudentProfile, field: String): String = if (base.studentId == student.studentId) {
+        field
+    } else {
+        "organizer_$field"
+    }
 
     private fun profile(base: StudentProfile): StudentProfile = base.copy(
         phoneNumber = store.getString(key(base, "phone")).orEmpty(),
@@ -87,7 +91,7 @@ class DemoAuthRepository @Inject constructor(
     }
 
     override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = withContext(Dispatchers.Default) {
-        runCatching {
+        suspendResult {
             mutex.withLock {
                 val base = listOf(student, organizer).firstOrNull {
                     identifier == it.studentId || identifier.equals(it.email, ignoreCase = true)
@@ -97,7 +101,7 @@ class DemoAuthRepository @Inject constructor(
         }
     }
 
-    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
+    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = suspendResult {
         mutex.withLock { baseFor(studentId)?.let(::profile) }
     }
 
@@ -106,7 +110,7 @@ class DemoAuthRepository @Inject constructor(
         oldPassword: String,
         newPassword: String,
     ): Result<Boolean> = withContext(Dispatchers.Default) {
-        runCatching {
+        suspendResult {
             mutex.withLock {
                 val base = baseFor(studentId) ?: return@withLock false
                 if (!passwordMatches(base, oldPassword)) return@withLock false
@@ -130,7 +134,7 @@ class DemoAuthRepository @Inject constructor(
         phone: String,
         personalEmail: String,
         currentAddress: String,
-    ): Result<StudentProfile> = runCatching {
+    ): Result<StudentProfile> = suspendResult {
         mutex.withLock {
             val base = requireNotNull(baseFor(studentId)) { "Unknown student" }
             check(

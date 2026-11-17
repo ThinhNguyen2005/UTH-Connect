@@ -21,12 +21,12 @@ class FirebaseAuthRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) : AuthRepository {
 
-    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = runCatching {
-        val targetEmail = resolveEmail(identifier) ?: return@runCatching null
+    override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = suspendResult {
+        val targetEmail = resolveEmail(identifier) ?: return@suspendResult null
 
         try {
             val authResult = firebaseAuth.signInWithEmailAndPassword(targetEmail, password).await()
-            val firebaseUser = authResult.user ?: return@runCatching null
+            val firebaseUser = authResult.user ?: return@suspendResult null
 
             fetchProfileFromFirestore(firebaseUser.uid, identifier, targetEmail)
         } catch (_: FirebaseAuthInvalidUserException) {
@@ -42,7 +42,7 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
-    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = runCatching {
+    override suspend fun findStudent(studentId: String): Result<StudentProfile?> = suspendResult {
         val snapshot = firestore.collection(USERS_COLLECTION)
             .whereEqualTo(FIELD_STUDENT_ID, studentId)
             .limit(1)
@@ -61,15 +61,15 @@ class FirebaseAuthRepository @Inject constructor(
         studentId: String,
         oldPassword: String,
         newPassword: String,
-    ): Result<Boolean> = runCatching {
-        val email = resolveEmail(studentId) ?: return@runCatching false
+    ): Result<Boolean> = suspendResult {
+        val email = resolveEmail(studentId) ?: return@suspendResult false
 
         // Firebase yeu cau re-authenticate truoc khi doi mat khau: dang nhap lai
         // bang mat khau cu vua de lay token moi, vua de kiem tra mat khau cu dung.
         try {
             firebaseAuth.signInWithEmailAndPassword(email, oldPassword).await()
         } catch (e: FirebaseAuthException) {
-            return@runCatching when (e.errorCode) {
+            return@suspendResult when (e.errorCode) {
                 "ERROR_WRONG_PASSWORD",
                 "ERROR_INVALID_CREDENTIALS",
                 "ERROR_USER_NOT_FOUND",
@@ -80,7 +80,7 @@ class FirebaseAuthRepository @Inject constructor(
             }
         }
 
-        val user = firebaseAuth.currentUser ?: return@runCatching false
+        val user = firebaseAuth.currentUser ?: return@suspendResult false
         user.updatePassword(newPassword).await()
         true
     }

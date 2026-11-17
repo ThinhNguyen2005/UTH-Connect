@@ -71,6 +71,8 @@ enum class UthDestination(
          * Tab chỉ được xác định bằng destination hiện tại của back stack, không bằng
          * biến state riêng. `hasRoute` so theo @Serializable class — không parse chuỗi.
          */
-        fun from(destination: NavDestination?): UthDestination? = destination?.let { cur -> entries.firstOrNull { cur.hasRoute(it.routeClass) } }
+        fun from(destination: NavDestination?): UthDestination? = destination?.let { cur ->
+            entries.firstOrNull { cur.hasRoute(it.routeClass) }
+        }
     }
 }

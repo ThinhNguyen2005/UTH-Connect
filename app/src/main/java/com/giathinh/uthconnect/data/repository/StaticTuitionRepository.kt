@@ -6,6 +6,8 @@ import com.giathinh.uthconnect.domain.repository.TuitionRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val SAMPLE_COURSE_CREDITS = 3
+
 @Singleton
 class StaticTuitionRepository @Inject constructor() : TuitionRepository {
 
@@ -19,12 +21,12 @@ class StaticTuitionRepository @Inject constructor() : TuitionRepository {
             creditsCount = 18,
             dueDate = "15/11/2025",
             courses = listOf(
-                TuitionCourse("IT001", "Lập trình thiết bị di động", 3, "2.100.000 VNĐ"),
-                TuitionCourse("IT002", "Kiến trúc & Thiết kế phần mềm", 3, "2.100.000 VNĐ"),
-                TuitionCourse("IT003", "Kiểm thử & Đảm bảo chất lượng", 3, "2.100.000 VNĐ"),
-                TuitionCourse("IT004", "Công nghệ phần mềm chuyên sâu", 3, "2.100.000 VNĐ"),
-                TuitionCourse("IT005", "Đồ án chuyên ngành KTPM", 3, "2.100.000 VNĐ"),
-                TuitionCourse("GE006", "Kỹ năng nghề nghiệp & Giao tiếp", 3, "2.150.000 VNĐ"),
+                TuitionCourse("IT001", "Lập trình thiết bị di động", SAMPLE_COURSE_CREDITS, "2.100.000 VNĐ"),
+                TuitionCourse("IT002", "Kiến trúc & Thiết kế phần mềm", SAMPLE_COURSE_CREDITS, "2.100.000 VNĐ"),
+                TuitionCourse("IT003", "Kiểm thử & Đảm bảo chất lượng", SAMPLE_COURSE_CREDITS, "2.100.000 VNĐ"),
+                TuitionCourse("IT004", "Công nghệ phần mềm chuyên sâu", SAMPLE_COURSE_CREDITS, "2.100.000 VNĐ"),
+                TuitionCourse("IT005", "Đồ án chuyên ngành KTPM", SAMPLE_COURSE_CREDITS, "2.100.000 VNĐ"),
+                TuitionCourse("GE006", "Kỹ năng nghề nghiệp & Giao tiếp", SAMPLE_COURSE_CREDITS, "2.150.000 VNĐ"),
             ),
         ),
     )

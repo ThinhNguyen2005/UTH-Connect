@@ -12,8 +12,14 @@ class UnavailableBookListingRepository @Inject constructor() : BookListingReposi
     override fun observeListings(): Flow<List<BookListing>> = flow {
         throw IllegalStateException("Book marketplace requires authentication")
     }
-    override suspend fun saveListing(listing: BookListing): Result<Unit> = Result.failure(IllegalStateException("Book marketplace requires authentication"))
-    override suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> = Result.failure(IllegalStateException("Book marketplace requires authentication"))
-    override suspend fun deleteListing(id: String): Result<Unit> = Result.failure(IllegalStateException("Book marketplace requires authentication"))
+    override suspend fun saveListing(listing: BookListing): Result<Unit> = Result.failure(
+        IllegalStateException("Book marketplace requires authentication"),
+    )
+    override suspend fun updateStatus(id: String, status: BookListingStatus): Result<Unit> = Result.failure(
+        IllegalStateException("Book marketplace requires authentication"),
+    )
+    override suspend fun deleteListing(id: String): Result<Unit> = Result.failure(
+        IllegalStateException("Book marketplace requires authentication"),
+    )
     override fun refresh() = Unit
 }

@@ -9,7 +9,9 @@ class StudentContactValidatorTest {
 
     @Test fun `accept optional empty contact`() = assertTrue(validator.validate("", "", "").valid)
 
-    @Test fun `accept vietnam phone and personal email`() = assertTrue(validator.validate("0912345678", "user@gmail.com", "123 Main Road").valid)
+    @Test fun `accept vietnam phone and personal email`() = assertTrue(
+        validator.validate("0912345678", "user@gmail.com", "123 Main Road").valid,
+    )
 
     @Test fun `reject invalid phone`() = assertEquals(
         ContactFieldError.InvalidPhone,
