@@ -42,10 +42,26 @@ export async function deleteListingWithImages(
   const expectedOrigin = client?.supabaseUrl;
   const paths = housingImagePaths(images, expectedOrigin);
   if (paths.length) {
-    const { data, error } = await client.storage.from(BUCKET).remove(paths);
+    const storageApi = client.storage.from(BUCKET);
+    const { data, error } = await storageApi.remove(paths);
     if (error) throw error;
-    if (!paths.every(path => data?.some((file: { name: string }) => file.name === path))) {
-      throw new Error("HOUSING_IMAGE_DELETE_INCOMPLETE");
+    const deleted = new Set((data || []).map((file: { name: string }) => file.name));
+    const unconfirmed = paths.filter(path => !deleted.has(path));
+
+    if (unconfirmed.length > 0) {
+      if (typeof storageApi.list !== "function") {
+        throw new Error("HOUSING_IMAGE_DELETE_INCOMPLETE");
+      }
+      for (const path of unconfirmed) {
+        const lastSlash = path.lastIndexOf("/");
+        const folder = lastSlash >= 0 ? path.substring(0, lastSlash) : "";
+        const fileName = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+        const { data: listed, error: listError } = await storageApi.list(folder, { search: fileName });
+        if (listError) throw listError;
+        if (listed?.some((f: { name: string }) => f.name === fileName)) {
+          throw new Error("HOUSING_IMAGE_DELETE_INCOMPLETE");
+        }
+      }
     }
   }
   const { error } = await client.rpc("delete_housing_listing", { p_listing_id: listingId });

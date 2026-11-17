@@ -109,10 +109,11 @@ test('RPC quản trị luôn kiểm tra admin và không cấp quyền cho anon'
   assert.ok(!sql.includes('delete from storage.objects'));
 });
 
-test('Migration 20261117 kiểm tra updated_at và ràng buộc ownership/path trong trg_housing_url_guards', () => {
+test('Migration 20261117 kiểm tra updated_at, dọn dẹp key cũ và ràng buộc ownership/path trong trg_housing_url_guards', () => {
   const sql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261117000000_housing_approval_revision.sql'), 'utf8');
   assert.ok(sql.includes('p_reviewed_updated_at'));
   assert.ok(sql.includes('HOUSING_LISTING_CHANGED'));
+  assert.ok(sql.includes('update public.housing_posts'));
   assert.ok(sql.includes('HOUSING_IMAGE_OWNERSHIP_INVALID'));
   assert.ok(sql.includes('HOUSING_IMAGE_PATH_INVALID'));
   assert.ok(sql.includes("new.author_id::text || '/'"));
@@ -215,6 +216,42 @@ test('deleteListingWithImages giữ bản ghi nếu storage không xóa đủ �
   };
   await assert.rejects(() => deleteListingWithImages(client, 'p', [`${IMG}/uid/a.jpg`]));
   assert.deepEqual(calls, ['remove']);
+});
+
+test('deleteListingWithImages thử lại thành công khi ảnh đã được xóa ở lần gọi trước (key đã vắng mặt)', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: {
+      from: bucket => ({
+        remove: async paths => { calls.push(['remove', bucket, paths]); return { data: [], error: null }; },
+        list: async (folder, opts) => { calls.push(['list', folder, opts]); return { data: [], error: null }; },
+      }),
+    },
+    rpc: async (fn, args) => { calls.push(['rpc', fn, args]); return { error: null }; },
+  };
+  await deleteListingWithImages(client, 'post-1', [`${IMG}/uid/a.jpg`]);
+  assert.deepEqual(calls, [
+    ['remove', 'housing-images', ['uid/a.jpg']],
+    ['list', 'uid', { search: 'a.jpg' }],
+    ['rpc', 'delete_housing_listing', { p_listing_id: 'post-1' }],
+  ]);
+});
+
+test('deleteListingWithImages giữ bản ghi nếu key chưa xóa vẫn còn tồn tại trong storage', async () => {
+  const { deleteListingWithImages } = loadHelper();
+  const calls = [];
+  const client = {
+    storage: {
+      from: () => ({
+        remove: async () => ({ data: [], error: null }),
+        list: async () => ({ data: [{ name: 'a.jpg' }], error: null }),
+      }),
+    },
+    rpc: async () => { calls.push('rpc'); return { error: null }; },
+  };
+  await assert.rejects(() => deleteListingWithImages(client, 'p', [`${IMG}/uid/a.jpg`]), /HOUSING_IMAGE_DELETE_INCOMPLETE/);
+  assert.equal(calls.length, 0);
 });
 
 test('deleteListingWithImages tin không ảnh chỉ gọi rpc xóa bản ghi', async () => {

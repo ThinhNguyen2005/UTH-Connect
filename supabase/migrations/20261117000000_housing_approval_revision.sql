@@ -37,6 +37,21 @@ $$;
 revoke all on function public.approve_housing_listing(uuid, timestamptz) from public, anon;
 grant execute on function public.approve_housing_listing(uuid, timestamptz) to authenticated;
 
+-- Dọn dẹp key ảnh cũ chứa %, .. hoặc không thuộc về author_id của tin trước khi bật guard mới
+update public.housing_posts
+set
+    images = coalesce(
+        (
+            select array_agg(img order by ord)
+            from unnest(images) with ordinality as t(img, ord)
+            where img ~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/'
+              and split_part(regexp_replace(img, '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/', ''), '?', 1) !~ '(%|\.\.)'
+              and split_part(regexp_replace(img, '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/', ''), '?', 1) ~ ('^' || author_id::text || '/')
+        ),
+        '{}'
+    )
+where images is not null and images <> '{}';
+
 -- Ràng buộc quyền sở hữu key và chống path traversal trong URL ảnh
 create or replace function public.trg_housing_url_guards()
 returns trigger
