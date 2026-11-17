@@ -261,12 +261,11 @@ Deno.serve(async (request) => {
       staleGroups.set(attempts, [...(staleGroups.get(attempts) ?? []), row.id]);
     }
     for (const [attempts, ids] of staleGroups) {
-      const terminal = attempts >= MAX_PUSH_ATTEMPTS;
       await patchInboxRows(
         ids,
         {
-          push_status: terminal ? "FAILED" : "PENDING",
-          push_retry_at: terminal || attempts === 0
+          push_status: "PENDING",
+          push_retry_at: attempts === 0
             ? null
             : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (attempts - 1)).toISOString(),
           push_claimed_at: null,
@@ -340,6 +339,16 @@ Deno.serve(async (request) => {
               rowDeferred = true;
               break;
             }
+            if (rowAttempts >= MAX_PUSH_ATTEMPTS) {
+              console.warn("Skipping device after FCM retries were exhausted", device.device_id);
+              await persistDeviceProgress(row.id, device.device_id);
+              rowAttempts = 0;
+              attemptCounted = false;
+              cursorBeforeAttempt = device.device_id;
+              attemptsSinceProgress.delete(row.id);
+              processedDevices++;
+              continue;
+            }
             ensureWithinDeadline(deadline);
             accessToken ??= await getFcmAccessToken(deadline);
             let result: FcmResult;
@@ -378,18 +387,20 @@ Deno.serve(async (request) => {
             } else {
               rowFailed = true;
             }
+            if (rowFailed && !deferred && rowAttempts >= MAX_PUSH_ATTEMPTS) {
+              console.warn("Skipping device after FCM retries were exhausted", device.device_id);
+              await persistDeviceProgress(row.id, device.device_id);
+              rowFailed = false;
+              rowAttempts = 0;
+              attemptCounted = false;
+              cursorBeforeAttempt = device.device_id;
+              retryAt = null;
+              attemptsSinceProgress.delete(row.id);
+              processedDevices++;
+              continue;
+            }
             if (rowFailed) break;
-            await patchInboxRows(
-              [row.id],
-              {
-                push_device_cursor: device.device_id,
-                push_claimed_at: new Date().toISOString(),
-                push_attempts: 0,
-              },
-              "&push_status=eq.PROCESSING",
-              false,
-              cleanupDeadline(),
-            );
+            await persistDeviceProgress(row.id, device.device_id);
             rowAttempts = 0;
             attemptCounted = false;
             cursorBeforeAttempt = device.device_id;
@@ -398,17 +409,14 @@ Deno.serve(async (request) => {
           }
 
           if (rowFailed) {
-            const terminal = rowAttempts >= MAX_PUSH_ATTEMPTS;
             await patchInboxRows(
               [row.id],
               {
-                push_status: terminal ? "FAILED" : "PENDING",
+                push_status: "PENDING",
                 push_attempts: rowAttempts,
-                push_retry_at: terminal
-                  ? null
-                  : new Date(
-                    retryAt ?? Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1),
-                  ).toISOString(),
+                push_retry_at: new Date(
+                  retryAt ?? Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (rowAttempts - 1),
+                ).toISOString(),
                 push_claimed_at: null,
               },
               "&push_status=eq.PROCESSING",
@@ -417,7 +425,7 @@ Deno.serve(async (request) => {
             );
             heldClaimIds.delete(row.id);
             attemptsSinceProgress.delete(row.id);
-            if (!terminal) pendingTotal++;
+            pendingTotal++;
             if (deferred) break;
           } else if (rowDeferred || hasMoreDevices) {
             await patchInboxRows(
@@ -500,16 +508,15 @@ Deno.serve(async (request) => {
             recoveryGroups.set(key, group);
           }
           await Promise.all([...recoveryGroups.values()].map((group) => {
-            const terminal = !group.progressSaved && group.attempts >= MAX_PUSH_ATTEMPTS;
             const cursorFilter = group.cursor === null
               ? "&push_device_cursor=is.null"
               : `&push_device_cursor=eq.${encodeURIComponent(group.cursor)}`;
             return patchInboxRows(
               group.ids,
               {
-                push_status: terminal ? "FAILED" : "PENDING",
+                push_status: "PENDING",
                 push_attempts: group.attempts,
-                push_retry_at: group.progressSaved || group.attempts === 0 || terminal
+                push_retry_at: group.progressSaved || group.attempts === 0
                   ? null
                   : new Date(Date.now() + PUSH_RETRY_DELAY_MS * 2 ** (group.attempts - 1)).toISOString(),
                 push_claimed_at: null,
@@ -827,6 +834,20 @@ function ensureWithinDeadline(deadline: number, additionalDelayMs = 0) {
 
 function pushRetryDueFilter(): string {
   return `or=(push_retry_at.is.null,push_retry_at.lte.${encodeURIComponent(new Date().toISOString())})`;
+}
+
+async function persistDeviceProgress(rowId: string, deviceId: string): Promise<void> {
+  await patchInboxRows(
+    [rowId],
+    {
+      push_device_cursor: deviceId,
+      push_claimed_at: new Date().toISOString(),
+      push_attempts: 0,
+    },
+    "&push_status=eq.PROCESSING",
+    false,
+    cleanupDeadline(),
+  );
 }
 
 async function getFcmAccessToken(deadline: number): Promise<string> {

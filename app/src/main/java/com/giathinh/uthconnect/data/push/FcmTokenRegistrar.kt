@@ -102,33 +102,48 @@ class FcmTokenRegistrar @Inject constructor(
     /** Queues a token rotation update received by FirebaseMessagingService. */
     @Suppress("ReturnCount", "UNUSED_PARAMETER")
     fun onTokenRefreshed(token: String) {
-        synchronized(registrationStateLock) {
-            if (signOutInProgress) return
+        var queuedUserId: String? = null
+        while (true) {
+            val userIdToQueue = registrationRetryUserId()
+            if (userIdToQueue != null && userIdToQueue != queuedUserId) {
+                enqueueDurableRegistrationRetry(userIdToQueue)
+                queuedUserId = userIdToQueue
+            }
+            if (scheduleRegistrationAfterTokenRefresh(queuedUserId)) return
+        }
+    }
 
-            val userId = client.userIdOrNull ?: rememberedSessionUserId()
-            if (userId != null) enqueueDurableRegistrationRetry(userId)
+    private fun registrationRetryUserId(): String? = synchronized(registrationStateLock) {
+        if (signOutInProgress) null else client.userIdOrNull ?: rememberedSessionUserId()
+    }
+
+    private fun scheduleRegistrationAfterTokenRefresh(queuedUserId: String?): Boolean {
+        return synchronized(registrationStateLock) {
+            if (signOutInProgress) return@synchronized true
+            val currentUserId = client.userIdOrNull ?: rememberedSessionUserId()
+            if (currentUserId != queuedUserId) return@synchronized false
 
             val signedInUserId = client.userIdOrNull
             if (signedInUserId != null) {
                 if (!registrationEnabled) {
                     registerForSignedInUserLocked()
-                    return
+                    return@synchronized true
                 }
                 val rotationPending = preferences.getBoolean(KEY_ROTATION_PENDING, false)
-                if (rotationPending && registrationJob?.isActive == true) return
+                if (rotationPending && registrationJob?.isActive == true) return@synchronized true
                 val generation = ++registrationGeneration
                 pendingRetryJob?.cancel()
                 if (!rotationPending) registrationJob?.cancel()
                 registrationJob = scope.launch {
                     retryRegistration(generation, signedInUserId) { registerToken(signedInUserId) }
                 }
-                return
+            } else {
+                restorePending = true
+                if (canStartRestoreLocked()) {
+                    registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
+                }
             }
-
-            restorePending = true
-            if (canStartRestoreLocked()) {
-                registrationJob = scope.launch { restoreAndRegisterIfAvailable() }
-            }
+            true
         }
     }
 

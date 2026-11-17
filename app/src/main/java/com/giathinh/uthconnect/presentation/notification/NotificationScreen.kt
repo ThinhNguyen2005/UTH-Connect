@@ -96,11 +96,13 @@ fun NotificationScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // Thanh bộ lọc dạng Chip ngang
-            NotificationFilterChipsRow(
-                uiState = uiState,
-                onSelectCategory = { onAction(NotificationAction.SelectCategory(it)) },
-            )
+            if (uiState.detailId == null) {
+                // Thanh bộ lọc dạng Chip ngang
+                NotificationFilterChipsRow(
+                    uiState = uiState,
+                    onSelectCategory = { onAction(NotificationAction.SelectCategory(it)) },
+                )
+            }
 
             if (uiState.detailId != null) {
                 when {
