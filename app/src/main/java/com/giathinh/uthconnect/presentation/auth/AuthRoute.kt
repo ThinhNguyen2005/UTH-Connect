@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.BuildConfig
-import com.giathinh.uthconnect.MainActivity
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.data.repository.GoogleIdTokenResult
 import com.giathinh.uthconnect.data.repository.GoogleIdTokenSource
@@ -39,13 +38,13 @@ fun AuthRoute(
     val googleIdTokens = rememberGoogleIdTokenSource()
     val snackbars = remember { SnackbarHostState() }
     val activity = findAuthActivity(context)
-    val mainActivity = activity as? MainActivity
-    val pendingDeepLink = mainActivity?.pendingAuthDeepLink
 
-    LaunchedEffect(pendingDeepLink) {
-        val uri = pendingDeepLink ?: return@LaunchedEffect
-        viewModel.onAction(AuthAction.HandleDeepLink(uri.toString()))
-        mainActivity?.clearAuthDeepLink(uri)
+    LaunchedEffect(activity?.intent) {
+        val uri = activity?.intent?.data
+        if (uri != null) {
+            viewModel.onAction(AuthAction.HandleDeepLink(uri.toString()))
+            activity.intent?.data = null
+        }
     }
 
     LaunchedEffect(viewModel, context) {

@@ -37,7 +37,7 @@ object AuthDeepLinkParser {
             val isRecovery = uriString.contains("reset-password") || params["type"] == "recovery"
             val message = when (errorCode) {
                 "otp_expired" -> "Liên kết đã hết hạn hoặc đã được sử dụng trước đó. Vui lòng gửi lại yêu cầu mới."
-                else -> errorDesc ?: "Liên kết xác thực không hợp lệ hoặc đã hết hạn."
+                else -> errorDesc?.let { decodeUrl(it) } ?: "Liên kết xác thực không hợp lệ hoặc đã hết hạn."
             }
             return AuthDeepLinkTarget.Error(message = message, isRecovery = isRecovery)
         }
@@ -67,7 +67,7 @@ object AuthDeepLinkParser {
         if (segment.isBlank()) return
         segment.split('&').forEach { param ->
             val parts = param.split('=', limit = 2)
-            if (parts.size == 2) out[parts[0]] = decodeUrl(parts[1])
+            if (parts.size == 2) out[parts[0]] = parts[1]
         }
     }
 
@@ -84,10 +84,6 @@ object AuthDeepLinkParser {
             is AuthDeepLinkTarget.Error -> handleError(target, uiState, events, scope)
             AuthDeepLinkTarget.Unknown -> Unit
         }
-    }
-
-    fun cancelPendingRequest() {
-        activeRequestId++
     }
 
     private fun handleError(
@@ -117,14 +113,6 @@ object AuthDeepLinkParser {
         scope: CoroutineScope,
     ) {
         val requestId = ++activeRequestId
-        uiState.update {
-            it.copy(
-                screenStep = AuthScreenStep.ResetPassword,
-                recoveryAccessToken = null,
-                resetPasswordError = null,
-                showManualOtpField = false,
-            )
-        }
         val accessToken = target.accessToken
         val tokenHash = target.tokenHash
         if (!accessToken.isNullOrBlank()) {

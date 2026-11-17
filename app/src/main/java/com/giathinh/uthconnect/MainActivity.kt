@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -63,8 +62,6 @@ class MainActivity : ComponentActivity() {
      */
     private var themeMode by mutableStateOf(ThemeMode.SYSTEM)
     private var pushNotificationId by mutableStateOf<String?>(null)
-    var pendingAuthDeepLink by mutableStateOf<Uri?>(null)
-        private set
     private var appAvailability by mutableStateOf<AppAvailability?>(null)
     private var updateUrlState by mutableStateOf("")
     private var isCheckingAvailability by mutableStateOf(false)
@@ -93,20 +90,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingAuthDeepLink = intent.data
         pushNotificationId = intent.getStringExtra(PushIntentContract.NOTIFICATION_ID)
-    }
-
-    fun clearAuthDeepLink(uri: Uri) {
-        if (pendingAuthDeepLink == uri) {
-            pendingAuthDeepLink = null
-            if (intent?.data == uri) intent?.data = null
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pendingAuthDeepLink = intent?.data
         createNotificationChannel()
         pushNotificationId = intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
         enableEdgeToEdge()

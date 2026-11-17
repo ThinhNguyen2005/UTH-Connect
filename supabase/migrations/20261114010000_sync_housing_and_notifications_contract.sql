@@ -49,7 +49,7 @@ begin
     end if;
 
     -- Kiểm tra regex bucket cho toàn bộ URL ảnh
-    foreach v_image in array array_cat(coalesce(new.image_urls, '{}'), coalesce(new.images, '{}')) loop
+    foreach v_image in array coalesce(new.image_urls, new.images, '{}') loop
         if v_image !~ '^https://[a-z0-9-]+[.]supabase[.]co/storage/v1/object/public/housing-images/' then
             raise exception 'HOUSING_IMAGE_BUCKET_INVALID' using errcode = 'P0001';
         end if;
