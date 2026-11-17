@@ -87,6 +87,11 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(newBase)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        pushNotificationId?.let { outState.putString(STATE_PENDING_PUSH_NOTIFICATION_ID, it) }
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -98,11 +103,12 @@ class MainActivity : ComponentActivity() {
         createNotificationChannel()
         val launchedFromHistory =
             (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
-        pushNotificationId = if (savedInstanceState == null && !launchedFromHistory) {
-            intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
-        } else {
-            null
-        }
+        pushNotificationId = savedInstanceState?.getString(STATE_PENDING_PUSH_NOTIFICATION_ID)
+            ?: if (savedInstanceState == null && !launchedFromHistory) {
+                intent?.getStringExtra(PushIntentContract.NOTIFICATION_ID)
+            } else {
+                null
+            }
         enableEdgeToEdge()
         observeThemeMode()
         observeRemoteConfig()
@@ -265,6 +271,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val STATE_PENDING_PUSH_NOTIFICATION_ID = "pending_push_notification_id"
         internal const val RELEASE_FETCH_INTERVAL_SECONDS = 3600L
     }
 }
