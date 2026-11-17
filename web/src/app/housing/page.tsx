@@ -109,9 +109,12 @@ export default function HousingPostsPage() {
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div className="text-xs font-medium text-slate-700 truncate max-w-[130px]">
-                  {post.profiles?.display_name || "Sinh viên UTH"}
-                </div>
+                <Link
+                  href={`/housing/${post.id}`}
+                  className="text-xs font-medium text-slate-700 hover:text-slate-900 hover:underline underline-offset-2 transition"
+                >
+                  Xem chi tiết →
+                </Link>
 
                 <div className="flex items-center gap-1">
                   {post.contact_phone && (
