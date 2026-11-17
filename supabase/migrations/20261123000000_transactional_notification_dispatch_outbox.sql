@@ -29,8 +29,12 @@ begin
       should_enqueue := old.published_at > statement_timestamp()
         and new.published_at <= statement_timestamp();
     end if;
-  elsif tg_table_name = 'housing_posts' and tg_op = 'INSERT' then
-    should_enqueue := new.status = 'OPEN';
+  elsif tg_table_name = 'housing_posts' then
+    if tg_op = 'INSERT' then
+      should_enqueue := new.status = 'OPEN';
+    else
+      should_enqueue := new.status = 'OPEN' and old.status is distinct from 'OPEN';
+    end if;
   end if;
 
   if not should_enqueue then
@@ -79,5 +83,5 @@ create trigger enqueue_notification_dispatch_outbox
 
 drop trigger if exists enqueue_notification_dispatch_outbox on public.housing_posts;
 create trigger enqueue_notification_dispatch_outbox
-  after insert on public.housing_posts
+  after insert or update of status on public.housing_posts
   for each row execute function private.enqueue_notification_dispatch_outbox();

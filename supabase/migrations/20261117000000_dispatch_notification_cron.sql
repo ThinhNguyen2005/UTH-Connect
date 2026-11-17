@@ -35,7 +35,8 @@ begin
       'content-type', 'application/json',
       'x-webhook-secret', webhook_secret
     ),
-    body := '{"type":"DISPATCH_PENDING"}'::jsonb
+    body := '{"type":"DISPATCH_PENDING"}'::jsonb,
+    timeout_milliseconds := 25000
   );
 end;
 $$;

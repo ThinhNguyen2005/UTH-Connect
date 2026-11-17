@@ -143,18 +143,22 @@ class AuthViewModel @Inject constructor(
         when (action) {
             is AuthAction.SelectLanguage -> selectLanguage(action.lang)
 
-            AuthAction.SwitchAccount -> _uiState.update {
-                it.copy(
-                    screenStep = AuthScreenStep.Password,
-                    identifier = "",
-                    password = "",
-                    failure = null,
-                    resetOtp = "",
-                    resetNewPassword = "",
-                    resetConfirmPassword = "",
-                    forgotEmail = "",
-                    recoveryAccessToken = null,
-                )
+            AuthAction.SwitchAccount -> {
+                AuthDeepLinkParser.cancelPendingRequest()
+                _uiState.update {
+                    it.copy(
+                        screenStep = AuthScreenStep.Password,
+                        identifier = "",
+                        password = "",
+                        failure = null,
+                        resetOtp = "",
+                        resetNewPassword = "",
+                        resetConfirmPassword = "",
+                        forgotEmail = "",
+                        recoveryAccessToken = null,
+                        showManualOtpField = false,
+                    )
+                }
             }
 
             is AuthAction.IdentifierChanged -> _uiState.update {
@@ -247,7 +251,13 @@ class AuthViewModel @Inject constructor(
 
             AuthAction.ToggleResetPasswordVisibility -> _uiState.update { it.copy(resetPasswordVisible = !it.resetPasswordVisible) }
 
-            AuthAction.ToggleManualOtpInput -> _uiState.update { it.copy(showManualOtpField = !it.showManualOtpField) }
+            AuthAction.ToggleManualOtpInput -> _uiState.update {
+                if (it.showManualOtpField) {
+                    it.copy(showManualOtpField = false)
+                } else {
+                    it.copy(showManualOtpField = true, recoveryAccessToken = null)
+                }
+            }
 
             AuthAction.SubmitResetPassword -> submitResetPassword()
 
@@ -481,6 +491,12 @@ class AuthViewModel @Inject constructor(
 
     private fun submitResetPassword() {
         val snapshot = _uiState.value
+        val hasValidOtp = snapshot.forgotEmail.contains('@') &&
+            snapshot.resetOtp.matches(Regex("[0-9]{6,8}"))
+        if (snapshot.recoveryAccessToken.isNullOrBlank() && !hasValidOtp) {
+            _uiState.update { it.copy(resetPasswordError = "Vui lòng nhập mã OTP hợp lệ từ email sinh viên") }
+            return
+        }
         _uiState.update { it.copy(isResettingPassword = true, resetPasswordError = null) }
         viewModelScope.launch {
             try {

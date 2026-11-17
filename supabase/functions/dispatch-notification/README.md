@@ -9,6 +9,7 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
 1. Apply all migrations, in order:
    - `supabase/migrations/20261108000000_push_notification_inbox.sql`
    - `supabase/migrations/20261114000000_notification_push_cursor.sql`
+   - `supabase/migrations/20261114010000_sync_housing_and_notifications_contract.sql`
    - `supabase/migrations/20261115000000_notification_device_claim.sql`
    - `supabase/migrations/20261115010000_notification_broadcast_rate_limit.sql`
    - `supabase/migrations/20261115020000_secure_notification_device_claim.sql`
@@ -37,7 +38,7 @@ Android FCM tokens now and stores a `WEB` platform value for later web clients.
    header `x-webhook-secret: <same WEBHOOK_SHARED_SECRET>`:
    - `public.events`: `INSERT` and `UPDATE` (sends only when an event first becomes `PUBLISHED`)
    - `public.notifications`: `INSERT` and `UPDATE` (sends published academic/system notices; an update only notifies when it publishes a previously scheduled row)
-   - `public.housing_posts`: `INSERT` (sends new listings with `status = OPEN`)
+   - `public.housing_posts`: `INSERT` and `UPDATE` (sends new listings when they become `OPEN`)
 
 The dispatcher claims inbox rows in small batches, limits each invocation's runtime
 and total device fan-out, and persists a per-inbox device cursor and successful-send

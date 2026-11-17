@@ -665,7 +665,8 @@ function toSourceNotification(payload: WebhookEventPayload) {
   }
 
   if (payload.table === "housing_posts") {
-    if (payload.type !== "INSERT" || row.status !== "OPEN") return null;
+    if (!["INSERT", "UPDATE"].includes(payload.type) || row.status !== "OPEN") return null;
+    if (payload.type === "UPDATE" && payload.old_record?.status === "OPEN") return null;
     const price = Number(row.monthly_rent_vnd ?? 0);
     return {
       sourceId: requiredString(row.id), recipientId: null, excludeUserId: stringValue(row.author_id),
@@ -686,9 +687,15 @@ function toSourceNotification(payload: WebhookEventPayload) {
   const publishedAt = stringValue(row.published_at);
   if (publishedAt && Date.parse(publishedAt) > Date.now()) return null;
   const sourceCategory = stringValue(row.category);
+  const userId = nullableString(row.user_id);
+  const legacyRecipientId = nullableString(row.recipient_id);
+  if (userId && legacyRecipientId && userId !== legacyRecipientId) {
+    console.error("Ignoring notification with conflicting recipient columns", row.id);
+    return null;
+  }
   const academic = ["ACADEMIC", "EXAMINATION"].includes(sourceCategory);
   return {
-    sourceId: requiredString(row.id), recipientId: nullableString(row.recipient_id), excludeUserId: null,
+    sourceId: requiredString(row.id), recipientId: userId ?? legacyRecipientId, excludeUserId: null,
     title: requiredString(row.title), summary: stringValue(row.summary), content: stringValue(row.content),
     category: sourceCategory, author: stringValue(row.author) || "Nhà trường",
     targetType: academic ? "ACADEMIC" : "SYSTEM", targetId: requiredString(row.id),

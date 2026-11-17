@@ -17,6 +17,14 @@ export async function GET(request: Request) {
     ? `https://${forwardedHost}`
     : origin;
 
+  const safeRedirect = (path: string) => {
+    if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) {
+      return new URL("/", baseUrl);
+    }
+    const target = new URL(path, baseUrl);
+    return target.origin === new URL(baseUrl).origin ? target : new URL("/", baseUrl);
+  };
+
   const supabase = createClient();
 
   // 1. Token Hash Verification (Email verification & Password recovery links)
@@ -27,16 +35,16 @@ export async function GET(request: Request) {
     });
     if (!error) {
       if (type === "recovery") {
-        return NextResponse.redirect(`${baseUrl}/reset-password`);
+        return NextResponse.redirect(new URL("/reset-password", baseUrl));
       }
       if (type === "signup" || type === "email") {
-        return NextResponse.redirect(`${baseUrl}/login?verified=true`);
+        return NextResponse.redirect(new URL("/login?verified=true", baseUrl));
       }
-      return NextResponse.redirect(`${baseUrl}${next}`);
+      return NextResponse.redirect(safeRedirect(next));
     } else {
-      return NextResponse.redirect(
-        `${baseUrl}/login?error=${encodeURIComponent(error.message)}`
-      );
+      const loginUrl = new URL("/login", baseUrl);
+      loginUrl.searchParams.set("error", error.message);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -53,21 +61,23 @@ export async function GET(request: Request) {
           target = "/admin";
         }
       }
-      return NextResponse.redirect(`${baseUrl}${target}`);
+      return NextResponse.redirect(safeRedirect(target));
     } else {
       if (type === "recovery" || next === "/reset-password") {
-        return NextResponse.redirect(
-          `${baseUrl}/reset-password#error=access_denied&error_code=otp_expired&error_description=${encodeURIComponent(
-            error.message
-          )}`
-        );
+        const resetUrl = new URL("/reset-password", baseUrl);
+        resetUrl.hash = new URLSearchParams({
+          error: "access_denied",
+          error_code: "otp_expired",
+          error_description: error.message,
+        }).toString();
+        return NextResponse.redirect(resetUrl);
       }
-      return NextResponse.redirect(
-        `${baseUrl}/login?error=${encodeURIComponent(error.message)}`
-      );
+      const loginUrl = new URL("/login", baseUrl);
+      loginUrl.searchParams.set("error", error.message);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
   // Return user to login page with error state
-  return NextResponse.redirect(`${baseUrl}/login?error=auth_callback_failed`);
+  return NextResponse.redirect(new URL("/login?error=auth_callback_failed", baseUrl));
 }
