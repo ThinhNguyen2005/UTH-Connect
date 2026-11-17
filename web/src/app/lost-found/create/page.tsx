@@ -145,8 +145,10 @@ export default function CreateLostFoundPostPage() {
         });
 
       if (insertError) {
-        if (uploadedFilePath) {
-          // Xóa ảnh rác trên Storage nếu insert bản ghi thất bại
+        // Chỉ cleanup file ảnh khi có mã lỗi từ chối rõ ràng từ Database (Postgres SQLSTATE code)
+        // Tránh xóa nhầm khi lỗi mạng hoặc status=0 mà giao dịch có thể đã commit
+        const isDbRejection = Boolean(insertError.code && insertError.code !== "" && insertError.code !== "0");
+        if (uploadedFilePath && isDbRejection) {
           await supabaseBrowserClient.storage
             .from("lost-found")
             .remove([uploadedFilePath]);

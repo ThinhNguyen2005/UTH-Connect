@@ -153,12 +153,9 @@ export default function LostFoundPage() {
     } else if (!data || data.length === 0) {
       alert("Không thể cập nhật: Lệnh UPDATE bị chặn bởi chính sách RLS của Database (0 dòng được sửa). Chỉ chủ sở hữu hoặc Admin được cấp quyền mới có thể cập nhật.");
     } else {
-      setItems((prev) => {
-        if (onlyUnresolved && nextState) {
-          return prev.filter((i) => i.id !== item.id);
-        }
-        return prev.map((i) => (i.id === item.id ? { ...i, is_resolved: nextState } : i));
-      });
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, is_resolved: nextState } : i))
+      );
     }
   };
 
@@ -168,6 +165,8 @@ export default function LostFoundPage() {
   };
 
   const filteredItems = items.filter((item) => {
+    // Luôn áp dụng điều kiện lọc trạng thái khi render để tránh closure cũ từ lúc gọi UPDATE
+    if (onlyUnresolved && item.is_resolved) return false;
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     return (
