@@ -113,6 +113,7 @@ test('Migration 20261117 kiểm tra updated_at, dọn dẹp key cũ và ràng bu
   const sql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261117000000_housing_approval_revision.sql'), 'utf8');
   assert.ok(sql.includes('p_reviewed_updated_at'));
   assert.ok(sql.includes('HOUSING_LISTING_CHANGED'));
+  assert.ok(sql.includes("set_config('housing.bypass_guard', 'on', true)"));
   assert.ok(sql.includes('update public.housing_posts'));
   assert.ok(sql.includes('HOUSING_IMAGE_OWNERSHIP_INVALID'));
   assert.ok(sql.includes('HOUSING_IMAGE_PATH_INVALID'));

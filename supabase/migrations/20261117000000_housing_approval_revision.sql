@@ -38,6 +38,8 @@ revoke all on function public.approve_housing_listing(uuid, timestamptz) from pu
 grant execute on function public.approve_housing_listing(uuid, timestamptz) to authenticated;
 
 -- Dọn dẹp key ảnh cũ chứa %, .. hoặc không thuộc về author_id của tin trước khi bật guard mới
+select set_config('housing.bypass_guard', 'on', true);
+
 update public.housing_posts
 set
     images = coalesce(
@@ -50,7 +52,15 @@ set
         ),
         '{}'
     )
-where images is not null and images <> '{}';
+where images is not null
+  and images <> '{}'
+  and exists (
+      select 1
+      from unnest(images) as img
+      where img !~ '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/'
+         or split_part(regexp_replace(img, '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/', ''), '?', 1) ~ '(%|\.\.)'
+         or split_part(regexp_replace(img, '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/housing-images/', ''), '?', 1) !~ ('^' || author_id::text || '/')
+  );
 
 -- Ràng buộc quyền sở hữu key và chống path traversal trong URL ảnh
 create or replace function public.trg_housing_url_guards()
