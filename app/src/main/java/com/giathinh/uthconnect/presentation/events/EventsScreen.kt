@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -55,7 +56,20 @@ fun EventsScreen(
     onSetStatus: (String, EventStatus) -> Unit,
     onScan: () -> Unit,
     onOpenAttendance: (String) -> Unit,
+    focusedEventId: String? = null,
+    onNavigateBack: () -> Unit = {},
 ) {
+    val listState = rememberLazyListState()
+    var scrolledToEventId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(focusedEventId, state.events, state.loading) {
+        if (!state.loading && focusedEventId != null && focusedEventId != scrolledToEventId) {
+            val itemIndex = state.events.indexOfFirst { it.id == focusedEventId }
+            if (itemIndex >= 0) {
+                listState.animateScrollToItem(itemIndex + 1)
+                scrolledToEventId = focusedEventId
+            }
+        }
+    }
     var editor by remember { mutableStateOf<EventEditorTarget?>(null) }
     var cancelEvent by remember { mutableStateOf<Event?>(null) }
     LaunchedEffect(state.message) {
@@ -88,6 +102,7 @@ fun EventsScreen(
         )
     }
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(UthDimens.Spacing.Xl),
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Lg),
@@ -96,6 +111,9 @@ fun EventsScreen(
             Text("Sự kiện UTH", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text("Đăng ký sự kiện và quản lý vé tham gia", style = MaterialTheme.typography.bodyMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                if (focusedEventId != null) {
+                    OutlinedButton(onClick = onNavigateBack) { Text("Quay lại") }
+                }
                 OutlinedButton(onClick = onRefresh) { Text("Làm mới") }
                 if (isOrganizer) {
                     OutlinedButton(onClick = { editor = EventEditorTarget(null) }) { Text("Tạo sự kiện") }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.giathinh.uthconnect.presentation.attendance.AttendanceDestination
 import kotlinx.serialization.Serializable
 
@@ -14,8 +15,19 @@ import kotlinx.serialization.Serializable
  */
 @Serializable data object EventsDestination
 
+@Serializable
+data class EventSourceDestination(val eventId: String)
+
 fun NavGraphBuilder.eventsGraph(navController: NavHostController) {
     composable<EventsDestination> {
         EventsRoute(onOpenAttendance = { eventId -> navController.navigate(AttendanceDestination(eventId)) })
+    }
+    composable<EventSourceDestination> { entry ->
+        val args = entry.toRoute<EventSourceDestination>()
+        EventsRoute(
+            onOpenAttendance = { eventId -> navController.navigate(AttendanceDestination(eventId)) },
+            focusedEventId = args.eventId,
+            onNavigateBack = { navController.popBackStack() },
+        )
     }
 }

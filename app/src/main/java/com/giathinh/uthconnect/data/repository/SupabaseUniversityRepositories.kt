@@ -18,6 +18,12 @@ import com.giathinh.uthconnect.domain.repository.ScheduleRepository
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.repository.StudentGradeRepository
 import com.giathinh.uthconnect.domain.repository.UserRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -28,6 +34,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -35,6 +42,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val universityZone = ZoneId.of("Asia/Ho_Chi_Minh")
+private const val NOTIFICATION_INBOX_PAGE_SIZE = 500
+private const val READ_MUTATION_RETRY_DELAY_MS = 1_000L
+private const val READ_MUTATION_MAX_DELAY_MS = 60_000L
+private const val READ_MUTATION_MAX_ATTEMPTS = 4
+private const val HTTP_TOO_MANY_REQUESTS = 429
+private const val HTTP_SERVER_ERROR_MIN_STATUS = 500
+
+private fun Throwable.isRetryableReadMutationFailure(): Boolean = when (this) {
+    is CancellationException -> false
+    is IOException -> true
+    is SupabaseHttpException -> status == HTTP_TOO_MANY_REQUESTS || status >= HTTP_SERVER_ERROR_MIN_STATUS
+    else -> false
+}
 
 private fun JsonObject.decimal(key: String): Float? = get(key)?.jsonPrimitive?.floatOrNull
 
@@ -140,10 +160,25 @@ internal fun JsonObject.toUniversityNotification(): PostNotification = PostNotif
     imageUrl = string("image_url"),
 )
 
+private fun JsonObject.toInboxNotification(): PostNotification = PostNotification(
+    id = requireNotNull(string("id")),
+    title = string("title").orEmpty(),
+    summary = string("summary").orEmpty(),
+    content = string("content").orEmpty(),
+    category = NotificationCategory.fromString(string("category")),
+    author = string("author").orEmpty(),
+    publishedAt = Instant.parse(requireNotNull(string("published_at"))).toEpochMilli(),
+    targetType = string("target_type"),
+    targetId = string("target_id"),
+    readAt = string("read_at")?.let { Instant.parse(it).toEpochMilli() },
+)
+
 @Singleton
 class SupabaseNotificationRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : NotificationRepository {
+    private val readMutationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun getNewsfeed(category: NotificationCategory): Flow<List<PostNotification>> = flow {
         val all = client.table("notifications?select=*&order=is_pinned.desc,published_at.desc")
             .jsonArray.map { it.jsonObject.toUniversityNotification() }
@@ -153,6 +188,94 @@ class SupabaseNotificationRepository @Inject constructor(
     override suspend fun getNotificationDetail(notificationId: String): Result<PostNotification?> = suspendResult {
         client.table("notifications?select=*&id=eq.${urlEncode(uuid(notificationId))}&limit=1")
             .jsonArray.singleOrNull()?.jsonObject?.toUniversityNotification()
+    }
+
+    override fun getInbox(): Flow<List<PostNotification>> = flow {
+        val userId = urlEncode(uuid(client.userId))
+        val rows = buildList {
+            var cursorPublishedAt: String? = null
+            var cursorId: String? = null
+            while (true) {
+                val cursorFilter = if (cursorPublishedAt != null && cursorId != null) {
+                    val publishedAtCursor = requireNotNull(cursorPublishedAt)
+                    val idCursor = requireNotNull(cursorId)
+                    val publishedAt = urlEncode(publishedAtCursor)
+                    val id = urlEncode(idCursor)
+                    "&or=(published_at.lt.$publishedAt,and(published_at.eq.$publishedAt,id.lt.$id))"
+                } else {
+                    ""
+                }
+                val page = client.table(
+                    "notification_inbox?select=id,title,summary,category,author,published_at," +
+                        "target_type,target_id,read_at&recipient_id=eq.$userId" +
+                        "&order=published_at.desc,id.desc&limit=$NOTIFICATION_INBOX_PAGE_SIZE$cursorFilter",
+                ).jsonArray
+                addAll(page.map { it.jsonObject.toInboxNotification() })
+                if (page.size < NOTIFICATION_INBOX_PAGE_SIZE) break
+                val last = page.last().jsonObject
+                cursorPublishedAt = requireNotNull(last.string("published_at"))
+                cursorId = requireNotNull(last.string("id"))
+            }
+        }
+        emit(rows)
+    }
+
+    override suspend fun markInboxNotificationRead(notificationId: String): Result<Unit> {
+        val userId = client.userIdOrNull
+            ?: return Result.failure(IllegalStateException("Supabase sign-in required"))
+        return readMutationScope.async {
+            markInboxNotificationReadUntilComplete(notificationId, userId)
+        }.await()
+    }
+
+    private suspend fun markInboxNotificationReadUntilComplete(
+        notificationId: String,
+        expectedUserId: String,
+    ): Result<Unit> {
+        val encodedUserId = urlEncode(uuid(expectedUserId))
+        val id = urlEncode(uuid(notificationId))
+        var retryExponent = 0
+        var finalResult: Result<Unit>? = null
+        while (client.userIdOrNull == expectedUserId && finalResult == null) {
+            val result = suspendResult {
+                client.patchTable(
+                    "notification_inbox?id=eq.$id&recipient_id=eq.$encodedUserId&read_at=is.null",
+                    buildJsonObject { put("read_at", Instant.now().toString()) },
+                )
+                Unit
+            }
+            val error = result.exceptionOrNull()
+            if (error == null || !error.isRetryableReadMutationFailure()) {
+                finalResult = result
+            } else if (retryExponent >= READ_MUTATION_MAX_ATTEMPTS - 1) {
+                finalResult = result
+            } else {
+                delay(
+                    (READ_MUTATION_RETRY_DELAY_MS * (1L shl retryExponent))
+                        .coerceAtMost(READ_MUTATION_MAX_DELAY_MS),
+                )
+                retryExponent++
+            }
+        }
+        return finalResult
+            ?: Result.failure(IllegalStateException("Supabase session changed before notification was marked read"))
+    }
+
+    override suspend fun markAllInboxNotificationsRead(): Result<Unit> = suspendResult {
+        val userId = urlEncode(uuid(client.userId))
+        client.patchTable(
+            "notification_inbox?recipient_id=eq.$userId&read_at=is.null",
+            buildJsonObject { put("read_at", Instant.now().toString()) },
+        )
+        Unit
+    }
+
+    override suspend fun getInboxNotification(notificationId: String): Result<PostNotification?> = suspendResult {
+        val userId = urlEncode(uuid(client.userId))
+        val id = urlEncode(uuid(notificationId))
+        client.table(
+            "notification_inbox?select=*&id=eq.$id&recipient_id=eq.$userId&limit=1",
+        ).jsonArray.singleOrNull()?.jsonObject?.toInboxNotification()
     }
 }
 

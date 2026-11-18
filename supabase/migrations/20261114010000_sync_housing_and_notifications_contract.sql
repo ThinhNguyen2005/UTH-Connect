@@ -91,10 +91,15 @@ drop policy if exists "notifications_select" on public.notifications;
 create policy "notifications_select" on public.notifications
     for select to authenticated
     using (
-        user_id = (select auth.uid()) 
-        or recipient_id = (select auth.uid()) 
-        or (user_id is null and recipient_id is null)
-        or (select is_admin())
+        (select is_admin())
+        or (
+            published_at <= statement_timestamp()
+            and (
+                user_id = (select auth.uid())
+                or recipient_id = (select auth.uid())
+                or (user_id is null and recipient_id is null)
+            )
+        )
     );
 
 -- Policy Update: Người dùng được cập nhật trạng thái đã đọc (is_read) cho thông báo của chính mình

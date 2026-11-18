@@ -110,6 +110,35 @@ fun UtilitiesRoute(
     }
 }
 
+/** Settings entry point used by flows outside the nested Utilities navigation graph. */
+@Composable
+fun SettingsRoute(
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit,
+    viewModel: UtilitiesViewModel = hiltViewModel(),
+) {
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    LaunchedEffect(viewModel, context) {
+        viewModel.events.collect { event ->
+            when (event) {
+                UtilitiesEvent.LanguageChanged -> activityOf(context)?.recreate()
+            }
+        }
+    }
+
+    SettingsScreen(
+        modifier = modifier,
+        uiState = settingsState,
+        onToggleTuitionReminder = { viewModel.onAction(UtilitiesAction.TuitionReminderChanged(it)) },
+        onToggleTrainingPointNotif = { viewModel.onAction(UtilitiesAction.TrainingPointNotifChanged(it)) },
+        onSelectLanguage = { viewModel.onAction(UtilitiesAction.LanguageSelected(it)) },
+        onSelectThemeMode = { viewModel.onAction(UtilitiesAction.ThemeModeSelected(it)) },
+        onBack = onBack,
+    )
+}
+
 /**
  * `LocalContext` trong `NavHost` là `ContextThemeWrapper`, cast thẳng ra Activity không
  * được — phải đi ngược chuỗi `baseContext` (cùng cách `AuthRoute` đọc intent deep link).
