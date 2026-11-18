@@ -1,0 +1,102 @@
+$ git rev-parse --show-toplevel
+D:/Downloads/UTH-Connect/.worktrees/kan-122
+
+
+EXIT CODE: 0
+
+$ git branch --show-current
+feat/kan-122-ui-security-qa
+
+
+EXIT CODE: 0
+
+$ git rev-parse HEAD origin/develop origin/Kan120
+ed7cecbb9c080d5da77455f522f05eff13df6e10
+ed7cecbb9c080d5da77455f522f05eff13df6e10
+b99ecdf63cf2d28c8947bad342d9c3bfafa08c7e
+
+
+EXIT CODE: 0
+
+$ git rev-list --left-right --count HEAD...origin/develop
+0	0
+
+
+EXIT CODE: 0
+
+$ git worktree list
+D:/Downloads/UTH-Connect                               a54f5b64 [backup/kan-108-before-main]
+D:/Downloads/UTH-Connect/.worktrees/erp-ui-security-qa ed7cecbb [chore/erp-ui-security-qa-audit]
+D:/Downloads/UTH-Connect/.worktrees/kan-108            1d5c8570 [feat/kan-108-core-media]
+D:/Downloads/UTH-Connect/.worktrees/kan-122            ed7cecbb [feat/kan-122-ui-security-qa]
+D:/Downloads/UTH-Connect/.worktrees/kan-integration    924ad360 [integration/kan-95-101-102]
+D:/Downloads/UTH-Connect/.worktrees/kan-security       326cc107 [repair/kan-102-security-20261110]
+D:/Downloads/UTH-Connect/_kan95                        a09cdadc [feature/KAN-95-clean]
+D:/Downloads/UTH-Connect/_kan95_main                   ad840cd1 [feature/KAN-95-main]
+D:/Downloads/UTH-Connect/_observability_ci             5a6cdef9 [test/observability-ci-20261109]
+
+
+EXIT CODE: 0
+
+$ git log --oneline origin/develop..origin/Kan120
+b99ecdf6 docs(kan-120): remove mockup screenshots, use transparent technical frames and real code blocks
+968c33f7 docs(kan-120): embed code snapshots and application UI screenshots in report
+cb1cc14e feat(canteen-pos): implement KAN-120 UTH Canteen POS ERP on Odoo Community 20.0
+79852df7 fix(web): intercept PKCE auth code in middleware and sync housing schema contract
+3dc9ce24 fix(auth, db, web): address CodeRabbit review recommendations and security guards
+7360df7d refactor(core): purge obsolete fake/demo repositories and standardize test fixtures
+59fca2ec feat(auth): unify password recovery with deep links and error handling
+9e56eca3 Merge pull request #71 from ThinhNguyen2005/feat/kan-108-core-media
+1d5c8570 fix(media): handle HEIC EXIF runtime exceptions [KAN-108]
+c36170a8 feat(media): integrate Coil 3 and WebP compression [KAN-108]
+42ace38a docs(web): add vercel deployment guide and update observability plan
+af6e4f9a feat(web): add official uth branding, favicon, campus photography, and clean login screen
+415c5d71 build(web): configure node 26 engine, vercel gitignore, and fail-fast supabase validation
+fe50e1cc ci(detekt): add static analysis workflow and update baseline
+4bd02bf4 Merge pull request #70 from ThinhNguyen2005/ThinhNguyen2005-patch-1
+5b4cbf93 Modify Android release workflow for APK upload
+d078c865 Merge pull request #63 from ThinhNguyen2005/develop
+
+
+EXIT CODE: 0
+
+$ git merge-base origin/develop origin/Kan120
+a54f5b643ba8d2db23a5b7cfb77066f1d710eaa4
+
+
+EXIT CODE: 0
+
+$ git status --short --untracked-files=all
+?? canteen-erp/patches/KAN-122-menu-load-order.patch
+?? canteen-erp/qa/README.md
+?? canteen-erp/qa/test_validate_module.py
+?? canteen-erp/qa/validate_module.py
+?? docs/reports/KAN-122/Bao_cao_ngay_KAN-122_17-11-2026.md
+?? docs/reports/KAN-122/KAN-122-PR-draft.md
+?? docs/reports/KAN-122/KAN-122-UAT-checklist.md
+?? docs/reports/KAN-122/KAN-122-acceptance-checklist.md
+?? docs/reports/KAN-122/KAN-122-demo-script.md
+?? docs/reports/KAN-122/KAN-122-security-matrix.md
+?? docs/reports/KAN-122/KAN-122-technical-report.md
+?? docs/reports/KAN-122/KAN-122-test-results.md
+?? docs/reports/KAN-122/evidence/checker-tests.txt
+?? docs/reports/KAN-122/evidence/patch-apply.txt
+?? docs/reports/KAN-122/evidence/patch-check.txt
+?? docs/reports/KAN-122/evidence/patch-reverse-check.txt
+?? docs/reports/KAN-122/evidence/simulation-tests.txt
+?? docs/reports/KAN-122/evidence/source-ref.txt
+?? docs/reports/KAN-122/evidence/static-after.txt
+?? docs/reports/KAN-122/evidence/static-before.txt
+
+
+EXIT CODE: 0
+
+$ git diff --stat
+
+
+EXIT CODE: 0
+
+$ git diff --check
+
+
+EXIT CODE: 0

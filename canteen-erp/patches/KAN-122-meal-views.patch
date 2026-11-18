@@ -1,0 +1,13 @@
+--- a/canteen-erp/custom_addons/uth_canteen_pos/__manifest__.py
++++ b/canteen-erp/custom_addons/uth_canteen_pos/__manifest__.py
+@@ -36,2 +36,3 @@
+         "wizard/pos_revenue_wizard_views.xml",
++        "views/meal_views.xml",
+         "views/menu_views.xml",
+--- a/canteen-erp/custom_addons/uth_canteen_pos/views/menu_views.xml
++++ b/canteen-erp/custom_addons/uth_canteen_pos/views/menu_views.xml
+@@ -41,3 +41,3 @@
+               parent="menu_canteen_products"
+-              action="point_of_sale.product_template_action"
++              action="action_canteen_meals"
+               sequence="10"/>

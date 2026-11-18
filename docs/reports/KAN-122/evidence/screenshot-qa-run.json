@@ -1,0 +1,52 @@
+{
+  "task": "KAN-122",
+  "tests": 11,
+  "failures": 0,
+  "errors": 0,
+  "rows": [
+    [
+      "test_meal_views.MealViewTests.test_action_binds_both_views_and_search",
+      "PASS"
+    ],
+    [
+      "test_meal_views.MealViewTests.test_money_widgets_include_currency_field",
+      "PASS"
+    ],
+    [
+      "test_meal_views.MealViewTests.test_pos_scope_and_archive_context",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_acl_unscoped_group_and_invalid_bit_fail",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_duplicate_id_is_rejected",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_eval_reference_is_checked",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_external_id_is_not_claimed_as_verified",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_forward_menu_reference_fails_then_order_fix_passes",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_manifest_cannot_escape_module",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_missing_and_malformed_xml_fail",
+      "PASS"
+    ],
+    [
+      "test_validate_module.StaticValidationTests.test_model_id_is_generated_before_xml",
+      "PASS"
+    ]
+  ]
+}

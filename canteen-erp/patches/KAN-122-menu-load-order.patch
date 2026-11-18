@@ -1,0 +1,10 @@
+--- a/canteen-erp/custom_addons/uth_canteen_pos/__manifest__.py
++++ b/canteen-erp/custom_addons/uth_canteen_pos/__manifest__.py
+@@ -33,3 +33,2 @@
+         "views/canteen_dashboard_views.xml",
+-        "views/menu_views.xml",
+         "reports/pos_revenue_report_views.xml",
+@@ -37,2 +36,3 @@
+         "wizard/pos_revenue_wizard_views.xml",
++        "views/menu_views.xml",
+     ],

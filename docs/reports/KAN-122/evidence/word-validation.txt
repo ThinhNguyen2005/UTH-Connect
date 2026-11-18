@@ -1,0 +1,2 @@
+PASS: Word reopened after screenshot insertion; 1 embedded PNG, width 17 cm, caption present under section 4; QA screenshot visually inspected.
+NOT RUN: Word GUI pagination review. Screenshot does not prove Odoo runtime tests.

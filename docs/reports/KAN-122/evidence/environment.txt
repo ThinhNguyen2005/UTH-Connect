@@ -1,0 +1,18 @@
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -c import sys,importlib.util; print(sys.version); print('odoo installed:',importlib.util.find_spec('odoo') is not None)
+3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+odoo installed: False
+
+
+EXIT CODE: 0
+
+$ docker version --format {{.Server.Version}}
+
+
+WARNING: Error loading config file: open C:\Users\anhph\.docker\config.json: Access is denied.
+failed to connect to the docker API at npipe:////./pipe/docker_engine; check if the path is correct and if the daemon is running: open //./pipe/docker_engine: The system cannot find the file specified.
+
+EXIT CODE: 1
+odoo on PATH: None
+odoo-bin on PATH: None
+psql on PATH: None
+No system software installed or shared service started by KAN-122. Odoo runtime tests BLOCKED.

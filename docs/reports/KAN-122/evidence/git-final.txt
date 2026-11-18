@@ -1,0 +1,62 @@
+$ git branch --show-current
+feat/kan-122-ui-security-qa
+
+
+EXIT CODE: 0
+$ git rev-parse HEAD origin/develop origin/Kan120
+ed7cecbb9c080d5da77455f522f05eff13df6e10
+ed7cecbb9c080d5da77455f522f05eff13df6e10
+b99ecdf63cf2d28c8947bad342d9c3bfafa08c7e
+
+
+EXIT CODE: 0
+$ git rev-list --left-right --count HEAD...origin/develop
+0	0
+
+
+EXIT CODE: 0
+$ git status --short --untracked-files=all
+?? canteen-erp/custom_addons/uth_canteen_pos/views/meal_views.xml
+?? canteen-erp/patches/KAN-122-meal-views.patch
+?? canteen-erp/patches/KAN-122-menu-load-order.patch
+?? canteen-erp/qa/README.md
+?? canteen-erp/qa/test_meal_views.py
+?? canteen-erp/qa/test_validate_module.py
+?? canteen-erp/qa/validate_module.py
+?? docs/reports/KAN-122/Bao_cao_ngay_KAN-122_17-11-2026.docx
+?? docs/reports/KAN-122/Bao_cao_ngay_KAN-122_17-11-2026.md
+?? docs/reports/KAN-122/KAN-122-PR-draft.md
+?? docs/reports/KAN-122/KAN-122-UAT-checklist.md
+?? docs/reports/KAN-122/KAN-122-acceptance-checklist.md
+?? docs/reports/KAN-122/KAN-122-demo-script.md
+?? docs/reports/KAN-122/KAN-122-security-matrix.md
+?? docs/reports/KAN-122/KAN-122-technical-report.md
+?? docs/reports/KAN-122/KAN-122-test-results.md
+?? docs/reports/KAN-122/evidence/checker-tests.txt
+?? docs/reports/KAN-122/evidence/environment.txt
+?? docs/reports/KAN-122/evidence/git-audit.txt
+?? docs/reports/KAN-122/evidence/meal-patch-apply.txt
+?? docs/reports/KAN-122/evidence/meal-patch-check.txt
+?? docs/reports/KAN-122/evidence/meal-patch-reverse-check.txt
+?? docs/reports/KAN-122/evidence/odoo20-source-check.txt
+?? docs/reports/KAN-122/evidence/patch-apply.txt
+?? docs/reports/KAN-122/evidence/patch-check.txt
+?? docs/reports/KAN-122/evidence/patch-reverse-check.txt
+?? docs/reports/KAN-122/evidence/simulation-tests.txt
+?? docs/reports/KAN-122/evidence/source-ref.txt
+?? docs/reports/KAN-122/evidence/source-review.txt
+?? docs/reports/KAN-122/evidence/static-after.txt
+?? docs/reports/KAN-122/evidence/static-before.txt
+?? docs/reports/KAN-122/evidence/static-final.txt
+?? docs/reports/KAN-122/evidence/word-validation.txt
+
+
+EXIT CODE: 0
+$ git diff --stat
+
+
+EXIT CODE: 0
+$ git diff --check
+
+
+EXIT CODE: 0

@@ -1,0 +1,18 @@
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B -m unittest discover -s C:\Users\anhph\AppData\Local\Temp\kan122-integration-rjdbrcpq\source\canteen-erp\tests -v
+test_category_breakdown_integrity (test_canteen_pos.TestCanteenPosLogic.test_category_breakdown_integrity)
+Category sales total must equal overall total sales. ... ok
+test_menu_items_validity (test_canteen_pos.TestCanteenPosLogic.test_menu_items_validity)
+All items must have positive price, positive cost, and price >= cost. ... ok
+test_payment_methods_configured (test_canteen_pos.TestCanteenPosLogic.test_payment_methods_configured)
+Payment methods must include Cash, QR, and Student Card. ... ok
+test_profit_margin_calculation (test_canteen_pos.TestCanteenPosLogic.test_profit_margin_calculation)
+Gross profit margin should be realistic (35% to 65% for university canteen). ... ok
+test_sales_simulation_reconciliation (test_canteen_pos.TestCanteenPosLogic.test_sales_simulation_reconciliation)
+Cash difference must be zero and sum of payments must equal total revenue. ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.004s
+
+OK
+
+EXIT CODE: 0

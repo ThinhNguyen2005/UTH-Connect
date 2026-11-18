@@ -1,0 +1,3 @@
+$ git apply --check D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\patches\KAN-122-menu-load-order.patch
+
+EXIT CODE: 0

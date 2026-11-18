@@ -1,0 +1,5 @@
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\qa\validate_module.py C:\Users\anhph\AppData\Local\Temp\kan122-final-zlle7qk_\source\canteen-erp\custom_addons\uth_canteen_pos
+STATIC ONLY: external IDs, field/schema compatibility, ORM and permissions NOT verified.
+0 static defect(s)
+
+EXIT CODE: 0

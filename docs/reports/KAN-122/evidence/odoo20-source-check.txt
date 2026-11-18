@@ -1,0 +1,7 @@
+Source: https://raw.githubusercontent.com/odoo/odoo/20.0/addons/product/models/product_template.py SHA256=8ce58d56213cca9c06841b0ff747e983b07d19c2b61885489e91453284baf1dd
+Source: https://raw.githubusercontent.com/odoo/odoo/20.0/addons/point_of_sale/models/product_template.py SHA256=3b9867065e6eb22e0bd49e31eaf5ccecd234cb7a7b0ad78e898ddc92a8d5fa04
+PASS: list view RelaxNG validation against Odoo 20.0; schema SHA256=09fd9fb8d8753f72fef122c49a5668ccbb10ab071c32118a1fcdcecef95e4f05
+PASS: search view RelaxNG validation against Odoo 20.0; schema SHA256=77e522d0b380b0e23e4899841a9c78d0961b7d447151df6afae0bd4d45e897af
+PASS: all new view field names declared in fetched Odoo 20.0 product/POS source.
+PASS: form XML parses; field references checked. Form runtime/constraints/XPath/ACL NOT verified.
+No Odoo server installed or started. Official source checks do not replace runtime tests.

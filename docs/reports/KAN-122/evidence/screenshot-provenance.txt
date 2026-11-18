@@ -1,0 +1,7 @@
+Actual browser screenshot: Google Chrome headless, 1600x1250, isolated temporary profile.
+Input: local qa-results.html generated from unittest result objects, not invented values.
+11 tests executed successfully; logs in screenshot-qa-run.txt and JSON in screenshot-qa-run.json.
+Image visually inspected: full table visible, no secrets, explicit static-only/Odoo-blocked notice.
+Not an Odoo UI screenshot, desktop terminal screenshot or proof of runtime ACL.
+PNG SHA256: ba3dcbd0b919ef266949b48f55cb3ce8ff3e9004e0681c2c3bfbd17bb786b924
+Word reopened: 1 embedded image, caption present.

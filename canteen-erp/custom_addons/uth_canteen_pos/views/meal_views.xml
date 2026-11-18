@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_canteen_meal_list" model="ir.ui.view">
+        <field name="name">canteen.meal.list</field>
+        <field name="model">product.template</field>
+        <field name="priority" eval="90"/>
+        <field name="arch" type="xml">
+            <list default_order="name">
+                <field name="name" string="Suất ăn / Món ăn"/>
+                <field name="default_code" string="Mã món"/>
+                <field name="pos_categ_ids" widget="many2many_tags" string="Nhóm món POS"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="list_price" widget="monetary" string="Giá bán"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_canteen_meal_form" model="ir.ui.view">
+        <field name="name">canteen.meal.form</field>
+        <field name="model">product.template</field>
+        <field name="priority" eval="90"/>
+        <field name="arch" type="xml">
+            <form string="Suất ăn / Món ăn">
+                <sheet>
+                    <group>
+                        <group string="Thông tin món ăn">
+                            <field name="name"/>
+                            <field name="default_code" string="Mã món"/>
+                            <field name="pos_categ_ids" widget="many2many_tags"/>
+                            <field name="categ_id"/>
+                        </group>
+                        <group string="Giá và trạng thái">
+                            <field name="currency_id" invisible="True"/>
+                            <field name="list_price" widget="monetary"/>
+                            <field name="available_in_pos"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_canteen_meal_search" model="ir.ui.view">
+        <field name="name">canteen.meal.search</field>
+        <field name="model">product.template</field>
+        <field name="priority" eval="90"/>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="default_code"/>
+                <field name="pos_categ_ids"/>
+                <filter name="active_meals" string="Đang hoạt động" domain="[('active', '=', True)]"/>
+                <filter name="archived_meals" string="Đã lưu trữ" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter name="group_category" string="Nhóm sản phẩm" context="{'group_by': 'categ_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_canteen_meals" model="ir.actions.act_window">
+        <field name="name">Quản lý suất ăn / Món ăn</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_canteen_meal_search"/>
+        <field name="domain">[('available_in_pos', '=', True)]</field>
+        <field name="context">{'default_available_in_pos': True, 'active_test': False, 'search_default_active_meals': 1}</field>
+    </record>
+
+    <record id="action_canteen_meals_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_canteen_meal_list"/>
+        <field name="act_window_id" ref="action_canteen_meals"/>
+    </record>
+
+    <record id="action_canteen_meals_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_canteen_meal_form"/>
+        <field name="act_window_id" ref="action_canteen_meals"/>
+    </record>
+</odoo>

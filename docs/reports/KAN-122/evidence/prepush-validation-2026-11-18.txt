@@ -1,0 +1,77 @@
+Date: 2026-11-18 Asia/Bangkok
+Source cached ref: b99ecdf63cf2d28c8947bad342d9c3bfafa08c7e
+Fetch failed: DNS resolution for github.com.
+
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B -m unittest discover -s D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\qa -v
+
+test_action_binds_both_views_and_search (test_meal_views.MealViewTests.test_action_binds_both_views_and_search) ... ok
+test_money_widgets_include_currency_field (test_meal_views.MealViewTests.test_money_widgets_include_currency_field) ... ok
+test_pos_scope_and_archive_context (test_meal_views.MealViewTests.test_pos_scope_and_archive_context) ... ok
+test_acl_unscoped_group_and_invalid_bit_fail (test_validate_module.StaticValidationTests.test_acl_unscoped_group_and_invalid_bit_fail) ... ok
+test_duplicate_id_is_rejected (test_validate_module.StaticValidationTests.test_duplicate_id_is_rejected) ... ok
+test_eval_reference_is_checked (test_validate_module.StaticValidationTests.test_eval_reference_is_checked) ... ok
+test_external_id_is_not_claimed_as_verified (test_validate_module.StaticValidationTests.test_external_id_is_not_claimed_as_verified) ... ok
+test_forward_menu_reference_fails_then_order_fix_passes (test_validate_module.StaticValidationTests.test_forward_menu_reference_fails_then_order_fix_passes) ... ok
+test_manifest_cannot_escape_module (test_validate_module.StaticValidationTests.test_manifest_cannot_escape_module) ... ok
+test_missing_and_malformed_xml_fail (test_validate_module.StaticValidationTests.test_missing_and_malformed_xml_fail) ... ok
+test_model_id_is_generated_before_xml (test_validate_module.StaticValidationTests.test_model_id_is_generated_before_xml) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.349s
+
+OK
+
+Exit: 0
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\qa\validate_module.py C:\Users\anhph\AppData\Local\Temp\kan122-prepush-5099jkld\source\canteen-erp\custom_addons\uth_canteen_pos
+STATIC ONLY: external IDs, field/schema compatibility, ORM and permissions NOT verified.
+FAIL: views/menu_views.xml: local reference before definition: action_canteen_revenue_report_pivot
+FAIL: views/menu_views.xml: local reference before definition: action_canteen_revenue_wizard
+2 static defect(s)
+
+
+Exit: 1
+$ git apply --check D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\patches\KAN-122-menu-load-order.patch
+
+
+Exit: 0
+$ git apply D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\patches\KAN-122-menu-load-order.patch
+
+
+Exit: 0
+$ git apply --check D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\patches\KAN-122-meal-views.patch
+
+
+Exit: 0
+$ git apply D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\patches\KAN-122-meal-views.patch
+
+
+Exit: 0
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B D:\Downloads\UTH-Connect\.worktrees\kan-122\canteen-erp\qa\validate_module.py C:\Users\anhph\AppData\Local\Temp\kan122-prepush-5099jkld\source\canteen-erp\custom_addons\uth_canteen_pos
+STATIC ONLY: external IDs, field/schema compatibility, ORM and permissions NOT verified.
+0 static defect(s)
+
+
+Exit: 0
+$ C:\Users\anhph\AppData\Local\Programs\Python\Python314\python.exe -B -m unittest discover -s C:\Users\anhph\AppData\Local\Temp\kan122-prepush-5099jkld\source\canteen-erp\tests -v
+
+test_category_breakdown_integrity (test_canteen_pos.TestCanteenPosLogic.test_category_breakdown_integrity)
+Category sales total must equal overall total sales. ... ok
+test_menu_items_validity (test_canteen_pos.TestCanteenPosLogic.test_menu_items_validity)
+All items must have positive price, positive cost, and price >= cost. ... ok
+test_payment_methods_configured (test_canteen_pos.TestCanteenPosLogic.test_payment_methods_configured)
+Payment methods must include Cash, QR, and Student Card. ... ok
+test_profit_margin_calculation (test_canteen_pos.TestCanteenPosLogic.test_profit_margin_calculation)
+Gross profit margin should be realistic (35% to 65% for university canteen). ... ok
+test_sales_simulation_reconciliation (test_canteen_pos.TestCanteenPosLogic.test_sales_simulation_reconciliation)
+Cash difference must be zero and sum of payments must equal total revenue. ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+OK
+
+Exit: 0
+PASS: Python syntax; Word opens with 1 image; PNG signature. Odoo runtime tests remain BLOCKED.
+PASS: limited credential-pattern scan and file scope; no credential values printed.
+
+Fetch retry succeeded; origin/develop remains ed7cecbb; origin/Kan120 remains b99ecdf6. GitHub API confirms push permission; no existing open PR for this head.
