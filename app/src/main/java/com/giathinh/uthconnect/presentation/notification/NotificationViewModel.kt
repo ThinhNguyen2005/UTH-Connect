@@ -214,7 +214,7 @@ class NotificationViewModel @Inject constructor(
                                     result,
                                     markAll = false,
                                 )
-                                if (result.isSuccess) refreshUnreadBadge()
+                                refreshUnreadBadge()
                             }
                         }
                     }
@@ -252,7 +252,7 @@ class NotificationViewModel @Inject constructor(
                 }
             }
             finishReadMutation(ids, version, result, markAll)
-            if (result.isSuccess) refreshUnreadBadge()
+            refreshUnreadBadge()
             if (markAll && result.isSuccess) loadNotifications(isRefresh = true)
         }
     }

@@ -138,15 +138,47 @@ before insert on public.notification_inbox
 for each statement
 execute function public.serialize_notification_read_updates();
 
+-- Keep legacy notification types readable while enforcing the type contract on
+-- new rows and actual type changes. A NOT VALID CHECK still rejects updates to
+-- legacy rows, including updates that only change is_read.
+create or replace function public.validate_personal_notification_type()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  should_validate_type boolean;
+begin
+  if tg_op = 'INSERT' then
+    should_validate_type := true;
+  else
+    should_validate_type := old.type is distinct from new.type;
+  end if;
+
+  if should_validate_type and (
+    new.type is null
+    or new.type not in ('HOUSING_APPROVED', 'HOUSING_REJECTED', 'EVENT_REMINDER', 'SYSTEM')
+  ) then
+    raise exception 'Unsupported personal notification type: %', new.type
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+alter table public.notifications
+  drop constraint notifications_personal_type_check;
+
+drop trigger if exists validate_personal_notification_type on public.notifications;
+create trigger validate_personal_notification_type
+before insert or update of type on public.notifications
+for each row
+execute function public.validate_personal_notification_type();
+
 -- Reconcile rows read through the push inbox before this migration was applied.
--- NOT VALID checks still apply to every updated row. Temporarily remove the
--- personal-type check in one atomic statement so legacy type values can have
--- their read state reconciled without changing notification content; restore
--- it as NOT VALID before the table lock is released.
 do $$
 begin
   perform pg_catalog.pg_advisory_xact_lock(20261128, 1);
-  alter table public.notifications drop constraint notifications_personal_type_check;
 
   update public.notifications as n
   set is_read = true
@@ -160,10 +192,5 @@ begin
         and i.recipient_id = coalesce(n.recipient_id, n.user_id)
         and i.read_at is not null
     );
-
-  alter table public.notifications
-    add constraint notifications_personal_type_check
-    check (type in ('HOUSING_APPROVED', 'HOUSING_REJECTED', 'EVENT_REMINDER', 'SYSTEM'))
-    not valid;
 end;
 $$;

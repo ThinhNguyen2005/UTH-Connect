@@ -152,8 +152,9 @@ class UserNotificationsViewModel @Inject constructor(
         } catch (_: Exception) {
             null
         } ?: return
-        if (readMutationGenerationById[notificationId] != readGeneration) return
         if (serverItem.isRead) confirmedReadIds += notificationId
+        val hasNewerReadMutation = readMutationGenerationById[notificationId] != readGeneration
+        if (hasNewerReadMutation && !serverItem.isRead) return
         mutableState.update { state ->
             state.copy(
                 notifications = state.notifications.map { item ->
@@ -163,7 +164,7 @@ class UserNotificationsViewModel @Inject constructor(
                         item
                     }
                 },
-                errorMessage = if (serverItem.isRead) null else state.errorMessage,
+                errorMessage = if (serverItem.isRead && !hasNewerReadMutation) null else state.errorMessage,
             )
         }
     }
