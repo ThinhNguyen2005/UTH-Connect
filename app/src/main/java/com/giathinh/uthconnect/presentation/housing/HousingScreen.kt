@@ -122,6 +122,7 @@ fun HousingScreen(
     modifier: Modifier = Modifier,
     onListingClick: (String) -> Unit = {},
     onCreatePost: () -> Unit = {},
+    onMyListings: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -161,6 +162,7 @@ fun HousingScreen(
                 visibleCount = uiState.visibleCount,
                 hasActiveFilters = uiState.hasActiveFilters,
                 onClearFilters = { onAction(HousingAction.ClearFilters) },
+                onMyListings = onMyListings,
             )
             when {
                 uiState.isLoading -> HousingSkeletonList()
@@ -447,6 +449,7 @@ private fun FeedHeader(
     visibleCount: Int,
     hasActiveFilters: Boolean,
     onClearFilters: () -> Unit,
+    onMyListings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -465,6 +468,9 @@ private fun FeedHeader(
             TextButton(onClick = onClearFilters) {
                 Text(stringResource(R.string.housing_clear_filters))
             }
+        }
+        TextButton(onClick = onMyListings) {
+            Text(stringResource(R.string.housing_my_listings_title))
         }
     }
 }

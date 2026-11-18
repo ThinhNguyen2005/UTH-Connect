@@ -5,6 +5,9 @@ import com.giathinh.uthconnect.domain.model.HousingListing
 interface HousingRepository {
     suspend fun getListings(): Result<List<HousingListing>>
 
+    /** Tin của chính người đăng — mọi trạng thái, kể cả PENDING/REJECTED (màn "Tin của tôi"). */
+    suspend fun getMyListings(): Result<List<HousingListing>>
+
     suspend fun getListingById(id: String): Result<HousingListing>
 
     suspend fun createListing(listing: HousingListing): Result<HousingListing>

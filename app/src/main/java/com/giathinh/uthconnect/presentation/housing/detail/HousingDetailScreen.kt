@@ -167,6 +167,7 @@ fun HousingDetailScreen(
                 HousingDetailContent(
                     listing = listing,
                     isOwner = uiState.isOwner,
+                    showRejectionBanner = uiState.showRejectionBanner,
                     isActionLoading = uiState.isActionLoading,
                     onOpenMap = { onAction(HousingDetailAction.OpenMap) },
                     onMarkFulfilled = { onAction(HousingDetailAction.MarkFulfilled) },
@@ -263,6 +264,7 @@ private fun HousingDetailHeader(
 private fun HousingDetailContent(
     listing: HousingListing,
     isOwner: Boolean,
+    showRejectionBanner: Boolean,
     isActionLoading: Boolean,
     onOpenMap: () -> Unit,
     onMarkFulfilled: () -> Unit,
@@ -320,6 +322,11 @@ private fun HousingDetailContent(
         }
 
         if (isOwner) {
+            if (showRejectionBanner) {
+                item {
+                    RejectionBanner(reason = listing.rejectionReason)
+                }
+            }
             item {
                 OwnerActionsCard(
                     listing = listing,
@@ -328,6 +335,31 @@ private fun HousingDetailContent(
                     onDelete = onDelete,
                 )
             }
+        }
+    }
+}
+
+/** Banner lý do admin từ chối tin — chỉ chủ tin thấy, kèm hướng dẫn xóa và đăng lại sau khi sửa. */
+@Composable
+private fun RejectionBanner(reason: String?, modifier: Modifier = Modifier) {
+    val colors = UthTheme.extendedColors
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = colors.dangerContainer,
+        contentColor = colors.onDangerContainer,
+    ) {
+        Column(modifier = Modifier.padding(UthDimens.Spacing.Lg)) {
+            Text(
+                text = stringResource(R.string.housing_detail_rejected_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
+            Text(
+                text = stringResource(R.string.housing_detail_rejected_body, reason.orEmpty()),
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
@@ -427,7 +459,6 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
     val images = listing.images
     val pageCount = images.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
-    val isOpen = listing.status == HousingListingStatus.OPEN
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -470,18 +501,28 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
                             .size(UthDimens.Spacing.Sm)
                             .clip(CircleShape)
                             .background(
-                                if (isOpen) UthTheme.extendedColors.success else MaterialTheme.colorScheme.error,
+                                when (listing.status) {
+                                    HousingListingStatus.OPEN -> UthTheme.extendedColors.success
+                                    HousingListingStatus.PENDING -> UthTheme.extendedColors.warning
+                                    else -> MaterialTheme.colorScheme.error
+                                },
                             ),
                     )
-                    val statusText = if (isOpen) {
-                        val genderText = when (listing.genderPreference) {
-                            GenderPreference.MALE -> stringResource(R.string.housing_gender_male)
-                            GenderPreference.FEMALE -> stringResource(R.string.housing_gender_female)
-                            GenderPreference.ANY -> stringResource(R.string.housing_gender_any)
+                    val statusText = when (listing.status) {
+                        HousingListingStatus.OPEN -> {
+                            val genderText = when (listing.genderPreference) {
+                                GenderPreference.MALE -> stringResource(R.string.housing_gender_male)
+                                GenderPreference.FEMALE -> stringResource(R.string.housing_gender_female)
+                                GenderPreference.ANY -> stringResource(R.string.housing_gender_any)
+                            }
+                            stringResource(R.string.housing_detail_roommate_looking, listing.availableSlots, genderText)
                         }
-                        stringResource(R.string.housing_detail_roommate_looking, listing.availableSlots, genderText)
-                    } else {
-                        stringResource(R.string.housing_report_reason_full)
+
+                        HousingListingStatus.PENDING -> stringResource(R.string.housing_status_pending)
+
+                        HousingListingStatus.REJECTED -> stringResource(R.string.housing_status_rejected)
+
+                        else -> stringResource(R.string.housing_report_reason_full)
                     }
                     Text(
                         text = statusText,

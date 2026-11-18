@@ -97,6 +97,7 @@ export default function PortalHomePage() {
       const { data: houseData } = await supabaseBrowserClient
         .from("housing_posts")
         .select("id, title, monthly_rent_vnd, campus, type")
+        .eq("status", "OPEN")
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -314,7 +315,7 @@ export default function PortalHomePage() {
                 </div>
               ) : (
                 housing.map((h) => (
-                  <div key={h.id} className="p-3 rounded-lg bg-[#F8FAFC]">
+                  <Link href={`/housing/${h.id}`} key={h.id} className="block p-3 rounded-lg bg-[#F8FAFC] hover:bg-slate-100">
                     <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
                       <span className="font-semibold text-slate-700 uppercase">
                         {h.campus ? h.campus.replace(/_/g, " ") : "UTH"}
@@ -326,7 +327,7 @@ export default function PortalHomePage() {
                     <div className="text-xs font-medium text-slate-800 line-clamp-1">
                       {h.title}
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>

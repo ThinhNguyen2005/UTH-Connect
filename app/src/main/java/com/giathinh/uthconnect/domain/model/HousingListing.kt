@@ -34,11 +34,15 @@ enum class UthCampus {
 }
 
 /**
- * Vòng đời tin. `hiddenByReports` là cơ chế chống lạm dụng "ẩn sau 3 báo cáo"
- * (README 3.2 mục Chống lạm dụng) do backend quyết, không phải lựa chọn của chủ tin.
+ * Vòng đời tin. Từ 14/11/2026 tin mới đăng phải qua kiểm duyệt: `PENDING` chờ
+ * admin duyệt, `REJECTED` bị từ chối kèm lý do — cả hai do backend quyết, không
+ * phải lựa chọn của chủ tin. `hiddenByReports` là cơ chế chống lạm dụng "ẩn sau
+ * 3 báo cáo" (README 3.2 mục Chống lạm dụng).
  */
 enum class HousingListingStatus {
+    PENDING,
     OPEN,
+    REJECTED,
     FULFILLED,
     HIDDEN_BY_REPORTS,
 }
@@ -137,7 +141,13 @@ data class HousingListing(
      * Mặc định 0 để chỗ dựng tin (repository/mock) tự tính, không nhập tay.
      */
     val distanceToCampusM: Int = 0,
+    /**
+     * Default OPEN chỉ để fixture cục bộ không vỡ; nguồn sự thật là DB — server
+     * luôn ép tin mới về PENDING (migration 20261114000000), client không gửi status.
+     */
     val status: HousingListingStatus = HousingListingStatus.OPEN,
+    /** Lý do admin từ chối tin (cột `rejection_reason`); null khi chưa bị từ chối. */
+    val rejectionReason: String? = null,
     val verified: Boolean = false,
     val verificationMethod: HostVerificationMethod? = null,
     val areaM2: Int? = null,
