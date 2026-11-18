@@ -30,6 +30,8 @@ class UserNotificationsViewModel @Inject constructor(
     private var refreshGeneration = 0L
     private val pendingReadIds = mutableSetOf<String>()
     private val confirmedReadIds = mutableSetOf<String>()
+    private val readMutationGenerationById = mutableMapOf<String, Long>()
+    private var nextReadMutationGeneration = 0L
 
     init {
         refresh()
@@ -94,6 +96,8 @@ class UserNotificationsViewModel @Inject constructor(
     private fun openNotification(notification: NotificationItem) {
         val latest = mutableState.value.notifications.firstOrNull { it.id == notification.id } ?: notification
         if (!latest.isRead && latest.recipientId != null && pendingReadIds.add(latest.id)) {
+            val readGeneration = ++nextReadMutationGeneration
+            readMutationGenerationById[latest.id] = readGeneration
             mutableState.update { state ->
                 state.copy(
                     notifications = state.notifications.map { item ->
@@ -122,7 +126,7 @@ class UserNotificationsViewModel @Inject constructor(
                             errorMessage = message ?: state.errorMessage,
                         )
                     }
-                    reconcileNotification(latest.id)
+                    reconcileNotification(latest.id, readGeneration)
                 }
                 repository.refreshUnreadCount()
             }
@@ -140,7 +144,7 @@ class UserNotificationsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun reconcileNotification(notificationId: String) {
+    private suspend fun reconcileNotification(notificationId: String, readGeneration: Long) {
         val serverItem = try {
             repository.getNotifications().first().firstOrNull { it.id == notificationId }
         } catch (cancelled: CancellationException) {
@@ -148,6 +152,7 @@ class UserNotificationsViewModel @Inject constructor(
         } catch (_: Exception) {
             null
         } ?: return
+        if (readMutationGenerationById[notificationId] != readGeneration) return
         if (serverItem.isRead) confirmedReadIds += notificationId
         mutableState.update { state ->
             state.copy(

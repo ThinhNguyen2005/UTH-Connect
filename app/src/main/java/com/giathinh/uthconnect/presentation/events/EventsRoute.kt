@@ -42,7 +42,10 @@ fun EventsRoute(
         onOpenAttendance = onOpenAttendance,
         focusedEventId = focusedEventId,
         onNavigateBack = onNavigateBack,
-        onScan = { scannerOpen = true },
+        onScan = {
+            viewModel.clearCheckInResult()
+            scannerOpen = true
+        },
     )
     if (scannerOpen) {
         QrScannerDialog(

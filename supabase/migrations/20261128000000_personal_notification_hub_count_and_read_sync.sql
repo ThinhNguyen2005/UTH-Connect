@@ -129,16 +129,41 @@ before update of read_at on public.notification_inbox
 for each statement
 execute function public.serialize_notification_read_updates();
 
+-- Dispatcher retries can INSERT ... ON CONFLICT while a read update touches
+-- the same inbox row. Acquire the same lock before row-level insert triggers
+-- lock the notification source or check the inbox uniqueness constraint.
+drop trigger if exists serialize_notification_inbox_insert on public.notification_inbox;
+create trigger serialize_notification_inbox_insert
+before insert on public.notification_inbox
+for each statement
+execute function public.serialize_notification_read_updates();
+
 -- Reconcile rows read through the push inbox before this migration was applied.
-update public.notifications as n
-set is_read = true
-where n.is_read is false
-  and coalesce(n.recipient_id, n.user_id) is not null
-  and exists (
-    select 1
-    from public.notification_inbox as i
-    where i.source_table = 'notifications'
-      and i.source_id = n.id
-      and i.recipient_id = coalesce(n.recipient_id, n.user_id)
-      and i.read_at is not null
-  );
+-- NOT VALID checks still apply to every updated row. Temporarily remove the
+-- personal-type check in one atomic statement so legacy type values can have
+-- their read state reconciled without changing notification content; restore
+-- it as NOT VALID before the table lock is released.
+do $$
+begin
+  perform pg_catalog.pg_advisory_xact_lock(20261128, 1);
+  alter table public.notifications drop constraint notifications_personal_type_check;
+
+  update public.notifications as n
+  set is_read = true
+  where n.is_read is false
+    and coalesce(n.recipient_id, n.user_id) is not null
+    and exists (
+      select 1
+      from public.notification_inbox as i
+      where i.source_table = 'notifications'
+        and i.source_id = n.id
+        and i.recipient_id = coalesce(n.recipient_id, n.user_id)
+        and i.read_at is not null
+    );
+
+  alter table public.notifications
+    add constraint notifications_personal_type_check
+    check (type in ('HOUSING_APPROVED', 'HOUSING_REJECTED', 'EVENT_REMINDER', 'SYSTEM'))
+    not valid;
+end;
+$$;

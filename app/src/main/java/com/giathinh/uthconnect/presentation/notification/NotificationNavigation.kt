@@ -25,7 +25,6 @@ data class NotificationDetailDestination(val notificationId: String)
  */
 fun NavGraphBuilder.notificationGraph(
     navController: NavHostController,
-    onInboxRead: () -> Unit = {},
 ) {
     composable<NotificationDestination> {
         NotificationRoute(
@@ -37,7 +36,6 @@ fun NavGraphBuilder.notificationGraph(
                 navController.navigate(ProfileDestination)
             },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
-            onInboxRead = onInboxRead,
             onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )
     }
@@ -48,7 +46,6 @@ fun NavGraphBuilder.notificationGraph(
             onOpenSettings = { navController.navigate(SettingsDestination) },
             onOpenProfile = { navController.navigate(ProfileDestination) },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
-            onInboxRead = onInboxRead,
             notificationId = args.notificationId,
             onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )

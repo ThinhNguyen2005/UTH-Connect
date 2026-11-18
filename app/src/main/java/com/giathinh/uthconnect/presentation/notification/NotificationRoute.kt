@@ -26,7 +26,6 @@ fun NotificationRoute(
     onOpenSettings: () -> Unit,
     onOpenProfile: () -> Unit,
     onOpenDetail: (String) -> Unit,
-    onInboxRead: () -> Unit = {},
     notificationId: String? = null,
     onOpenSource: (String, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -63,7 +62,6 @@ fun NotificationRoute(
                 is NotificationNavigationEvent.OpenSettings -> onOpenSettings()
                 is NotificationNavigationEvent.OpenProfile -> onOpenProfile()
                 is NotificationNavigationEvent.OpenDetail -> onOpenDetail(event.notificationId)
-                NotificationNavigationEvent.InboxRead -> onInboxRead()
             }
         }
     }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -60,6 +61,35 @@ class UserNotificationsViewModelTest {
         assertFalse(viewModel.uiState.value.notifications.single().isRead)
     }
 
+    @Test
+    fun `stale reconcile does not overwrite a newer read attempt`() = runTest {
+        val item = notification()
+        val staleResponse = CompletableDeferred<List<NotificationItem>>()
+        val repository = FakeUserNotificationRepository(
+            initial = listOf(item),
+            markResults = ArrayDeque(
+                listOf(
+                    Result.failure(IllegalStateException("temporary")),
+                    Result.success(true),
+                ),
+            ),
+            staleResponse = staleResponse,
+        )
+        val viewModel = UserNotificationsViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(UserNotificationsAction.Open(item))
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.notifications.single().isRead)
+
+        viewModel.onAction(UserNotificationsAction.Open(item))
+        advanceUntilIdle()
+        staleResponse.complete(listOf(item))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.notifications.single().isRead)
+    }
+
     private fun notification() = NotificationItem(
         id = "notification-1",
         recipientId = "user-1",
@@ -72,7 +102,8 @@ class UserNotificationsViewModelTest {
 
     private class FakeUserNotificationRepository(
         private val initial: List<NotificationItem>,
-        private val markResult: Result<Boolean>,
+        private val markResult: Result<Boolean> = Result.success(true),
+        private val markResults: ArrayDeque<Result<Boolean>> = ArrayDeque(),
         private val staleResponse: CompletableDeferred<List<NotificationItem>>? = null,
     ) : UserNotificationRepository {
         override val unreadCount = MutableStateFlow(0)
@@ -92,6 +123,8 @@ class UserNotificationsViewModelTest {
 
         override fun clearUnreadCount() = Unit
 
-        override suspend fun markAsRead(notificationId: String): Result<Boolean> = markResult
+        override suspend fun markAsRead(notificationId: String): Result<Boolean> = nextMarkResult()
+
+        private fun nextMarkResult() = markResults.removeFirstOrNull() ?: markResult
     }
 }

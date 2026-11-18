@@ -3,6 +3,7 @@ package com.giathinh.uthconnect.presentation.notification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.repository.NotificationRepository
+import com.giathinh.uthconnect.domain.repository.UserNotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,13 +23,13 @@ sealed interface NotificationNavigationEvent {
     data object Back : NotificationNavigationEvent
     data object OpenSettings : NotificationNavigationEvent
     data object OpenProfile : NotificationNavigationEvent
-    data object InboxRead : NotificationNavigationEvent
     data class OpenDetail(val notificationId: String) : NotificationNavigationEvent
 }
 
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
+    private val userNotificationRepository: UserNotificationRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState(isLoading = true))
@@ -213,7 +214,7 @@ class NotificationViewModel @Inject constructor(
                                     result,
                                     markAll = false,
                                 )
-                                if (result.isSuccess) _events.emit(NotificationNavigationEvent.InboxRead)
+                                if (result.isSuccess) refreshUnreadBadge()
                             }
                         }
                     }
@@ -251,7 +252,7 @@ class NotificationViewModel @Inject constructor(
                 }
             }
             finishReadMutation(ids, version, result, markAll)
-            if (result.isSuccess) _events.emit(NotificationNavigationEvent.InboxRead)
+            if (result.isSuccess) refreshUnreadBadge()
             if (markAll && result.isSuccess) loadNotifications(isRefresh = true)
         }
     }
@@ -261,6 +262,10 @@ class NotificationViewModel @Inject constructor(
         failedReadMutations.clear()
         _uiState.update { it.copy(readMutationFailed = false) }
         failed.forEach { mutation -> startReadMutation(mutation.ids, mutation.markAll) }
+    }
+
+    private fun refreshUnreadBadge() {
+        viewModelScope.launch { userNotificationRepository.refreshUnreadCount() }
     }
 
     private fun finishReadMutation(
