@@ -49,7 +49,9 @@ class BooksViewModel @Inject constructor(
 
             is BooksAction.SetCondition -> _uiState.update { it.copy(condition = action.value) }
 
-            is BooksAction.SetPriceRange -> _uiState.update { it.copy(minimumPrice = action.minimum, maximumPrice = action.maximum) }
+            is BooksAction.SetPriceRange -> _uiState.update {
+                it.copy(minimumPrice = action.minimum, maximumPrice = action.maximum)
+            }
 
             is BooksAction.SetSort -> _uiState.update { it.copy(sort = action.value) }
 

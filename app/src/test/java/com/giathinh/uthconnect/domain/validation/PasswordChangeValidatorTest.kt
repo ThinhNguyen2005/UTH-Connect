@@ -8,7 +8,9 @@ import org.junit.Test
 class PasswordChangeValidatorTest {
     private val validator = PasswordChangeValidator()
 
-    @Test fun `accept strong distinct password`() = assertTrue(validator.validate("UTH@123456", "New@12345", "New@12345").valid)
+    @Test fun `accept strong distinct password`() = assertTrue(
+        validator.validate("UTH@123456", "New@12345", "New@12345").valid,
+    )
 
     @Test fun `reject weak password`() = assertEquals(
         PasswordError.Weak,
@@ -25,5 +27,7 @@ class PasswordChangeValidatorTest {
         validator.validate("UTH@123456", "UTH@123456", "UTH@123456").newError,
     )
 
-    @Test fun `reject whitespace and excessive password`() = assertFalse(validator.validate("old", "A@abcdef1 ", "A@abcdef1 ").valid)
+    @Test fun `reject whitespace and excessive password`() = assertFalse(
+        validator.validate("old", "A@abcdef1 ", "A@abcdef1 ").valid,
+    )
 }

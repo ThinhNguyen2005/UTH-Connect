@@ -41,7 +41,7 @@ if (file("google-services.json").exists()) {
 android {
     namespace = "com.giathinh.uthconnect"
     compileSdk {
-        version = release(36) { minorApiLevel = 1 }
+        version = release(37)
     }
 
     defaultConfig {
@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -123,7 +124,6 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
-    implementation(libs.coil.compose)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)
@@ -135,6 +135,7 @@ dependencies {
     ksp(libs.kotlin.metadata.jvm)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -166,11 +167,5 @@ spotless {
 configurations.all {
     resolutionStrategy {
         force("androidx.concurrent:concurrent-futures:1.2.0")
-    }
-}
-
-tasks.configureEach {
-    if (name.contains("AarMetadata")) {
-        enabled = false
     }
 }

@@ -59,6 +59,34 @@ class BookListingUseCasesTest {
     }
 
     @Test
+    fun `listing field limits are enforced before persistence`() = runTest {
+        val valid = listing().copy(
+            title = "t".repeat(160),
+            subject = "s".repeat(100),
+            sellerName = "n".repeat(100),
+            description = "d".repeat(2000),
+        )
+        val repository = FakeBookListingRepository()
+        val useCases = BookListingUseCases(repository)
+        assertTrue(useCases.save(valid).isSuccess)
+
+        val invalid = listOf(
+            valid.copy(id = ""),
+            valid.copy(title = "t".repeat(161)),
+            valid.copy(subject = "s".repeat(101)),
+            valid.copy(sellerName = "n".repeat(101)),
+            valid.copy(description = "d".repeat(2001)),
+            valid.copy(contact = "a".repeat(249) + "@b.co" + "m"),
+            valid.copy(contact = "1234567"),
+        )
+        invalid.forEach { value ->
+            repository.saved = false
+            assertTrue(useCases.save(value).isFailure)
+            assertFalse(repository.saved)
+        }
+    }
+
+    @Test
     fun `updateStatus delegates to repository with only id and status`() = runTest {
         val repository = FakeBookListingRepository()
         val result = BookListingUseCases(repository).updateStatus("book-1", BookListingStatus.SOLD)

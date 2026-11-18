@@ -16,10 +16,19 @@ class SubmitVerificationRequestUseCaseTest {
             Result.success(VerificationRequestResult("req-123", VerificationStatus.PENDING))
         },
     ) = object : AuthRepository {
-        override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+        override suspend fun authenticate(
+            identifier: String,
+            password: String,
+        ): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
-        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
-        override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = onSubmit(studentId)
+        override suspend fun changePassword(
+            studentId: String,
+            oldPassword: String,
+            newPassword: String,
+        ): Result<Boolean> = Result.success(false)
+        override suspend fun submitVerificationRequest(studentId: String): Result<VerificationRequestResult> = onSubmit(
+            studentId,
+        )
     }
 
     @Test

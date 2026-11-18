@@ -19,3 +19,4 @@ local.properties
 /docs/plan
 __pycache__/
 *.pyc
+.vercel

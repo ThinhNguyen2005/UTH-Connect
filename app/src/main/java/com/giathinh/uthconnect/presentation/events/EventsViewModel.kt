@@ -97,9 +97,13 @@ class EventsViewModel @Inject constructor(
 
     fun cancel(eventId: String) = mutate(eventId) { events.cancelCurrentRegistration(eventId) }
 
-    fun saveEvent(eventId: String?, draft: EventDraft) = mutate(eventId ?: "new", "Đã lưu sự kiện") { events.saveEvent(eventId, draft) }
+    fun saveEvent(eventId: String?, draft: EventDraft) = mutate(eventId ?: "new", "Đã lưu sự kiện") {
+        events.saveEvent(eventId, draft)
+    }
 
-    fun setStatus(eventId: String, status: EventStatus) = mutate(eventId, "Đã cập nhật trạng thái sự kiện") { events.setStatus(eventId, status) }
+    fun setStatus(eventId: String, status: EventStatus) = mutate(eventId, "Đã cập nhật trạng thái sự kiện") {
+        events.setStatus(eventId, status)
+    }
 
     private fun mutate(
         eventId: String,

@@ -27,6 +27,8 @@ enum class NotificationCategory {
     ;
 
     companion object {
-        fun fromString(value: String?): NotificationCategory = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: ALL
+        fun fromString(value: String?): NotificationCategory = entries.firstOrNull {
+            it.name.equals(value, ignoreCase = true)
+        } ?: ALL
     }
 }

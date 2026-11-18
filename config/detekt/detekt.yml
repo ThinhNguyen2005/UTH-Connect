@@ -19,6 +19,9 @@ naming:
     ignoreAnnotated: ['Composable']
 
 style:
+  UnusedPrivateMember:
+    active: true
+    ignoreAnnotated: ['Preview']
   MagicNumber:
     active: true
     ignorePropertyDeclaration: true

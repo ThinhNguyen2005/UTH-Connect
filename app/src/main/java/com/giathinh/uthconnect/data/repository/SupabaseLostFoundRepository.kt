@@ -48,6 +48,7 @@ class SupabaseLostFoundRepository @Inject constructor(
         imageMimeType: String?,
     ): Result<LostFoundListing> {
         var uploadedBucketPath: String? = null
+        var writeStarted = false
         return runCatching {
             var uploadedImageUrl: String? = item.imageUrl
             if (imageBytes != null && imageBytes.isNotEmpty()) {
@@ -70,6 +71,8 @@ class SupabaseLostFoundRepository @Inject constructor(
 
             val itemToInsert = item.copy(imageUrl = uploadedImageUrl)
             val payload = itemToInsert.toJsonObject(userId = client.userIdOrNull)
+            // A failed or cancelled request may still have committed on the server.
+            writeStarted = true
             val response = client.insertTable("lost_found_items", payload)
             val createdRow = when (response) {
                 is JsonArray -> response.firstOrNull()?.jsonObject
@@ -79,7 +82,7 @@ class SupabaseLostFoundRepository @Inject constructor(
             createdRow.toDomainLostFoundListing()
         }.onFailure { error ->
             val path = uploadedBucketPath
-            if (path != null) {
+            if (path != null && !writeStarted) {
                 withContext(NonCancellable) {
                     runCatching { client.deleteStorage("lost-found", path) }
                 }

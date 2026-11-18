@@ -114,7 +114,30 @@ Dưới đây là các quyết định kỹ thuật đã được cân nhắc k�
 * Soạn thảo tài liệu chuẩn [`docs/web/VERCEL_DEPLOYMENT_GUIDE.md`](file:///d:/APP/UTH-Connect/docs/web/VERCEL_DEPLOYMENT_GUIDE.md):
   * Root Directory: `web`.
   * Framework Preset: `Next.js`.
-  * Cấu hình `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` riêng cho Development, Preview và Production; đây là cấu hình public, không đặt service-role key ở client. Xác minh code không âm thầm dùng giá trị fallback trong production khi thiếu env.\n  * Đăng ký callback URL `/auth/callback` cho từng domain preview/production trong cấu hình Supabase Auth; kiểm tra OAuth, email confirmation và luồng cookie SSR trên từng môi trường. Không đưa secret vào Git hoặc biến `NEXT_PUBLIC_*`.\n  * Ghi nhận giới hạn/gói Vercel đang áp dụng và người chịu trách nhiệm theo dõi usage trước khi bật production.
+  * Cấu hình `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` riêng cho Development, Preview và Production; đây là cấu hình public, không đặt service-role key ở client. Xác minh code không âm thầm dùng giá trị fallback trong production khi thiếu env.
+  * Đăng ký callback URL `/auth/callback` cho từng domain preview/production trong cấu hình Supabase Auth; kiểm tra OAuth, email confirmation và luồng cookie SSR trên từng môi trường. Không đưa secret vào Git hoặc biến `NEXT_PUBLIC_*`.
+  * Ghi nhận giới hạn/gói Vercel đang áp dụng và người chịu trách nhiệm theo dõi usage trước khi bật production.
+
+### 3.7. Hồ sơ Triển khai Vercel Live Preview (Milestone M1 — 2026-11-13)
+* **Vercel Project ID**: `prj_KiOeJtlZcQVKJ88sYzxX1oLkHAJQ` (`uth-connect-web`)
+* **Team**: `team_HAWtY4VoL7QdsLqohTF6zZwm` (Owner: `nguyenthinhk52005-5982`)
+* **Root Directory**: `web`
+* **Node.js Version**: `24.x`
+* **Deployments**:
+  * **Preview Deployment (Branch `develop`)**:
+    * Deployment ID: `dpl_9jWuihY4C1XJu3cM1NS496EJXisb`
+    * Unique URL: `https://uth-connect-4ynxduvvn-nguyenthinhk52005-5982.vercel.app`
+    * Branch Alias: `https://uth-connect-web-git-develop-nguyenthinhk52005-5982.vercel.app`
+    * Health Status: HTTP 200 OK trên `/` và `/login`.
+  * **Preview Deployment (Branch `main`)**:
+    * Deployment ID: `dpl_A9tFfExfWbxe9ckDyJPvejmBPA7F`
+    * Unique URL: `https://uth-connect-4l9sn55uk-nguyenthinhk52005-5982.vercel.app`
+    * Branch Alias: `https://uth-connect-web-git-main-nguyenthinhk52005-5982.vercel.app`
+    * Health Status: HTTP 200 OK trên `/` và `/login`.
+* **Biến môi trường đã cấu hình**:
+  * `NEXT_PUBLIC_SUPABASE_URL`: `https://bvxilfcctwmgmrwrncvd.supabase.co`
+  * `NEXT_PUBLIC_SUPABASE_ANON_KEY`: `sb_publishable_-tCoKaUA7cXMETDFwAnOjw_Z-VOPzTo`
+* **Observability Logs**: 0 runtime errors (`get_runtime_logs` & `get_runtime_errors` clean).
 
 ---
 

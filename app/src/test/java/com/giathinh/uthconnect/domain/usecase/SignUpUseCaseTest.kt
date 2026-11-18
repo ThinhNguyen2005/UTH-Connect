@@ -15,10 +15,22 @@ class SignUpUseCaseTest {
             Result.success(SignUpResult(needsEmailConfirmation = true, email = email))
         },
     ) = object : AuthRepository {
-        override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+        override suspend fun authenticate(
+            identifier: String,
+            password: String,
+        ): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
-        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
-        override suspend fun signUp(email: String, password: String, displayName: String, faculty: String): Result<SignUpResult> = onSignUp(email, password, displayName, faculty)
+        override suspend fun changePassword(
+            studentId: String,
+            oldPassword: String,
+            newPassword: String,
+        ): Result<Boolean> = Result.success(false)
+        override suspend fun signUp(
+            email: String,
+            password: String,
+            displayName: String,
+            faculty: String,
+        ): Result<SignUpResult> = onSignUp(email, password, displayName, faculty)
     }
 
     @Test
@@ -116,7 +128,9 @@ class SignUpUseCaseTest {
     @Test
     fun `may chu bao loi DOMAIN_RESTRICTION thi tra ve DomainRestriction outcome`() = runBlocking {
         val repo = createAuthRepo { _, _, _, _ ->
-            Result.failure(IllegalStateException("DOMAIN_RESTRICTION: Only @ut.edu.vn or @uth.edu.vn addresses are allowed"))
+            Result.failure(
+                IllegalStateException("DOMAIN_RESTRICTION: Only @ut.edu.vn or @uth.edu.vn addresses are allowed"),
+            )
         }
         val useCase = SignUpUseCase(repo)
         val result = useCase(

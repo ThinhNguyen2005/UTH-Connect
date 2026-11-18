@@ -3,6 +3,9 @@ package com.giathinh.uthconnect.domain.usecase
 import com.giathinh.uthconnect.domain.repository.AuthRepository
 import javax.inject.Inject
 
+private const val MIN_VERIFICATION_ID_LENGTH = 5
+private const val MAX_VERIFICATION_ID_LENGTH = 32
+
 sealed interface SubmitVerificationOutcome {
     data class Success(val requestId: String) : SubmitVerificationOutcome
     data class InvalidStudentId(val message: String) : SubmitVerificationOutcome
@@ -16,7 +19,7 @@ class SubmitVerificationRequestUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(rawStudentId: String): SubmitVerificationOutcome {
         val studentId = rawStudentId.trim()
-        if (studentId.length !in 5..32) {
+        if (studentId.length !in MIN_VERIFICATION_ID_LENGTH..MAX_VERIFICATION_ID_LENGTH) {
             return SubmitVerificationOutcome.InvalidStudentId("Mã số sinh viên phải có từ 5 đến 32 ký tự")
         }
 

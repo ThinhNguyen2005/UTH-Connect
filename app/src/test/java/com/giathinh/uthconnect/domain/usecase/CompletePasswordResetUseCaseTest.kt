@@ -12,10 +12,21 @@ class CompletePasswordResetUseCaseTest {
     private fun createAuthRepo(
         onComplete: (String, String, String) -> Result<Unit> = { _, _, _ -> Result.success(Unit) },
     ) = object : AuthRepository {
-        override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+        override suspend fun authenticate(
+            identifier: String,
+            password: String,
+        ): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
-        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
-        override suspend fun completePasswordReset(email: String, otp: String, newPassword: String): Result<Unit> = onComplete(email, otp, newPassword)
+        override suspend fun changePassword(
+            studentId: String,
+            oldPassword: String,
+            newPassword: String,
+        ): Result<Boolean> = Result.success(false)
+        override suspend fun completePasswordReset(
+            email: String,
+            otp: String,
+            newPassword: String,
+        ): Result<Unit> = onComplete(email, otp, newPassword)
     }
 
     @Test

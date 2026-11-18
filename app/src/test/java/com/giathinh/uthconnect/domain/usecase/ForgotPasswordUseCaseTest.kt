@@ -13,9 +13,16 @@ class ForgotPasswordUseCaseTest {
     private fun createAuthRepo(
         onReset: (String) -> Result<Unit> = { Result.success(Unit) },
     ) = object : AuthRepository {
-        override suspend fun authenticate(identifier: String, password: String): Result<StudentProfile?> = Result.success(null)
+        override suspend fun authenticate(
+            identifier: String,
+            password: String,
+        ): Result<StudentProfile?> = Result.success(null)
         override suspend fun findStudent(studentId: String): Result<StudentProfile?> = Result.success(null)
-        override suspend fun changePassword(studentId: String, oldPassword: String, newPassword: String): Result<Boolean> = Result.success(false)
+        override suspend fun changePassword(
+            studentId: String,
+            oldPassword: String,
+            newPassword: String,
+        ): Result<Boolean> = Result.success(false)
         override suspend fun sendPasswordReset(email: String): Result<Unit> = onReset(email)
     }
 

@@ -71,7 +71,8 @@ class GoogleIdTokenSource @Inject constructor() {
         } catch (failure: GetCredentialException) {
             Log.w(
                 TAG,
-                "Explicit sign-in failed [${failure.javaClass.simpleName}]: ${failure.message}; trying GetGoogleIdOption fallback",
+                "Explicit sign-in failed [${failure.javaClass.simpleName}]: ${failure.message}; " +
+                    "trying GetGoogleIdOption fallback",
             )
         }
 

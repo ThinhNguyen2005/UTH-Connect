@@ -74,7 +74,11 @@ fun AttendanceScreen(
                                 Text(stringResource(R.string.attendance_refresh))
                             }
                             Button(onClick = onExport, enabled = !state.loading && !exporting) {
-                                Text(stringResource(if (exporting) R.string.attendance_exporting else R.string.attendance_export))
+                                Text(
+                                    stringResource(
+                                        if (exporting) R.string.attendance_exporting else R.string.attendance_export,
+                                    ),
+                                )
                             }
                         }
                         OutlinedTextField(
@@ -133,11 +137,20 @@ fun AttendanceScreen(
                         modifier = Modifier.padding(UthDimens.Spacing.Lg),
                         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
                     ) {
-                        Text(entry.displayName.ifBlank { entry.studentId }, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            entry.displayName.ifBlank { entry.studentId },
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                         Text(stringResource(R.string.attendance_student_id_value, entry.studentId))
                         Text(
-                            stringResource(if (entry.checkedIn) R.string.attendance_present else R.string.attendance_missing),
-                            color = if (entry.checkedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            stringResource(
+                                if (entry.checkedIn) R.string.attendance_present else R.string.attendance_missing,
+                            ),
+                            color = if (entry.checkedIn) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         )
                         entry.checkedInAt?.let { timestamp ->
                             Text(

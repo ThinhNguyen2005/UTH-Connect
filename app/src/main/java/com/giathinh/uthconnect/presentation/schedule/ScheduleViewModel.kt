@@ -29,6 +29,8 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Named
 
+private const val EVENT_REFRESH_INTERVAL_MILLIS = 60_000L
+
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val useCase: TimetableUseCase,
@@ -95,7 +97,7 @@ class ScheduleViewModel @Inject constructor(
             eventRepository.getEvents().retryWhen { cause, _ ->
                 if (cause is CancellationException) throw cause
                 state.update { it.copy(isEventsLoading = false, eventsLoadFailed = true) }
-                delay(60_000)
+                delay(EVENT_REFRESH_INTERVAL_MILLIS)
                 true
             }.collect { events ->
                 loadedEvents = events
@@ -117,7 +119,7 @@ class ScheduleViewModel @Inject constructor(
                         registrationsLoadFailed = true,
                     )
                 }
-                delay(60_000)
+                delay(EVENT_REFRESH_INTERVAL_MILLIS)
                 true
             }
                 .collect { ids ->
@@ -133,7 +135,7 @@ class ScheduleViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (true) {
-                delay(60_000)
+                delay(EVENT_REFRESH_INTERVAL_MILLIS)
                 val currentNow = LocalDateTime.now(clock)
                 state.update { it.copy(now = currentNow) }
                 syncDisplayedEvents()
@@ -163,10 +165,11 @@ class ScheduleViewModel @Inject constructor(
             is ScheduleAction.RegisterEvent -> {
                 val event = state.value.events.firstOrNull { it.id == action.id } ?: return
                 val now = LocalDateTime.now(clock)
-                if (
-                    state.value.isRegistrationsLoading || state.value.registrationsLoadFailed ||
+                val current = state.value
+                val registrationsUnavailable = current.isRegistrationsLoading || current.registrationsLoadFailed
+                val eventUnavailable =
                     event.status != EventStatus.PUBLISHED || now >= event.startAt || now >= event.endAt
-                ) {
+                if (registrationsUnavailable || eventUnavailable) {
                     return
                 }
                 state.update { it.copy(registrationError = null, registrationErrorCode = null) }

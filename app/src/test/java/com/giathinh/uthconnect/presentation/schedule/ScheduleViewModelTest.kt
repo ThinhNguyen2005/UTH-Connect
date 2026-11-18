@@ -34,7 +34,13 @@ class ScheduleViewModelTest {
     /** Verifies deadline validation errors appear and clear as fields are corrected. */
     @Test fun `deadline form reports field errors and clears errors on correction`() {
         val repository = InMemoryTimetableRepository(clock)
-        val vm = ScheduleViewModel(TimetableUseCase(repository), EmptyEventRepository, EmptyTicketRepository, EmptySessionRepository, clock)
+        val vm = ScheduleViewModel(
+            TimetableUseCase(repository),
+            EmptyEventRepository,
+            EmptyTicketRepository,
+            EmptySessionRepository,
+            clock,
+        )
         try {
             vm.onAction(ScheduleAction.OpenForm)
             vm.onAction(ScheduleAction.Date("2026-02-30"))
@@ -159,14 +165,21 @@ class ScheduleViewModelTest {
 private object EmptyEventRepository : EventRepository {
     override fun getEvents(campus: String?): Flow<List<Event>> = flowOf(emptyList())
     override suspend fun getEventDetail(eventId: String): Result<Event?> = Result.success(null)
-    override suspend fun registerEvent(eventId: String, uid: String, studentId: String, studentName: String): Result<Unit> = Result.success(Unit)
+    override suspend fun registerEvent(
+        eventId: String,
+        uid: String,
+        studentId: String,
+        studentName: String,
+    ): Result<Unit> = Result.success(Unit)
     override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = Result.success(Unit)
     override fun isRegistered(eventId: String, uid: String): Flow<Boolean> = flowOf(false)
     override fun currentUserRegistrations(): Flow<Set<String>> = flowOf(emptySet())
 }
 
 private object EmptyTicketRepository : TicketRepository {
-    override suspend fun getTickets(studentId: String) = Result.success(emptyList<com.giathinh.uthconnect.domain.model.Ticket>())
+    override suspend fun getTickets(studentId: String) = Result.success(
+        emptyList<com.giathinh.uthconnect.domain.model.Ticket>(),
+    )
 }
 
 private object EmptySessionRepository : SessionRepository {

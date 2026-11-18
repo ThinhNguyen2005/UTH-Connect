@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>ComplexCondition:BookListingUseCases.kt$BookListingUseCases$listing.id.isBlank() || listing.title.isBlank() || listing.title.length &gt; 160 || listing.subject.isBlank() || listing.subject.length &gt; 100 || listing.sellerName.isBlank() || listing.sellerName.length &gt; 100 || listing.description.length &gt; 2000 || listing.contact.length &gt; 254 || !isValidContact(listing.contact) || (listing.dealType == BookDealType.SALE &amp;&amp; (listing.priceVnd ?: 0) &lt;= 0) || (listing.dealType == BookDealType.EXCHANGE &amp;&amp; listing.priceVnd != null)</ID>
     <ID>ComplexCondition:EventsScreen.kt$validationError == null &amp;&amp; start != null &amp;&amp; end != null &amp;&amp; count != null</ID>
-    <ID>ComplexCondition:LostFoundViewModel.kt$LostFoundViewModel$titleError != null || descriptionError != null || locationError != null || phoneError != null</ID>
     <ID>ComplexCondition:ScheduleViewModel.kt$ScheduleViewModel$state.value.isRegistrationsLoading || state.value.registrationsLoadFailed || event.status != EventStatus.PUBLISHED || now &gt;= event.startAt || now &gt;= event.endAt</ID>
     <ID>ComplexCondition:SignUpUseCase.kt$SignUpUseCase$nameError != null || emailError != null || passwordError != null || confirmError != null</ID>
     <ID>CyclomaticComplexMethod:AuthViewModel.kt$AuthViewModel$fun onAction(action: AuthAction)</ID>
@@ -94,7 +93,6 @@
     <ID>MagicNumber:SupabaseBookListingRepository.kt$SupabaseBookListingRepository.Companion$8</ID>
     <ID>MagicNumber:SupabaseBookListingRepository.kt$SupabaseBookListingRepository.Companion$8192</ID>
     <ID>MagicNumber:SupabaseBookListingRepository.kt$SupabaseBookListingRepository.Companion$9</ID>
-    <ID>MagicNumber:SupabaseLostFoundRepository.kt$SupabaseLostFoundRepository$20</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$1000L</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$15_000</ID>
     <ID>MagicNumber:SupabaseRestClient.kt$SupabaseRestClient$200</ID>
@@ -354,7 +352,6 @@
     <ID>ReturnCount:GoogleIdTokenSource.kt$GoogleIdTokenSource$suspend fun request(activity: Activity, webClientId: String): GoogleIdTokenResult</ID>
     <ID>ReturnCount:QrFrameDecoder.kt$QrFrameDecoder$fun compactLuminance(plane: ByteBuffer, width: Int, height: Int, rowStride: Int): ByteArray</ID>
     <ID>ReturnCount:QrScannerRoute.kt$private fun decodeFrame(frame: ImageProxy): String?</ID>
-    <ID>ReturnCount:ReportItemBottomSheet.kt$private fun compressRawBytes( rawBytes: ByteArray, maxDimension: Int, quality: Int, ): ImageProcessResult</ID>
     <ID>ReturnCount:ScheduleViewModel.kt$ScheduleViewModel$fun onAction(action: ScheduleAction)</ID>
     <ID>ReturnCount:SupabaseMappers.kt$internal fun JsonObject.toDomainTicket( studentId: String, userId: String, attendedEventIds: Set&lt;String&gt;, ): Ticket?</ID>
     <ID>ReturnCount:UpdateStudentContactUseCase.kt$UpdateStudentContactUseCase$suspend operator fun invoke(phone: String, email: String, address: String): UpdateContactResult</ID>

@@ -208,7 +208,10 @@ fun AuthScreen(
                         Surface(
                             shape = UthDimens.Radius.MdShape,
                             color = extended.successContainer.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder),
-                            border = BorderStroke(UthDimens.Size.Stroke, extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder)),
+                            border = BorderStroke(
+                                UthDimens.Size.Stroke,
+                                extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder),
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("auth_forgot_success_banner"),
@@ -349,7 +352,10 @@ private fun AuthTopBar(
         Surface(
             shape = MaterialTheme.shapes.small,
             color = extended.surfaceSubtle,
-            border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.SubtleDivider)),
+            border = BorderStroke(
+                UthDimens.Size.Stroke,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.SubtleDivider),
+            ),
             modifier = Modifier.testTag("auth_language_pill"),
         ) {
             Row(
@@ -437,7 +443,10 @@ private fun ModernPasswordContent(
             Surface(
                 shape = UthDimens.Radius.MdShape,
                 color = extended.successContainer,
-                border = BorderStroke(UthDimens.Size.Stroke, extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder)),
+                border = BorderStroke(
+                    UthDimens.Size.Stroke,
+                    extended.success.copy(alpha = UthDimens.Opacity.AuthSuccessBannerBorder),
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = UthDimens.Spacing.Lg),
@@ -470,7 +479,9 @@ private fun ModernPasswordContent(
                 focusedContainerColor = extended.surfaceSubtle,
                 unfocusedContainerColor = extended.surfaceSubtle,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthInputUnfocusedBorder),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(
+                    alpha = UthDimens.Opacity.AuthInputUnfocusedBorder,
+                ),
             ),
             leadingIcon = {
                 Icon(
@@ -506,7 +517,9 @@ private fun ModernPasswordContent(
                 focusedContainerColor = extended.surfaceSubtle,
                 unfocusedContainerColor = extended.surfaceSubtle,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthInputUnfocusedBorder),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(
+                    alpha = UthDimens.Opacity.AuthInputUnfocusedBorder,
+                ),
             ),
             leadingIcon = {
                 Icon(
@@ -679,7 +692,10 @@ private fun ModernPasswordContent(
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = extended.surfaceSubtle,
                 ),
-                border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder)),
+                border = BorderStroke(
+                    UthDimens.Size.Stroke,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder),
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = UthDimens.Size.ButtonHeight)
@@ -712,7 +728,10 @@ private fun ModernPasswordContent(
             Surface(
                 shape = UthDimens.Radius.MdShape,
                 color = extended.infoContainer,
-                border = BorderStroke(UthDimens.Size.Stroke, extended.info.copy(alpha = UthDimens.Opacity.AuthInfoBannerBorder)),
+                border = BorderStroke(
+                    UthDimens.Size.Stroke,
+                    extended.info.copy(alpha = UthDimens.Opacity.AuthInfoBannerBorder),
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("auth_google_pending"),
@@ -852,7 +871,9 @@ private fun ModernIdentifierContent(
                 focusedContainerColor = extended.surfaceSubtle,
                 unfocusedContainerColor = extended.surfaceSubtle,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthInputUnfocusedBorder),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(
+                    alpha = UthDimens.Opacity.AuthInputUnfocusedBorder,
+                ),
             ),
             leadingIcon = {
                 Icon(
@@ -891,7 +912,10 @@ private fun ModernIdentifierContent(
                 enabled = enabled && !uiState.isSigningInWithGoogle,
                 shape = textFieldShape,
                 colors = ButtonDefaults.outlinedButtonColors(containerColor = extended.surfaceSubtle),
-                border = BorderStroke(UthDimens.Size.Stroke, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder)),
+                border = BorderStroke(
+                    UthDimens.Size.Stroke,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = UthDimens.Opacity.AuthOutlineButtonBorder),
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = UthDimens.Size.ButtonHeight)
@@ -1150,7 +1174,11 @@ private fun ModernResetPasswordContent(
                 unfocusedContainerColor = extended.surfaceSubtle,
             ),
             label = { Text(stringResource(R.string.auth_reset_new_password)) },
-            visualTransformation = if (uiState.resetPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            visualTransformation = if (uiState.resetPasswordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
             trailingIcon = {
                 IconButton(
                     onClick = { onAction(AuthAction.ToggleResetPasswordVisibility) },
@@ -1184,7 +1212,11 @@ private fun ModernResetPasswordContent(
                 unfocusedContainerColor = extended.surfaceSubtle,
             ),
             label = { Text(stringResource(R.string.auth_reset_confirm_password)) },
-            visualTransformation = if (uiState.resetPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            visualTransformation = if (uiState.resetPasswordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onAction(AuthAction.SubmitResetPassword) }),
         )

@@ -808,7 +808,9 @@ private fun AnnouncementStatePreview(
 
 @Preview(name = "content light", showBackground = true)
 @Composable
-private fun AnnouncementContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentPreview() = AnnouncementStatePreview(
+    AnnouncementUiState(isLoading = false, detail = PreviewDetail),
+)
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
@@ -820,7 +822,9 @@ private fun AnnouncementContentDarkPreview() = AnnouncementStatePreview(
 /** Bài ngắn: đúng dữ liệu thật của bảng tin (chỉ tóm tắt), không thêm mục rỗng. */
 @Preview(name = "short content", showBackground = true)
 @Composable
-private fun AnnouncementShortContentPreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewShortDetail))
+private fun AnnouncementShortContentPreview() = AnnouncementStatePreview(
+    AnnouncementUiState(isLoading = false, detail = PreviewShortDetail),
+)
 
 @Preview(name = "loading light", showBackground = true)
 @Composable
@@ -857,4 +861,6 @@ private fun AnnouncementMissingDarkPreview() = AnnouncementStatePreview(
 /** Font scale 130 % — kiểm tra tiêu đề dài và dòng meta không bị cắt (`Design-system` mục 8). */
 @Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f)
 @Composable
-private fun AnnouncementContentFontScalePreview() = AnnouncementStatePreview(AnnouncementUiState(isLoading = false, detail = PreviewDetail))
+private fun AnnouncementContentFontScalePreview() = AnnouncementStatePreview(
+    AnnouncementUiState(isLoading = false, detail = PreviewDetail),
+)

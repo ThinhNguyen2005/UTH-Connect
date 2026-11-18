@@ -112,7 +112,8 @@ class FakeNotificationRepository @Inject constructor() : NotificationRepository 
         PostNotification(
             id = "notif-006",
             title = "Workshop Định hướng Nghề nghiệp – Ngành CNTT",
-            summary = "Khoa CNTT tổ chức workshop 'Nghề nghiệp CNTT 2025' với sự tham gia của doanh nghiệp FPT, Viettel.",
+            summary = "Khoa CNTT tổ chức workshop 'Nghề nghiệp CNTT 2025' " +
+                "với sự tham gia của doanh nghiệp FPT, Viettel.",
             content = """
                 Khoa Công nghệ Thông tin phối hợp với doanh nghiệp tổ chức Workshop:
                 "Định hướng Nghề nghiệp ngành CNTT 2025"

@@ -154,9 +154,27 @@ fun ScheduleScreen(
                 } else {
                     val rawEvents = uiState.events.filter { it.startAt.toLocalDate() == uiState.selectedDate }
                     val filteredEvents = when (selectedCategory) {
-                        1 -> rawEvents.filter { it.title.contains("Workshop", ignoreCase = true) || it.title.contains("Hội thảo", ignoreCase = true) || it.title.contains("Seminar", ignoreCase = true) || it.title.contains("AI", ignoreCase = true) }
-                        2 -> rawEvents.filter { it.title.contains("Hội thao", ignoreCase = true) || it.title.contains("Thể thao", ignoreCase = true) || it.title.contains("Sports", ignoreCase = true) || it.title.contains("Festival", ignoreCase = true) }
-                        3 -> rawEvents.filter { it.title.contains("Doanh nghiệp", ignoreCase = true) || it.title.contains("Logistics", ignoreCase = true) || it.title.contains("Career", ignoreCase = true) || it.title.contains("Đoàn", ignoreCase = true) }
+                        1 -> rawEvents.filter {
+                            it.title.contains("Workshop", ignoreCase = true) ||
+                                it.title.contains("Hội thảo", ignoreCase = true) ||
+                                it.title.contains("Seminar", ignoreCase = true) ||
+                                it.title.contains("AI", ignoreCase = true)
+                        }
+
+                        2 -> rawEvents.filter {
+                            it.title.contains("Hội thao", ignoreCase = true) ||
+                                it.title.contains("Thể thao", ignoreCase = true) ||
+                                it.title.contains("Sports", ignoreCase = true) ||
+                                it.title.contains("Festival", ignoreCase = true)
+                        }
+
+                        3 -> rawEvents.filter {
+                            it.title.contains("Doanh nghiệp", ignoreCase = true) ||
+                                it.title.contains("Logistics", ignoreCase = true) ||
+                                it.title.contains("Career", ignoreCase = true) ||
+                                it.title.contains("Đoàn", ignoreCase = true)
+                        }
+
                         else -> rawEvents
                     }
 
@@ -963,7 +981,8 @@ private fun ScheduleEvent.toTicket(studentId: String): Ticket = Ticket(
     eventId = id,
     eventTitle = title,
     eventLocation = location.removePrefix("Địa điểm: ").removePrefix("Hội trường: "),
-    eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · ${startAt.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+    eventStartsAt = "${startAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · " +
+        startAt.format(DateTimeFormatter.ofPattern("HH:mm")),
     status = if (registration == EventRegistration.CHECKED_IN) TicketStatus.CHECKED_IN else TicketStatus.VALID,
     fallbackCode = "",
     organizerName = organizer,

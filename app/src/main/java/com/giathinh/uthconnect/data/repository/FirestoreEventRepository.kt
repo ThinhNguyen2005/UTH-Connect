@@ -46,7 +46,7 @@ class FirestoreEventRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun getEventDetail(eventId: String): Result<Event?> = runCatching {
+    override suspend fun getEventDetail(eventId: String): Result<Event?> = suspendResult {
         val doc = firestore.collection(EVENTS_COLLECTION).document(eventId).get().await()
         if (doc.exists()) doc.toEvent() else null
     }
@@ -56,14 +56,14 @@ class FirestoreEventRepository @Inject constructor(
         uid: String,
         studentId: String,
         studentName: String,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = suspendResult {
         val eventRef = firestore.collection(EVENTS_COLLECTION).document(eventId)
         val registrationRef = eventRef.collection(REGISTRATIONS_COLLECTION).document(uid)
 
         firestore.runTransaction { transaction ->
             val eventDoc = transaction.get(eventRef)
             if (!eventDoc.exists()) {
-                throw IllegalStateException("Sự kiện không tồn tại")
+                error("Sự kiện không tồn tại")
             }
 
             val currentRegistered = eventDoc.getLong(FIELD_REGISTERED_COUNT)?.toInt() ?: 0
@@ -76,9 +76,7 @@ class FirestoreEventRepository @Inject constructor(
                 return@runTransaction
             }
 
-            if (capacity > 0 && currentRegistered >= capacity) {
-                throw IllegalStateException("Sự kiện đã hết số lượng đăng ký")
-            }
+            check(capacity <= 0 || currentRegistered < capacity) { "Sự kiện đã hết số lượng đăng ký" }
 
             transaction.update(eventRef, FIELD_REGISTERED_COUNT, currentRegistered + 1)
             val registrationData = mapOf(
@@ -92,7 +90,7 @@ class FirestoreEventRepository @Inject constructor(
         }.await()
     }
 
-    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = runCatching {
+    override suspend fun cancelRegistration(eventId: String, uid: String): Result<Unit> = suspendResult {
         val eventRef = firestore.collection(EVENTS_COLLECTION).document(eventId)
         val registrationRef = eventRef.collection(REGISTRATIONS_COLLECTION).document(uid)
 

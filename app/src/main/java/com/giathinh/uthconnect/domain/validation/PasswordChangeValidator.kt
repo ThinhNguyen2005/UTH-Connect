@@ -1,5 +1,8 @@
 package com.giathinh.uthconnect.domain.validation
 
+private const val MIN_PASSWORD_LENGTH = 8
+private const val MAX_PASSWORD_LENGTH = 64
+
 enum class PasswordError { Required, Weak, SameAsOld, ConfirmationMismatch }
 
 data class PasswordValidation(
@@ -13,7 +16,7 @@ data class PasswordValidation(
 /** 8..64 characters, uppercase, lowercase, decimal digit, special character, no whitespace. */
 class PasswordChangeValidator {
     fun validate(old: String, updated: String, confirmation: String): PasswordValidation {
-        val strong = updated.length in 8..64 && updated.none(Char::isWhitespace) &&
+        val strong = updated.length in MIN_PASSWORD_LENGTH..MAX_PASSWORD_LENGTH && updated.none(Char::isWhitespace) &&
             updated.any(Char::isUpperCase) && updated.any(Char::isLowerCase) &&
             updated.any(Char::isDigit) && updated.any { !it.isLetterOrDigit() && !it.isWhitespace() }
         return PasswordValidation(

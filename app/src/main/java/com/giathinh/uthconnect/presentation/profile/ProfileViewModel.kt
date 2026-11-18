@@ -64,7 +64,9 @@ class ProfileViewModel @Inject constructor(
                 )
             }
 
-            ProfileAction.Back -> _uiState.update { it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), failure = null) }
+            ProfileAction.Back -> _uiState.update {
+                it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), failure = null)
+            }
 
             is ProfileAction.OldPasswordChanged -> _uiState.update {
                 it.copy(passwordForm = it.passwordForm.copy(current = action.value, incorrectCurrent = false))
@@ -147,7 +149,11 @@ class ProfileViewModel @Inject constructor(
 
                     ChangePasswordResult.Success -> {
                         _uiState.update {
-                            it.copy(page = ProfilePage.Overview, passwordForm = PasswordForm(), notice = ProfileNotice.PasswordChanged)
+                            it.copy(
+                                page = ProfilePage.Overview,
+                                passwordForm = PasswordForm(),
+                                notice = ProfileNotice.PasswordChanged,
+                            )
                         }
                         eventChannel.send(ProfileEvent.PasswordChanged)
                     }
@@ -203,7 +209,9 @@ class ProfileViewModel @Inject constructor(
                 } else {
                     manageSession.disableBiometric()
                 }
-                _uiState.update { it.copy(notice = if (enable) ProfileNotice.BiometricEnabled else ProfileNotice.BiometricDisabled) }
+                _uiState.update {
+                    it.copy(notice = if (enable) ProfileNotice.BiometricEnabled else ProfileNotice.BiometricDisabled)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -233,7 +241,9 @@ class ProfileViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                _uiState.update { it.copy(isLoggingOut = false, confirmLogout = true, failure = ProfileFailure.LogoutFailed) }
+                _uiState.update {
+                    it.copy(isLoggingOut = false, confirmLogout = true, failure = ProfileFailure.LogoutFailed)
+                }
                 eventChannel.send(ProfileEvent.LogoutFailed)
             }
         }

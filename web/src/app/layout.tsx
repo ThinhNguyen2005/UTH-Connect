@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "UTH Connect — Cổng thông tin & Dashboard Quản trị UTH",
   description:
     "Hệ thống đa phân quyền dành cho Sinh viên, Giảng viên và Quản trị viên Trường Đại học Giao thông vận tải TP.HCM.",
+  icons: {
+    icon: [
+      { url: "/icon-uth.png", type: "image/png" },
+      { url: "/images/icon-uth.png", type: "image/png" },
+    ],
+    shortcut: "/icon-uth.png",
+    apple: "/icon-uth.png",
+  },
 };
 
 export default function RootLayout({
