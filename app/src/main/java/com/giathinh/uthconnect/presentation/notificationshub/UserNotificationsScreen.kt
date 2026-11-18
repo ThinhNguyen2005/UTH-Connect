@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -33,10 +35,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -150,7 +157,7 @@ private fun Modifier.shimmer(alpha: Float): Modifier = background(
 @Composable
 private fun NotificationHubEmpty() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -167,7 +174,7 @@ private fun NotificationHubEmpty() {
 @Composable
 private fun NotificationHubError(message: String, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -191,6 +198,8 @@ private fun NotificationHubInlineError(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun NotificationHubCard(item: NotificationItem, onClick: () -> Unit) {
+    var expanded by rememberSaveable(item.id) { mutableStateOf(false) }
+    var contentOverflows by remember(item.id) { mutableStateOf(false) }
     val color = if (item.isRead) {
         MaterialTheme.colorScheme.surface
     } else {
@@ -223,9 +232,23 @@ private fun NotificationHubCard(item: NotificationItem, onClick: () -> Unit) {
                     item.content,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
                     overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { contentOverflows = it.hasVisualOverflow },
                 )
+                if (item.type == UserNotificationType.SYSTEM && (contentOverflows || expanded)) {
+                    TextButton(onClick = { expanded = !expanded }) {
+                        Text(
+                            stringResource(
+                                if (expanded) {
+                                    R.string.user_notification_show_less
+                                } else {
+                                    R.string.user_notification_show_more
+                                },
+                            ),
+                        )
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,

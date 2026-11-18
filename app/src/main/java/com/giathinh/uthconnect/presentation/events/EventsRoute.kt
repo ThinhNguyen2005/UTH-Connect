@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.presentation.common.messageText
@@ -43,8 +43,8 @@ fun EventsRoute(
             busy = state.checkingIn,
             resultMessage = state.checkInAlreadyAt?.let {
                 stringResource(R.string.event_checkin_already_at, it)
-            } ?: state.message,
-            errorMessage = state.errorCode?.messageText(state.error) ?: state.error,
+            } ?: state.checkInMessage,
+            errorMessage = state.checkInErrorCode?.messageText(state.checkInError) ?: state.checkInError,
             checkedInCount = state.checkedInCount,
             onDismiss = {
                 scannerOpen = false

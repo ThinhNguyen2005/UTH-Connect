@@ -973,5 +973,7 @@
     <string name="user_notification_housing_rejected">Housing post needs an update</string>
     <string name="user_notification_event_reminder">Event reminder</string>
     <string name="user_notification_system">System</string>
+    <string name="user_notification_show_more">Show more</string>
+    <string name="user_notification_show_less">Show less</string>
     <string name="event_checkin_already_at">This ticket was already checked in at %1$s.</string>
 </resources>

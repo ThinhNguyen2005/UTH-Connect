@@ -35,7 +35,10 @@ data class EventsUiState(
     val checkingIn: Boolean = false,
     val checkedInCount: Int = 0,
     val message: String? = null,
+    val checkInMessage: String? = null,
     val checkInAlreadyAt: String? = null,
+    val checkInError: String? = null,
+    val checkInErrorCode: ServerErrorCode? = null,
     /**
      * Chuỗi lỗi thô từ tầng data. Để debug và làm fallback khi `errorCode == Unknown`;
      * giao diện luôn ưu tiên `errorCode?.messageText(error)`.
@@ -135,14 +138,20 @@ class EventsViewModel @Inject constructor(
     fun checkIn(token: String) {
         if (_state.value.checkingIn) return
         _state.update {
-            it.copy(checkingIn = true, message = null, checkInAlreadyAt = null, error = null, errorCode = null)
+            it.copy(
+                checkingIn = true,
+                checkInMessage = null,
+                checkInAlreadyAt = null,
+                checkInError = null,
+                checkInErrorCode = null,
+            )
         }
         viewModelScope.launch {
             try {
                 val outcome = tickets.checkInTicketQr(token).getOrThrow()
                 when (outcome.status) {
                     TicketQrCheckInStatus.CHECKED_IN -> _state.update {
-                        it.copy(message = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
+                        it.copy(checkInMessage = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
                     }
 
                     TicketQrCheckInStatus.ALREADY_CHECKED_IN -> _state.update {
@@ -154,8 +163,8 @@ class EventsViewModel @Inject constructor(
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
-                        error = error.message ?: "Không thể điểm danh",
-                        errorCode = ServerErrorCode.of(error),
+                        checkInError = error.message ?: "Không thể điểm danh",
+                        checkInErrorCode = ServerErrorCode.of(error),
                     )
                 }
             } finally {
@@ -169,7 +178,14 @@ class EventsViewModel @Inject constructor(
      * suy ra `QrScannerOutcome` từ `message`/`error` nên bắt buộc phải có lệnh này.
      */
     fun clearCheckInResult() {
-        _state.update { it.copy(message = null, checkInAlreadyAt = null, error = null, errorCode = null) }
+        _state.update {
+            it.copy(
+                checkInMessage = null,
+                checkInAlreadyAt = null,
+                checkInError = null,
+                checkInErrorCode = null,
+            )
+        }
     }
 
     private fun formatCheckInTime(value: String): String = Instant.parse(value)

@@ -1,8 +1,6 @@
 -- Return an idempotent result for an already checked-in ticket while retaining
 -- the server-signed QR token contract and all existing registration/time checks.
-drop function if exists public.check_in_ticket_qr(text);
-
-create function public.check_in_ticket_qr(p_token text)
+create function public.check_in_ticket_qr_with_result(p_token text)
 returns jsonb
 language plpgsql
 security definer
@@ -75,5 +73,25 @@ begin
 end;
 $$;
 
+-- Preserve the legacy void contract: older Android clients treat any successful
+-- RPC response as a new check-in and increment their local attendance count.
+create or replace function public.check_in_ticket_qr(p_token text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  result := public.check_in_ticket_qr_with_result(p_token);
+  if result ->> 'status' = 'ALREADY_CHECKED_IN' then
+    raise exception 'ALREADY_CHECKED_IN';
+  end if;
+end;
+$$;
+
+revoke all on function public.check_in_ticket_qr_with_result(text) from public, anon, authenticated;
 revoke all on function public.check_in_ticket_qr(text) from public, anon, authenticated;
+grant execute on function public.check_in_ticket_qr_with_result(text) to authenticated;
 grant execute on function public.check_in_ticket_qr(text) to authenticated;

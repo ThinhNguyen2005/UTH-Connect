@@ -990,5 +990,7 @@
     <string name="user_notification_housing_rejected">Tin trọ cần cập nhật</string>
     <string name="user_notification_event_reminder">Nhắc lịch sự kiện</string>
     <string name="user_notification_system">Hệ thống</string>
+    <string name="user_notification_show_more">Xem thêm</string>
+    <string name="user_notification_show_less">Thu gọn</string>
     <string name="event_checkin_already_at">Vé này đã được điểm danh trước đó lúc %1$s.</string>
 </resources>

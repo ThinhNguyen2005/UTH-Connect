@@ -46,7 +46,10 @@ class SupabaseTicketRepository @Inject constructor(
     }
 
     override suspend fun checkInTicketQr(token: String): Result<TicketQrCheckIn> = suspendResult {
-        val response = client.rpc("check_in_ticket_qr", buildJsonObject { put("p_token", token) }).jsonObject
+        val response = client.rpc(
+            "check_in_ticket_qr_with_result",
+            buildJsonObject { put("p_token", token) },
+        ).jsonObject
         val status = when (response.string("status")) {
             "CHECKED_IN" -> TicketQrCheckInStatus.CHECKED_IN
             "ALREADY_CHECKED_IN" -> TicketQrCheckInStatus.ALREADY_CHECKED_IN

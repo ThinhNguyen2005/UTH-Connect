@@ -6,11 +6,13 @@ import com.giathinh.uthconnect.domain.model.NotificationItem
 import com.giathinh.uthconnect.domain.model.UserNotificationType
 import com.giathinh.uthconnect.domain.repository.UserNotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -25,6 +27,11 @@ class UserNotificationsViewModel @Inject constructor(
     private val eventChannel = Channel<UserNotificationsEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
     private var refreshJob: Job? = null
+    private var refreshGeneration = 0L
+    private var readMutationVersion = 0L
+    private val readVersionById = mutableMapOf<String, Long>()
+    private val pendingReadIds = mutableSetOf<String>()
+    private val confirmedReadIds = mutableSetOf<String>()
 
     init {
         refresh()
@@ -39,6 +46,8 @@ class UserNotificationsViewModel @Inject constructor(
 
     fun refresh() {
         refreshJob?.cancel()
+        val generation = ++refreshGeneration
+        val readVersionAtStart = readMutationVersion
         val refreshing = mutableState.value.notifications.isNotEmpty()
         mutableState.update {
             it.copy(
@@ -50,54 +59,81 @@ class UserNotificationsViewModel @Inject constructor(
         refreshJob = viewModelScope.launch {
             repository.getNotifications()
                 .catch { error ->
-                    mutableState.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage = error.localizedMessage,
-                        )
+                    if (error is CancellationException) throw error
+                    if (generation == refreshGeneration) {
+                        mutableState.update {
+                            it.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                errorMessage = error.localizedMessage
+                                    ?: "Không thể tải thông báo. Vui lòng thử lại.",
+                            )
+                        }
                     }
                 }
-                .collect { notifications ->
+                .collect { serverNotifications ->
+                    if (generation != refreshGeneration) return@collect
+                    confirmedReadIds += serverNotifications.filter { it.isRead }.map { it.id }
+                    val merged = serverNotifications.map { item ->
+                        val changedAfterRequest = (readVersionById[item.id] ?: 0L) > readVersionAtStart
+                        if (item.id in confirmedReadIds || item.id in pendingReadIds || changedAfterRequest) {
+                            item.copy(isRead = true)
+                        } else {
+                            item
+                        }
+                    }
                     mutableState.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            notifications = notifications,
+                            notifications = merged,
                             errorMessage = null,
                         )
                     }
                 }
-            repository.refreshUnreadCount()
+            if (generation == refreshGeneration) repository.refreshUnreadCount()
         }
     }
 
     private fun openNotification(notification: NotificationItem) {
-        if (!notification.isRead && notification.recipientId != null) {
+        val latest = mutableState.value.notifications.firstOrNull { it.id == notification.id } ?: notification
+        if (!latest.isRead && latest.recipientId != null && pendingReadIds.add(latest.id)) {
+            val version = ++readMutationVersion
+            readVersionById[latest.id] = version
             mutableState.update { state ->
                 state.copy(
                     notifications = state.notifications.map { item ->
-                        if (item.id == notification.id) item.copy(isRead = true) else item
+                        if (item.id == latest.id) item.copy(isRead = true) else item
                     },
                 )
             }
             viewModelScope.launch {
-                val result = repository.markAsRead(notification.id)
-                if (result.isFailure) {
+                val result = repository.markAsRead(latest.id)
+                pendingReadIds.remove(latest.id)
+                if (result.isSuccess) {
+                    confirmedReadIds += latest.id
+                } else {
+                    val message = result.exceptionOrNull()?.localizedMessage
+                        ?: "Không thể cập nhật trạng thái thông báo. Vui lòng thử lại."
                     mutableState.update { state ->
                         state.copy(
                             notifications = state.notifications.map { item ->
-                                if (item.id == notification.id) item.copy(isRead = false) else item
+                                if (item.id == latest.id) {
+                                    item.copy(isRead = latest.id in confirmedReadIds)
+                                } else {
+                                    item
+                                }
                             },
-                            errorMessage = result.exceptionOrNull()?.localizedMessage,
+                            errorMessage = message,
                         )
                     }
-                    repository.refreshUnreadCount()
+                    reconcileNotification(latest.id)
                 }
+                repository.refreshUnreadCount()
             }
         }
         viewModelScope.launch {
-            when (notification.type) {
+            when (latest.type) {
                 UserNotificationType.HOUSING_APPROVED,
                 UserNotificationType.HOUSING_REJECTED,
                 -> eventChannel.send(UserNotificationsEvent.OpenHousing)
@@ -108,6 +144,29 @@ class UserNotificationsViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun reconcileNotification(notificationId: String) {
+        val serverItem = try {
+            repository.getNotifications().first().firstOrNull { it.id == notificationId }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return
+        if (serverItem.isRead) confirmedReadIds += notificationId
+        mutableState.update { state ->
+            state.copy(
+                notifications = state.notifications.map { item ->
+                    if (item.id == notificationId) {
+                        item.copy(isRead = serverItem.isRead || notificationId in confirmedReadIds)
+                    } else {
+                        item
+                    }
+                },
+                errorMessage = if (serverItem.isRead) null else state.errorMessage,
+            )
+        }
+    }
 }
 
 @HiltViewModel
@@ -115,12 +174,24 @@ class NotificationBadgeViewModel @Inject constructor(
     private val repository: UserNotificationRepository,
 ) : ViewModel() {
     val unreadCount = repository.unreadCount
+    val currentUserId: String? get() = repository.currentUserId
+    private var observedUserId = currentUserId
 
-    init {
+    fun onSignedInUserChanged() {
+        val latestUserId = currentUserId
+        if (latestUserId != observedUserId) {
+            repository.clearUnreadCount()
+            observedUserId = latestUserId
+        }
         refresh()
     }
 
     fun refresh() {
         viewModelScope.launch { repository.refreshUnreadCount() }
+    }
+
+    override fun onCleared() {
+        repository.clearUnreadCount()
+        super.onCleared()
     }
 }

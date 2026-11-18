@@ -14,6 +14,7 @@ create policy notifications_select on public.notifications
       and (
         user_id = (select auth.uid())
         or recipient_id = (select auth.uid())
+        or (user_id is null and recipient_id is null)
       )
     )
   );

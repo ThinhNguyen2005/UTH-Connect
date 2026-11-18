@@ -7,11 +7,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.time.Instant
 import javax.inject.Inject
@@ -24,55 +26,76 @@ class SupabasePersonalNotificationRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : UserNotificationRepository {
     private val mutableUnreadCount = MutableStateFlow(0)
+    private val countMutex = Mutex()
     private var countOwnerId: String? = null
 
     override val unreadCount = mutableUnreadCount.asStateFlow()
+    override val currentUserId: String? get() = client.userIdOrNull
 
     override fun getNotifications(): Flow<List<NotificationItem>> = flow {
         val userId = urlEncode(uuid(client.userId))
-        val rows = mutableListOf<JsonObject>()
-        var offset = 0
-        do {
-            val page = client.table(
-                "notifications?select=id,user_id,recipient_id,title,content,type,is_read,created_at" +
-                    "&or=(user_id.eq.$userId,recipient_id.eq.$userId,recipient_id.is.null)" +
-                    "&order=created_at.desc,id.desc&limit=$USER_NOTIFICATION_PAGE_SIZE&offset=$offset",
-            ).jsonArray.map { it.jsonObject }
-            rows += page
-            offset += page.size
-        } while (page.size == USER_NOTIFICATION_PAGE_SIZE)
+        val rows = buildList {
+            var cursorCreatedAt: String? = null
+            var cursorId: String? = null
+            while (true) {
+                val cursorFilter = if (cursorCreatedAt != null && cursorId != null) {
+                    val createdAt = urlEncode(requireNotNull(cursorCreatedAt))
+                    val id = urlEncode(requireNotNull(cursorId))
+                    "or(created_at.lt.$createdAt,and(created_at.eq.$createdAt,id.lt.$id))"
+                } else {
+                    null
+                }
+                val ownershipFilter =
+                    "or(user_id.eq.$userId,recipient_id.eq.$userId,recipient_id.is.null)"
+                val filters = cursorFilter?.let { "&and=($ownershipFilter,$it)" } ?: "&$ownershipFilter"
+                val page = client.table(
+                    "notifications?select=id,user_id,recipient_id,title,content,type,is_read,created_at" +
+                        filters + "&order=created_at.desc,id.desc&limit=$USER_NOTIFICATION_PAGE_SIZE",
+                ).jsonArray.map { it.jsonObject }
+                addAll(page)
+                if (page.size < USER_NOTIFICATION_PAGE_SIZE) break
+                val last = page.last()
+                cursorCreatedAt = requireNotNull(last.string("created_at"))
+                cursorId = requireNotNull(last.string("id"))
+            }
+        }
         emit(rows.map { it.toNotificationItem() })
     }
 
-    override suspend fun refreshUnreadCount(): Result<Int> = suspendResult {
-        val userId = urlEncode(uuid(client.userId))
+    override suspend fun refreshUnreadCount(): Result<Int> = countMutex.withLock {
+        val rawUserId = uuid(client.userId)
+        val userId = urlEncode(rawUserId)
         resetCountForUser(userId)
-        var count = 0
-        var offset = 0
-        do {
-            val page = client.table(
-                "notifications?select=id&is_read=eq.false" +
-                    "&or=(user_id.eq.$userId,recipient_id.eq.$userId)" +
-                    "&order=created_at.desc,id.desc&limit=$USER_NOTIFICATION_PAGE_SIZE&offset=$offset",
-            ).jsonArray
-            count += page.size
-            offset += page.size
-        } while (page.size == USER_NOTIFICATION_PAGE_SIZE)
-        mutableUnreadCount.value = count
-        count
+        suspendResult {
+            val count = client.rpc("count_unread_user_notifications", buildJsonObject {})
+                .jsonPrimitive.content.toInt()
+            if (countOwnerId == userId && runCatching { uuid(client.userId) == rawUserId }.getOrDefault(false)) {
+                mutableUnreadCount.value = count
+            }
+            count
+        }
     }
 
-    override suspend fun markAsRead(notificationId: String): Result<Boolean> = suspendResult {
-        val userId = urlEncode(uuid(client.userId))
+    override fun clearUnreadCount() {
+        countOwnerId = null
+        mutableUnreadCount.value = 0
+    }
+
+    override suspend fun markAsRead(notificationId: String): Result<Boolean> = countMutex.withLock {
+        val rawUserId = uuid(client.userId)
+        val userId = urlEncode(rawUserId)
         val id = urlEncode(uuid(notificationId))
-        val changed = client.patchTable(
-            "notifications?id=eq.$id&is_read=eq.false&or=(user_id.eq.$userId,recipient_id.eq.$userId)",
-            buildJsonObject { put("is_read", true) },
-        ).jsonArray.isNotEmpty()
-        if (changed && countOwnerId == userId) {
-            mutableUnreadCount.update { (it - 1).coerceAtLeast(0) }
+        suspendResult {
+            val changed = client.patchTable(
+                "notifications?id=eq.$id&is_read=eq.false&or=(user_id.eq.$userId,recipient_id.eq.$userId)",
+                buildJsonObject { put("is_read", true) },
+            ).jsonArray.isNotEmpty()
+            val stillSameUser = runCatching { uuid(client.userId) == rawUserId }.getOrDefault(false)
+            if (changed && countOwnerId == userId && stillSameUser) {
+                mutableUnreadCount.value = (mutableUnreadCount.value - 1).coerceAtLeast(0)
+            }
+            changed
         }
-        changed
     }
 
     private fun resetCountForUser(userId: String) {
