@@ -1,6 +1,8 @@
 package com.giathinh.uthconnect.data.repository
 
 import com.giathinh.uthconnect.domain.model.Ticket
+import com.giathinh.uthconnect.domain.repository.TicketQrCheckIn
+import com.giathinh.uthconnect.domain.repository.TicketQrCheckInStatus
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -41,5 +43,18 @@ class SupabaseTicketRepository @Inject constructor(
     override suspend fun checkIn(token: String): Result<Unit> = suspendResult {
         client.rpc("check_in_ticket_qr", buildJsonObject { put("p_token", token) })
         Unit
+    }
+
+    override suspend fun checkInTicketQr(token: String): Result<TicketQrCheckIn> = suspendResult {
+        val response = client.rpc("check_in_ticket_qr", buildJsonObject { put("p_token", token) }).jsonObject
+        val status = when (response.string("status")) {
+            "CHECKED_IN" -> TicketQrCheckInStatus.CHECKED_IN
+            "ALREADY_CHECKED_IN" -> TicketQrCheckInStatus.ALREADY_CHECKED_IN
+            else -> error("Unexpected check-in response")
+        }
+        TicketQrCheckIn(
+            status = status,
+            checkedInAt = requireNotNull(response.string("checked_in_at")),
+        )
     }
 }

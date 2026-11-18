@@ -8,6 +8,7 @@ import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.EventRepository
+import com.giathinh.uthconnect.domain.repository.TicketQrCheckInStatus
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class EventsUiState(
@@ -31,6 +35,7 @@ data class EventsUiState(
     val checkingIn: Boolean = false,
     val checkedInCount: Int = 0,
     val message: String? = null,
+    val checkInAlreadyAt: String? = null,
     /**
      * Chuỗi lỗi thô từ tầng data. Để debug và làm fallback khi `errorCode == Unknown`;
      * giao diện luôn ưu tiên `errorCode?.messageText(error)`.
@@ -129,12 +134,20 @@ class EventsViewModel @Inject constructor(
 
     fun checkIn(token: String) {
         if (_state.value.checkingIn) return
-        _state.update { it.copy(checkingIn = true, message = null, error = null, errorCode = null) }
+        _state.update {
+            it.copy(checkingIn = true, message = null, checkInAlreadyAt = null, error = null, errorCode = null)
+        }
         viewModelScope.launch {
             try {
-                tickets.checkIn(token).getOrThrow()
-                _state.update {
-                    it.copy(message = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
+                val outcome = tickets.checkInTicketQr(token).getOrThrow()
+                when (outcome.status) {
+                    TicketQrCheckInStatus.CHECKED_IN -> _state.update {
+                        it.copy(message = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
+                    }
+
+                    TicketQrCheckInStatus.ALREADY_CHECKED_IN -> _state.update {
+                        it.copy(checkInAlreadyAt = formatCheckInTime(outcome.checkedInAt))
+                    }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -156,6 +169,14 @@ class EventsViewModel @Inject constructor(
      * suy ra `QrScannerOutcome` từ `message`/`error` nên bắt buộc phải có lệnh này.
      */
     fun clearCheckInResult() {
-        _state.update { it.copy(message = null, error = null, errorCode = null) }
+        _state.update { it.copy(message = null, checkInAlreadyAt = null, error = null, errorCode = null) }
+    }
+
+    private fun formatCheckInTime(value: String): String = Instant.parse(value)
+        .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+        .format(CHECK_IN_TIME_FORMAT)
+
+    private companion object {
+        val CHECK_IN_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd/MM")
     }
 }

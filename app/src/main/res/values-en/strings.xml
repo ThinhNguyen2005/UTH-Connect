@@ -13,6 +13,7 @@
     <string name="tab_schedule">Schedule</string>
     <string name="tab_utilities">Utilities</string>
     <string name="tab_profile">Profile</string>
+    <string name="tab_notifications">Notifications</string>
 
     <!-- Vào từ hàng "My tickets" trong tab Profile, không phải tab đáy. -->
     <string name="tab_tickets">My tickets</string>
@@ -965,4 +966,12 @@
     <string name="notification_tag_generic">Notification</string>
     <string name="notification_channel_updates">UTH Connect updates</string>
     <string name="notification_channel_updates_description">Events, academic, and system updates</string>
+    <string name="user_notifications_title">Personal notifications</string>
+    <string name="user_notifications_empty">No notifications yet</string>
+    <string name="user_notifications_empty_description">Housing and event updates will appear here.</string>
+    <string name="user_notification_housing_approved">Housing post approved</string>
+    <string name="user_notification_housing_rejected">Housing post needs an update</string>
+    <string name="user_notification_event_reminder">Event reminder</string>
+    <string name="user_notification_system">System</string>
+    <string name="event_checkin_already_at">This ticket was already checked in at %1$s.</string>
 </resources>

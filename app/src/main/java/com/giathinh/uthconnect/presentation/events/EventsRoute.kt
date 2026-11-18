@@ -5,8 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.presentation.common.messageText
 import com.giathinh.uthconnect.presentation.scanner.QrScannerDialog
 
@@ -39,7 +41,9 @@ fun EventsRoute(
     if (scannerOpen) {
         QrScannerDialog(
             busy = state.checkingIn,
-            resultMessage = state.message,
+            resultMessage = state.checkInAlreadyAt?.let {
+                stringResource(R.string.event_checkin_already_at, it)
+            } ?: state.message,
             errorMessage = state.errorCode?.messageText(state.error) ?: state.error,
             checkedInCount = state.checkedInCount,
             onDismiss = {

@@ -9,11 +9,12 @@
     <string name="common_retry">Thử lại</string>
     <string name="common_meta_separator">•</string>
 
-    <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
+    <!-- 5 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+    <string name="tab_notifications">Thông báo</string>
 
     <!--
       "Vé của tôi" không còn là tab đáy: nó là hàng điều hướng trong tab Cá nhân
@@ -982,4 +983,12 @@
     <string name="notification_tag_generic">Thông báo</string>
     <string name="notification_channel_updates">Cập nhật UTH Connect</string>
     <string name="notification_channel_updates_description">Thông báo sự kiện, học vụ và cập nhật hệ thống</string>
+    <string name="user_notifications_title">Thông báo cá nhân</string>
+    <string name="user_notifications_empty">Bạn chưa có thông báo</string>
+    <string name="user_notifications_empty_description">Thông báo về tin trọ và sự kiện sẽ xuất hiện tại đây.</string>
+    <string name="user_notification_housing_approved">Tin trọ đã được duyệt</string>
+    <string name="user_notification_housing_rejected">Tin trọ cần cập nhật</string>
+    <string name="user_notification_event_reminder">Nhắc lịch sự kiện</string>
+    <string name="user_notification_system">Hệ thống</string>
+    <string name="event_checkin_already_at">Vé này đã được điểm danh trước đó lúc %1$s.</string>
 </resources>

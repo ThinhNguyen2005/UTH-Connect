@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
@@ -12,7 +13,7 @@ import com.giathinh.uthconnect.R
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
-// 4 route cấp 1 — @Serializable object, không có tham số. Navigation dựng
+// Các route cấp 1 — @Serializable object, không có tham số. Navigation dựng
 // đường dẫn từ tên class, không còn chuỗi route tự do (docs/Design.md mục 8.1).
 @Serializable object HomeDestination
 
@@ -24,13 +25,14 @@ import kotlin.reflect.KClass
 
 @Serializable object ProfileDestination
 
+@Serializable object UserNotificationsDestination
+
 /**
- * 4 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
+ * 5 tab cấp 1 của app — khung Navigation theo `docs/Design.md` mục 8.
  *
- * Con số 4 không phải tuỳ hứng: khuyến nghị của Google cho navigation bar là
+ * Số điểm đến nằm trong giới hạn Google khuyến nghị cho navigation bar là
  * **3–5 điểm đến ngang hàng** (developer.android.com — Navigation bar). Vượt 5 thì
- * thanh đáy vỡ chuẩn khoảng chạm, nên màn ngoài tab phải đi vào qua lưới Tiện ích
- * hoặc tab Cá nhân, không cộng thêm entry vào enum này.
+ * thanh đáy vỡ chuẩn khoảng chạm, nên màn ngoài tab phải đi qua các tab này.
  *
  * Mỗi tab ánh xạ một route type-safe ([route]/[routeClass]) với nhãn và icon **khác nhau** —
  * ba tab từng cùng dùng `DateRange` khiến người dùng không phân biệt được bằng hình.
@@ -63,6 +65,12 @@ enum class UthDestination(
         ProfileDestination::class,
         R.string.tab_profile,
         Icons.Filled.Person,
+    ),
+    USER_NOTIFICATIONS(
+        UserNotificationsDestination,
+        UserNotificationsDestination::class,
+        R.string.tab_notifications,
+        Icons.Filled.Notifications,
     ),
     ;
 
