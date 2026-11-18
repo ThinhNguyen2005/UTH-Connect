@@ -3,10 +3,15 @@ package com.giathinh.uthconnect.data.repository
 import com.giathinh.uthconnect.domain.model.NotificationItem
 import com.giathinh.uthconnect.domain.model.UserNotificationType
 import com.giathinh.uthconnect.domain.repository.UserNotificationRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
@@ -27,6 +32,9 @@ class SupabasePersonalNotificationRepository @Inject constructor(
 ) : UserNotificationRepository {
     private val mutableUnreadCount = MutableStateFlow(0)
     private val countMutex = Mutex()
+    private val badgeRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val badgeRefreshLock = Any()
+    private var badgeRefreshJob: Job? = null
     private var countOwnerId: String? = null
 
     override val unreadCount = mutableUnreadCount.asStateFlow()
@@ -77,9 +85,23 @@ class SupabasePersonalNotificationRepository @Inject constructor(
         }
     }
 
+    override fun scheduleUnreadCountRefresh() {
+        val expectedUserId = currentUserId ?: return
+        synchronized(badgeRefreshLock) {
+            badgeRefreshJob?.cancel()
+            badgeRefreshJob = badgeRefreshScope.launch {
+                if (currentUserId == expectedUserId) refreshUnreadCount()
+            }
+        }
+    }
+
     override fun clearUnreadCount() {
-        countOwnerId = null
-        mutableUnreadCount.value = 0
+        synchronized(badgeRefreshLock) {
+            badgeRefreshJob?.cancel()
+            badgeRefreshJob = null
+            countOwnerId = null
+            mutableUnreadCount.value = 0
+        }
     }
 
     override suspend fun markAsRead(notificationId: String): Result<Boolean> = countMutex.withLock {

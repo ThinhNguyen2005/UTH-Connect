@@ -17,6 +17,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -102,6 +103,9 @@ private fun SignedInUthApp(
     val badgeViewModel: NotificationBadgeViewModel = hiltViewModel()
     val unreadNotificationCount by badgeViewModel.unreadCount.collectAsStateWithLifecycle()
     LaunchedEffect(badgeViewModel.currentUserId) { badgeViewModel.onSignedInUserChanged() }
+    DisposableEffect(badgeViewModel) {
+        onDispose { badgeViewModel.onSignedInSessionEnded() }
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { badgeViewModel.refresh() }
 
     LaunchedEffect(pushNotificationId) {

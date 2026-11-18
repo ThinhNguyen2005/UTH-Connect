@@ -472,7 +472,7 @@ class NotificationViewModelTest {
         viewModel.onAction(NotificationAction.ClickNotification("notification-1"))
         advanceUntilIdle()
 
-        assertEquals(1, badgeRepository.refreshCalls)
+        assertEquals(1, badgeRepository.scheduledRefreshCalls)
     }
 
     private fun createViewModel(repository: NotificationRepository): NotificationViewModel = NotificationViewModel(
@@ -540,14 +540,15 @@ class NotificationViewModelTest {
     private class FakeUserNotificationRepository : UserNotificationRepository {
         override val unreadCount = MutableStateFlow(0)
         override val currentUserId: String = "user-1"
-        var refreshCalls = 0
+        var scheduledRefreshCalls = 0
             private set
 
         override fun getNotifications(): Flow<List<NotificationItem>> = flowOf(emptyList())
 
-        override suspend fun refreshUnreadCount(): Result<Int> {
-            refreshCalls++
-            return Result.success(0)
+        override suspend fun refreshUnreadCount(): Result<Int> = Result.success(0)
+
+        override fun scheduleUnreadCountRefresh() {
+            scheduledRefreshCalls++
         }
 
         override fun clearUnreadCount() = Unit

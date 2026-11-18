@@ -265,7 +265,7 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun refreshUnreadBadge() {
-        viewModelScope.launch { userNotificationRepository.refreshUnreadCount() }
+        userNotificationRepository.scheduleUnreadCountRefresh()
     }
 
     private fun finishReadMutation(

@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -118,14 +119,40 @@ class UserNotificationsViewModelTest {
         viewModel.onAction(UserNotificationsAction.Open(item))
         runCurrent()
 
-        staleResponse.complete(listOf(item.copy(isRead = true)))
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.notifications.single().isRead)
-
         secondPatch.complete(Unit)
         advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.notifications.single().isRead)
+
+        staleResponse.complete(listOf(item.copy(isRead = true)))
+        advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.notifications.single().isRead)
+    }
+
+    @Test
+    fun `stale read confirmation does not clear a newer inbox refresh error`() = runTest {
+        val item = notification()
+        val reconcileResponse = CompletableDeferred<List<NotificationItem>>()
+        val repository = FakeUserNotificationRepository(
+            initial = listOf(item),
+            markResult = Result.failure(IllegalStateException("read failed")),
+            staleResponse = reconcileResponse,
+            failedGetRequest = 2,
+        )
+        val viewModel = UserNotificationsViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(UserNotificationsAction.Open(item))
+        runCurrent()
+        viewModel.onAction(UserNotificationsAction.Refresh)
+        advanceUntilIdle()
+        assertEquals("refresh failed", viewModel.uiState.value.errorMessage)
+
+        reconcileResponse.complete(listOf(item.copy(isRead = true)))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.notifications.single().isRead)
+        assertEquals("refresh failed", viewModel.uiState.value.errorMessage)
     }
 
     private fun notification() = NotificationItem(
@@ -144,6 +171,7 @@ class UserNotificationsViewModelTest {
         private val markResults: ArrayDeque<Result<Boolean>> = ArrayDeque(),
         private val staleResponse: CompletableDeferred<List<NotificationItem>>? = null,
         private val markGates: Map<Int, CompletableDeferred<Unit>> = emptyMap(),
+        private val failedGetRequest: Int? = null,
     ) : UserNotificationRepository {
         override val unreadCount = MutableStateFlow(0)
         override val currentUserId: String = "user-1"
@@ -152,7 +180,9 @@ class UserNotificationsViewModelTest {
 
         override fun getNotifications(): Flow<List<NotificationItem>> {
             val request = getCount++
-            return if (request == 1 && staleResponse != null) {
+            return if (request == failedGetRequest) {
+                flow { throw IllegalStateException("refresh failed") }
+            } else if (request == 1 && staleResponse != null) {
                 flow { emit(staleResponse.await()) }
             } else {
                 flowOf(initial)

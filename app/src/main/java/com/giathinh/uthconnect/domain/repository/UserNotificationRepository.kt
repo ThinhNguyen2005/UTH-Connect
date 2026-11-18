@@ -13,6 +13,9 @@ interface UserNotificationRepository {
 
     suspend fun refreshUnreadCount(): Result<Int>
 
+    /** Schedules a badge refresh in the signed-in session scope after a read mutation. */
+    fun scheduleUnreadCountRefresh() = Unit
+
     /** Clears account-scoped state when the signed-in navigation scope ends. */
     fun clearUnreadCount() = Unit
 
