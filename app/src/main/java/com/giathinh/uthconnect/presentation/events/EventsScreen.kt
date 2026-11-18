@@ -49,6 +49,8 @@ private val eventDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:m
 @Composable
 fun EventsScreen(
     state: EventsUiState,
+    checkInResultMessage: String? = null,
+    checkInErrorMessage: String? = null,
     onRefresh: () -> Unit,
     onRegister: (String) -> Unit,
     onCancel: (String) -> Unit,
@@ -126,6 +128,8 @@ fun EventsScreen(
             // Ưu tiên câu dịch theo mã server; chuỗi thô chỉ còn dùng khi mã không nhận diện được.
             (state.errorCode?.messageText(state.error) ?: state.error)
                 ?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            checkInResultMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            checkInErrorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (state.loading) item { CircularProgressIndicator() }
         if (!state.loading && state.events.isEmpty()) {

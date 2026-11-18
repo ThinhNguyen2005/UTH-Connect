@@ -40,6 +40,38 @@ begin
 end;
 $$;
 
+-- Inbox copies created after a notification was read must inherit that state.
+-- Lock the source row so inserts and hub read updates cannot race past each other.
+create or replace function public.sync_notification_read_on_inbox_insert()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  source_is_read boolean;
+begin
+  if new.source_table = 'notifications' then
+    select n.is_read
+    into source_is_read
+    from public.notifications as n
+    where n.id = new.source_id
+      and coalesce(n.recipient_id, n.user_id) = new.recipient_id
+    for update;
+
+    if found and source_is_read then
+      new.read_at := coalesce(new.read_at, statement_timestamp());
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists sync_notification_read_on_inbox_insert on public.notification_inbox;
+create trigger sync_notification_read_on_inbox_insert
+before insert on public.notification_inbox
+for each row
+execute function public.sync_notification_read_on_inbox_insert();
+
 drop trigger if exists sync_notification_read_to_inbox on public.notifications;
 create trigger sync_notification_read_to_inbox
 after update of is_read on public.notifications
@@ -70,3 +102,43 @@ after update of read_at on public.notification_inbox
 for each row
 when (old.read_at is null and new.read_at is not null)
 execute function public.sync_inbox_read_to_notification();
+
+-- The two after-row triggers above touch the other table. Serialize read-state
+-- UPDATE statements before either statement acquires row locks, preventing the
+-- opposite update paths from forming a notification/inbox lock cycle.
+create or replace function public.serialize_notification_read_updates()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform pg_catalog.pg_advisory_xact_lock(20261128, 1);
+  return null;
+end;
+$$;
+
+drop trigger if exists serialize_notification_read_update on public.notifications;
+create trigger serialize_notification_read_update
+before update of is_read on public.notifications
+for each statement
+execute function public.serialize_notification_read_updates();
+
+drop trigger if exists serialize_notification_inbox_read_update on public.notification_inbox;
+create trigger serialize_notification_inbox_read_update
+before update of read_at on public.notification_inbox
+for each statement
+execute function public.serialize_notification_read_updates();
+
+-- Reconcile rows read through the push inbox before this migration was applied.
+update public.notifications as n
+set is_read = true
+where n.is_read is false
+  and coalesce(n.recipient_id, n.user_id) is not null
+  and exists (
+    select 1
+    from public.notification_inbox as i
+    where i.source_table = 'notifications'
+      and i.source_id = n.id
+      and i.recipient_id = coalesce(n.recipient_id, n.user_id)
+      and i.read_at is not null
+  );

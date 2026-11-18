@@ -246,16 +246,19 @@ private fun ScannerResultBanner(
     val colors = MaterialTheme.colorScheme
     val container = when (state.outcome) {
         QrScannerOutcome.Success -> colors.secondaryContainer
+        QrScannerOutcome.AlreadyCheckedIn -> colors.tertiaryContainer
         QrScannerOutcome.Failure -> colors.errorContainer
         else -> colors.surface.copy(alpha = UthDimens.Opacity.ScannerPanel)
     }
     val onContainer = when (state.outcome) {
         QrScannerOutcome.Success -> colors.onSecondaryContainer
+        QrScannerOutcome.AlreadyCheckedIn -> colors.onTertiaryContainer
         QrScannerOutcome.Failure -> colors.onErrorContainer
         else -> colors.onSurface
     }
     val label = when (state.outcome) {
         QrScannerOutcome.Success -> stringResource(R.string.scanner_state_success)
+        QrScannerOutcome.AlreadyCheckedIn -> stringResource(R.string.scanner_state_already_checked_in)
         QrScannerOutcome.Failure -> stringResource(R.string.scanner_state_failure)
         QrScannerOutcome.Processing -> stringResource(R.string.scanner_state_processing)
         QrScannerOutcome.Idle -> stringResource(R.string.scanner_state_idle)
@@ -292,7 +295,10 @@ private fun ScannerResultBanner(
                     Text(it, style = MaterialTheme.typography.bodySmall, color = onContainer)
                 }
             }
-            if (state.outcome == QrScannerOutcome.Success || state.outcome == QrScannerOutcome.Failure) {
+            if (state.outcome == QrScannerOutcome.Success ||
+                state.outcome == QrScannerOutcome.AlreadyCheckedIn ||
+                state.outcome == QrScannerOutcome.Failure
+            ) {
                 TextButton(onClick = onContinue) {
                     Text(stringResource(R.string.scanner_next), color = onContainer)
                 }

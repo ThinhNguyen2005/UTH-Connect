@@ -656,6 +656,7 @@
     <string name="scanner_state_idle">Đang chờ mã…</string>
     <string name="scanner_state_processing">Đang kiểm tra mã trên server…</string>
     <string name="scanner_state_success">Điểm danh thành công</string>
+    <string name="scanner_state_already_checked_in">Đã điểm danh trước đó</string>
     <string name="scanner_state_failure">Không điểm danh được</string>
     <string name="scanner_permission_title">Cần quyền camera</string>
     <string name="scanner_permission_body">Mã được đọc trực tiếp từ khung hình nên app cần quyền camera để điểm danh.</string>
@@ -993,4 +994,5 @@
     <string name="user_notification_show_more">Xem thêm</string>
     <string name="user_notification_show_less">Thu gọn</string>
     <string name="event_checkin_already_at">Vé này đã được điểm danh trước đó lúc %1$s.</string>
+    <string name="event_checkin_success">Điểm danh thành công</string>
 </resources>

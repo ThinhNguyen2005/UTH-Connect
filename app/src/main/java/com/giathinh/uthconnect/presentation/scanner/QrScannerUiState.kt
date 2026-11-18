@@ -15,6 +15,9 @@ enum class QrScannerOutcome {
     /** `check_in_ticket_qr` chấp nhận mã. */
     Success,
 
+    /** Vé đã được điểm danh trước đó; lượt quét này không tăng số người. */
+    AlreadyCheckedIn,
+
     /** Server từ chối (mã lạ, chưa tới giờ, quét trùng…) hoặc camera lỗi. */
     Failure,
 }

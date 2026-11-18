@@ -22,6 +22,7 @@ sealed interface NotificationNavigationEvent {
     data object Back : NotificationNavigationEvent
     data object OpenSettings : NotificationNavigationEvent
     data object OpenProfile : NotificationNavigationEvent
+    data object InboxRead : NotificationNavigationEvent
     data class OpenDetail(val notificationId: String) : NotificationNavigationEvent
 }
 
@@ -212,6 +213,7 @@ class NotificationViewModel @Inject constructor(
                                     result,
                                     markAll = false,
                                 )
+                                if (result.isSuccess) _events.emit(NotificationNavigationEvent.InboxRead)
                             }
                         }
                     }
@@ -249,6 +251,7 @@ class NotificationViewModel @Inject constructor(
                 }
             }
             finishReadMutation(ids, version, result, markAll)
+            if (result.isSuccess) _events.emit(NotificationNavigationEvent.InboxRead)
             if (markAll && result.isSuccess) loadNotifications(isRefresh = true)
         }
     }

@@ -46,8 +46,9 @@ class SupabasePersonalNotificationRepository @Inject constructor(
                     null
                 }
                 val ownershipFilter =
-                    "or(user_id.eq.$userId,recipient_id.eq.$userId,recipient_id.is.null)"
-                val filters = cursorFilter?.let { "&and=($ownershipFilter,$it)" } ?: "&$ownershipFilter"
+                    "or(user_id.eq.$userId,recipient_id.eq.$userId,and(user_id.is.null,recipient_id.is.null))"
+                val filters = cursorFilter?.let { "&and=($ownershipFilter,$it)" }
+                    ?: "&or=(user_id.eq.$userId,recipient_id.eq.$userId,and(user_id.is.null,recipient_id.is.null))"
                 val page = client.table(
                     "notifications?select=id,user_id,recipient_id,title,content,type,is_read,created_at" +
                         filters + "&order=created_at.desc,id.desc&limit=$USER_NOTIFICATION_PAGE_SIZE",
@@ -63,10 +64,10 @@ class SupabasePersonalNotificationRepository @Inject constructor(
     }
 
     override suspend fun refreshUnreadCount(): Result<Int> = countMutex.withLock {
-        val rawUserId = uuid(client.userId)
-        val userId = urlEncode(rawUserId)
-        resetCountForUser(userId)
         suspendResult {
+            val rawUserId = uuid(client.userId)
+            val userId = urlEncode(rawUserId)
+            resetCountForUser(userId)
             val count = client.rpc("count_unread_user_notifications", buildJsonObject {})
                 .jsonPrimitive.content.toInt()
             if (countOwnerId == userId && runCatching { uuid(client.userId) == rawUserId }.getOrDefault(false)) {
@@ -82,10 +83,10 @@ class SupabasePersonalNotificationRepository @Inject constructor(
     }
 
     override suspend fun markAsRead(notificationId: String): Result<Boolean> = countMutex.withLock {
-        val rawUserId = uuid(client.userId)
-        val userId = urlEncode(rawUserId)
-        val id = urlEncode(uuid(notificationId))
         suspendResult {
+            val rawUserId = uuid(client.userId)
+            val userId = urlEncode(rawUserId)
+            val id = urlEncode(uuid(notificationId))
             val changed = client.patchTable(
                 "notifications?id=eq.$id&is_read=eq.false&or=(user_id.eq.$userId,recipient_id.eq.$userId)",
                 buildJsonObject { put("is_read", true) },

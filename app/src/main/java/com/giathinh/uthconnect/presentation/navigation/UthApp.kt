@@ -136,6 +136,7 @@ private fun SignedInUthApp(
         UthNavHost(
             navController = navController,
             modifier = Modifier.padding(innerPadding),
+            onInboxRead = badgeViewModel::refresh,
         )
     }
 }
@@ -143,6 +144,7 @@ private fun SignedInUthApp(
 @Composable
 private fun UthNavHost(
     navController: NavHostController,
+    onInboxRead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -206,7 +208,7 @@ private fun UthNavHost(
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
-        notificationGraph(navController)
+        notificationGraph(navController, onInboxRead)
         announcementGraph(navController)
         lostFoundGraph(navController)
         booksGraph(navController)

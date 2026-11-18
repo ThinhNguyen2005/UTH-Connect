@@ -35,7 +35,7 @@ data class EventsUiState(
     val checkingIn: Boolean = false,
     val checkedInCount: Int = 0,
     val message: String? = null,
-    val checkInMessage: String? = null,
+    val checkInSucceeded: Boolean = false,
     val checkInAlreadyAt: String? = null,
     val checkInError: String? = null,
     val checkInErrorCode: ServerErrorCode? = null,
@@ -140,7 +140,7 @@ class EventsViewModel @Inject constructor(
         _state.update {
             it.copy(
                 checkingIn = true,
-                checkInMessage = null,
+                checkInSucceeded = false,
                 checkInAlreadyAt = null,
                 checkInError = null,
                 checkInErrorCode = null,
@@ -151,7 +151,7 @@ class EventsViewModel @Inject constructor(
                 val outcome = tickets.checkInTicketQr(token).getOrThrow()
                 when (outcome.status) {
                     TicketQrCheckInStatus.CHECKED_IN -> _state.update {
-                        it.copy(checkInMessage = "Điểm danh thành công", checkedInCount = it.checkedInCount + 1)
+                        it.copy(checkInSucceeded = true, checkedInCount = it.checkedInCount + 1)
                     }
 
                     TicketQrCheckInStatus.ALREADY_CHECKED_IN -> _state.update {
@@ -180,7 +180,7 @@ class EventsViewModel @Inject constructor(
     fun clearCheckInResult() {
         _state.update {
             it.copy(
-                checkInMessage = null,
+                checkInSucceeded = false,
                 checkInAlreadyAt = null,
                 checkInError = null,
                 checkInErrorCode = null,

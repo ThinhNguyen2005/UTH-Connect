@@ -237,7 +237,12 @@ private fun NotificationHubCard(item: NotificationItem, onClick: () -> Unit) {
                     onTextLayout = { contentOverflows = it.hasVisualOverflow },
                 )
                 if (item.type == UserNotificationType.SYSTEM && (contentOverflows || expanded)) {
-                    TextButton(onClick = { expanded = !expanded }) {
+                    TextButton(
+                        onClick = {
+                            if (!expanded && !item.isRead) onClick()
+                            expanded = !expanded
+                        },
+                    ) {
                         Text(
                             stringResource(
                                 if (expanded) {

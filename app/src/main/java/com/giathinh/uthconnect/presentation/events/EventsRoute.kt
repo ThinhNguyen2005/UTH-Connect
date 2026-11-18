@@ -23,6 +23,17 @@ fun EventsRoute(
     var scannerOpen by remember { mutableStateOf(false) }
     EventsScreen(
         state = state,
+        checkInResultMessage = if (!scannerOpen) {
+            state.checkInAlreadyAt?.let { stringResource(R.string.event_checkin_already_at, it) }
+                ?: if (state.checkInSucceeded) stringResource(R.string.event_checkin_success) else null
+        } else {
+            null
+        },
+        checkInErrorMessage = if (!scannerOpen) {
+            state.checkInErrorCode?.messageText(state.checkInError) ?: state.checkInError
+        } else {
+            null
+        },
         onRefresh = viewModel::reload,
         onRegister = viewModel::register,
         onCancel = viewModel::cancel,
@@ -31,24 +42,20 @@ fun EventsRoute(
         onOpenAttendance = onOpenAttendance,
         focusedEventId = focusedEventId,
         onNavigateBack = onNavigateBack,
-        onScan = {
-            // Bỏ tin nhắn của lượt đăng ký/lưu trước đó, nếu không máy quét sẽ tưởng
-            // rằng vừa có một lượt điểm danh trả kết quả.
-            viewModel.clearCheckInResult()
-            scannerOpen = true
-        },
+        onScan = { scannerOpen = true },
     )
     if (scannerOpen) {
         QrScannerDialog(
             busy = state.checkingIn,
-            resultMessage = state.checkInAlreadyAt?.let {
+            resultMessage = if (state.checkInSucceeded) stringResource(R.string.event_checkin_success) else null,
+            alreadyCheckedInMessage = state.checkInAlreadyAt?.let {
                 stringResource(R.string.event_checkin_already_at, it)
-            } ?: state.checkInMessage,
+            },
             errorMessage = state.checkInErrorCode?.messageText(state.checkInError) ?: state.checkInError,
             checkedInCount = state.checkedInCount,
             onDismiss = {
                 scannerOpen = false
-                viewModel.clearCheckInResult()
+                if (!state.checkingIn) viewModel.clearCheckInResult()
             },
             onContinue = viewModel::clearCheckInResult,
             onToken = viewModel::checkIn,

@@ -28,8 +28,6 @@ class UserNotificationsViewModel @Inject constructor(
     val events = eventChannel.receiveAsFlow()
     private var refreshJob: Job? = null
     private var refreshGeneration = 0L
-    private var readMutationVersion = 0L
-    private val readVersionById = mutableMapOf<String, Long>()
     private val pendingReadIds = mutableSetOf<String>()
     private val confirmedReadIds = mutableSetOf<String>()
 
@@ -47,7 +45,6 @@ class UserNotificationsViewModel @Inject constructor(
     fun refresh() {
         refreshJob?.cancel()
         val generation = ++refreshGeneration
-        val readVersionAtStart = readMutationVersion
         val refreshing = mutableState.value.notifications.isNotEmpty()
         mutableState.update {
             it.copy(
@@ -75,8 +72,7 @@ class UserNotificationsViewModel @Inject constructor(
                     if (generation != refreshGeneration) return@collect
                     confirmedReadIds += serverNotifications.filter { it.isRead }.map { it.id }
                     val merged = serverNotifications.map { item ->
-                        val changedAfterRequest = (readVersionById[item.id] ?: 0L) > readVersionAtStart
-                        if (item.id in confirmedReadIds || item.id in pendingReadIds || changedAfterRequest) {
+                        if (item.id in confirmedReadIds || item.id in pendingReadIds) {
                             item.copy(isRead = true)
                         } else {
                             item
@@ -98,8 +94,6 @@ class UserNotificationsViewModel @Inject constructor(
     private fun openNotification(notification: NotificationItem) {
         val latest = mutableState.value.notifications.firstOrNull { it.id == notification.id } ?: notification
         if (!latest.isRead && latest.recipientId != null && pendingReadIds.add(latest.id)) {
-            val version = ++readMutationVersion
-            readVersionById[latest.id] = version
             mutableState.update { state ->
                 state.copy(
                     notifications = state.notifications.map { item ->
@@ -110,11 +104,12 @@ class UserNotificationsViewModel @Inject constructor(
             viewModelScope.launch {
                 val result = repository.markAsRead(latest.id)
                 pendingReadIds.remove(latest.id)
-                if (result.isSuccess) {
+                if (result.getOrNull() == true) {
                     confirmedReadIds += latest.id
                 } else {
-                    val message = result.exceptionOrNull()?.localizedMessage
-                        ?: "Không thể cập nhật trạng thái thông báo. Vui lòng thử lại."
+                    val error = result.exceptionOrNull()
+                    val message = error?.localizedMessage
+                        ?: error?.let { "Không thể cập nhật trạng thái thông báo. Vui lòng thử lại." }
                     mutableState.update { state ->
                         state.copy(
                             notifications = state.notifications.map { item ->
@@ -124,7 +119,7 @@ class UserNotificationsViewModel @Inject constructor(
                                     item
                                 }
                             },
-                            errorMessage = message,
+                            errorMessage = message ?: state.errorMessage,
                         )
                     }
                     reconcileNotification(latest.id)

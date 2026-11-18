@@ -23,7 +23,10 @@ data class NotificationDetailDestination(val notificationId: String)
 /**
  * Graph điều hướng của module Thông Báo.
  */
-fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
+fun NavGraphBuilder.notificationGraph(
+    navController: NavHostController,
+    onInboxRead: () -> Unit = {},
+) {
     composable<NotificationDestination> {
         NotificationRoute(
             onBack = { navController.popBackStack() },
@@ -34,6 +37,7 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
                 navController.navigate(ProfileDestination)
             },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
+            onInboxRead = onInboxRead,
             onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )
     }
@@ -44,6 +48,7 @@ fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
             onOpenSettings = { navController.navigate(SettingsDestination) },
             onOpenProfile = { navController.navigate(ProfileDestination) },
             onOpenDetail = { notificationId -> navController.navigate(NotificationDetailDestination(notificationId)) },
+            onInboxRead = onInboxRead,
             notificationId = args.notificationId,
             onOpenSource = { type, id -> navController.openNotificationSource(type, id) },
         )
