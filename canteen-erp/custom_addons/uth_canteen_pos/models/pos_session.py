@@ -29,15 +29,15 @@ class PosSession(models.Model):
         compute="_compute_total_revenue",
         store=True,
     )
-    order_count = fields.Integer(
+    canteen_order_count = fields.Integer(
         string="Số đơn hàng",
         compute="_compute_total_revenue",
         store=True,
     )
 
-    @api.depends("order_ids", "order_ids.amount_total")
+    @api.depends("order_ids", "order_ids.amount_total", "order_ids.state")
     def _compute_total_revenue(self):
         for session in self:
-            orders = session.order_ids
+            orders = session.order_ids.filtered(lambda order: order.state in ("paid", "done", "invoiced"))
             session.total_revenue = sum(orders.mapped("amount_total"))
-            session.order_count = len(orders)
+            session.canteen_order_count = len(orders)

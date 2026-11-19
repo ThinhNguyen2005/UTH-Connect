@@ -9,15 +9,14 @@
                     <h4 style="color: #555; margin: 5px 0;">HỆ THỐNG QUẢN LÝ CĂN-TIN SINH VIÊN (ERP)</h4>
                     <h2 style="color: #c0392b; margin: 10px 0 0 0;">BÁO CÁO DOANH THU BÁN HÀNG CĂN-TIN</h2>
                     <p style="margin: 5px 0; color: #777;">
-                        <em>Khoảng thời gian: từ ngày <t t-esc="doc.date_from"/> đến ngày <t t-esc="doc.date_to"/></em>
+                        <em>Khoảng thời gian: từ ngày <t t-out="doc.date_from"/> đến ngày <t t-out="doc.date_to"/></em>
                     </p>
                 </div>
 
+                <t t-set="totals" t-value="doc.get_revenue_totals()"/>
                 <table class="table table-sm table-bordered" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                     <thead style="background-color: #003366; color: white; text-align: center;">
                         <tr>
-                            <th style="padding: 8px;">STT</th>
-                            <th style="padding: 8px;">Ngày</th>
                             <th style="padding: 8px;">Địa điểm</th>
                             <th style="padding: 8px;">Khung bữa</th>
                             <th style="padding: 8px;">Số đơn</th>
@@ -26,36 +25,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <t t-set="grand_total" t-value="0"/>
-                        <t t-set="grand_orders" t-value="0"/>
-                        <t t-set="grand_qty" t-value="0"/>
-                        <t t-set="stt" t-value="1"/>
-
-                        <!-- Sample dynamic or static loop -->
                         <tr>
-                            <td style="text-align: center;"><t t-esc="stt"/></td>
-                            <td style="text-align: center;"><t t-esc="doc.date_from"/></td>
-                            <td>Cơ sở 1 (Chính)</td>
-                            <td>Bữa trưa (11:00 – 14:00)</td>
-                            <td style="text-align: center;">185</td>
-                            <td style="text-align: center;">240</td>
-                            <td style="text-align: right; font-weight: bold;">6,850,000</td>
+                            <td><t t-out="dict(doc._fields['canteen_location'].selection).get(doc.canteen_location)"/></td>
+                            <td><t t-out="dict(doc._fields['meal_type'].selection).get(doc.meal_type)"/></td>
+                            <td style="text-align: center;"><t t-out="totals['orders']"/></td>
+                            <td style="text-align: center;"><t t-out="totals['quantity']"/></td>
+                            <td style="text-align: right; font-weight: bold;"><t t-out="'{:,.2f}'.format(totals['revenue'])"/></td>
                         </tr>
                     </tbody>
-                    <tfoot style="background-color: #f2f2f2; font-weight: bold;">
-                        <tr>
-                            <td colspan="4" style="text-align: right; padding: 8px;">TỔNG CỘNG:</td>
-                            <td style="text-align: center;">185</td>
-                            <td style="text-align: center;">240</td>
-                            <td style="text-align: right; color: #c0392b; font-size: 14px;">6,850,000 VND</td>
-                        </tr>
-                    </tfoot>
                 </table>
 
                 <div style="margin-top: 40px; width: 100%;">
                     <div style="float: left; width: 50%; text-align: center;">
                         <p style="font-weight: bold; margin-bottom: 60px;">NGƯỜI LẬP BÁO CÁO</p>
-                        <p style="text-transform: uppercase;">Tạ Huy Thiên Văn</p>
+                        <p>(Ký và ghi rõ họ tên)</p>
                     </div>
                     <div style="float: right; width: 50%; text-align: center;">
                         <p style="font-weight: bold; margin-bottom: 60px;">QUẢN LÝ CĂN-TIN UTH</p>
@@ -80,7 +63,6 @@
         <field name="model">canteen.revenue.wizard</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">uth_canteen_pos.report_canteen_revenue</field>
-        <field name="report_file">uth_canteen_pos.report_canteen_revenue</field>
         <field name="binding_model_id" ref="model_canteen_revenue_wizard"/>
         <field name="binding_type">report</field>
     </record>

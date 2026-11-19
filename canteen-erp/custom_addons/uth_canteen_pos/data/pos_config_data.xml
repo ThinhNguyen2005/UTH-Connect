@@ -27,7 +27,7 @@
             <field name="allow_student_card">True</field>
             <field name="daily_revenue_target">4000000.0</field>
             <field name="payment_method_ids" eval="[(6, 0, [
-                ref('pos_payment_method_cash'),
+                ref('pos_payment_method_cash_drinks'),
                 ref('pos_payment_method_vietqr'),
                 ref('pos_payment_method_student_card')
             ])]"/>
@@ -43,7 +43,7 @@
             <field name="allow_student_card">True</field>
             <field name="daily_revenue_target">3500000.0</field>
             <field name="payment_method_ids" eval="[(6, 0, [
-                ref('pos_payment_method_cash'),
+                ref('pos_payment_method_cash_kiosk'),
                 ref('pos_payment_method_vietqr'),
                 ref('pos_payment_method_student_card')
             ])]"/>

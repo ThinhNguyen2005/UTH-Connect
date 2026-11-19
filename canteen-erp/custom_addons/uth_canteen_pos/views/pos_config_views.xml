@@ -33,7 +33,7 @@
             <xpath expr="//filter[@name='inactive']" position="after">
                 <separator/>
                 <filter string="Quầy Căn-tin UTH" name="filter_canteen" domain="[('is_canteen', '=', True)]"/>
-                <group expand="0" string="Gom nhóm theo">
+                <group>
                     <filter string="Địa điểm Căn-tin" name="group_canteen_location" context="{'group_by': 'canteen_location'}"/>
                     <filter string="Ca bán hàng" name="group_shift_type" context="{'group_by': 'shift_type'}"/>
                 </group>

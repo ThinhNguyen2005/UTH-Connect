@@ -1,0 +1,4 @@
+id,name,model_id,group_id/id,operation,domain
+access_canteen_revenue_report_user,canteen.revenue.report.user,canteen.revenue.report,point_of_sale.group_pos_user,r,
+access_canteen_revenue_wizard_user,canteen.revenue.wizard.user,canteen.revenue.wizard,point_of_sale.group_pos_user,crud,
+rule_canteen_revenue_company,Canteen revenue by allowed companies,canteen.revenue.report,,crud,"[('company_id', 'in', company_ids)]"

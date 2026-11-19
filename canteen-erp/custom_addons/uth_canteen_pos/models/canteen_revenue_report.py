@@ -32,12 +32,10 @@ class CanteenRevenueReport(models.Model):
         string="Khung bữa ăn",
         readonly=True,
     )
-    product_id = fields.Many2one("product.product", string="Món ăn / Thức uống", readonly=True)
-    category_id = fields.Many2one("pos.category", string="Nhóm món", readonly=True)
+    company_id = fields.Many2one("res.company", string="Công ty", readonly=True)
     order_count = fields.Integer(string="Số lượt mua", readonly=True)
     qty_sold = fields.Float(string="Số lượng bán", readonly=True)
     total_amount = fields.Float(string="Tổng doanh thu (VND)", readonly=True)
-    payment_method_name = fields.Char(string="Phương thức thanh toán", readonly=True)
 
     def init(self):
         """Create or replace the PostgreSQL view for fast revenue aggregation."""
@@ -45,32 +43,22 @@ class CanteenRevenueReport(models.Model):
         self.env.cr.execute(f"""
             CREATE OR REPLACE VIEW {self._table} AS (
                 SELECT
-                    row_number() OVER () AS id,
-                    DATE(o.date_order) AS date,
+                    o.id AS id,
+                    DATE(o.date_order AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh') AS date,
+                    o.company_id AS company_id,
                     cfg.canteen_location AS canteen_location,
                     o.meal_type AS meal_type,
-                    line.product_id AS product_id,
-                    pt.pos_categ_ids AS category_id,
-                    COUNT(DISTINCT o.id) AS order_count,
-                    SUM(line.qty) AS qty_sold,
-                    SUM(line.price_subtotal_incl) AS total_amount,
-                    pm.name AS payment_method_name
-                FROM pos_order_line line
-                JOIN pos_order o ON line.order_id = o.id
+                    1 AS order_count,
+                    COALESCE(lines.qty_sold, 0) AS qty_sold,
+                    o.amount_total AS total_amount
+                FROM pos_order o
                 JOIN pos_session s ON o.session_id = s.id
                 JOIN pos_config cfg ON s.config_id = cfg.id
-                JOIN product_product pp ON line.product_id = pp.id
-                JOIN product_template pt ON pp.product_tmpl_id = pt.id
-                LEFT JOIN pos_payment p ON p.pos_order_id = o.id
-                LEFT JOIN pos_payment_method pm ON p.payment_method_id = pm.id
+                LEFT JOIN LATERAL (
+                    SELECT SUM(line.qty) AS qty_sold
+                    FROM pos_order_line line WHERE line.order_id = o.id
+                ) lines ON TRUE
                 WHERE cfg.is_canteen = TRUE
                   AND o.state IN ('paid', 'done', 'invoiced')
-                GROUP BY
-                    DATE(o.date_order),
-                    cfg.canteen_location,
-                    o.meal_type,
-                    line.product_id,
-                    pt.pos_categ_ids,
-                    pm.name
             )
         """)

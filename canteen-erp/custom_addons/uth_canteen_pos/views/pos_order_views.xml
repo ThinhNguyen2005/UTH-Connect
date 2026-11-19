@@ -35,11 +35,11 @@
         <field name="model">pos.order</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_order_search"/>
         <field name="arch" type="xml">
-            <xpath expr="//filter[@name='done']" position="after">
+            <xpath expr="//field[@name='config_id']" position="after">
                 <separator/>
                 <filter string="Đơn Căn-tin UTH" name="canteen_orders" domain="[('is_canteen_order', '=', True)]"/>
                 <filter string="Thanh toán thẻ SV" name="student_card_orders" domain="[('student_id_number', '!=', False)]"/>
-                <group expand="0" string="Gom nhóm Căn-tin">
+                <group>
                     <filter string="Bữa ăn (Sáng/Trưa/Ăn vặt)" name="group_meal_type" context="{'group_by': 'meal_type'}"/>
                     <filter string="Địa điểm Căn-tin" name="group_canteen_location" context="{'group_by': 'canteen_location'}"/>
                 </group>
