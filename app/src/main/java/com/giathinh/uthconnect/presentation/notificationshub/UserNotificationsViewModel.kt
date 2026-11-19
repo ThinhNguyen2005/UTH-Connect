@@ -63,21 +63,26 @@ class UserNotificationsViewModel @Inject constructor(
                 .catch { error ->
                     if (error is CancellationException) throw error
                     if (generation == refreshGeneration) {
-                        readErrorOwner = null
                         mutableState.update {
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = error.localizedMessage
-                                    ?: "Không thể tải thông báo. Vui lòng thử lại.",
+                                errorMessage = if (readErrorOwner != null) {
+                                    it.errorMessage
+                                } else {
+                                    error.localizedMessage ?: "Không thể tải thông báo. Vui lòng thử lại."
+                                },
                             )
                         }
                     }
                 }
                 .collect { serverNotifications ->
                     if (generation != refreshGeneration) return@collect
-                    readErrorOwner = null
-                    confirmedReadIds += serverNotifications.filter { it.isRead }.map { it.id }
+                    val serverReadIds = serverNotifications.filter { it.isRead }.map { it.id }.toSet()
+                    confirmedReadIds += serverReadIds
+                    val currentReadError = readErrorOwner
+                    val readErrorConfirmed = currentReadError?.notificationId?.let { it in serverReadIds } == true
+                    if (readErrorConfirmed) readErrorOwner = null
                     val merged = serverNotifications.map { item ->
                         if (item.id in confirmedReadIds || item.id in pendingReadIds) {
                             item.copy(isRead = true)
@@ -90,7 +95,7 @@ class UserNotificationsViewModel @Inject constructor(
                             isLoading = false,
                             isRefreshing = false,
                             notifications = merged,
-                            errorMessage = null,
+                            errorMessage = if (readErrorOwner == null || readErrorConfirmed) null else it.errorMessage,
                         )
                     }
                 }

@@ -82,10 +82,14 @@ execute function public.sync_notification_read_to_inbox();
 create or replace function public.sync_inbox_read_to_notification()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
-  if new.source_table = 'notifications' then
+  -- The notification SELECT policy hides scheduled rows until publication.
+  -- The inbox UPDATE policy still limits this trigger to the signed-in recipient.
+  if new.source_table = 'notifications'
+    and (select auth.uid()) = new.recipient_id then
     update public.notifications
     set is_read = true
     where id = new.source_id
@@ -95,6 +99,8 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function public.sync_inbox_read_to_notification() from public, anon, authenticated;
 
 drop trigger if exists sync_inbox_read_to_notification on public.notification_inbox;
 create trigger sync_inbox_read_to_notification

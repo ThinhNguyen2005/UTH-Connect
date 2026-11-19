@@ -155,6 +155,35 @@ class UserNotificationsViewModelTest {
         assertEquals("refresh failed", viewModel.uiState.value.errorMessage)
     }
 
+    @Test
+    fun `refresh response does not clear a read error created while it is pending`() = runTest {
+        val item = notification()
+        val refreshResponse = CompletableDeferred<List<NotificationItem>>()
+        val patch = CompletableDeferred<Unit>()
+        val repository = FakeUserNotificationRepository(
+            initial = listOf(item),
+            markResult = Result.failure(IllegalStateException("read failed")),
+            staleResponse = refreshResponse,
+            markGates = mapOf(1 to patch),
+        )
+        val viewModel = UserNotificationsViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(UserNotificationsAction.Refresh)
+        runCurrent()
+        viewModel.onAction(UserNotificationsAction.Open(item))
+        runCurrent()
+        patch.complete(Unit)
+        advanceUntilIdle()
+        assertEquals("read failed", viewModel.uiState.value.errorMessage)
+
+        refreshResponse.complete(listOf(item))
+        advanceUntilIdle()
+
+        assertEquals("read failed", viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.notifications.single().isRead)
+    }
+
     private fun notification() = NotificationItem(
         id = "notification-1",
         recipientId = "user-1",

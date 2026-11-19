@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -187,12 +187,11 @@ class EventsViewModel @Inject constructor(
             )
         }
     }
-
-    private fun formatCheckInTime(value: String): String = Instant.parse(value)
-        .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
-        .format(CHECK_IN_TIME_FORMAT)
-
-    private companion object {
-        val CHECK_IN_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd/MM")
-    }
 }
+
+internal fun formatCheckInTime(value: String): String = OffsetDateTime.parse(value)
+    .toInstant()
+    .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+    .format(CHECK_IN_TIME_FORMAT)
+
+private val CHECK_IN_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd/MM")
