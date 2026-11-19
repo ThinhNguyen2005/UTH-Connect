@@ -1,4 +1,4 @@
-package com.giathinh.uthconnect.presentation.auth
+cpackage com.giathinh.uthconnect.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
