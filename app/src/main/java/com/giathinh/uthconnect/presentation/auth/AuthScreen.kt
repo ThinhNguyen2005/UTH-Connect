@@ -53,7 +53,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -1337,59 +1336,78 @@ private fun ModernVerifyEmailContent(
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        val targetMailbox = uiState.registeredEmail.ifEmpty {
+            stringResource(R.string.auth_verify_email_default_mailbox)
+        }
+        val subtitleRes = if (uiState.verifyEmailSent) {
+            R.string.auth_verify_email_subtitle
+        } else {
+            R.string.auth_verify_email_subtitle_pending
+        }
         Text(
-            text = stringResource(
-                R.string.auth_verify_email_subtitle,
-                uiState.registeredEmail.ifEmpty { stringResource(R.string.auth_verify_email_default_mailbox) },
-            ),
+            text = stringResource(subtitleRes, targetMailbox),
             style = MaterialTheme.typography.bodyMedium,
             color = extended.textSecondary,
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(UthDimens.Spacing.Xl))
-
-        val context = LocalContext.current
-        Button(
-            onClick = {
-                val emailIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_APP_EMAIL)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                runCatching { context.startActivity(emailIntent) }
-            },
-            shape = UthDimens.Radius.LgShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = UthDimens.Size.ButtonHeight),
-        ) {
+        uiState.failure?.let { failure ->
+            Spacer(Modifier.height(UthDimens.Spacing.Md))
             Text(
-                text = stringResource(R.string.auth_open_email_app),
-                style = MaterialTheme.typography.labelLarge,
+                text = stringResource(failureRes(failure)),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.testTag("auth_verify_error"),
             )
         }
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+
+        Spacer(Modifier.height(UthDimens.Spacing.Xl))
+
+        if (uiState.verifyEmailSent) {
+            val context = LocalContext.current
+            Button(
+                onClick = {
+                    val emailIntent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_APP_EMAIL)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    runCatching { context.startActivity(emailIntent) }
+                },
+                shape = UthDimens.Radius.LgShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = UthDimens.Size.ButtonHeight),
+            ) {
+                Text(
+                    text = stringResource(R.string.auth_open_email_app),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+            Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        }
 
         val cooldown = uiState.verifyEmailCooldownSeconds
         OutlinedButton(
             onClick = { onAction(AuthAction.ResendVerificationEmail) },
-            enabled = enabled && cooldown == 0,
+            enabled = enabled && !uiState.isSendingVerifyEmail && cooldown == 0,
             shape = UthDimens.Radius.LgShape,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = UthDimens.Size.ButtonHeight)
                 .testTag("auth_resend_email"),
         ) {
+            val actionLabel = when {
+                cooldown > 0 -> stringResource(R.string.auth_verify_email_resend_cooldown, cooldown)
+                uiState.verifyEmailSent -> stringResource(R.string.auth_verify_email_resend)
+                else -> stringResource(R.string.auth_verify_email_send)
+            }
             Text(
-                text = if (cooldown > 0) {
-                    stringResource(R.string.auth_verify_email_resend_cooldown, cooldown)
-                } else {
-                    stringResource(R.string.auth_verify_email_resend)
-                },
+                text = actionLabel,
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -1479,14 +1497,12 @@ private fun RememberMeOption(
     }
 }
 
-/** Security & Version Footer (Gọn gàng, độ mờ nhẹ, không gây phân tán). */
+/** Security & Version Footer (Đủ độ tương phản WCAG AA với textSecondary #475569). */
 @Composable
 private fun AuthSecurityFooter(modifier: Modifier = Modifier) {
     val extended = UthTheme.extendedColors
     Column(
-        modifier = modifier
-            .padding(top = UthDimens.Spacing.Md, bottom = UthDimens.Spacing.Xs)
-            .alpha(UthDimens.Opacity.AuthFooter),
+        modifier = modifier.padding(top = UthDimens.Spacing.Md, bottom = UthDimens.Spacing.Xs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
@@ -1497,20 +1513,20 @@ private fun AuthSecurityFooter(modifier: Modifier = Modifier) {
                 imageVector = Icons.Filled.Lock,
                 contentDescription = null,
                 modifier = Modifier.size(UthDimens.Size.SecurityIconSize),
-                tint = extended.textTertiary,
+                tint = extended.textSecondary,
             )
             Spacer(Modifier.width(UthDimens.Spacing.Xs))
             Text(
                 text = stringResource(R.string.auth_ssl_indicator),
                 style = MaterialTheme.typography.labelSmall,
-                color = extended.textTertiary,
+                color = extended.textSecondary,
             )
         }
         Spacer(Modifier.height(UthDimens.Spacing.Xxs))
         Text(
             text = stringResource(R.string.auth_app_version),
             style = MaterialTheme.typography.labelSmall,
-            color = extended.textTertiary,
+            color = extended.textSecondary,
             modifier = Modifier.testTag("auth_footer_version"),
         )
     }

@@ -254,7 +254,7 @@
     <string name="auth_new_student_confirm_password">Xác nhận mật khẩu</string>
     <string name="auth_new_student_submit">Hoàn tất kích hoạt</string>
     <string name="auth_new_student_success">Kích hoạt tài khoản thành công! Hãy đăng nhập bằng mật khẩu vừa tạo.</string>
-    <string name="auth_identifier_label">Email sinh viên</string>
+    <string name="auth_identifier_label">MSSV (8–12 số) hoặc email trường</string>
     <string name="auth_password_label">Mật khẩu</string>
     <string name="auth_remember">Ghi nhớ đăng nhập</string>
     <string name="auth_forgot">Quên mật khẩu?</string>
@@ -290,6 +290,8 @@
     <string name="auth_reset_token_expired">Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ. Vui lòng gửi lại yêu cầu.</string>
     <string name="auth_verify_email_title">Xác nhận Email sinh viên</string>
     <string name="auth_verify_email_subtitle">Hệ thống đã gửi liên kết kích hoạt đến %1$s. Vui lòng kiểm tra hộp thư để hoàn tất kích hoạt tài khoản.</string>
+    <string name="auth_verify_email_subtitle_pending">Nhấn \"Gửi email kích hoạt\" để nhận liên kết kích hoạt tại %1$s.</string>
+    <string name="auth_verify_email_send">Gửi email kích hoạt</string>
     <string name="auth_verify_email_resend">Gửi lại email kích hoạt</string>
     <string name="auth_verify_email_resend_cooldown">Gửi lại sau (%1$ds)</string>
     <string name="auth_ok">Đồng ý</string>

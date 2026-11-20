@@ -244,9 +244,6 @@ object UthDimens {
         /** Lớp nền mỹ thuật ambient Canvas góc trên phải. */
         const val AuthAmbientShape = 0.45f
 
-        /** Độ mờ nhẹ cho footer bản quyền & bảo mật. */
-        const val AuthFooter = 0.45f
-
         /** Viền mờ cho nút phụ OutlinedButton (Google SSO). */
         const val AuthOutlineButtonBorder = 0.45f
 

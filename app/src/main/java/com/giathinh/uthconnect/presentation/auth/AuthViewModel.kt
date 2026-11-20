@@ -26,6 +26,7 @@ import com.giathinh.uthconnect.domain.usecase.SubmitVerificationOutcome
 import com.giathinh.uthconnect.domain.usecase.SubmitVerificationRequestUseCase
 import com.giathinh.uthconnect.domain.usecase.UpdateSettingsUseCase
 import com.giathinh.uthconnect.domain.validation.LoginFieldError
+import com.giathinh.uthconnect.domain.validation.LoginValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -90,12 +92,23 @@ class AuthViewModel @Inject constructor(
         updateSettings = UpdateSettingsUseCase(NoopSettingsRepository),
     )
     private val googleEnabled = BuildConfig.USE_SUPABASE && BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()
+    private val validator = LoginValidator()
     private val _uiState = MutableStateFlow(AuthUiState(googleSignInAvailable = googleEnabled))
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     private val eventChannel = Channel<AuthEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
     private var cooldownJob: Job? = null
+    private var resendJob: Job? = null
     private var recoveryCooldownJob: Job? = null
+    private var verifyEmailGeneration: Long = 0L
+
+    private fun invalidateVerifyEmailRequests() {
+        verifyEmailGeneration++
+        resendJob?.cancel()
+        resendJob = null
+        cooldownJob?.cancel()
+        cooldownJob = null
+    }
 
     /**
      * Ngôn ngữ đang thực sự bật (BCP-47). Giữ bản sao trong VM để pill VI/EN biết
@@ -120,6 +133,8 @@ class AuthViewModel @Inject constructor(
                 _uiState.update { it.copy(isRestoring = false, failure = AuthFailure.SessionRestore) }
             }
             sessions.observe().collect { current ->
+                val willLogOut = _uiState.value.student != null && current.profile == null
+                if (willLogOut) invalidateVerifyEmailRequests()
                 _uiState.update {
                     val justLoggedOut = it.student != null && current.profile == null
                     it.copy(
@@ -127,6 +142,10 @@ class AuthViewModel @Inject constructor(
                         student = current.profile,
                         identifier = if (justLoggedOut) "" else it.identifier,
                         password = if (justLoggedOut) "" else it.password,
+                        registeredEmail = if (justLoggedOut) "" else it.registeredEmail,
+                        verifyEmailSent = if (justLoggedOut) false else it.verifyEmailSent,
+                        isSendingVerifyEmail = if (justLoggedOut) false else it.isSendingVerifyEmail,
+                        verifyEmailCooldownSeconds = if (justLoggedOut) 0 else it.verifyEmailCooldownSeconds,
                         rememberMe = if (current.profile != null) current.remembered else it.rememberMe,
                         failure = when {
                             current.failure != null -> AuthFailure.SessionRestore
@@ -143,22 +162,42 @@ class AuthViewModel @Inject constructor(
         when (action) {
             is AuthAction.SelectLanguage -> selectLanguage(action.lang)
 
-            AuthAction.SwitchAccount -> _uiState.update {
-                it.copy(
-                    screenStep = AuthScreenStep.Password,
-                    identifier = "",
-                    password = "",
-                    failure = null,
-                    resetOtp = "",
-                    resetNewPassword = "",
-                    resetConfirmPassword = "",
-                    forgotEmail = "",
-                    recoveryAccessToken = null,
-                )
+            AuthAction.SwitchAccount -> {
+                invalidateVerifyEmailRequests()
+                _uiState.update {
+                    it.copy(
+                        screenStep = AuthScreenStep.Password,
+                        identifier = "",
+                        password = "",
+                        failure = null,
+                        resetOtp = "",
+                        resetNewPassword = "",
+                        resetConfirmPassword = "",
+                        forgotEmail = "",
+                        registeredEmail = "",
+                        verifyEmailSent = false,
+                        isSendingVerifyEmail = false,
+                        verifyEmailCooldownSeconds = 0,
+                        recoveryAccessToken = null,
+                    )
+                }
             }
 
-            is AuthAction.IdentifierChanged -> _uiState.update {
-                it.copy(identifier = action.value, identifierError = null, failure = null, forgotEmail = action.value)
+            is AuthAction.IdentifierChanged -> {
+                val changed = action.value != _uiState.value.identifier
+                if (changed) invalidateVerifyEmailRequests()
+                _uiState.update {
+                    it.copy(
+                        identifier = action.value,
+                        identifierError = null,
+                        failure = null,
+                        forgotEmail = action.value,
+                        registeredEmail = if (changed) "" else it.registeredEmail,
+                        verifyEmailSent = if (changed) false else it.verifyEmailSent,
+                        isSendingVerifyEmail = if (changed) false else it.isSendingVerifyEmail,
+                        verifyEmailCooldownSeconds = if (changed) 0 else it.verifyEmailCooldownSeconds,
+                    )
+                }
             }
 
             is AuthAction.PasswordChanged -> _uiState.update {
@@ -203,22 +242,21 @@ class AuthViewModel @Inject constructor(
             // Next-step flow actions
             AuthAction.ContinueIdentifier -> continueIdentifier()
 
-            is AuthAction.SelectStep -> _uiState.update {
-                it.copy(
-                    screenStep = action.step,
-                    resetOtp = if (action.step == AuthScreenStep.ResetPassword) it.resetOtp else "",
-                    resetNewPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetNewPassword else "",
-                    resetConfirmPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else "",
-                    resetPasswordError = null,
-                    failure = null,
-                    identifierError = null,
-                    passwordError = null,
-                    registeredEmail = if (action.step == AuthScreenStep.VerifyEmail && it.registeredEmail.isBlank()) {
-                        it.forgotEmail.ifBlank { it.identifier }
-                    } else {
-                        it.registeredEmail
-                    },
-                )
+            is AuthAction.SelectStep -> if (action.step == AuthScreenStep.VerifyEmail) {
+                openVerifyEmail()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        screenStep = action.step,
+                        resetOtp = if (action.step == AuthScreenStep.ResetPassword) it.resetOtp else "",
+                        resetNewPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetNewPassword else "",
+                        resetConfirmPassword = if (action.step == AuthScreenStep.ResetPassword) it.resetConfirmPassword else "",
+                        resetPasswordError = null,
+                        failure = null,
+                        identifierError = null,
+                        passwordError = null,
+                    )
+                }
             }
 
             is AuthAction.NewStudentNameChanged -> _uiState.update { it.copy(newStudentName = action.value) }
@@ -260,6 +298,29 @@ class AuthViewModel @Inject constructor(
                 uiState = _uiState,
                 events = eventChannel,
                 scope = viewModelScope,
+            )
+        }
+    }
+
+    private fun openVerifyEmail() {
+        val snapshot = _uiState.value
+        val email = snapshot.registeredEmail.ifBlank {
+            val id = snapshot.identifier.trim()
+            validator.identifierError(id)?.let { error ->
+                _uiState.update { it.copy(identifierError = error) }
+                return
+            }
+            if ('@' in id) id else "$id@ut.edu.vn"
+        }
+        val sameEmail = snapshot.registeredEmail.equals(email, ignoreCase = true)
+        _uiState.update {
+            it.copy(
+                screenStep = AuthScreenStep.VerifyEmail,
+                registeredEmail = email,
+                verifyEmailSent = snapshot.verifyEmailSent && sameEmail,
+                failure = null,
+                identifierError = null,
+                passwordError = null,
             )
         }
     }
@@ -321,15 +382,17 @@ class AuthViewModel @Inject constructor(
                 ) {
                     is SignUpOutcome.Success -> {
                         if (outcome.needsEmailConfirmation) {
+                            val currentGeneration = verifyEmailGeneration
                             _uiState.update {
                                 it.copy(
                                     isSigningIn = false,
                                     screenStep = AuthScreenStep.VerifyEmail,
                                     registeredEmail = outcome.email,
+                                    verifyEmailSent = true,
                                     verifyEmailCooldownSeconds = 60,
                                 )
                             }
-                            startVerifyEmailCooldown()
+                            startVerifyEmailCooldown(currentGeneration)
                         } else {
                             _uiState.update {
                                 it.copy(
@@ -542,43 +605,78 @@ class AuthViewModel @Inject constructor(
 
     private fun resendVerificationEmail() {
         val snapshot = _uiState.value
-        val targetEmail = snapshot.registeredEmail.ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }.trim()
-        if (targetEmail.isBlank()) {
+        if (snapshot.isSendingVerifyEmail || snapshot.verifyEmailCooldownSeconds > 0) return
+        val rawTarget = snapshot.registeredEmail
+            .ifBlank { snapshot.forgotEmail.ifBlank { snapshot.identifier } }
+            .trim()
+        if (validator.identifierError(rawTarget) != null) {
             viewModelScope.launch {
-                eventChannel.send(AuthEvent.GeneralMessage("Chưa có email sinh viên để gửi xác thực"))
+                eventChannel.send(
+                    AuthEvent.GeneralMessage("Vui lòng nhập MSSV (8–12 số) hoặc email sinh viên hợp lệ."),
+                )
             }
             return
         }
-        if (snapshot.verifyEmailCooldownSeconds > 0) return
-        startVerifyEmailCooldown()
-        viewModelScope.launch {
-            try {
-                supabaseRestClient.resendSignupConfirmation(targetEmail)
-                eventChannel.send(AuthEvent.GeneralMessage("Đã yêu cầu gửi lại email xác minh. Vui lòng kiểm tra hộp thư."))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: com.giathinh.uthconnect.data.repository.SupabaseHttpException) {
-                if (error.status == 429) {
-                    _uiState.update { it.copy(failure = AuthFailure.RateLimited) }
-                } else {
-                    cooldownJob?.cancel()
-                    _uiState.update { it.copy(verifyEmailCooldownSeconds = 0, failure = AuthFailure.Unexpected) }
-                }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
-                cooldownJob?.cancel()
-                _uiState.update { it.copy(failure = AuthFailure.Unexpected) }
-            }
+        val targetEmail = if ('@' in rawTarget) rawTarget else "$rawTarget@ut.edu.vn"
+        val requestGeneration = verifyEmailGeneration
+        _uiState.update { it.copy(isSendingVerifyEmail = true, failure = null) }
+        resendJob?.cancel()
+        resendJob = viewModelScope.launch {
+            sendVerificationRequest(targetEmail, requestGeneration)
         }
     }
 
-    private fun startVerifyEmailCooldown() {
+    private suspend fun sendVerificationRequest(targetEmail: String, requestGeneration: Long) {
+        try {
+            supabaseRestClient.resendSignupConfirmation(targetEmail)
+            if (requestGeneration != verifyEmailGeneration) return
+            _uiState.update {
+                it.copy(
+                    isSendingVerifyEmail = false,
+                    registeredEmail = targetEmail,
+                    verifyEmailSent = true,
+                    failure = null,
+                )
+            }
+            startVerifyEmailCooldown(requestGeneration)
+            eventChannel.send(
+                AuthEvent.GeneralMessage("Đã gửi liên kết kích hoạt. Vui lòng kiểm tra hộp thư sinh viên."),
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: com.giathinh.uthconnect.data.repository.SupabaseHttpException) {
+            val isRateLimited = error.status == 429
+            applyVerificationError(
+                requestGeneration = requestGeneration,
+                failure = if (isRateLimited) AuthFailure.RateLimited else AuthFailure.Unexpected,
+                startCooldown = isRateLimited,
+            )
+        } catch (_: IOException) {
+            applyVerificationError(requestGeneration, AuthFailure.NetworkError)
+        } catch (_: Exception) {
+            applyVerificationError(requestGeneration, AuthFailure.Unexpected)
+        }
+    }
+
+    private fun applyVerificationError(
+        requestGeneration: Long,
+        failure: AuthFailure,
+        startCooldown: Boolean = false,
+    ) {
+        if (requestGeneration != verifyEmailGeneration) return
+        _uiState.update { it.copy(isSendingVerifyEmail = false, failure = failure) }
+        if (startCooldown) startVerifyEmailCooldown(requestGeneration)
+    }
+
+    private fun startVerifyEmailCooldown(expectedGeneration: Long = verifyEmailGeneration) {
         cooldownJob?.cancel()
         cooldownJob = viewModelScope.launch {
             for (sec in 60 downTo 1) {
+                if (expectedGeneration != verifyEmailGeneration) return@launch
                 _uiState.update { it.copy(verifyEmailCooldownSeconds = sec) }
                 delay(1000L)
             }
+            if (expectedGeneration != verifyEmailGeneration) return@launch
             _uiState.update { it.copy(verifyEmailCooldownSeconds = 0) }
         }
     }
