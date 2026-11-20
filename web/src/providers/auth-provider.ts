@@ -174,7 +174,7 @@ export const authProvider: AuthProvider = {
 
       return {
         success: true,
-        redirectTo: `/verify-email?email=${encodeURIComponent(normalizedEmail)}`,
+        redirectTo: `/verify-email?email=${encodeURIComponent(normalizedEmail)}&sent=1`,
       };
     } catch (err: any) {
       return {
@@ -229,10 +229,10 @@ export const authProvider: AuthProvider = {
     return { error };
   },
 
-  getPermissions: async (): Promise<AppUserRole> => {
+  getPermissions: async (): Promise<AppUserRole | null> => {
     const { data } = await supabaseBrowserClient.auth.getSession();
     const session = data?.session;
-    if (!session?.user) return "student";
+    if (!session?.user) return null;
 
     const appRole = session.user.app_metadata?.role as AppUserRole | undefined;
     if (appRole) return appRole;
@@ -252,7 +252,7 @@ export const authProvider: AuthProvider = {
     if (!session?.user) return null;
 
     const user = session.user;
-    const role = (user.app_metadata?.role as AppUserRole) || "student";
+    const appRole = user.app_metadata?.role as AppUserRole | undefined;
 
     const { data: profile } = await supabaseBrowserClient
       .from("profiles")
@@ -273,7 +273,7 @@ export const authProvider: AuthProvider = {
         profile?.avatar_url ||
         user.user_metadata?.avatar_url ||
         user.user_metadata?.picture,
-      role: (profile?.role as AppUserRole) || role,
+      role: appRole || (profile?.role as AppUserRole) || "student",
     };
   },
 };

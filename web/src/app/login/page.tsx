@@ -445,7 +445,7 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-4 text-xs text-neutral-400/80 text-center lg:text-left">
-            📍 Trụ sở chính: Số 2, Đường Võ Oanh, Phường 25, Quận Bình Thạnh, TP.HCM
+            Trụ sở chính: Số 2, Đường Võ Oanh, Phường 25, Quận Bình Thạnh, TP.HCM
           </p>
         </div>
       </div>
