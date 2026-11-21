@@ -249,7 +249,7 @@
     <string name="auth_new_student_confirm_password">Confirm Password</string>
     <string name="auth_new_student_submit">Complete Activation</string>
     <string name="auth_new_student_success">Account activated successfully! Please sign in with your new password.</string>
-    <string name="auth_identifier_label">Student ID or University Email</string>
+    <string name="auth_identifier_label">Student ID (8–12 digits) or university email</string>
     <string name="auth_password_label">Password</string>
     <string name="auth_remember">Remember me</string>
     <string name="auth_forgot">Forgot password?</string>
@@ -285,6 +285,8 @@
     <string name="auth_reset_token_expired">The password reset link has expired or is invalid. Please request a new one.</string>
     <string name="auth_verify_email_title">Verify Student Email</string>
     <string name="auth_verify_email_subtitle">A confirmation link was sent to %1$s. Please check your inbox to activate your account.</string>
+    <string name="auth_verify_email_subtitle_pending">Tap \"Send activation email\" to receive an activation link at %1$s.</string>
+    <string name="auth_verify_email_send">Send activation email</string>
     <string name="auth_verify_email_resend">Resend confirmation email</string>
     <string name="auth_verify_email_resend_cooldown">Resend in (%1$ds)</string>
     <string name="auth_ok">OK</string>

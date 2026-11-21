@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 
 /**
@@ -80,12 +81,12 @@ internal fun loadSavedGate(context: Context): SavedGate {
  * Lưu trạng thái gate mới vào SharedPreferences cục bộ.
  */
 internal fun saveGate(prefs: SharedPreferences, gate: SavedGate) {
-    prefs.edit()
-        .putBoolean("maintenance_mode", gate.maintenanceMode)
-        .putString("force_update_min_version", gate.forceUpdateMinVersion)
-        .putString("update_url", gate.updateUrl)
-        .putBoolean("has_saved_state", true)
-        .apply()
+    prefs.edit {
+        putBoolean("maintenance_mode", gate.maintenanceMode)
+            .putString("force_update_min_version", gate.forceUpdateMinVersion)
+            .putString("update_url", gate.updateUrl)
+            .putBoolean("has_saved_state", true)
+    }
 }
 
 internal fun saveGate(context: Context, gate: SavedGate) {
@@ -238,7 +239,7 @@ internal fun AvailabilityScreen(
                 Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(activeUrl.trim()))
+                        val intent = Intent(Intent.ACTION_VIEW, activeUrl.trim().toUri())
                         try {
                             context.startActivity(intent)
                         } catch (_: ActivityNotFoundException) {

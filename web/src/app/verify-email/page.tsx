@@ -7,17 +7,22 @@ import { supabaseBrowserClient } from "@/utils/supabase-client";
 export default function VerifyEmailPage() {
   const [email, setEmail] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sends, setSends] = useState(1);
+  const [sends, setSends] = useState(0);
   const [wait, setWait] = useState(30);
-  const [left, setLeft] = useState(30);
+  const [left, setLeft] = useState(0);
   const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const queryEmail = params.get("email");
+      const queryEmail = params.get("email")?.trim() || "";
+      const alreadySent = params.get("sent") === "1";
       if (queryEmail) {
         setEmail(queryEmail);
+        if (alreadySent) {
+          setSends(1);
+          setLeft(30);
+        }
       }
     }
   }, []);
@@ -33,23 +38,31 @@ export default function VerifyEmailPage() {
   const handleResend = async () => {
     if (left > 0 || isResending) return;
 
-    setIsResending(true);
-    const newSends = sends + 1;
-    setSends(newSends);
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage("Vui lòng nhập email trường hoặc MSSV để gửi liên kết xác thực.");
+      return;
+    }
 
-    // Each retry costs a little more patience than the last
-    const nextWait = Math.min(wait * 2, 120);
-    setWait(nextWait);
-    setLeft(nextWait);
+    const targetEmail = cleanEmail.includes("@") ? cleanEmail : `${cleanEmail}@ut.edu.vn`;
+
+    setIsResending(true);
+    setErrorMessage(null);
 
     try {
       const { error } = await supabaseBrowserClient.auth.resend({
         type: "signup",
-        email: email.trim(),
+        email: targetEmail,
       });
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage(error.message || "Không thể gửi email xác thực. Vui lòng thử lại.");
       } else {
+        setEmail(targetEmail);
+        // Each retry costs a little more patience than the last
+        const nextWait = sends === 0 ? 30 : Math.min(wait * 2, 120);
+        setSends((prev) => prev + 1);
+        setWait(nextWait);
+        setLeft(nextWait);
         setErrorMessage(null);
       }
     } catch {
@@ -81,17 +94,50 @@ export default function VerifyEmailPage() {
           </svg>
         </div>
 
-        <h1 className="text-lg font-semibold text-neutral-900">Check your inbox</h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
-          We sent a verification link to{" "}
-          <span className="font-medium text-neutral-900">{email}</span>
-          <Link
-            href="/register"
-            className="ml-1 text-neutral-500 underline underline-offset-4 hover:text-neutral-900"
+        {sends > 0 ? (
+          <>
+            <h1 className="text-lg font-semibold text-neutral-900">Check your inbox</h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
+              We sent a verification link to{" "}
+              <span className="font-medium text-neutral-900">{email}</span>
+              <Link
+                href="/register"
+                className="ml-1 text-neutral-500 underline underline-offset-4 hover:text-neutral-900"
+              >
+                change
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-lg font-semibold text-neutral-900">Verify your email</h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
+              Enter your student email or Student ID to receive a verification link.
+            </p>
+            <div className="mt-4 text-left">
+              <input
+                type="text"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrorMessage(null);
+                }}
+                placeholder="you@ut.edu.vn or 2151050000"
+                aria-label="Student email or Student ID"
+                className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none ring-neutral-900/10 focus:border-neutral-900 focus:ring-4 transition"
+              />
+            </div>
+          </>
+        )}
+
+        {errorMessage && (
+          <div
+            role="alert"
+            className="mt-4 rounded-xl bg-red-50 p-3 text-left text-xs text-red-700"
           >
-            change
-          </Link>
-        </p>
+            {errorMessage}
+          </div>
+        )}
 
         {/* Hints Checklist */}
         <ul className="mt-6 space-y-2 rounded-xl bg-neutral-50 p-4 text-left text-xs text-neutral-600">
@@ -154,13 +200,21 @@ export default function VerifyEmailPage() {
               : "text-neutral-700 hover:bg-neutral-50 active:scale-[0.99]"
           }`}
         >
-          {left > 0 ? `Resend email in ${left}s` : "Resend email"}
+          {isResending
+            ? "Sending..."
+            : left > 0
+            ? `Resend email in ${left}s`
+            : sends > 0
+            ? "Resend email"
+            : "Send verification email"}
         </button>
 
         {/* Sent Counter Note */}
-        <p id="resendNote" className="mt-2 text-xs text-neutral-400">
-          Sent {sends === 1 ? "once" : `${sends} times`} to this address.
-        </p>
+        {sends > 0 && (
+          <p id="resendNote" className="mt-2 text-xs text-neutral-400">
+            Sent {sends === 1 ? "once" : `${sends} times`} to this address.
+          </p>
+        )}
 
         {/* Contact Support Footer */}
         <p className="mt-6 border-t border-neutral-200 pt-4 text-xs text-neutral-400">

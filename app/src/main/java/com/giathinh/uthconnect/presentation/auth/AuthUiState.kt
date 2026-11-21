@@ -67,6 +67,8 @@ data class AuthUiState(
     val setupSuccessNotice: Boolean = false,
     val registeredEmail: String = "",
     val verifyEmailCooldownSeconds: Int = 0,
+    val verifyEmailSent: Boolean = false,
+    val isSendingVerifyEmail: Boolean = false,
     /** Reset password fields */
     val resetOtp: String = "",
     val resetNewPassword: String = "",

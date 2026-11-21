@@ -89,7 +89,7 @@ export default function RegisterPage() {
       });
 
       if (res?.success) {
-        const dest = res.redirectTo || `/verify-email?email=${encodeURIComponent(cleanEmail)}`;
+        const dest = res.redirectTo || `/verify-email?email=${encodeURIComponent(cleanEmail)}&sent=1`;
         router.push(dest);
       } else {
         setErrorMessage(res?.error?.message || "Đăng ký không thành công. Vui lòng thử lại.");
