@@ -1,12 +1,17 @@
 package com.giathinh.uthconnect.presentation.notification
 
 import com.giathinh.uthconnect.domain.model.NotificationCategory
+import com.giathinh.uthconnect.domain.model.NotificationItem
 import com.giathinh.uthconnect.domain.model.PostNotification
+import com.giathinh.uthconnect.domain.model.UserNotificationType
 import com.giathinh.uthconnect.domain.repository.NotificationRepository
+import com.giathinh.uthconnect.domain.repository.UserNotificationRepository
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -31,7 +36,7 @@ class NotificationViewModelTest {
                 ),
             ),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
 
         advanceUntilIdle()
         repository.emit(listOf(notification))
@@ -65,7 +70,7 @@ class NotificationViewModelTest {
             markGates = ArrayDeque(listOf(firstPatch, secondPatch)),
             detail = notification,
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
 
         advanceUntilIdle()
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
@@ -101,7 +106,7 @@ class NotificationViewModelTest {
             markGates = ArrayDeque(listOf(firstPatch, secondPatch)),
             detail = notification,
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
 
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
         advanceUntilIdle()
@@ -127,7 +132,7 @@ class NotificationViewModelTest {
             markAllResults = ArrayDeque(listOf(Result.success(Unit))),
             markGates = ArrayDeque(listOf(individualReadGate)),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -157,7 +162,7 @@ class NotificationViewModelTest {
                 ),
             ),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -188,7 +193,7 @@ class NotificationViewModelTest {
                 ),
             ),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
 
         viewModel.onAction(NotificationAction.MarkAllAsRead)
@@ -220,7 +225,7 @@ class NotificationViewModelTest {
             markAllGates = ArrayDeque(listOf(markAllGate)),
             detail = notification,
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -255,7 +260,7 @@ class NotificationViewModelTest {
                 ),
             ),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(first, second))
         advanceUntilIdle()
@@ -288,7 +293,7 @@ class NotificationViewModelTest {
         val repository = FakeNotificationRepository(
             markResults = ArrayDeque(listOf(Result.failure(IllegalStateException("temporary")))),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -320,7 +325,7 @@ class NotificationViewModelTest {
             markGates = ArrayDeque(listOf(patchGate)),
             detail = notification.copy(readAt = 1_700_000_000_000L),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
 
         viewModel.onAction(NotificationAction.ClickNotification(notification.id))
@@ -347,7 +352,7 @@ class NotificationViewModelTest {
             markResults = ArrayDeque(),
             detail = notification.copy(readAt = 1_700_000_000_000L),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
 
         viewModel.onAction(NotificationAction.Refresh)
@@ -371,7 +376,7 @@ class NotificationViewModelTest {
                 ),
             ),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
         repository.emit(listOf(notification))
         advanceUntilIdle()
@@ -407,7 +412,7 @@ class NotificationViewModelTest {
             markGates = ArrayDeque(listOf(initialFailureGate, staleSuccessGate)),
             detail = notification,
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
         advanceUntilIdle()
 
         viewModel.onAction(NotificationAction.ClickNotification(notification.id))
@@ -437,7 +442,7 @@ class NotificationViewModelTest {
             markResults = ArrayDeque(listOf(Result.success(Unit))),
             detailResults = ArrayDeque(listOf(staleResult, latestResult)),
         )
-        val viewModel = NotificationViewModel(repository)
+        val viewModel = createViewModel(repository)
 
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
         viewModel.onAction(NotificationAction.LoadDetail(notification.id))
@@ -455,6 +460,25 @@ class NotificationViewModelTest {
         assertTrue(!viewModel.uiState.value.isDetailLoading)
         assertTrue(viewModel.uiState.value.detail == notification)
     }
+
+    @Test
+    fun `successful inbox read refreshes badge without a route collector`() = runTest {
+        val repository = FakeNotificationRepository(
+            markResults = ArrayDeque(listOf(Result.success(Unit))),
+        )
+        val badgeRepository = FakeUserNotificationRepository()
+        val viewModel = NotificationViewModel(repository, badgeRepository)
+
+        viewModel.onAction(NotificationAction.ClickNotification("notification-1"))
+        advanceUntilIdle()
+
+        assertEquals(1, badgeRepository.scheduledRefreshCalls)
+    }
+
+    private fun createViewModel(repository: NotificationRepository): NotificationViewModel = NotificationViewModel(
+        notificationRepository = repository,
+        userNotificationRepository = FakeUserNotificationRepository(),
+    )
 
     private fun notification(id: String) = PostNotification(
         id = id,
@@ -511,5 +535,24 @@ class NotificationViewModelTest {
         override suspend fun getInboxNotification(
             notificationId: String,
         ): Result<PostNotification?> = detailResults.removeFirstOrNull()?.await() ?: Result.success(detail)
+    }
+
+    private class FakeUserNotificationRepository : UserNotificationRepository {
+        override val unreadCount = MutableStateFlow(0)
+        override val currentUserId: String = "user-1"
+        var scheduledRefreshCalls = 0
+            private set
+
+        override fun getNotifications(): Flow<List<NotificationItem>> = flowOf(emptyList())
+
+        override suspend fun refreshUnreadCount(): Result<Int> = Result.success(0)
+
+        override fun scheduleUnreadCountRefresh() {
+            scheduledRefreshCalls++
+        }
+
+        override fun clearUnreadCount() = Unit
+
+        override suspend fun markAsRead(notificationId: String): Result<Boolean> = Result.success(false)
     }
 }

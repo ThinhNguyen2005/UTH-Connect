@@ -63,6 +63,7 @@ import java.util.concurrent.Executors
 fun QrScannerDialog(
     busy: Boolean,
     resultMessage: String?,
+    alreadyCheckedInMessage: String? = null,
     errorMessage: String?,
     checkedInCount: Int,
     onDismiss: () -> Unit,
@@ -88,6 +89,7 @@ fun QrScannerDialog(
 
     val outcome = when {
         errorMessage != null -> QrScannerOutcome.Failure
+        alreadyCheckedInMessage != null -> QrScannerOutcome.AlreadyCheckedIn
         resultMessage != null -> QrScannerOutcome.Success
         busy -> QrScannerOutcome.Processing
         else -> QrScannerOutcome.Idle
@@ -97,7 +99,7 @@ fun QrScannerDialog(
         permissionGranted = granted,
         cameraError = cameraError,
         outcome = outcome,
-        resultText = errorMessage ?: resultMessage,
+        resultText = errorMessage ?: alreadyCheckedInMessage ?: resultMessage,
         checkedInCount = checkedInCount,
         torchOn = torchOn,
         torchAvailable = torchAvailable,

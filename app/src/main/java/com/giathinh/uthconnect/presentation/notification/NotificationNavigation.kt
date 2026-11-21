@@ -23,7 +23,9 @@ data class NotificationDetailDestination(val notificationId: String)
 /**
  * Graph điều hướng của module Thông Báo.
  */
-fun NavGraphBuilder.notificationGraph(navController: NavHostController) {
+fun NavGraphBuilder.notificationGraph(
+    navController: NavHostController,
+) {
     composable<NotificationDestination> {
         NotificationRoute(
             onBack = { navController.popBackStack() },
