@@ -6,20 +6,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,17 +27,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
-import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
@@ -75,16 +71,6 @@ fun UtilitiesScreen(
     modifier: Modifier = Modifier,
 ) {
     val openedModules = uiState.modules.filter { it.enabled }
-    val lockedModules = uiState.modules.filterNot { it.enabled }
-
-    // Chữ phóng lớn (>= Layout.LargeTextScale) khiến ô 3 cột chỉ còn ~66dp bề ngang
-    // chữ, nên khu dịch vụ hạ về 2 cột — cùng nhánh thích ứng đã dùng ở UthApp/AuthScreen.
-    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
-    val serviceColumns = if (largeText) {
-        UthDimens.Layout.ServiceGridColumnsLargeText
-    } else {
-        UthDimens.Layout.ServiceGridColumns
-    }
 
     /** Một lần bấm ô lưới luôn đi qua đây, nên tile không cần giữ lambda. */
     fun onTileTarget(target: UtilityTileTarget) {
@@ -152,145 +138,83 @@ fun UtilitiesScreen(
             color = UthTheme.extendedColors.textSecondary,
         )
         UthSectionHeader(title = stringResource(R.string.utilities_section_mine))
-        UtilityTileGrid(myUtilities, columns = UthDimens.Layout.FeatureGridColumns) { tile, cellModifier ->
-            UtilityFeatureTile(
-                tile = tile,
-                onClick = { onTileTarget(tile.target) },
-                modifier = cellModifier,
-            )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            myUtilities.forEach { tile ->
+                UtilityListItem(
+                    tile = tile,
+                    onClick = { onTileTarget(tile.target) },
+                )
+            }
         }
-        //utilities_section_upcoming (dịch vụ đang phát triển sẽ bị ẩn đi do không cần thiết)
-
-//        when {
-//            uiState.isLoading -> {
-//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-//                UtilitiesLoading()
-//            }
-//
-//            uiState.failure != null -> {
-//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-//                UtilitiesError(onRetry = { onAction(UtilitiesAction.Retry) })
-//            }
-//
-//            uiState.isEmpty -> UthEmptyState(
-//                title = stringResource(R.string.utilities_empty_title),
-//                body = stringResource(R.string.utilities_empty_body),
-//            )
-//
-//            // Toàn bộ module đã bật: không còn gì để liệt kê ở khu vực thứ hai.
-//            lockedModules.isEmpty() -> Unit
-//
-//            else -> {
-//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-//                UtilityTileGrid(lockedModules, columns = serviceColumns) { module, cellModifier ->
-//                    UtilityServiceTile(module = module, modifier = cellModifier)
-//                }
-//            }
-//        }
 
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
     }
 }
 
 /**
- * Tile của khu vực "Tiện ích của tôi": ô lớn 2 cột, nền icon `primaryContainer`
- * và glyph duotone `Size.UtilityFeatureIcon` (spec trong `docs/Design-system.md` mục tiện ích).
+ * Mục tiện ích hiển thị dạng hàng danh sách (List Item): icon khối vuông bo tròn bên trái,
+ * tiêu đề và mô tả ở giữa, mũi tên điều hướng bên phải.
  */
 @Composable
-private fun UtilityFeatureTile(
+private fun UtilityListItem(
     tile: UtilityTile,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     UthCard(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = UthDimens.Size.MinTouchTarget),
         onClick = onClick,
-    ) {
-        UtilityIconFrame(
-            iconRes = tile.icon,
-            container = UthDimens.Size.UtilityFeatureIconContainer,
-            icon = UthDimens.Size.UtilityFeatureIcon,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-
-        Text(
-            text = tile.title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        Spacer(Modifier.height(UthDimens.Spacing.Xxs))
-
-        Text(
-            text = tile.subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = UthTheme.extendedColors.textSecondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/**
- * Ô nén 3 cột cho dịch vụ chưa mở: không có `onClick` nên [UthCard] render tĩnh,
- * lộ trình giao chữ `[phase_*]` diễn đạt thay cho badge màu.
- */
-@Composable
-private fun UtilityServiceTile(
-    module: UtilityModule,
-    modifier: Modifier = Modifier,
-) {
-    UthCard(
-        modifier = modifier.fillMaxHeight(),
-        // Ô 3 cột tự quản padding (`Sm` thay vì `Lg`) để dành bề ngang cho nhãn;
-        // padding chuẩn của UthCard sẽ khiến nhãn gãy thành 3 dòng.
         contentPadding = false,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = UthDimens.Spacing.Sm,
-                    vertical = UthDimens.Spacing.Md,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = UthDimens.Spacing.Lg, vertical = UthDimens.Spacing.Md),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             UtilityIconFrame(
-                iconRes = module.id.iconRes(),
-                container = UthDimens.Size.UtilityServiceIconContainer,
+                iconRes = tile.icon,
+                container = UthDimens.Size.UtilityIconContainer,
                 icon = UthDimens.Size.Icon,
-                containerColor = UthTheme.extendedColors.surfaceSubtle,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
-            Spacer(Modifier.height(UthDimens.Spacing.Sm))
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
 
-            Text(
-                text = stringResource(module.id.titleRes()),
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.Center,
-                // Không khai báo `overflow` thì M3 dùng TextOverflow.Clip: nhãn dài
-                // mất chữ mà người dùng không thấy dấu "…" nào.
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = tile.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (tile.subtitle.isNotBlank()) {
+                    Spacer(Modifier.height(UthDimens.Spacing.Xxs))
+                    Text(
+                        text = tile.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = UthTheme.extendedColors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
 
-            Spacer(Modifier.height(UthDimens.Spacing.Xxs))
+            Spacer(Modifier.width(UthDimens.Spacing.Sm))
 
-            Text(
-                text = stringResource(module.phase.labelRes()),
-                style = MaterialTheme.typography.labelSmall,
-                // textTertiary chỉ đạt ~2.9:1 trên Surface nên không dùng cho chữ nhỏ;
-                // textSecondary đạt AA (docs/Design-system.md mục 1.4).
-                color = UthTheme.extendedColors.textSecondary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(UthDimens.Size.IconCompact),
             )
         }
     }
@@ -298,8 +222,7 @@ private fun UtilityServiceTile(
 
 /**
  * Khung vuông bo góc chứa glyph: kích thước, màu nền và màu icon đều lấy từ design
- * token. `Icon` tint theo `contentColor` nhưng giữ `fillAlpha` từng lớp của vector
- * two-tone, nên duotone không bị ép về flat.
+ * token.
  */
 @Composable
 private fun UtilityIconFrame(
@@ -320,52 +243,10 @@ private fun UtilityIconFrame(
     ) {
         Icon(
             painter = painterResource(iconRes),
-            // Nhãn đã nằm ngay dưới icon nên icon chỉ là trang trí;
-            // screen reader đọc nhãn một lần duy nhất.
             contentDescription = null,
             tint = contentColor,
             modifier = Modifier.size(icon),
         )
-    }
-}
-
-/**
- * Lưới tile tổng quát: [columns] ô mỗi hàng, các ô chia đều bề ngang bằng
- * `weight(1f)`; hàng lẻ được đệm `Spacer` trọng số để ô thật không bị kéo giãn
- * (chỗ trống bên phải là chủ ý, không phải lỗi căn chỉnh).
- *
- * `height(IntrinsicSize.Min)` là phần không thể bỏ: không nó, [Row] đo theo chiều cao
- * nội dung của từng ô nên hai card cùng hàng so le đáy khi một nhãn gãy 2 dòng.
- * Cùng idiom với thẻ vé ở `TicketsScreen`.
- */
-@Composable
-private fun <T> UtilityTileGrid(
-    items: List<T>,
-    columns: Int,
-    modifier: Modifier = Modifier,
-    content: @Composable (T, Modifier) -> Unit,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = UthDimens.Spacing.Xs),
-        verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
-    ) {
-        items.chunked(columns).forEach { rowItems ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
-            ) {
-                rowItems.forEach { item ->
-                    content(item, Modifier.weight(1f))
-                }
-                repeat(columns - rowItems.size) {
-                    Spacer(Modifier.weight(1f))
-                }
-            }
-        }
     }
 }
 
@@ -389,47 +270,6 @@ private sealed interface UtilityTileTarget {
     data object Campuses : UtilityTileTarget
     data object Settings : UtilityTileTarget
     data class Module(val moduleId: UtilityModuleId) : UtilityTileTarget
-}
-
-@Composable
-private fun UtilitiesLoading() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = UthDimens.Spacing.Xxl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(UthDimens.Size.Progress),
-            color = MaterialTheme.colorScheme.primary,
-            strokeWidth = UthDimens.Size.ProgressStroke,
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(
-            text = stringResource(R.string.utilities_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = UthTheme.extendedColors.textSecondary,
-        )
-    }
-}
-
-@Composable
-private fun UtilitiesError(onRetry: () -> Unit) {
-    UthEmptyState(
-        title = stringResource(R.string.utilities_error_title),
-        body = stringResource(R.string.utilities_error_body),
-        icon = Icons.Filled.Warning,
-        actionLabel = stringResource(R.string.common_retry),
-        onAction = onRetry,
-    )
-}
-
-@StringRes
-private fun DeliveryPhase.labelRes(): Int = when (this) {
-    DeliveryPhase.MVP -> R.string.phase_mvp
-    DeliveryPhase.PHASE_2 -> R.string.phase_2
-    DeliveryPhase.PHASE_3 -> R.string.phase_3
-    DeliveryPhase.BACKLOG -> R.string.phase_backlog
 }
 
 /**

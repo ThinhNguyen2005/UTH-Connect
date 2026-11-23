@@ -31,8 +31,8 @@ export const accessControlProvider: AccessControlProvider = {
         };
       }
 
-      // Can manage events and notifications
-      if (resource === "notifications" || resource === "events") {
+      // Can manage events and notifications, and export reports
+      if (resource === "notifications" || resource === "events" || resource === "reports") {
         return { can: true };
       }
 
@@ -59,6 +59,15 @@ export const accessControlProvider: AccessControlProvider = {
         if (action === "list" || action === "show" || action === "create") return { can: true };
         if (action === "edit" || action === "delete") {
           // Handled by RLS on database or params.id check
+          return { can: true };
+        }
+      }
+
+      // Book Listings: Can view, create, edit, delete own
+      if (resource === "book_listings") {
+        if (action === "list" || action === "show" || action === "create") return { can: true };
+        if (action === "edit" || action === "delete") {
+          // Handled by RLS on database
           return { can: true };
         }
       }

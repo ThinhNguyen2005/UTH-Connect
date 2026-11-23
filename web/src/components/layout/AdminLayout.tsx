@@ -9,7 +9,9 @@ import {
   LayoutDashboard,
   Users,
   Home,
+  BookOpen,
   Bell,
+  FileSpreadsheet,
   LogOut,
   ExternalLink,
   Lock,
@@ -41,9 +43,19 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({
       icon: Home,
     },
     {
+      name: "Quản lý Chợ sách",
+      href: "/admin/books",
+      icon: BookOpen,
+    },
+    {
       name: "Soạn thảo Thông báo",
       href: "/admin/announcements",
       icon: Bell,
+    },
+    {
+      name: "Xuất Báo cáo & Thống kê",
+      href: "/admin/reports",
+      icon: FileSpreadsheet,
     },
   ];
 

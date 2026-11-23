@@ -17,6 +17,7 @@ data class Event(
     val registeredCount: Int = 0,
     val status: EventStatus = EventStatus.PUBLISHED,
     val coverUrl: String? = null,
+    val points: Int = 0,
 )
 
 /** Data an organizer can edit. Ownership and status are decided by the server. */

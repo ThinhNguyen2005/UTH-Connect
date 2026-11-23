@@ -71,6 +71,7 @@ internal fun JsonObject.toDomainEvent(): Event = Event(
     registeredCount = int("current_registered"),
     status = EventStatus.fromString(string("status")),
     coverUrl = string("banner_url"),
+    points = int("points"),
 )
 
 /**

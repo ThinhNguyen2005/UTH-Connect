@@ -156,6 +156,7 @@ class FirestoreEventRepository @Inject constructor(
             registeredCount = getLong(FIELD_REGISTERED_COUNT)?.toInt() ?: 0,
             status = EventStatus.fromString(getString(FIELD_STATUS)),
             coverUrl = getString(FIELD_COVER_URL),
+            points = getLong(FIELD_POINTS)?.toInt() ?: 0,
         )
     }
 
@@ -174,6 +175,7 @@ class FirestoreEventRepository @Inject constructor(
         private const val FIELD_REGISTERED_COUNT = "registeredCount"
         private const val FIELD_STATUS = "status"
         private const val FIELD_COVER_URL = "coverUrl"
+        private const val FIELD_POINTS = "points"
 
         private const val STATUS_REGISTERED = "registered"
         private const val STATUS_CANCELLED = "cancelled"

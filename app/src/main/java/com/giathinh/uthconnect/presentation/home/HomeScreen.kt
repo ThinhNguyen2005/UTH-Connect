@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -53,7 +54,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -71,9 +74,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
@@ -84,8 +90,12 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.Announcement
 import com.giathinh.uthconnect.domain.model.AnnouncementCategory
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.HomeBanner
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
@@ -126,10 +136,7 @@ fun HomeScreen(
 
             else -> homeFeed(
                 state = uiState,
-                onOpen = { onAction(HomeAction.OpenAnnouncement(it)) },
-                onOpenFilter = { onAction(HomeAction.OpenFilter) },
-                onOpenArchive = { onAction(HomeAction.OpenArchive) },
-                onSelectCategory = { onAction(HomeAction.SelectCategory(it)) },
+                onAction = onAction,
             )
         }
     }
@@ -137,24 +144,50 @@ fun HomeScreen(
 
 private fun LazyListScope.homeFeed(
     state: HomeUiState,
-    onOpen: (String) -> Unit,
-    onOpenFilter: () -> Unit,
-    onOpenArchive: () -> Unit,
-    onSelectCategory: (AnnouncementCategory?) -> Unit,
+    onAction: (HomeAction) -> Unit,
 ) {
     item(key = HomeKey.Highlights) {
         HomeHighlightsSection(
             banners = state.banners,
-            onOpen = { onOpen(it.id) },
+            onOpen = { onAction(HomeAction.OpenAnnouncement(it.id)) },
         )
     }
 
+    if (state.selectedCategory == null || state.selectedCategory == AnnouncementCategory.YOUTH_UNION) {
+        item(key = HomeKey.Events) {
+            HomeEventsSection(
+                events = state.visibleEvents,
+                registeredIds = state.registeredEventIds,
+                selectedCampus = state.selectedCampus,
+                onSelectCampus = { onAction(HomeAction.SelectCampus(it)) },
+                onOpenEvent = { onAction(HomeAction.OpenEvent(it)) },
+                onOpenAllEvents = { onAction(HomeAction.OpenAllEvents) },
+                modifier = Modifier.padding(top = UthDimens.Spacing.Xl),
+            )
+        }
+    }
+
+    if (state.selectedCategory == null) {
+        item(key = HomeKey.Community) {
+            HomeCommunitySections(
+                uiState = state,
+                onAction = onAction,
+                modifier = Modifier.padding(top = UthDimens.Spacing.Xl),
+            )
+        }
+    }
+
+    homeAnnouncements(state = state, onAction = onAction)
+}
+
+private fun LazyListScope.homeAnnouncements(
+    state: HomeUiState,
+    onAction: (HomeAction) -> Unit,
+) {
     item(key = HomeKey.FeedHeader) {
-        // Header + chip vẫn hiện khi danh sách rỗng có lọc: người dùng cần lối thoát
-        // khỏi bộ lọc đang chọn (`docs/Design-system.md` mục 4.9 — nói nguyên nhân + cách xử lý).
         HomeFeedHeader(
             unreadCount = state.unreadCount,
-            onOpenFilter = onOpenFilter,
+            onOpenFilter = { onAction(HomeAction.OpenFilter) },
             modifier = Modifier.padding(
                 start = UthDimens.Spacing.Xl,
                 end = UthDimens.Spacing.Xl,
@@ -168,7 +201,7 @@ private fun LazyListScope.homeFeed(
             counts = state.categoryCounts,
             total = state.announcements.size,
             selected = state.selectedCategory,
-            onSelect = onSelectCategory,
+            onSelect = { onAction(HomeAction.SelectCategory(it)) },
             modifier = Modifier.padding(
                 start = UthDimens.Spacing.Xl,
                 end = UthDimens.Spacing.Xl,
@@ -188,7 +221,7 @@ private fun LazyListScope.homeFeed(
         item(key = HomeKey.FeedList) {
             AnnouncementList(
                 announcements = state.visibleAnnouncements,
-                onOpen = { onOpen(it.id) },
+                onOpen = { onAction(HomeAction.OpenAnnouncement(it.id)) },
                 modifier = Modifier.padding(horizontal = UthDimens.Spacing.Xl),
             )
         }
@@ -197,7 +230,7 @@ private fun LazyListScope.homeFeed(
     item(key = HomeKey.Footer) {
         HomeFooter(
             total = state.visibleAnnouncements.size,
-            onOpenArchive = onOpenArchive,
+            onOpenArchive = { onAction(HomeAction.OpenArchive) },
             modifier = Modifier.padding(
                 start = UthDimens.Spacing.Xl,
                 end = UthDimens.Spacing.Xl,
@@ -713,6 +746,366 @@ private fun HomeBannerAction(
     }
 }
 
+private val CAMPUS_OPTIONS = listOf(null, "Cơ sở 1", "Cơ sở 2", "Cơ sở 3")
+private val EVENT_CARD_DATE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm").withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+
+/**
+ * Khối hiển thị các sự kiện sắp diễn ra trên trang chủ.
+ * Hỗ trợ bộ lọc cơ sở nhanh và dẫn sang màn hình Sự kiện chi tiết.
+ */
+@Composable
+private fun HomeEventsSection(
+    events: List<Event>,
+    registeredIds: Set<String>,
+    selectedCampus: String?,
+    onSelectCampus: (String?) -> Unit,
+    onOpenEvent: (String) -> Unit,
+    onOpenAllEvents: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = UthDimens.Spacing.Xl),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Text(
+                    text = stringResource(R.string.home_section_upcoming),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            TextButton(
+                onClick = onOpenAllEvents,
+                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Sm),
+            ) {
+                Text(
+                    text = stringResource(R.string.home_see_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconCompact),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        // Campus Filter Chips (bộ lọc cơ sở chuẩn SQL)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = UthDimens.Spacing.Sm),
+        ) {
+            items(CAMPUS_OPTIONS, key = { it ?: "all_campus" }) { campus ->
+                val isSelected = (campus == null && selectedCampus == null) || (campus == selectedCampus)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onSelectCampus(campus) },
+                    label = {
+                        Text(
+                            text = when (campus) {
+                                null -> stringResource(R.string.home_campus_all)
+                                "Cơ sở 1" -> stringResource(R.string.home_campus_1)
+                                "Cơ sở 2" -> stringResource(R.string.home_campus_2)
+                                "Cơ sở 3" -> stringResource(R.string.home_campus_3)
+                                else -> campus
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                )
+            }
+        }
+
+        if (events.isEmpty()) {
+            HomeEventsEmpty(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Sm),
+            )
+        } else {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = UthDimens.Spacing.Sm),
+            ) {
+                items(events, key = { it.id }) { event ->
+                    HomeEventCard(
+                        event = event,
+                        isRegistered = event.id in registeredIds,
+                        onOpen = { onOpenEvent(event.id) },
+                        modifier = Modifier.width(280.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Thẻ sự kiện nổi bật trong carousel ngang trang chủ. */
+@Composable
+private fun HomeEventCard(
+    event: Event,
+    isRegistered: Boolean,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val eventInstant = Instant.ofEpochMilli(event.startAt)
+    UthCard(
+        onClick = onOpen,
+        contentPadding = false,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = event.title
+        },
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header Cover Gradient + Calendar Badge
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                        ),
+                    )
+                    .padding(UthDimens.Spacing.Md),
+            ) {
+                val zonedDateTime = eventInstant.atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                val dayOfMonth = zonedDateTime.dayOfMonth.toString()
+                val monthStr = "T${zonedDateTime.monthValue}"
+
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = UthDimens.Elevation.Card,
+                    modifier = Modifier.align(Alignment.TopStart),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm, vertical = UthDimens.Spacing.Xs),
+                    ) {
+                        Text(
+                            text = monthStr,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = dayOfMonth,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    if (event.status == EventStatus.HAPPENING) {
+                        UthStatusBadge(
+                            text = stringResource(R.string.home_event_happening),
+                            tone = BadgeTone.Danger,
+                            icon = null,
+                        )
+                    } else {
+                        UthStatusBadge(
+                            text = stringResource(R.string.home_event_upcoming),
+                            tone = BadgeTone.Info,
+                            icon = null,
+                        )
+                    }
+
+                    if (event.points > 0) {
+                        UthStatusBadge(
+                            text = stringResource(R.string.home_event_points, event.points),
+                            tone = BadgeTone.Warning,
+                            icon = null,
+                        )
+                    }
+                }
+            }
+
+            // Body Card
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(UthDimens.Spacing.Md),
+                verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+            ) {
+                if (event.orgName.isNotBlank()) {
+                    Text(
+                        text = event.orgName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    minLines = 2,
+                )
+
+                Spacer(Modifier.height(UthDimens.Spacing.Xs))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(UthDimens.Size.IconBadge),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = EVENT_CARD_DATE_FORMATTER.format(eventInstant),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+
+                val locationDisplay = listOfNotNull(
+                    event.campus.takeIf { it.isNotBlank() },
+                    event.location.takeIf { it.isNotBlank() },
+                ).joinToString(" · ")
+                if (locationDisplay.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconBadge),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = locationDisplay,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = UthDimens.Spacing.Xs),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isRegistered) {
+                        UthStatusBadge(
+                            text = stringResource(R.string.home_event_registered),
+                            tone = BadgeTone.Success,
+                        )
+                    } else {
+                        val slotText = if (event.capacity > 0) {
+                            val remaining = (event.capacity - event.registeredCount).coerceAtLeast(0)
+                            stringResource(R.string.home_event_slots, remaining, event.capacity)
+                        } else {
+                            stringResource(R.string.home_event_unlimited)
+                        }
+                        Text(
+                            text = slotText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Trạng thái rỗng nhỏ gọn khi chưa có sự kiện theo bộ lọc. */
+@Composable
+private fun HomeEventsEmpty(modifier: Modifier = Modifier) {
+    UthCard(
+        modifier = modifier,
+        contentPadding = true,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(UthDimens.Size.Avatar),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_events_empty_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.home_events_empty_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 /** Tiêu đề bảng tin + badge số mới + nút "Bộ lọc" (chạm 48dp, hình 32dp theo mục 4.4). */
 @Composable
 private fun HomeFeedHeader(
@@ -1135,6 +1528,40 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
                 .aspectRatio(UthDimens.Layout.CoverAspectRatio),
         )
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
+        // Shimmer cho Khối Sự kiện
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SkeletonBlock(
+                progress = shimmerProgress,
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(UthDimens.Spacing.Lg),
+            )
+            SkeletonBlock(
+                progress = shimmerProgress,
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(UthDimens.Spacing.Md),
+            )
+        }
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+        ) {
+            repeat(2) {
+                SkeletonBlock(
+                    progress = shimmerProgress,
+                    modifier = Modifier
+                        .width(260.dp)
+                        .height(180.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(UthDimens.Spacing.Xl))
         repeat(UthDimens.Layout.HomeSkeletonRowCount) { index ->
             if (index > 0) Spacer(Modifier.height(UthDimens.Spacing.Lg))
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -1236,6 +1663,8 @@ private fun HomeEmpty(modifier: Modifier = Modifier) {
 private object HomeKey {
     const val Header = "home_header"
     const val Highlights = "home_highlights"
+    const val Events = "home_events"
+    const val Community = "home_community"
     const val FeedHeader = "home_feed_header"
     const val Categories = "home_categories"
     const val FeedList = "home_feed_list"
@@ -1311,19 +1740,62 @@ private val PreviewBanners = listOf(
     HomeBanner(announcement = PreviewAnnouncements[2]),
 )
 
+private val PreviewEvents = listOf(
+    Event(
+        id = "e1",
+        title = "Hội thảo Công nghệ và AI trong Giao thông Vận tải 2026",
+        description = "Chia sẻ từ các chuyên gia đầu ngành.",
+        orgId = "org1",
+        orgName = "CLB Tin học UTH",
+        location = "Hội trường A, Tầng 3",
+        campus = "Cơ sở 1",
+        startAt = System.currentTimeMillis() + 86_400_000L,
+        endAt = System.currentTimeMillis() + 90_000_000L,
+        capacity = 150,
+        registeredCount = 45,
+        status = EventStatus.PUBLISHED,
+        points = 5,
+    ),
+    Event(
+        id = "e2",
+        title = "Giải Bóng đá Sinh viên UTH Mở rộng - Vòng Bảng",
+        description = "Các trận đấu hấp dẫn giữa các khoa.",
+        orgId = "org2",
+        orgName = "Đoàn Thanh niên - Hội Sinh viên",
+        location = "Sân bóng đá mini",
+        campus = "Cơ sở 2",
+        startAt = System.currentTimeMillis() + 172_800_000L,
+        endAt = System.currentTimeMillis() + 180_000_000L,
+        capacity = 300,
+        registeredCount = 280,
+        status = EventStatus.PUBLISHED,
+        points = 8,
+    ),
+)
+
 @Composable
 private fun HomeStatePreview(state: HomeUiState, darkTheme: Boolean = false) = UthPreview(darkTheme = darkTheme) { HomeScreen(uiState = state, onAction = {}) }
 
 @Preview(name = "content light", showBackground = true)
 @Composable
 private fun HomeContentPreview() = HomeStatePreview(
-    HomeUiState(isLoading = false, banners = PreviewBanners, announcements = PreviewAnnouncements),
+    HomeUiState(
+        isLoading = false,
+        banners = PreviewBanners,
+        announcements = PreviewAnnouncements,
+        events = PreviewEvents,
+    ),
 )
 
 @Preview(name = "content dark", showBackground = true)
 @Composable
 private fun HomeContentDarkPreview() = HomeStatePreview(
-    HomeUiState(isLoading = false, banners = PreviewBanners, announcements = PreviewAnnouncements),
+    HomeUiState(
+        isLoading = false,
+        banners = PreviewBanners,
+        announcements = PreviewAnnouncements,
+        events = PreviewEvents,
+    ),
     darkTheme = true,
 )
 
@@ -1360,5 +1832,10 @@ private fun HomeEmptyDarkPreview() = HomeStatePreview(HomeUiState(isLoading = fa
 @Preview(name = "content fontScale 130%", showBackground = true, fontScale = 1.3f)
 @Composable
 private fun HomeContentFontScalePreview() = HomeStatePreview(
-    HomeUiState(isLoading = false, banners = PreviewBanners, announcements = PreviewAnnouncements),
+    HomeUiState(
+        isLoading = false,
+        banners = PreviewBanners,
+        announcements = PreviewAnnouncements,
+        events = PreviewEvents,
+    ),
 )

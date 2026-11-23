@@ -7,8 +7,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -26,7 +24,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,10 +37,13 @@ import com.giathinh.uthconnect.presentation.attendance.attendanceGraph
 import com.giathinh.uthconnect.presentation.auth.AuthRoute
 import com.giathinh.uthconnect.presentation.books.navigation.BooksDestination
 import com.giathinh.uthconnect.presentation.books.navigation.booksGraph
+import com.giathinh.uthconnect.presentation.events.EventSourceDestination
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
+import com.giathinh.uthconnect.presentation.housing.CreateHousingPostDestination
 import com.giathinh.uthconnect.presentation.housing.HousingDestination
+import com.giathinh.uthconnect.presentation.housing.HousingDetailDestination
 import com.giathinh.uthconnect.presentation.housing.MyListingsDestination
 import com.giathinh.uthconnect.presentation.housing.housingGraph
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
@@ -101,7 +101,6 @@ private fun SignedInUthApp(
     onPushNavigationHandled: (String) -> Unit = {},
 ) {
     val badgeViewModel: NotificationBadgeViewModel = hiltViewModel()
-    val unreadNotificationCount by badgeViewModel.unreadCount.collectAsStateWithLifecycle()
     LaunchedEffect(badgeViewModel.currentUserId) { badgeViewModel.onSignedInUserChanged() }
     DisposableEffect(badgeViewModel) {
         onDispose { badgeViewModel.onSignedInSessionEnded() }
@@ -122,7 +121,6 @@ private fun SignedInUthApp(
             if (selectedDestination != null) {
                 UthBottomBar(
                     selected = selectedDestination,
-                    unreadNotificationCount = unreadNotificationCount,
                     onSelect = { destination ->
                         if (destination != selectedDestination) {
                             navController.navigate(destination.route) {
@@ -167,6 +165,36 @@ private fun UthNavHost(
                 },
                 onOpenNotifications = {
                     navController.navigate(NotificationDestination)
+                },
+                onOpenEvent = { eventId ->
+                    navController.navigate(EventSourceDestination(eventId))
+                },
+                onOpenAllEvents = {
+                    navController.navigate(EventsDestination)
+                },
+                onOpenHousingDetail = { listingId ->
+                    navController.navigate(HousingDetailDestination(listingId = listingId))
+                },
+                onOpenAllHousing = {
+                    navController.navigate(HousingDestination)
+                },
+                onCreateHousingPost = {
+                    navController.navigate(CreateHousingPostDestination)
+                },
+                onOpenBookDetail = {
+                    navController.navigate(BooksDestination)
+                },
+                onOpenAllBooks = {
+                    navController.navigate(BooksDestination)
+                },
+                onOpenLostFoundDetail = {
+                    navController.navigate(LostFoundDestination)
+                },
+                onOpenAllLostFound = {
+                    navController.navigate(LostFoundDestination)
+                },
+                onCreateLostFoundPost = {
+                    navController.navigate(LostFoundDestination)
                 },
             )
         }
@@ -221,7 +249,6 @@ private fun UthNavHost(
 @Composable
 private fun UthBottomBar(
     selected: UthDestination?,
-    unreadNotificationCount: Int,
     onSelect: (UthDestination) -> Unit,
 ) {
     val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
@@ -239,21 +266,14 @@ private fun UthBottomBar(
         tonalElevation = UthDimens.Elevation.BottomBar,
     ) {
         destinations.forEach { destination ->
+            val isSelected = destination == selected
             NavigationBarItem(
-                selected = destination == selected,
+                selected = isSelected,
                 onClick = { onSelect(destination) },
                 icon = {
-                    BadgedBox(
-                        badge = {
-                            if (destination == UthDestination.USER_NOTIFICATIONS && unreadNotificationCount > 0) {
-                                Badge {
-                                    Text(
-                                        if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString(),
-                                    )
-                                }
-                            }
-                        },
-                    ) {
+                    if (destination == UthDestination.SCANNER) {
+                        AnimatedQrScannerIcon(isSelected = isSelected)
+                    } else {
                         Icon(
                             imageVector = destination.icon,
                             contentDescription = null, // NavigationBarItem đã có label cho TalkBack.
