@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -15,10 +17,16 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,29 +44,46 @@ import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
 import com.giathinh.uthconnect.presentation.housing.HousingDestination
+import com.giathinh.uthconnect.presentation.housing.MyListingsDestination
 import com.giathinh.uthconnect.presentation.housing.housingGraph
 import com.giathinh.uthconnect.presentation.lostfound.LostFoundDestination
 import com.giathinh.uthconnect.presentation.lostfound.lostFoundGraph
+import com.giathinh.uthconnect.presentation.notification.NotificationDestination
+import com.giathinh.uthconnect.presentation.notification.NotificationDetailDestination
+import com.giathinh.uthconnect.presentation.notification.notificationGraph
+import com.giathinh.uthconnect.presentation.notificationshub.NotificationBadgeViewModel
+import com.giathinh.uthconnect.presentation.notificationshub.UserNotificationsRoute
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
 import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
 import com.giathinh.uthconnect.presentation.tickets.ticketsGraph
+import com.giathinh.uthconnect.presentation.utilities.SettingsRoute
 import com.giathinh.uthconnect.presentation.utilities.UtilitiesRoute
 
 /**
- * Cửa vào app: 4 tab chỉ mở sau khi xác thực demo.
+ * Cửa vào app: các tab chỉ mở sau khi xác thực demo.
  *
  * Phần đăng nhập nằm trong [AuthRoute] và phần đã đăng nhập nằm trong [SignedInUthApp], nên
  * khung điều hướng không phải biết gì về form đăng nhập, và ngược lại.
  */
 @Composable
-fun UthApp() {
-    AuthRoute(signedInContent = { SignedInUthApp() })
+fun UthApp(
+    pushNotificationId: String? = null,
+    onPushNavigationHandled: (String) -> Unit = {},
+) {
+    AuthRoute(
+        signedInContent = {
+            SignedInUthApp(
+                pushNotificationId = pushNotificationId,
+                onPushNavigationHandled = onPushNavigationHandled,
+            )
+        },
+    )
 }
 
 /**
- * Khung điều hướng tổng: [UthBottomBar] + [NavHost] cho 4 tab cấp 1 và các graph con.
+ * Khung điều hướng tổng: [UthBottomBar] + [NavHost] cho 5 tab cấp 1 và các graph con.
  *
  * Trạng thái tab đang chọn lấy từ `currentBackStackEntry`, không nhân bản sang
  * biến riêng — tránh lệch khi quay lại bằng nút hệ thống.
@@ -72,7 +97,23 @@ fun UthApp() {
 @Composable
 private fun SignedInUthApp(
     navController: NavHostController = rememberNavController(),
+    pushNotificationId: String? = null,
+    onPushNavigationHandled: (String) -> Unit = {},
 ) {
+    val badgeViewModel: NotificationBadgeViewModel = hiltViewModel()
+    val unreadNotificationCount by badgeViewModel.unreadCount.collectAsStateWithLifecycle()
+    LaunchedEffect(badgeViewModel.currentUserId) { badgeViewModel.onSignedInUserChanged() }
+    DisposableEffect(badgeViewModel) {
+        onDispose { badgeViewModel.onSignedInSessionEnded() }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { badgeViewModel.refresh() }
+
+    LaunchedEffect(pushNotificationId) {
+        pushNotificationId?.let { id ->
+            navController.navigate(NotificationDetailDestination(id)) { launchSingleTop = true }
+            onPushNavigationHandled(id)
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedDestination = UthDestination.from(backStackEntry?.destination)
 
@@ -81,6 +122,7 @@ private fun SignedInUthApp(
             if (selectedDestination != null) {
                 UthBottomBar(
                     selected = selectedDestination,
+                    unreadNotificationCount = unreadNotificationCount,
                     onSelect = { destination ->
                         if (destination != selectedDestination) {
                             navController.navigate(destination.route) {
@@ -123,6 +165,9 @@ private fun UthNavHost(
                 onOpenAnnouncement = { announcementId ->
                     navController.navigate(AnnouncementDetailDestination(announcementId))
                 },
+                onOpenNotifications = {
+                    navController.navigate(NotificationDestination)
+                },
             )
         }
         composable<ScheduleDestination> { ScheduleRoute() }
@@ -145,9 +190,18 @@ private fun UthNavHost(
                 },
             )
         }
+        composable<SettingsDestination> {
+            SettingsRoute(onBack = { navController.popBackStack() })
+        }
         composable<ProfileDestination> {
-            // Vé chuyển từ tab đáy vào tab Cá nhân (docs/Design.md mục 8.2) để thanh nav giữ 4 điểm đến.
+            // Vé chuyển từ tab đáy vào tab Cá nhân (docs/Design.md mục 8.2).
             ProfileRoute(onOpenTickets = { navController.navigate(TicketsDestination) })
+        }
+        composable<UserNotificationsDestination> {
+            UserNotificationsRoute(
+                onOpenHousing = { navController.navigate(MyListingsDestination) },
+                onOpenEvents = { navController.navigate(EventsDestination) },
+            )
         }
         attendanceGraph(navController)
         ticketsGraph(navController)
@@ -156,6 +210,7 @@ private fun UthNavHost(
 
         // Graph con của module Thông báo (route Chi tiết). Mỗi module tự khai báo graph của mình;
         // file này chỉ gọi một dòng, không biết chi tiết bên trong.
+        notificationGraph(navController)
         announcementGraph(navController)
         lostFoundGraph(navController)
         booksGraph(navController)
@@ -166,6 +221,7 @@ private fun UthNavHost(
 @Composable
 private fun UthBottomBar(
     selected: UthDestination?,
+    unreadNotificationCount: Int,
     onSelect: (UthDestination) -> Unit,
 ) {
     val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
@@ -187,10 +243,22 @@ private fun UthBottomBar(
                 selected = destination == selected,
                 onClick = { onSelect(destination) },
                 icon = {
-                    Icon(
-                        imageVector = destination.icon,
-                        contentDescription = null, // NavigationBarItem đã có label cho TalkBack.
-                    )
+                    BadgedBox(
+                        badge = {
+                            if (destination == UthDestination.USER_NOTIFICATIONS && unreadNotificationCount > 0) {
+                                Badge {
+                                    Text(
+                                        if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString(),
+                                    )
+                                }
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = destination.icon,
+                            contentDescription = null, // NavigationBarItem đã có label cho TalkBack.
+                        )
+                    }
                 },
                 label = { Text(stringResource(destination.labelRes)) },
                 colors = NavigationBarItemDefaults.colors(

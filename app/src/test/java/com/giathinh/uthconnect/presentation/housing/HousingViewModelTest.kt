@@ -354,6 +354,8 @@ class HousingViewModelTest {
             return if (item != null) Result.success(item) else Result.failure(NoSuchElementException(id))
         }
 
+        override suspend fun getMyListings(): Result<List<HousingListing>> = Result.success(emptyList())
+
         override suspend fun createListing(listing: HousingListing): Result<HousingListing> = Result.success(listing)
 
         override suspend fun updateListing(listing: HousingListing): Result<HousingListing> = Result.success(listing)

@@ -9,11 +9,12 @@
     <string name="common_retry">Thử lại</string>
     <string name="common_meta_separator">•</string>
 
-    <!-- 4 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
+    <!-- 5 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
     <string name="tab_home">Trang chủ</string>
     <string name="tab_schedule">Thời khóa biểu</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Cá nhân</string>
+    <string name="tab_notifications">Thông báo</string>
 
     <!--
       "Vé của tôi" không còn là tab đáy: nó là hàng điều hướng trong tab Cá nhân
@@ -657,6 +658,7 @@
     <string name="scanner_state_idle">Đang chờ mã…</string>
     <string name="scanner_state_processing">Đang kiểm tra mã trên server…</string>
     <string name="scanner_state_success">Điểm danh thành công</string>
+    <string name="scanner_state_already_checked_in">Đã điểm danh trước đó</string>
     <string name="scanner_state_failure">Không điểm danh được</string>
     <string name="scanner_permission_title">Cần quyền camera</string>
     <string name="scanner_permission_body">Mã được đọc trực tiếp từ khung hình nên app cần quyền camera để điểm danh.</string>
@@ -826,7 +828,7 @@
     <string name="housing_create_zalo_label">Link Zalo hoặc SĐT Zalo</string>
     <string name="housing_create_utilities_included">Điện nước đã bao gồm trong tiền phòng</string>
     <string name="housing_create_submit">Đăng tin ngay</string>
-    <string name="housing_create_success">Đăng tin phòng trọ thành công!</string>
+    <string name="housing_create_success">Đã gửi tin! Tin sẽ hiển thị sau khi được kiểm duyệt.</string>
     <string name="housing_create_error_title">Vui lòng nhập tiêu đề bài đăng</string>
     <string name="housing_create_error_title_length">Tiêu đề cần từ 5 đến 150 ký tự</string>
     <string name="housing_create_error_area">Diện tích phải là số lớn hơn 0</string>
@@ -939,7 +941,60 @@
     <string name="housing_filter_type_label">Loại tin</string>
     <string name="housing_posted_yesterday">Hôm qua, %1$s</string>
     <string name="housing_posted_days_ago">%1$d ngày trước</string>
+    <string name="housing_my_listings_title">Tin của tôi</string>
+    <string name="housing_my_listings_empty">Bạn chưa đăng tin nào.</string>
+    <string name="housing_my_listings_rejection">Lý do: %1$s</string>
+    <string name="housing_status_pending">Chờ duyệt</string>
+    <string name="housing_status_rejected">Bị từ chối</string>
+    <string name="housing_status_open">Đang hiện</string>
+    <string name="housing_status_fulfilled">Hết phòng</string>
+    <string name="housing_status_hidden">Bị ẩn</string>
+    <string name="housing_detail_rejected_title">Tin bị từ chối</string>
+    <string name="housing_detail_rejected_body">Lý do: %1$s. Hãy xóa tin và đăng lại sau khi sửa.</string>
     <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
     <string name="campuses_directions_action">Chỉ đường</string>
+
+    <!-- Push notification inbox and FCM channel -->
+    <string name="notification_title">Thông Báo</string>
+    <string name="notification_back">Quay lại</string>
+    <string name="notification_mark_all_read">Đánh dấu đã đọc tất cả</string>
+    <string name="notification_refresh">Làm mới thông báo</string>
+    <string name="notification_settings">Cài đặt thông báo</string>
+    <string name="notification_profile">Hồ sơ cá nhân</string>
+    <string name="notification_category_all">Tất cả (%1$d)</string>
+    <string name="notification_category_study">Học tập &amp; TKB (%1$d)</string>
+    <string name="notification_category_event">Sự kiện (%1$d)</string>
+    <string name="notification_category_auction">Đấu giá (%1$d)</string>
+    <string name="notification_category_system">Hệ thống (%1$d)</string>
+    <string name="notification_section_today">Hôm nay</string>
+    <string name="notification_section_previous">Hôm qua &amp; Trước đó</string>
+    <string name="notification_new_count">%1$d mới</string>
+    <string name="notification_viewed">Đã xem</string>
+    <string name="notification_read">Đã đọc</string>
+    <string name="notification_unread">Chưa đọc</string>
+    <string name="notification_empty_title">Không có thông báo nào</string>
+    <string name="notification_empty_desc">Bạn sẽ nhận được các thông báo cập nhật về học tập, sự kiện tại đây.</string>
+    <string name="notification_detail_unavailable">Không tìm thấy thông báo này.</string>
+    <string name="notification_open_source">Mở nội dung liên quan</string>
+    <string name="notification_error_title">Không thể tải thông báo</string>
+    <string name="notification_read_update_failed">Không thể cập nhật trạng thái đã đọc. Vui lòng thử lại.</string>
+    <string name="notification_retry">Thử lại</string>
+    <string name="notification_tag_event">Sự kiện</string>
+    <string name="notification_tag_academic">Học vụ</string>
+    <string name="notification_tag_system">Hệ thống</string>
+    <string name="notification_tag_generic">Thông báo</string>
+    <string name="notification_channel_updates">Cập nhật UTH Connect</string>
+    <string name="notification_channel_updates_description">Thông báo sự kiện, học vụ và cập nhật hệ thống</string>
+    <string name="user_notifications_title">Thông báo cá nhân</string>
+    <string name="user_notifications_empty">Bạn chưa có thông báo</string>
+    <string name="user_notifications_empty_description">Thông báo về tin trọ và sự kiện sẽ xuất hiện tại đây.</string>
+    <string name="user_notification_housing_approved">Tin trọ đã được duyệt</string>
+    <string name="user_notification_housing_rejected">Tin trọ cần cập nhật</string>
+    <string name="user_notification_event_reminder">Nhắc lịch sự kiện</string>
+    <string name="user_notification_system">Hệ thống</string>
+    <string name="user_notification_show_more">Xem thêm</string>
+    <string name="user_notification_show_less">Thu gọn</string>
+    <string name="event_checkin_already_at">Vé này đã được điểm danh trước đó lúc %1$s.</string>
+    <string name="event_checkin_success">Điểm danh thành công</string>
 </resources>
