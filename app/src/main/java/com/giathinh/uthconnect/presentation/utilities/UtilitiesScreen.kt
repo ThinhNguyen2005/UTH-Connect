@@ -100,18 +100,18 @@ fun UtilitiesScreen(
     // Một hàng đợi duy nhất cho "thứ sinh viên mở được ngay": 4 tiện ích tra cứu
     // và module đã bật, để hai khu vực không cùng tranh sự chú ý.
     val myUtilities = listOf(
-        UtilityTile(
-            icon = R.drawable.ic_utilities_tuition,
-            title = stringResource(R.string.utilities_grid_tuition),
-            subtitle = stringResource(R.string.utilities_grid_tuition_desc),
-            target = UtilityTileTarget.Tuition,
-        ),
-        UtilityTile(
-            icon = R.drawable.ic_utilities_training_point,
-            title = stringResource(R.string.utilities_grid_training_point),
-            subtitle = stringResource(R.string.utilities_grid_training_point_desc),
-            target = UtilityTileTarget.TrainingPoint,
-        ),
+//        UtilityTile(
+//            icon = R.drawable.ic_utilities_tuition,
+//            title = stringResource(R.string.utilities_grid_tuition),
+//            subtitle = stringResource(R.string.utilities_grid_tuition_desc),
+//            target = UtilityTileTarget.Tuition,
+//        ),
+//        UtilityTile(
+//            icon = R.drawable.ic_utilities_training_point,
+//            title = stringResource(R.string.utilities_grid_training_point),
+//            subtitle = stringResource(R.string.utilities_grid_training_point_desc),
+//            target = UtilityTileTarget.TrainingPoint,
+//        ),
         UtilityTile(
             icon = R.drawable.ic_utilities_campuses,
             title = stringResource(R.string.utilities_grid_campuses),
@@ -159,33 +159,34 @@ fun UtilitiesScreen(
                 modifier = cellModifier,
             )
         }
+        //utilities_section_upcoming (dịch vụ đang phát triển sẽ bị ẩn đi do không cần thiết)
 
-        when {
-            uiState.isLoading -> {
-                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-                UtilitiesLoading()
-            }
-
-            uiState.failure != null -> {
-                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-                UtilitiesError(onRetry = { onAction(UtilitiesAction.Retry) })
-            }
-
-            uiState.isEmpty -> UthEmptyState(
-                title = stringResource(R.string.utilities_empty_title),
-                body = stringResource(R.string.utilities_empty_body),
-            )
-
-            // Toàn bộ module đã bật: không còn gì để liệt kê ở khu vực thứ hai.
-            lockedModules.isEmpty() -> Unit
-
-            else -> {
-                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
-                UtilityTileGrid(lockedModules, columns = serviceColumns) { module, cellModifier ->
-                    UtilityServiceTile(module = module, modifier = cellModifier)
-                }
-            }
-        }
+//        when {
+//            uiState.isLoading -> {
+//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
+//                UtilitiesLoading()
+//            }
+//
+//            uiState.failure != null -> {
+//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
+//                UtilitiesError(onRetry = { onAction(UtilitiesAction.Retry) })
+//            }
+//
+//            uiState.isEmpty -> UthEmptyState(
+//                title = stringResource(R.string.utilities_empty_title),
+//                body = stringResource(R.string.utilities_empty_body),
+//            )
+//
+//            // Toàn bộ module đã bật: không còn gì để liệt kê ở khu vực thứ hai.
+//            lockedModules.isEmpty() -> Unit
+//
+//            else -> {
+//                UthSectionHeader(title = stringResource(R.string.utilities_section_upcoming))
+//                UtilityTileGrid(lockedModules, columns = serviceColumns) { module, cellModifier ->
+//                    UtilityServiceTile(module = module, modifier = cellModifier)
+//                }
+//            }
+//        }
 
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
     }

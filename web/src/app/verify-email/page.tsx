@@ -50,9 +50,17 @@ export default function VerifyEmailPage() {
     setErrorMessage(null);
 
     try {
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "https://uth-connect-web-git-main-nguyenthinhk52005-5982.vercel.app";
+
       const { error } = await supabaseBrowserClient.auth.resend({
         type: "signup",
         email: targetEmail,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+        },
       });
       if (error) {
         setErrorMessage(error.message || "Không thể gửi email xác thực. Vui lòng thử lại.");
