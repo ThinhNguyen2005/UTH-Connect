@@ -1,13 +1,13 @@
 package com.giathinh.uthconnect.presentation.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
@@ -104,13 +104,12 @@ private fun HomeHousingSection(
         )
 
         if (listings.isEmpty()) {
-            Text(
-                text = stringResource(R.string.home_community_empty_housing),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Sm),
+            HomeCommunityEmptyCard(
+                icon = Icons.Default.Home,
+                message = stringResource(R.string.home_community_empty_housing),
             )
         } else {
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
             LazyRow(
                 contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
@@ -214,18 +213,17 @@ private fun HomeBooksSection(
             title = stringResource(R.string.home_community_books_title),
             subtitle = stringResource(R.string.home_community_books_subtitle),
             onSeeAll = onOpenAll,
-            actionLabel = stringResource(R.string.home_community_post_book),
-            onAction = onOpenAll,
+            actionLabel = null,
+            onAction = null,
         )
 
         if (listings.isEmpty()) {
-            Text(
-                text = stringResource(R.string.home_community_empty_books),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Sm),
+            HomeCommunityEmptyCard(
+                icon = Icons.Default.ShoppingCart,
+                message = stringResource(R.string.home_community_empty_books),
             )
         } else {
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
             LazyRow(
                 contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
@@ -259,18 +257,19 @@ private fun HomeBookCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp)
+                    .height(68.dp)
                     .clip(UthDimens.Radius.MdShape)
                     .background(MaterialTheme.colorScheme.tertiaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "📚 ${listing.subject.take(15)}",
+                    text = "📚 ${listing.subject.take(20)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = UthDimens.Spacing.Sm),
                 )
             }
             Spacer(Modifier.height(UthDimens.Spacing.Sm))
@@ -282,7 +281,7 @@ private fun HomeBookCard(
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.tertiary,
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(2.dp))
             Text(
@@ -296,6 +295,7 @@ private fun HomeBookCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = listing.sellerName,
@@ -305,12 +305,18 @@ private fun HomeBookCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = conditionTag,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        text = conditionTag,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
     }
@@ -335,13 +341,12 @@ private fun HomeLostFoundSection(
         )
 
         if (listings.isEmpty()) {
-            Text(
-                text = stringResource(R.string.home_community_empty_lostfound),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = UthDimens.Spacing.Xl, vertical = UthDimens.Spacing.Sm),
+            HomeCommunityEmptyCard(
+                icon = Icons.Default.Search,
+                message = stringResource(R.string.home_community_empty_lostfound),
             )
         } else {
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
             LazyRow(
                 contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Xl),
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
@@ -421,13 +426,45 @@ private fun HomeLostFoundCard(
 }
 
 @Composable
+private fun HomeCommunityEmptyCard(
+    icon: ImageVector,
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = UthDimens.Spacing.Xl),
+        contentPadding = true,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
+            modifier = Modifier.padding(vertical = UthDimens.Spacing.Sm),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
 private fun HomeSectionHeader(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onSeeAll: () -> Unit,
-    actionLabel: String,
-    onAction: () -> Unit,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -442,80 +479,77 @@ private fun HomeSectionHeader(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+                modifier = Modifier.weight(1f, fill = false),
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
                 )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(
-                    onClick = onAction,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    modifier = Modifier.height(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(Modifier.width(2.dp))
-                    Text(
-                        text = actionLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                TextButton(
-                    onClick = onSeeAll,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.height(32.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_community_see_all),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
+            TextButton(
+                onClick = onSeeAll,
+                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Sm),
+                modifier = Modifier.defaultMinSize(minHeight = UthDimens.Size.MinTouchTarget, minWidth = 0.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.home_see_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconCompact),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
+        Spacer(Modifier.height(UthDimens.Spacing.Xxs))
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (actionLabel != null && onAction != null) {
+            Spacer(Modifier.height(UthDimens.Spacing.Sm))
+            OutlinedButton(
+                onClick = onAction,
+                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Md),
+                shape = CircleShape,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+                modifier = Modifier.defaultMinSize(minHeight = UthDimens.Size.MinTouchTarget, minWidth = 0.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(UthDimens.Size.IconBadge),
+                )
+                Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }
 
-private const val ONE_MILLION_DOUBLE = 1_000_000.0
-private const val ONE_MILLION_LONG = 1_000_000L
-
 private fun formatHousingPrice(priceVnd: Int): String {
-    val million = priceVnd / ONE_MILLION_DOUBLE
-    return if (million >= 1.0) {
-        if (priceVnd % ONE_MILLION_LONG.toInt() == 0) {
-            "${million.toLong()} Tr/tháng"
-        } else {
-            String.format(Locale.US, "%.1f Tr/tháng", million)
-        }
-    } else {
-        "${NumberFormat.getNumberInstance(Locale.GERMANY).format(priceVnd)}đ/tháng"
-    }
+    val formatted = NumberFormat.getNumberInstance(Locale.GERMANY).format(priceVnd)
+    return "${formatted}đ/tháng"
 }

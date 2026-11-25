@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
@@ -98,7 +98,7 @@ fun AnnouncementScreen(
             onShare = onShare,
         )
         when {
-            uiState.isLoading -> AnnouncementLoading()
+            uiState.isLoading && detail == null -> AnnouncementLoading()
 
             uiState.failure != null -> AnnouncementError(
                 onRetry = { onAction(AnnouncementAction.Retry) },
@@ -636,25 +636,7 @@ private fun attachmentKindLabel(kind: AttachmentKind): String = stringResource(
 
 @Composable
 private fun AnnouncementLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(UthDimens.Spacing.Xl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary,
-            strokeWidth = UthDimens.Size.ProgressStroke,
-            modifier = Modifier.size(UthDimens.Size.Progress),
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Lg))
-        Text(
-            text = stringResource(R.string.announcement_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = UthTheme.extendedColors.textSecondary,
-        )
-    }
+    UthContentSkeleton(modifier = modifier, detail = true)
 }
 
 /** enum → chuỗi đặt ở UI: ViewModel không được cầm `@StringRes`. */

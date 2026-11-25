@@ -1,13 +1,6 @@
 package com.giathinh.uthconnect.presentation.home
 
-import android.animation.ValueAnimator
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -67,7 +61,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
@@ -84,7 +77,9 @@ import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
+import com.giathinh.uthconnect.core.designsystem.component.UthSkeletonBlock
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
+import com.giathinh.uthconnect.core.designsystem.component.rememberUthSkeletonProgress
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
@@ -128,7 +123,11 @@ fun HomeScreen(
         }
 
         when {
-            uiState.isLoading -> item(key = HomeKey.Loading) { HomeLoading() }
+            uiState.isLoading &&
+                uiState.announcements.isEmpty() &&
+                uiState.banners.isEmpty() -> item(key = HomeKey.Loading) {
+                HomeLoading()
+            }
 
             uiState.failure != null -> item(key = HomeKey.Error) {
                 HomeError(onRetry = { onAction(HomeAction.Retry) })
@@ -792,6 +791,7 @@ private fun HomeEventsSection(
             TextButton(
                 onClick = onOpenAllEvents,
                 contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Sm),
+                modifier = Modifier.defaultMinSize(minHeight = UthDimens.Size.MinTouchTarget, minWidth = 0.dp),
             ) {
                 Text(
                     text = stringResource(R.string.home_see_all),
@@ -1489,26 +1489,7 @@ private fun HomeFooter(
 @Composable
 private fun HomeLoading(modifier: Modifier = Modifier) {
     val label = stringResource(R.string.home_loading)
-    // Hệ thống tắt animation: skeleton đứng yên, không chạy infinite transition.
-    val motionEnabled = ValueAnimator.areAnimatorsEnabled()
-    val shimmerProgress = if (motionEnabled) {
-        val shimmer = rememberInfiniteTransition(label = "homeSkeleton")
-        val progress by shimmer.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(
-                    durationMillis = UthDimens.Motion.ShimmerMillis,
-                    easing = LinearEasing,
-                ),
-                repeatMode = RepeatMode.Restart,
-            ),
-            label = "homeSkeletonProgress",
-        )
-        progress
-    } else {
-        null
-    }
+    val shimmerProgress = rememberUthSkeletonProgress()
 
     Column(
         modifier = modifier
@@ -1521,7 +1502,7 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
                 bottom = UthDimens.Spacing.Xl,
             ),
     ) {
-        SkeletonBlock(
+        UthSkeletonBlock(
             progress = shimmerProgress,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1534,16 +1515,16 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SkeletonBlock(
+            UthSkeletonBlock(
                 progress = shimmerProgress,
                 modifier = Modifier
-                    .width(160.dp)
+                    .fillMaxWidth(UthDimens.Layout.HomeSkeletonMetadataFraction)
                     .height(UthDimens.Spacing.Lg),
             )
-            SkeletonBlock(
+            UthSkeletonBlock(
                 progress = shimmerProgress,
                 modifier = Modifier
-                    .width(72.dp)
+                    .fillMaxWidth(UthDimens.Layout.HomeSkeletonMetadataFraction)
                     .height(UthDimens.Spacing.Md),
             )
         }
@@ -1553,11 +1534,11 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
         ) {
             repeat(2) {
-                SkeletonBlock(
+                UthSkeletonBlock(
                     progress = shimmerProgress,
                     modifier = Modifier
-                        .width(260.dp)
-                        .height(180.dp),
+                        .weight(1f)
+                        .aspectRatio(UthDimens.Layout.CoverAspectRatio),
                 )
             }
         }
@@ -1565,27 +1546,27 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
         repeat(UthDimens.Layout.HomeSkeletonRowCount) { index ->
             if (index > 0) Spacer(Modifier.height(UthDimens.Spacing.Lg))
             Row(modifier = Modifier.fillMaxWidth()) {
-                SkeletonBlock(
+                UthSkeletonBlock(
                     progress = shimmerProgress,
                     modifier = Modifier.size(UthDimens.Size.Thumbnail),
                 )
                 Spacer(Modifier.width(UthDimens.Spacing.Md))
                 Column(modifier = Modifier.weight(1f)) {
-                    SkeletonBlock(
+                    UthSkeletonBlock(
                         progress = shimmerProgress,
                         modifier = Modifier
                             .fillMaxWidth(UthDimens.Layout.HomeSkeletonTitleFraction)
                             .height(UthDimens.Spacing.Md),
                     )
                     Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                    SkeletonBlock(
+                    UthSkeletonBlock(
                         progress = shimmerProgress,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(UthDimens.Spacing.Md),
                     )
                     Spacer(Modifier.height(UthDimens.Spacing.Sm))
-                    SkeletonBlock(
+                    UthSkeletonBlock(
                         progress = shimmerProgress,
                         modifier = Modifier
                             .fillMaxWidth(UthDimens.Layout.HomeSkeletonMetadataFraction)
@@ -1595,39 +1576,6 @@ private fun HomeLoading(modifier: Modifier = Modifier) {
             }
         }
     }
-}
-
-/**
- * Khối giữ chỗ có shimmer (mục 4.2): nền `SurfaceSubtle` cộng một dải sáng `Surface` chạy
- * ngang. Cả hai lớp vẽ trong [drawBehind] — đặt `.background()` trước nó thì dải sáng bị
- * nền che mất.
- *
- * @param progress 0f → 1f; null nếu người dùng tắt chuyển động (chỉ vẽ nền tĩnh).
- */
-@Composable
-private fun SkeletonBlock(progress: Float?, modifier: Modifier = Modifier) {
-    val base = UthTheme.extendedColors.surfaceSubtle
-    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = UthDimens.Opacity.ShimmerHighlight)
-
-    Box(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
-            .drawBehind {
-                drawRect(color = base)
-                if (progress != null) {
-                    val band = size.width * UthDimens.Layout.ShimmerBandFraction
-                    val travel = size.width + band * 2
-                    val start = -band + travel * progress
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, highlight, Color.Transparent),
-                            start = Offset(start, 0f),
-                            end = Offset(start + band, size.height),
-                        ),
-                    )
-                }
-            },
-    )
 }
 
 /** enum → chuỗi đặt ở UI: ViewModel không được cầm `@StringRes`. */

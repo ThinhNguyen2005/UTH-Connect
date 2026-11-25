@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,6 +39,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
 import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
@@ -69,9 +69,7 @@ fun ProfileScreen(
 
             ProfilePage.Overview -> {
                 when {
-                    uiState.isLoading -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    uiState.isLoading && uiState.student == null -> UthContentSkeleton(detail = true)
 
                     uiState.failure == ProfileFailure.LoadFailed -> UthEmptyState(
                         stringResource(R.string.auth_profile_error),

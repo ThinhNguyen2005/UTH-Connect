@@ -11,7 +11,7 @@
 
     <!-- 5 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
     <string name="tab_home">Trang chủ</string>
-    <string name="tab_schedule">Thời khóa biểu</string>
+    <string name="tab_schedule">Lịch học</string>
     <string name="tab_scanner">Quét QR</string>
     <string name="tab_utilities">Tiện ích</string>
     <string name="tab_profile">Tôi</string>
@@ -1032,9 +1032,9 @@
     <string name="home_community_lostfound_title">Trạm đồ thất lạc</string>
     <string name="home_community_lostfound_subtitle">Hỗ trợ tìm kiếm &amp; trao trả tài sản UTH</string>
     <string name="home_community_see_all">Xem tất cả</string>
-    <string name="home_community_post_housing">+ Đăng phòng</string>
-    <string name="home_community_post_book">+ Đăng sách</string>
-    <string name="home_community_post_lostfound">+ Báo tin</string>
+    <string name="home_community_post_housing">Đăng phòng</string>
+    <string name="home_community_post_book">Đăng sách</string>
+    <string name="home_community_post_lostfound">Báo tin</string>
     <string name="home_community_empty_housing">Chưa có tin trọ mới</string>
     <string name="home_community_empty_books">Chưa có bài đăng sách mới</string>
     <string name="home_community_empty_lostfound">Không có tin thất lạc gần đây</string>

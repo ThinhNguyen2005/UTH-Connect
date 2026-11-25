@@ -35,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
@@ -149,6 +150,8 @@ fun UtilitiesScreen(
                 )
             }
         }
+
+        if (uiState.isLoading && uiState.modules.isEmpty()) UthContentSkeleton()
 
         Spacer(Modifier.height(UthDimens.Spacing.Xl))
     }

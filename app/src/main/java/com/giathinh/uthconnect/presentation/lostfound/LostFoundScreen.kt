@@ -1,14 +1,10 @@
 package com.giathinh.uthconnect.presentation.lostfound
 
-import android.content.Context
-import android.content.Intent
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,7 +73,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
@@ -370,18 +366,7 @@ private fun LostFoundContentBody(
     modifier: Modifier = Modifier,
 ) {
     when {
-        uiState.isLoading -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(UthDimens.Size.Progress),
-                    strokeWidth = UthDimens.Size.ProgressStroke,
-                )
-            }
-        }
+        uiState.isLoading && uiState.listings.isEmpty() -> UthContentSkeleton(modifier = modifier)
 
         uiState.isError -> {
             UthEmptyState(

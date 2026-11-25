@@ -4,6 +4,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -54,6 +56,7 @@ import com.giathinh.uthconnect.presentation.notification.notificationGraph
 import com.giathinh.uthconnect.presentation.notificationshub.NotificationBadgeViewModel
 import com.giathinh.uthconnect.presentation.notificationshub.UserNotificationsRoute
 import com.giathinh.uthconnect.presentation.profile.ProfileRoute
+import com.giathinh.uthconnect.presentation.scanner.ScannerDestination
 import com.giathinh.uthconnect.presentation.scanner.scannerGraph
 import com.giathinh.uthconnect.presentation.schedule.ScheduleRoute
 import com.giathinh.uthconnect.presentation.tickets.TicketsDestination
@@ -118,11 +121,13 @@ private fun SignedInUthApp(
 
     Scaffold(
         bottomBar = {
-            if (selectedDestination != null) {
+            if (selectedDestination != null && selectedDestination != UthDestination.SCANNER) {
                 UthBottomBar(
                     selected = selectedDestination,
                     onSelect = { destination ->
-                        if (destination != selectedDestination) {
+                        if (destination == UthDestination.SCANNER) {
+                            navController.navigate(ScannerDestination) { launchSingleTop = true }
+                        } else if (destination != selectedDestination) {
                             navController.navigate(destination.route) {
                                 // Tab cấp 1: lưu/trả trạng thái riêng từng tab, không xếp chồng bản sao.
                                 popUpTo(UthDestination.start.route) { saveState = true }
@@ -267,12 +272,15 @@ private fun UthBottomBar(
     ) {
         destinations.forEach { destination ->
             val isSelected = destination == selected
+            val isScanner = destination == UthDestination.SCANNER
+            val interactionSource = remember { MutableInteractionSource() }
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onSelect(destination) },
+                interactionSource = interactionSource,
                 icon = {
-                    if (destination == UthDestination.SCANNER) {
-                        AnimatedQrScannerIcon(isSelected = isSelected)
+                    if (isScanner) {
+                        AnimatedQrScannerIcon(interactionSource = interactionSource)
                     } else {
                         Icon(
                             imageVector = destination.icon,

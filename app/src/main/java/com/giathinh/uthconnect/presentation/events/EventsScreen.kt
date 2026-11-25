@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.Event
 import com.giathinh.uthconnect.domain.model.EventComment
@@ -164,7 +164,7 @@ fun EventsScreen(
             checkInResultMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             checkInErrorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-        if (state.loading) item { CircularProgressIndicator() }
+        if (state.loading && state.events.isEmpty()) item { UthContentSkeleton() }
         if (!state.loading && state.events.isEmpty()) {
             item { Text("Chưa có sự kiện được đăng tải.") }
         }

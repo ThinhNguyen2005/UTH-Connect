@@ -1,11 +1,5 @@
 package com.giathinh.uthconnect.presentation.notificationshub
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,12 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.domain.model.NotificationItem
 import com.giathinh.uthconnect.domain.model.UserNotificationType
 import java.time.Instant
@@ -86,7 +79,7 @@ fun UserNotificationsScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
             when {
-                state.isLoading -> NotificationHubLoading()
+                state.isLoading && state.notifications.isEmpty() -> NotificationHubLoading()
 
                 state.errorMessage != null && state.notifications.isEmpty() -> NotificationHubError(
                     message = state.errorMessage,
@@ -119,40 +112,8 @@ fun UserNotificationsScreen(
 
 @Composable
 private fun NotificationHubLoading() {
-    val transition = rememberInfiniteTransition(label = "notification-shimmer")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "notification-shimmer-alpha",
-    )
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        repeat(5) {
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.fillMaxWidth(0.42f).height(14.dp).shimmer(alpha))
-                    Box(Modifier.fillMaxWidth(0.86f).height(18.dp).shimmer(alpha))
-                    Box(Modifier.fillMaxWidth(0.64f).height(12.dp).shimmer(alpha))
-                }
-            }
-        }
-    }
+    UthContentSkeleton()
 }
-
-@Composable
-private fun Modifier.shimmer(alpha: Float): Modifier = background(
-    brush = Brush.horizontalGradient(
-        listOf(
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha),
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha),
-        ),
-    ),
-    shape = RoundedCornerShape(8.dp),
-)
 
 @Composable
 private fun NotificationHubEmpty() {

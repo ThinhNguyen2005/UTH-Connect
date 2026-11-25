@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +52,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.theme.SuccessContainerLight
 import com.giathinh.uthconnect.core.designsystem.theme.SuccessOnContainerLight
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
@@ -107,7 +107,7 @@ fun NotificationScreen(
 
             if (uiState.detailId != null) {
                 when {
-                    uiState.isDetailLoading -> NotificationLoadingState()
+                    uiState.isDetailLoading -> NotificationLoadingState(detail = true)
 
                     uiState.detail != null -> {
                         if (uiState.readMutationFailed) {
@@ -131,7 +131,7 @@ fun NotificationScreen(
                         onRetry = { onAction(NotificationAction.LoadDetail(uiState.detailId)) },
                     )
                 }
-            } else if (uiState.isLoading || (uiState.isRefreshing && uiState.notifications.isEmpty())) {
+            } else if ((uiState.isLoading || uiState.isRefreshing) && uiState.notifications.isEmpty()) {
                 NotificationLoadingState()
             } else if (uiState.inboxErrorMessage != null && uiState.notifications.isEmpty()) {
                 if (uiState.readMutationFailed) {
@@ -326,14 +326,8 @@ private fun NotificationFilterChipsRow(
 }
 
 @Composable
-private fun NotificationLoadingState() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(UthDimens.Size.Progress),
-            strokeWidth = UthDimens.Size.ProgressStroke,
-            color = UthNavy,
-        )
-    }
+private fun NotificationLoadingState(detail: Boolean = false) {
+    UthContentSkeleton(detail = detail)
 }
 
 /**

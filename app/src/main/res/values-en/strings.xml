@@ -1015,9 +1015,9 @@
     <string name="home_community_lostfound_title">Lost &amp; Found Station</string>
     <string name="home_community_lostfound_subtitle">Support finding &amp; returning campus items</string>
     <string name="home_community_see_all">See all</string>
-    <string name="home_community_post_housing">+ Post room</string>
-    <string name="home_community_post_book">+ Post book</string>
-    <string name="home_community_post_lostfound">+ Report</string>
+    <string name="home_community_post_housing">Post room</string>
+    <string name="home_community_post_book">Post book</string>
+    <string name="home_community_post_lostfound">Report</string>
     <string name="home_community_empty_housing">No new housing posts</string>
     <string name="home_community_empty_books">No new book posts</string>
     <string name="home_community_empty_lostfound">No recent lost &amp; found items</string>

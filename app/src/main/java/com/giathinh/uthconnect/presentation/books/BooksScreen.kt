@@ -61,6 +61,7 @@ import coil3.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
@@ -258,21 +259,8 @@ fun BooksScreen(
             }
         }
 
-        if (uiState.isLoading) {
-            item {
-                Row(
-                    Modifier.fillMaxWidth().padding(UthDimens.Spacing.Lg),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(Modifier.size(UthDimens.Size.ProgressInline))
-                    Text(
-                        stringResource(R.string.books_loading),
-                        modifier = Modifier.padding(start = UthDimens.Spacing.Sm),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
+        if (uiState.isLoading && uiState.listings.isEmpty()) {
+            item { UthContentSkeleton() }
         } else if (uiState.saveFailure != null && !showForm) {
             item {
                 Surface(
@@ -322,7 +310,7 @@ fun BooksScreen(
                     },
                 )
             }
-        } else if (!uiState.isLoading && uiState.loadFailure == null && uiState.visibleListings.isEmpty()) {
+        } else if (uiState.visibleListings.isEmpty() && (!uiState.isLoading || uiState.listings.isNotEmpty())) {
             item {
                 UthEmptyState(
                     title = stringResource(if (uiState.listings.isEmpty()) R.string.books_empty_title else R.string.books_no_results_title),
@@ -335,7 +323,7 @@ fun BooksScreen(
                     },
                 )
             }
-        } else if (!uiState.isLoading && uiState.loadFailure == null) {
+        } else if (uiState.visibleListings.isNotEmpty()) {
             items(uiState.visibleListings, key = { it.id }) { listing ->
                 ListingCard(
                     listing = listing,

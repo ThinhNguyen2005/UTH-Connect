@@ -1,14 +1,7 @@
 package com.giathinh.uthconnect.presentation.housing.detail
 
-import android.animation.ValueAnimator
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,13 +30,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -55,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,8 +57,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -83,7 +73,9 @@ import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
+import com.giathinh.uthconnect.core.designsystem.component.UthSkeletonBlock
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
+import com.giathinh.uthconnect.core.designsystem.component.rememberUthSkeletonProgress
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
@@ -129,7 +121,7 @@ fun HousingDetailScreen(
         },
     ) { innerPadding ->
         when {
-            uiState.isLoading -> {
+            uiState.isLoading && uiState.listing == null -> {
                 HousingDetailSkeleton(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1156,24 +1148,7 @@ private fun DetailBottomBar(
 @Composable
 private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
     val loadingLabel = stringResource(R.string.housing_loading)
-    val shimmerProgress = if (ValueAnimator.areAnimatorsEnabled()) {
-        val shimmer = rememberInfiniteTransition(label = "housingDetailSkeleton")
-        val progress by shimmer.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(
-                    durationMillis = UthDimens.Motion.ShimmerMillis,
-                    easing = LinearEasing,
-                ),
-                repeatMode = RepeatMode.Restart,
-            ),
-            label = "housingDetailSkeletonProgress",
-        )
-        progress
-    } else {
-        null
-    }
+    val shimmerProgress = rememberUthSkeletonProgress()
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -1182,7 +1157,7 @@ private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
             .semantics { contentDescription = loadingLabel },
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
-        HousingSkeletonBlock(
+        UthSkeletonBlock(
             progress = shimmerProgress,
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
@@ -1196,9 +1171,9 @@ private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
 
 /** Khối giữ chỗ cho [PrimaryInfoCard]: tiêu đề, hàng giá/cọc, địa chỉ và hộp khoảng cách. */
 @Composable
-private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Modifier) {
+private fun DetailPrimaryInfoSkeleton(progress: State<Float>?, modifier: Modifier = Modifier) {
     UthCard(modifier = modifier.fillMaxWidth()) {
-        HousingSkeletonBlock(
+        UthSkeletonBlock(
             progress = progress,
             modifier = Modifier
                 .fillMaxWidth(UthDimens.Layout.HousingSkeletonTitleFraction)
@@ -1209,14 +1184,14 @@ private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Mod
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,
         ) {
-            HousingSkeletonBlock(
+            UthSkeletonBlock(
                 progress = progress,
                 modifier = Modifier
                     .weight(1f)
                     .height(UthDimens.Size.Icon),
             )
             Spacer(modifier = Modifier.width(UthDimens.Spacing.Md))
-            HousingSkeletonBlock(
+            UthSkeletonBlock(
                 progress = progress,
                 modifier = Modifier
                     .fillMaxWidth(UthDimens.Layout.HousingSkeletonBadgeFraction)
@@ -1224,7 +1199,7 @@ private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Mod
             )
         }
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        HousingSkeletonBlock(
+        UthSkeletonBlock(
             progress = progress,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1236,8 +1211,8 @@ private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Mod
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
         ) {
-            HousingSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.IconInline))
-            HousingSkeletonBlock(
+            UthSkeletonBlock(progress = progress, modifier = Modifier.size(UthDimens.Size.IconInline))
+            UthSkeletonBlock(
                 progress = progress,
                 modifier = Modifier
                     .weight(1f)
@@ -1245,7 +1220,7 @@ private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Mod
             )
         }
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        HousingSkeletonBlock(
+        UthSkeletonBlock(
             progress = progress,
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
@@ -1257,20 +1232,20 @@ private fun DetailPrimaryInfoSkeleton(progress: Float?, modifier: Modifier = Mod
 
 /** Khối giữ chỗ cho [HostCard]: nhãn + badge, avatar lớn và tên/MSSV chủ tin. */
 @Composable
-private fun DetailHostSkeleton(progress: Float?, modifier: Modifier = Modifier) {
+private fun DetailHostSkeleton(progress: State<Float>?, modifier: Modifier = Modifier) {
     UthCard(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HousingSkeletonBlock(
+            UthSkeletonBlock(
                 progress = progress,
                 modifier = Modifier
                     .fillMaxWidth(UthDimens.Layout.HousingSkeletonBadgeFraction)
                     .height(UthDimens.Size.IconInline),
             )
-            HousingSkeletonBlock(
+            UthSkeletonBlock(
                 progress = progress,
                 modifier = Modifier
                     .width(UthDimens.Layout.HousingSkeletonChipWidth)
@@ -1283,20 +1258,20 @@ private fun DetailHostSkeleton(progress: Float?, modifier: Modifier = Modifier) 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
         ) {
-            HousingSkeletonBlock(
+            UthSkeletonBlock(
                 progress = progress,
                 shape = CircleShape,
                 modifier = Modifier.size(UthDimens.Size.AvatarLarge),
             )
             Column(modifier = Modifier.weight(1f)) {
-                HousingSkeletonBlock(
+                UthSkeletonBlock(
                     progress = progress,
                     modifier = Modifier
                         .fillMaxWidth(UthDimens.Layout.HousingSkeletonTitleFraction)
                         .height(UthDimens.Size.Icon),
                 )
                 Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
-                HousingSkeletonBlock(
+                UthSkeletonBlock(
                     progress = progress,
                     modifier = Modifier
                         .fillMaxWidth(UthDimens.Layout.HousingSkeletonBodyFraction)
@@ -1312,35 +1287,6 @@ private fun DetailHostSkeleton(progress: Float?, modifier: Modifier = Modifier) 
  * cả hai vẽ trong [drawBehind] để nền không che dải sáng. [progress] null khi hệ thống
  * tắt chuyển động — chỉ vẽ nền tĩnh.
  */
-@Composable
-private fun HousingSkeletonBlock(
-    progress: Float?,
-    modifier: Modifier = Modifier,
-    shape: Shape = MaterialTheme.shapes.extraSmall,
-) {
-    val base = UthTheme.extendedColors.surfaceSubtle
-    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = UthDimens.Opacity.ShimmerHighlight)
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .drawBehind {
-                drawRect(color = base)
-                if (progress != null) {
-                    val band = size.width * UthDimens.Layout.ShimmerBandFraction
-                    val travel = size.width + band * 2
-                    val start = -band + travel * progress
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, highlight, Color.Transparent),
-                            start = Offset(start, 0f),
-                            end = Offset(start + band, size.height),
-                        ),
-                    )
-                }
-            },
-    )
-}
-
 @StringRes
 private fun UthCampus.labelRes(): Int = when (this) {
     UthCampus.CS1_QUANG_TRUNG -> R.string.housing_campus_cs1

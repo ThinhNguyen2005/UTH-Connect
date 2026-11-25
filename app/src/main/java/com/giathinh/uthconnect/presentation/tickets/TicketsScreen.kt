@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +67,7 @@ import com.giathinh.uthconnect.BuildConfig
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
 import com.giathinh.uthconnect.core.designsystem.component.UthStatusBadge
@@ -75,7 +75,6 @@ import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.core.designsystem.theme.UthTheme
 import com.giathinh.uthconnect.domain.model.Ticket
-import com.giathinh.uthconnect.domain.model.TicketQrPayload
 import com.giathinh.uthconnect.domain.model.TicketStatus
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -135,7 +134,7 @@ fun TicketsScreen(
             }
 
             when {
-                uiState.isLoading -> item(key = TicketsKey.Loading) { TicketsLoading() }
+                uiState.isLoading && uiState.tickets.isEmpty() -> item(key = TicketsKey.Loading) { TicketsLoading() }
 
                 uiState.failure != null -> item(key = TicketsKey.Error) {
                     UthEmptyState(
@@ -359,24 +358,7 @@ private fun TicketsFilterTab(
 /** Indicator tải danh sách: không phủ overlay, chỉ đặt giữa vùng nội dung. */
 @Composable
 private fun TicketsLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = UthDimens.Spacing.Section),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary,
-            strokeWidth = UthDimens.Size.ProgressStroke,
-            modifier = Modifier.size(UthDimens.Size.Progress),
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(
-            text = stringResource(R.string.tickets_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    UthContentSkeleton(modifier = modifier)
 }
 
 /**
