@@ -3,9 +3,11 @@ package com.giathinh.uthconnect.presentation.events
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventComment
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.EventRepository
 import com.giathinh.uthconnect.domain.repository.TicketQrCheckInStatus
@@ -46,6 +48,12 @@ data class EventsUiState(
     val error: String? = null,
     /** Mã lỗi server nhận diện được để màn hình dịch ra câu có người đọc được. */
     val errorCode: ServerErrorCode? = null,
+    val activeDiscussionEvent: Event? = null,
+    val commentsByEvent: Map<String, List<EventComment>> = emptyMap(),
+    val commentDraft: String = "",
+    val isPostingComment: Boolean = false,
+    val selectedGuestProfile: StudentProfile? = null,
+    val isLoadingGuestProfile: Boolean = false,
 )
 
 @HiltViewModel
@@ -185,6 +193,74 @@ class EventsViewModel @Inject constructor(
                 checkInError = null,
                 checkInErrorCode = null,
             )
+        }
+    }
+
+    fun onDiscussionAction(action: EventDiscussionAction) {
+        when (action) {
+            is EventDiscussionAction.Open -> {
+                _state.update { it.copy(activeDiscussionEvent = action.event, commentDraft = "") }
+                viewModelScope.launch {
+                    events.getEventComments(action.event.id).collect { comments ->
+                        _state.update { state ->
+                            state.copy(commentsByEvent = state.commentsByEvent + (action.event.id to comments))
+                        }
+                    }
+                }
+            }
+
+            EventDiscussionAction.Close -> {
+                _state.update { it.copy(activeDiscussionEvent = null, commentDraft = "") }
+            }
+
+            is EventDiscussionAction.DraftChange -> {
+                _state.update { it.copy(commentDraft = action.text) }
+            }
+
+            is EventDiscussionAction.Send -> postComment(action.eventId)
+
+            is EventDiscussionAction.OpenGuestProfile -> {
+                if (action.studentId.isNotBlank()) {
+                    _state.update { it.copy(isLoadingGuestProfile = true) }
+                    viewModelScope.launch {
+                        try {
+                            val profile = events.getGuestProfile(action.studentId).getOrNull()
+                            _state.update { it.copy(selectedGuestProfile = profile, isLoadingGuestProfile = false) }
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            _state.update { it.copy(isLoadingGuestProfile = false) }
+                        }
+                    }
+                }
+            }
+
+            EventDiscussionAction.CloseGuestProfile -> {
+                _state.update { it.copy(selectedGuestProfile = null) }
+            }
+        }
+    }
+
+    private fun postComment(eventId: String) {
+        val draft = _state.value.commentDraft.trim()
+        if (draft.isBlank() || _state.value.isPostingComment) return
+        _state.update { it.copy(isPostingComment = true) }
+        viewModelScope.launch {
+            try {
+                val comment = events.addEventComment(eventId, draft).getOrThrow()
+                _state.update { state ->
+                    val existing = state.commentsByEvent[eventId].orEmpty()
+                    state.copy(
+                        isPostingComment = false,
+                        commentDraft = "",
+                        commentsByEvent = state.commentsByEvent + (eventId to (existing + comment)),
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _state.update { it.copy(isPostingComment = false) }
+            }
         }
     }
 }

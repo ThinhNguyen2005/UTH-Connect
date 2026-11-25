@@ -3,10 +3,13 @@ package com.giathinh.uthconnect.presentation.events
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -15,24 +18,30 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventComment
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.UserRole
@@ -60,6 +69,7 @@ fun EventsScreen(
     onOpenAttendance: (String) -> Unit,
     focusedEventId: String? = null,
     onNavigateBack: () -> Unit = {},
+    onDiscussionAction: (EventDiscussionAction) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     var scrolledToEventId by remember { mutableStateOf<String?>(null) }
@@ -69,6 +79,14 @@ fun EventsScreen(
             if (itemIndex >= 0) {
                 listState.animateScrollToItem(itemIndex + 1)
                 scrolledToEventId = focusedEventId
+            }
+        }
+    }
+    LaunchedEffect(focusedEventId, state.events) {
+        if (focusedEventId != null) {
+            val focused = state.events.firstOrNull { it.id == focusedEventId }
+            if (focused != null && state.activeDiscussionEvent?.id != focusedEventId) {
+                onDiscussionAction(EventDiscussionAction.Open(focused))
             }
         }
     }
@@ -103,6 +121,21 @@ fun EventsScreen(
             dismissButton = { OutlinedButton(onClick = { cancelEvent = null }) { Text("Quay lại") } },
         )
     }
+    state.activeDiscussionEvent?.let { event ->
+        EventDiscussionBottomSheet(
+            event = event,
+            comments = state.commentsByEvent[event.id].orEmpty(),
+            commentDraft = state.commentDraft,
+            isPosting = state.isPostingComment,
+            onDiscussionAction = onDiscussionAction,
+        )
+    }
+    state.selectedGuestProfile?.let { student ->
+        GuestProfileDialog(
+            student = student,
+            onDismiss = { onDiscussionAction(EventDiscussionAction.CloseGuestProfile) },
+        )
+    }
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -131,17 +164,21 @@ fun EventsScreen(
             checkInResultMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             checkInErrorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-        if (state.loading) item { CircularProgressIndicator() }
+        if (state.loading && state.events.isEmpty()) item { UthContentSkeleton() }
         if (!state.loading && state.events.isEmpty()) {
             item { Text("Chưa có sự kiện được đăng tải.") }
         }
         items(state.events, key = { it.id }) { event ->
             val registered = event.id in state.registeredIds
+            val comments = state.commentsByEvent[event.id].orEmpty()
             EventCard(
-                event = event, registered = registered,
+                event = event,
+                registered = registered,
                 busy = state.busyEvent != null,
                 canManage = isOrganizer && (state.role == UserRole.ADMIN || event.orgId == state.currentUserId),
-                onRegister = { onRegister(event.id) }, onCancel = { onCancel(event.id) },
+                comments = comments,
+                onRegister = { onRegister(event.id) },
+                onCancel = { onCancel(event.id) },
                 onEdit = { editor = EventEditorTarget(event) },
                 onOpenAttendance = { onOpenAttendance(event.id) },
                 onSetStatus = { status ->
@@ -151,6 +188,7 @@ fun EventsScreen(
                         onSetStatus(event.id, status)
                     }
                 },
+                onOpenDiscussion = { onDiscussionAction(EventDiscussionAction.Open(event)) },
             )
         }
     }
@@ -162,11 +200,13 @@ private fun EventCard(
     registered: Boolean,
     busy: Boolean,
     canManage: Boolean,
+    comments: List<EventComment>,
     onRegister: () -> Unit,
     onCancel: () -> Unit,
     onEdit: () -> Unit,
     onOpenAttendance: () -> Unit,
     onSetStatus: (EventStatus) -> Unit,
+    onOpenDiscussion: () -> Unit,
 ) {
     val canRegister = event.status == EventStatus.PUBLISHED && event.startAt > System.currentTimeMillis() &&
         (event.capacity == 0 || event.registeredCount < event.capacity)
@@ -180,6 +220,15 @@ private fun EventCard(
             Text(eventDateFormatter.format(Instant.ofEpochMilli(event.startAt)))
             Text("${event.location} · ${event.campus}", style = MaterialTheme.typography.bodyMedium)
             Text("Trạng thái: ${event.status.name} · Đã đăng ký: ${event.registeredCount}${if (event.capacity > 0) "/${event.capacity}" else ""}")
+            if (event.description.isNotBlank()) {
+                Text(
+                    text = event.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
             if (registered) {
                 Text("Đã đăng ký · Vé có trong tab Vé của tôi", color = MaterialTheme.colorScheme.primary)
                 OutlinedButton(onClick = onCancel, enabled = !busy) { Text("Hủy đăng ký") }
@@ -214,6 +263,26 @@ private fun EventCard(
             if (canManage) {
                 OutlinedButton(onClick = onOpenAttendance) {
                     Text(stringResource(R.string.attendance_open))
+                }
+            }
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onOpenDiscussion) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_profile_tickets),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(UthDimens.Spacing.Xs))
+                    Text(stringResource(R.string.event_discussion_open, comments.size))
+                }
+                TextButton(onClick = onOpenDiscussion) {
+                    Text(stringResource(R.string.event_write_comment))
                 }
             }
         }

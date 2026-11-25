@@ -11,6 +11,11 @@ class GetLostFoundListingsUseCase @Inject constructor(
     private val repository: LostFoundRepository,
 ) {
     /**
+     * Returns the currently authenticated user ID, or null if anonymous.
+     */
+    fun currentUserId(): String? = repository.currentUserId()
+
+    /**
      * Executes the query to fetch all listings.
      *
      * @return Result containing list of [LostFoundListing].

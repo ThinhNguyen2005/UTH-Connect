@@ -23,6 +23,8 @@ sealed interface HousingDetailEvent {
     data class OpenZalo(val url: String) : HousingDetailEvent
     data object InvalidZaloLink : HousingDetailEvent
     data class OpenMap(val latitude: Double, val longitude: Double, val addressLabel: String) : HousingDetailEvent
+    data class ShareListing(val title: String, val monthlyRentVnd: Int, val addressLabel: String) : HousingDetailEvent
+    data class CopyAddress(val addressLabel: String) : HousingDetailEvent
     data object MarkFulfilledSuccess : HousingDetailEvent
     data object Deleted : HousingDetailEvent
     data object ActionFailed : HousingDetailEvent
@@ -63,6 +65,10 @@ class HousingDetailViewModel @Inject constructor(
             HousingDetailAction.OpenZalo -> openZalo()
 
             HousingDetailAction.OpenMap -> openMap()
+
+            HousingDetailAction.ShareListing -> shareListing()
+
+            HousingDetailAction.CopyAddress -> copyAddress()
 
             HousingDetailAction.MarkFulfilled -> {
                 viewModelScope.launch {
@@ -120,6 +126,27 @@ class HousingDetailViewModel @Inject constructor(
         val listing = _uiState.value.listing ?: return
         viewModelScope.launch {
             _events.send(HousingDetailEvent.OpenMap(listing.latitude, listing.longitude, listing.addressLabel))
+        }
+    }
+
+    private fun shareListing() {
+        val listing = _uiState.value.listing ?: return
+        viewModelScope.launch {
+            _events.send(
+                HousingDetailEvent.ShareListing(
+                    title = listing.title,
+                    monthlyRentVnd = listing.monthlyRentVnd,
+                    addressLabel = listing.addressLabel,
+                ),
+            )
+        }
+    }
+
+    private fun copyAddress() {
+        val listing = _uiState.value.listing ?: return
+        if (listing.addressLabel.isBlank()) return
+        viewModelScope.launch {
+            _events.send(HousingDetailEvent.CopyAddress(listing.addressLabel))
         }
     }
 

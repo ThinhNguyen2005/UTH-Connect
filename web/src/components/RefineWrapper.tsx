@@ -52,6 +52,13 @@ export const RefineWrapper: React.FC<{ children: React.ReactNode }> = ({
             meta: { label: "Ghép trọ & KTX" },
           },
           {
+            name: "book_listings",
+            list: "/books",
+            create: "/books/create",
+            show: "/books/:id",
+            meta: { label: "Chợ sách giáo trình" },
+          },
+          {
             name: "profiles",
             list: "/admin/users",
             meta: { label: "Thành viên" },

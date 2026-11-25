@@ -1,6 +1,5 @@
 package com.giathinh.uthconnect.presentation.profile
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,12 +36,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
+import com.giathinh.uthconnect.core.designsystem.component.UthContentSkeleton
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
+import com.giathinh.uthconnect.core.designsystem.component.UthSectionHeader
 import com.giathinh.uthconnect.core.designsystem.theme.UthDimens
 import com.giathinh.uthconnect.core.designsystem.theme.UthPreview
 import com.giathinh.uthconnect.domain.model.StudentProfile
@@ -69,12 +68,8 @@ fun ProfileScreen(
             ProfilePage.EditContact -> ContactEditContent(uiState, onAction)
 
             ProfilePage.Overview -> {
-                Text(stringResource(R.string.auth_profile_title), style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(UthDimens.Spacing.Lg))
                 when {
-                    uiState.isLoading -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    uiState.isLoading && uiState.student == null -> UthContentSkeleton(detail = true)
 
                     uiState.failure == ProfileFailure.LoadFailed -> UthEmptyState(
                         stringResource(R.string.auth_profile_error),
@@ -146,18 +141,73 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> Unit, onOpenTickets: () -> Unit) {
+private fun ProfileOverview(
+    state: ProfileUiState,
+    onAction: (ProfileAction) -> Unit,
+    onOpenTickets: () -> Unit,
+) {
     val student = state.student ?: return
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    UserProfileHeader(student)
+    Spacer(Modifier.height(UthDimens.Spacing.Lg))
+    CompactTicketsRow(
+        onClick = onOpenTickets,
+        modifier = Modifier.testTag("profile_open_tickets"),
+    )
+    PersonalInfoSection(student)
+    SchoolInfoSection(student)
+    ContactInfoSection(student)
+    ProfileActions(state, onAction)
+}
+
+@Composable
+private fun UserProfileHeader(
+    student: StudentProfile,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         StudentAvatar(student)
-        Spacer(Modifier.height(UthDimens.Spacing.Md))
-        Text(
-            student.displayName,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.testTag("profile_name"),
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        Spacer(Modifier.width(UthDimens.Spacing.Lg))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+        ) {
+            Text(
+                text = student.displayName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.testTag("profile_name"),
+            )
+            val studentDesc = listOf(student.studentId, student.className)
+                .filter { it.isNotBlank() }
+                .joinToString(" · ")
+            if (studentDesc.isNotBlank()) {
+                Text(
+                    text = studentDesc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (student.major.isNotBlank()) {
+                Text(
+                    text = student.major,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            ProfileBadges(student)
+        }
+    }
+}
+
+@Composable
+private fun ProfileBadges(student: StudentProfile) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (student.uthVerified) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -167,8 +217,11 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
                 Text(
                     stringResource(R.string.auth_verified_demo_badge),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(UthDimens.Spacing.Sm),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(
+                        horizontal = UthDimens.Spacing.Sm,
+                        vertical = UthDimens.Spacing.Xs,
+                    ),
                 )
             }
         } else {
@@ -179,7 +232,6 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
             )
         }
         if (student.role == UserRole.ORGANIZER) {
-            Spacer(Modifier.height(UthDimens.Spacing.Xs))
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = MaterialTheme.shapes.small,
@@ -188,20 +240,97 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
                 Text(
                     stringResource(R.string.auth_organizer_demo_badge),
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(UthDimens.Spacing.Sm),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(
+                        horizontal = UthDimens.Spacing.Sm,
+                        vertical = UthDimens.Spacing.Xs,
+                    ),
                 )
             }
         }
     }
-    Spacer(Modifier.height(UthDimens.Spacing.Xl))
+}
+
+@Composable
+private fun CompactTicketsRow(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    UthCard(
+        modifier = modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(UthDimens.Size.UtilityIconContainer)
+                    .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_profile_tickets),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(UthDimens.Size.Icon),
+                )
+            }
+            Spacer(Modifier.width(UthDimens.Spacing.Md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.tab_tickets),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.profile_tickets_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PersonalInfoSection(student: StudentProfile) {
+    UthSectionHeader(stringResource(R.string.profile_section_personal))
     UthCard(modifier = Modifier.fillMaxWidth()) {
         ProfileRow(stringResource(R.string.auth_profile_name), student.displayName)
-        ProfileRow(stringResource(R.string.auth_profile_student_id), student.studentId)
         ProfileRow(stringResource(R.string.auth_profile_email), student.email)
+    }
+}
+
+@Composable
+private fun SchoolInfoSection(student: StudentProfile, showNote: Boolean = false) {
+    UthSectionHeader(stringResource(R.string.profile_section_school))
+    UthCard(modifier = Modifier.fillMaxWidth()) {
+        ProfileRow(stringResource(R.string.auth_profile_student_id), student.studentId)
         ProfileRow(stringResource(R.string.auth_profile_class), student.className)
         ProfileRow(stringResource(R.string.auth_profile_major), student.major)
         ProfileRow(stringResource(R.string.auth_profile_faculty), student.faculty)
+        if (showNote) {
+            Spacer(Modifier.height(UthDimens.Spacing.Xs))
+            Text(
+                stringResource(R.string.profile_school_info_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContactInfoSection(student: StudentProfile) {
+    UthSectionHeader(stringResource(R.string.profile_section_contact))
+    UthCard(modifier = Modifier.fillMaxWidth()) {
         ProfileRow(
             stringResource(R.string.auth_contact_phone),
             if (student.phoneNumber.isBlank()) stringResource(R.string.auth_contact_not_set) else student.phoneNumber,
@@ -215,15 +344,10 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
             if (student.currentAddress.isBlank()) stringResource(R.string.auth_contact_not_set) else student.currentAddress,
         )
     }
-    Spacer(Modifier.height(UthDimens.Spacing.Lg))
-    // Vé rời thanh tab đáy để khung app giữ 4 điểm đến (docs/Design.md mục 8.1–8.2),
-    // nhưng vẫn là tác vụ lặp lại hằng ngày của sinh viên nên đặt ngay dưới hồ sơ.
-    ProfileNavRow(
-        iconRes = R.drawable.ic_profile_tickets,
-        label = stringResource(R.string.tab_tickets),
-        onClick = onOpenTickets,
-        modifier = Modifier.testTag("profile_open_tickets"),
-    )
+}
+
+@Composable
+private fun ProfileActions(state: ProfileUiState, onAction: (ProfileAction) -> Unit) {
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     OutlinedButton(
         onClick = { onAction(ProfileAction.OpenContact) },
@@ -234,18 +358,6 @@ private fun ProfileOverview(state: ProfileUiState, onAction: (ProfileAction) -> 
         onClick = { onAction(ProfileAction.OpenPassword) },
         modifier = Modifier.fillMaxWidth().testTag("profile_change_password"),
     ) { Text(stringResource(R.string.auth_password_change_title)) }
-    Spacer(Modifier.height(UthDimens.Spacing.Sm))
-    OutlinedButton(
-        onClick = { onAction(if (state.biometricEnabled) ProfileAction.DisableBiometric else ProfileAction.RequestBiometricEnroll) },
-        enabled = !state.isSaving,
-        modifier = Modifier.fillMaxWidth().testTag("profile_biometric_toggle"),
-    ) { Text(stringResource(if (state.biometricEnabled) R.string.auth_biometric_disable else R.string.auth_biometric_enable)) }
-    Spacer(Modifier.height(UthDimens.Spacing.Xs))
-    Text(
-        stringResource(R.string.auth_biometric_note),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     DisplayFeedback(state)
     OutlinedButton(
@@ -370,45 +482,15 @@ private fun passwordErrorRes(error: PasswordError): Int = when (error) {
 @Composable
 private fun ContactEditContent(state: ProfileUiState, onAction: (ProfileAction) -> Unit) {
     val form = state.contactForm
+    val student = state.student
     Text(stringResource(R.string.auth_contact_edit_title), style = MaterialTheme.typography.headlineMedium)
-    Spacer(Modifier.height(UthDimens.Spacing.Lg))
-    UthCard(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = form.phone,
-            onValueChange = { onAction(ProfileAction.PhoneChanged(it)) },
-            label = { Text(stringResource(R.string.auth_contact_phone)) },
-            modifier = Modifier.fillMaxWidth().testTag("contact_phone"),
-            enabled = !state.isSaving,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            isError = form.errors.phoneError != null,
-            supportingText = { form.errors.phoneError?.let { Text(stringResource(contactErrorRes(it))) } },
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        OutlinedTextField(
-            value = form.email,
-            onValueChange = { onAction(ProfileAction.EmailChanged(it)) },
-            label = { Text(stringResource(R.string.auth_contact_email)) },
-            modifier = Modifier.fillMaxWidth().testTag("contact_email"),
-            enabled = !state.isSaving,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            isError = form.errors.emailError != null,
-            supportingText = { form.errors.emailError?.let { Text(stringResource(contactErrorRes(it))) } },
-        )
-        Spacer(Modifier.height(UthDimens.Spacing.Sm))
-        OutlinedTextField(
-            value = form.address,
-            onValueChange = { onAction(ProfileAction.AddressChanged(it)) },
-            label = { Text(stringResource(R.string.auth_contact_address)) },
-            modifier = Modifier.fillMaxWidth().testTag("contact_address"),
-            enabled = !state.isSaving,
-            minLines = 2,
-            maxLines = 3,
-            isError = form.errors.addressError != null,
-            supportingText = { form.errors.addressError?.let { Text(stringResource(contactErrorRes(it))) } },
-        )
+    Spacer(Modifier.height(UthDimens.Spacing.Sm))
+    if (student != null) {
+        PersonalInfoSection(student)
+        SchoolInfoSection(student, showNote = true)
     }
+    UthSectionHeader(stringResource(R.string.profile_section_contact))
+    ContactEditFields(form = form, isSaving = state.isSaving, onAction = onAction)
     Spacer(Modifier.height(UthDimens.Spacing.Lg))
     DisplayFeedback(state)
     UthPrimaryButton(
@@ -428,6 +510,51 @@ private fun ContactEditContent(state: ProfileUiState, onAction: (ProfileAction) 
     }
 }
 
+@Composable
+private fun ContactEditFields(
+    form: ContactForm,
+    isSaving: Boolean,
+    onAction: (ProfileAction) -> Unit,
+) {
+    UthCard(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = form.phone,
+            onValueChange = { onAction(ProfileAction.PhoneChanged(it)) },
+            label = { Text(stringResource(R.string.auth_contact_phone)) },
+            modifier = Modifier.fillMaxWidth().testTag("contact_phone"),
+            enabled = !isSaving,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            isError = form.errors.phoneError != null,
+            supportingText = { form.errors.phoneError?.let { Text(stringResource(contactErrorRes(it))) } },
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        OutlinedTextField(
+            value = form.email,
+            onValueChange = { onAction(ProfileAction.EmailChanged(it)) },
+            label = { Text(stringResource(R.string.auth_contact_email)) },
+            modifier = Modifier.fillMaxWidth().testTag("contact_email"),
+            enabled = !isSaving,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            isError = form.errors.emailError != null,
+            supportingText = { form.errors.emailError?.let { Text(stringResource(contactErrorRes(it))) } },
+        )
+        Spacer(Modifier.height(UthDimens.Spacing.Sm))
+        OutlinedTextField(
+            value = form.address,
+            onValueChange = { onAction(ProfileAction.AddressChanged(it)) },
+            label = { Text(stringResource(R.string.auth_contact_address)) },
+            modifier = Modifier.fillMaxWidth().testTag("contact_address"),
+            enabled = !isSaving,
+            minLines = 2,
+            maxLines = 3,
+            isError = form.errors.addressError != null,
+            supportingText = { form.errors.addressError?.let { Text(stringResource(contactErrorRes(it))) } },
+        )
+    }
+}
+
 private fun contactErrorRes(error: ContactFieldError): Int = when (error) {
     ContactFieldError.InvalidPhone -> R.string.auth_contact_invalid_phone
     ContactFieldError.InvalidEmail -> R.string.auth_contact_invalid_email
@@ -435,62 +562,21 @@ private fun contactErrorRes(error: ContactFieldError): Int = when (error) {
 }
 
 @Composable
-private fun StudentAvatar(student: StudentProfile) {
+private fun StudentAvatar(student: StudentProfile, modifier: Modifier = Modifier) {
     val initials = student.displayName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .takeLast(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
     Box(
-        modifier = Modifier.size(UthDimens.Size.AvatarLarge)
+        modifier = modifier
+            .size(UthDimens.Size.AvatarLarge)
             .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            initials.ifEmpty { "SV" },
+            text = initials.ifEmpty { "SV" },
             color = MaterialTheme.colorScheme.onPrimaryContainer,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
         )
-    }
-}
-
-/**
- * Hàng điều hướng trong tab Cá nhân: icon duotone + nhãn + mũi tên.
- *
- * Card chiếm nguyên hàng nên vùng chạm vượt chuẩn tối thiểu `Size.MinTouchTarget`;
- * mũi tên chỉ là gợi ý, không phải control riêng
- * (tránh hai vùng chạm chồng lấn — `docs/UI-UX.md` mục 4).
- */
-@Composable
-private fun ProfileNavRow(
-    @DrawableRes iconRes: Int,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    UthCard(
-        modifier = modifier.fillMaxWidth().heightIn(min = UthDimens.Size.MinTouchTarget),
-        onClick = onClick,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(UthDimens.Size.UtilityIconContainer)
-                    .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null, // Nhãn chữ ngay bên cạnh đã mô tả hàng này.
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(UthDimens.Size.Icon),
-                )
-            }
-            Spacer(Modifier.width(UthDimens.Spacing.Md))
-            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

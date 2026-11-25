@@ -1,23 +1,23 @@
 package com.giathinh.uthconnect.presentation.housing.detail
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.giathinh.uthconnect.R
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun HousingDetailRoute(
@@ -59,6 +59,30 @@ fun HousingDetailRoute(
                     openExternal(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)), snackbars)
                 }
 
+                is HousingDetailEvent.ShareListing -> {
+                    val formattedRent = NumberFormat
+                        .getIntegerInstance(Locale.forLanguageTag("vi-VN"))
+                        .format(event.monthlyRentVnd)
+                    val shareText = context.getString(
+                        R.string.housing_detail_share_body,
+                        event.title,
+                        formattedRent,
+                        event.addressLabel,
+                    )
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                    }
+                    val chooser = Intent.createChooser(sendIntent, context.getString(R.string.housing_detail_share))
+                    openExternal(context, chooser, snackbars)
+                }
+
+                is HousingDetailEvent.CopyAddress -> {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("address", event.addressLabel))
+                    snackbars.showSnackbar(context.getString(R.string.housing_detail_address_copied))
+                }
+
                 HousingDetailEvent.MarkFulfilledSuccess -> {
                     snackbars.showSnackbar(context.getString(R.string.housing_detail_fulfilled_success))
                 }
@@ -72,15 +96,13 @@ fun HousingDetailRoute(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        HousingDetailScreen(
-            uiState = uiState,
-            onAction = viewModel::onAction,
-            onNavigateBack = onNavigateBack,
-            modifier = Modifier.fillMaxSize(),
-        )
-        SnackbarHost(hostState = snackbars, modifier = Modifier.align(Alignment.BottomCenter))
-    }
+    HousingDetailScreen(
+        uiState = uiState,
+        onAction = viewModel::onAction,
+        onNavigateBack = onNavigateBack,
+        snackbarHostState = snackbars,
+        modifier = modifier,
+    )
 }
 
 /** Máy không có app xử lý intent thì báo snackbar thay vì để ngoại lệ làm sập màn hình. */

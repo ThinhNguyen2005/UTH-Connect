@@ -75,6 +75,7 @@ fun ScannerScreen(
                 value = state.code,
                 onValueChange = { onAction(ScannerAction.CodeChanged(it)) },
                 label = { Text(stringResource(R.string.scanner_code)) },
+                modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !state.isSubmitting,
             )

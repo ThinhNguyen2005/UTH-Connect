@@ -410,7 +410,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/95 via-neutral-950/60 to-neutral-950/40" />
         <div className="absolute inset-0 bg-neutral-950/20 backdrop-brightness-[0.9]" />
 
-        {/* Top Header in Visual Panel */}
+        {/* Top Header in Visual Panel
         <div className="relative z-10 flex items-center justify-between">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3.5 py-1.5 text-xs text-neutral-200 backdrop-blur-md">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -419,11 +419,11 @@ export default function LoginPage() {
           <span className="text-xs text-neutral-300 font-mono tracking-wider bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm border border-white/5">
             Ho Chi Minh City, VN
           </span>
-        </div>
+        </div> */}
 
         {/* Bottom Hero Card */}
         <div className="relative z-10">
-          <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
+          {/* <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
               <span>Đại học Giao thông vận tải TP.HCM</span>
@@ -442,7 +442,7 @@ export default function LoginPage() {
               <span className="rounded-md bg-white/10 px-2.5 py-1 font-medium">20.000+ Sinh viên</span>
               <span className="rounded-md bg-white/10 px-2.5 py-1 font-medium">Hệ thống một cửa</span>
             </div>
-          </div>
+          </div> */}
 
           <p className="mt-4 text-xs text-neutral-400/80 text-center lg:text-left">
             Trụ sở chính: Số 2, Đường Võ Oanh, Phường 25, Quận Bình Thạnh, TP.HCM

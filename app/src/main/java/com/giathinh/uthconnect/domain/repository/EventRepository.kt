@@ -1,8 +1,10 @@
 package com.giathinh.uthconnect.domain.repository
 
 import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventComment
 import com.giathinh.uthconnect.domain.model.EventDraft
 import com.giathinh.uthconnect.domain.model.EventStatus
+import com.giathinh.uthconnect.domain.model.StudentProfile
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -43,4 +45,13 @@ interface EventRepository {
     suspend fun saveEvent(eventId: String?, draft: EventDraft): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
 
     suspend fun setStatus(eventId: String, status: EventStatus): Result<Unit> = Result.failure(UnsupportedOperationException("Event management unavailable"))
+
+    fun getEventComments(eventId: String): Flow<List<EventComment>> = kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun addEventComment(eventId: String, content: String): Result<EventComment> {
+        val error = UnsupportedOperationException("Event comment unavailable")
+        return Result.failure(error)
+    }
+
+    suspend fun getGuestProfile(studentId: String): Result<StudentProfile?> = Result.success(null)
 }

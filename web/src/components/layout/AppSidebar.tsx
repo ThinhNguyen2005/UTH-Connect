@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { useGetIdentity, useLogout } from "@refinedev/core";
 import {
   LayoutDashboard,
-  Bell,
   Calendar,
   Home,
+  BookOpen,
   Building2,
   ShieldCheck,
   ShieldAlert,
@@ -90,14 +90,6 @@ export const AppSidebar: React.FC = () => {
       items: [
         { id: "dashboard", name: "Tổng quan", href: "/", icon: LayoutDashboard },
         {
-          id: "notifications",
-          name: "Thông báo",
-          href: "/notifications",
-          icon: Bell,
-          count: "Mới",
-          badgeColor: "bg-blue-100 text-blue-700",
-        },
-        {
           id: "events",
           name: "Sự kiện & Vé QR",
           href: "/events",
@@ -108,6 +100,12 @@ export const AppSidebar: React.FC = () => {
           name: "Ghép trọ & KTX",
           href: "/housing",
           icon: Home,
+        },
+        {
+          id: "books",
+          name: "Chợ sách giáo trình",
+          href: "/books",
+          icon: BookOpen,
         },
       ],
     },

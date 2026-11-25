@@ -46,6 +46,7 @@ fun EventsRoute(
             viewModel.clearCheckInResult()
             scannerOpen = true
         },
+        onDiscussionAction = viewModel::onDiscussionAction,
     )
     if (scannerOpen) {
         QrScannerDialog(

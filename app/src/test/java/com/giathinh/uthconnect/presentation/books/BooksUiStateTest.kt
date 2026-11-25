@@ -40,6 +40,35 @@ class BooksUiStateTest {
         assertEquals(listOf(cheap), state.visibleListings)
     }
 
+    @Test
+    fun `onlyMine filters to listings owned by currentUserUid`() {
+        val mine = listing("My Book", BookDealType.SALE).copy(ownerUid = "uid-1")
+        val peer = listing("Peer Book", BookDealType.SALE).copy(ownerUid = "uid-2")
+
+        val state = BooksUiState(
+            isLoading = false,
+            currentUserUid = "uid-1",
+            listings = listOf(mine, peer),
+            onlyMine = true,
+        )
+
+        assertEquals(listOf(mine), state.visibleListings)
+    }
+
+    @Test
+    fun `activeFilterCount counts active advanced filters`() {
+        val base = BooksUiState(isLoading = false)
+        assertEquals(0, base.activeFilterCount)
+
+        val filtered = base.copy(
+            condition = BookCondition.NEW,
+            minimumPrice = "10000",
+            sort = BooksSort.PRICE_LOW,
+            includeSold = true,
+        )
+        assertEquals(4, filtered.activeFilterCount)
+    }
+
     private fun listing(title: String, deal: BookDealType, status: BookListingStatus = BookListingStatus.AVAILABLE) = BookListing(
         id = "$title-$deal", title = title, subject = "CS", condition = BookCondition.GOOD,
         dealType = deal, priceVnd = 1000, description = "", sellerName = "Seller",

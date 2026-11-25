@@ -337,6 +337,28 @@ class HousingDetailViewModelTest {
         assertFalse(state.showRejectionBanner)
     }
 
+    @Test
+    fun `ShareListing - phat event ShareListing dung thong tin`() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.onAction(HousingDetailAction.ShareListing)
+
+        val event = viewModel.events.first() as HousingDetailEvent.ShareListing
+        assertEquals("Phòng trọ test", event.title)
+        assertEquals(2_500_000, event.monthlyRentVnd)
+        assertEquals("Quang Trung, Gò Vấp", event.addressLabel)
+    }
+
+    @Test
+    fun `CopyAddress - phat event CopyAddress dung dia chi`() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.onAction(HousingDetailAction.CopyAddress)
+
+        val event = viewModel.events.first() as HousingDetailEvent.CopyAddress
+        assertEquals("Quang Trung, Gò Vấp", event.addressLabel)
+    }
+
     private class FakeSessionRepository(studentId: String?) : SessionRepository {
         override val session: StateFlow<StudentSession> = MutableStateFlow(
             StudentSession(

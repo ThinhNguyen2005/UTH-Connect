@@ -2,14 +2,23 @@ package com.giathinh.uthconnect.presentation.lostfound
 
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
+import com.giathinh.uthconnect.domain.model.LostFoundListing
 
 sealed interface LostFoundAction {
     data class SelectKind(val kind: ListingKind) : LostFoundAction
     data class SelectCategory(val category: ItemCategory) : LostFoundAction
     data class UpdateSearchQuery(val query: String) : LostFoundAction
+    data class SetOnlyMine(val onlyMine: Boolean) : LostFoundAction
+    data class SetShowResolved(val showResolved: Boolean) : LostFoundAction
+    data object ResetFilters : LostFoundAction
+    data object Refresh : LostFoundAction
     data class ToggleResolveListing(val id: String) : LostFoundAction
     data object OpenReportDialog : LostFoundAction
+    data class OpenEditDialog(val listing: LostFoundListing) : LostFoundAction
     data object CloseReportDialog : LostFoundAction
+    data class RequestDeleteListing(val listing: LostFoundListing) : LostFoundAction
+    data object CancelDeleteListing : LostFoundAction
+    data object ConfirmDeleteListing : LostFoundAction
     data class UpdateReportTitle(val title: String) : LostFoundAction
     data class UpdateReportDescription(val description: String) : LostFoundAction
     data class UpdateReportKind(val kind: ListingKind) : LostFoundAction

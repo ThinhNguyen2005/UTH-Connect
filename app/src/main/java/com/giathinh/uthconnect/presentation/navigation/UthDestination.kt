@@ -2,14 +2,15 @@ package com.giathinh.uthconnect.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.giathinh.uthconnect.R
+import com.giathinh.uthconnect.presentation.scanner.ScannerDestination
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
@@ -54,6 +55,12 @@ enum class UthDestination(
         R.string.tab_schedule,
         Icons.Filled.DateRange,
     ),
+    SCANNER(
+        ScannerDestination,
+        ScannerDestination::class,
+        R.string.tab_scanner,
+        Icons.Filled.Check,
+    ),
     UTILITIES(
         UtilitiesDestination,
         UtilitiesDestination::class,
@@ -65,12 +72,6 @@ enum class UthDestination(
         ProfileDestination::class,
         R.string.tab_profile,
         Icons.Filled.Person,
-    ),
-    USER_NOTIFICATIONS(
-        UserNotificationsDestination,
-        UserNotificationsDestination::class,
-        R.string.tab_notifications,
-        Icons.Filled.Notifications,
     ),
     ;
 

@@ -155,7 +155,8 @@ class SupabaseMappersTest {
               "contact_name": "Nguyễn Minh Thắng",
               "contact_phone": "0901234567",
               "image_url": "https://example.supabase.co/storage/v1/object/public/lost-found/items/key.jpg",
-              "is_resolved": true
+              "is_resolved": true,
+              "user_id": "user-uuid-123"
             }
         """
         val item = objectFromJson(raw).toDomainLostFoundListing()
@@ -170,6 +171,7 @@ class SupabaseMappersTest {
         assertEquals("0901234567", item.contactPhone)
         assertEquals("https://example.supabase.co/storage/v1/object/public/lost-found/items/key.jpg", item.imageUrl)
         assertTrue(item.isResolved)
+        assertEquals("user-uuid-123", item.userId)
     }
 
     @Test fun lostFoundListingToJsonObjectSerializesCorrectly() {

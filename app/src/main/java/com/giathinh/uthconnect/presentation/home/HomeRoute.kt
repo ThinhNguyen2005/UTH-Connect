@@ -23,6 +23,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun HomeRoute(
     onOpenAnnouncement: (String) -> Unit,
     onOpenNotifications: () -> Unit = {},
+    onOpenEvent: (String) -> Unit = {},
+    onOpenAllEvents: () -> Unit = {},
+    onOpenHousingDetail: (String) -> Unit = {},
+    onOpenAllHousing: () -> Unit = {},
+    onOpenBookDetail: (String) -> Unit = {},
+    onOpenAllBooks: () -> Unit = {},
+    onOpenLostFoundDetail: (String) -> Unit = {},
+    onOpenAllLostFound: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -34,6 +42,14 @@ fun HomeRoute(
             when (action) {
                 is HomeAction.OpenAnnouncement -> onOpenAnnouncement(action.announcementId)
                 is HomeAction.OpenNotifications -> onOpenNotifications()
+                is HomeAction.OpenEvent -> onOpenEvent(action.eventId)
+                HomeAction.OpenAllEvents -> onOpenAllEvents()
+                is HomeAction.OpenHousingDetail -> onOpenHousingDetail(action.listingId)
+                HomeAction.OpenAllHousing -> onOpenAllHousing()
+                is HomeAction.OpenBookDetail -> onOpenBookDetail(action.bookId)
+                HomeAction.OpenAllBooks -> onOpenAllBooks()
+                is HomeAction.OpenLostFoundDetail -> onOpenLostFoundDetail(action.itemId)
+                HomeAction.OpenAllLostFound -> onOpenAllLostFound()
                 else -> viewModel.onAction(action)
             }
         },

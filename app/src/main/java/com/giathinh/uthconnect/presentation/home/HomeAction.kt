@@ -31,4 +31,31 @@ sealed interface HomeAction {
 
     /** Mở chi tiết một thông báo hoặc banner. */
     data class OpenAnnouncement(val announcementId: String) : HomeAction
+
+    /** Chọn cơ sở cho khối Sự kiện. `campus = null` hoặc `"Tất cả"` là xem toàn trường. */
+    data class SelectCampus(val campus: String?) : HomeAction
+
+    /** Mở xem chi tiết sự kiện. */
+    data class OpenEvent(val eventId: String) : HomeAction
+
+    /** Bấm "Xem tất cả" mở màn hình danh sách sự kiện đầy đủ. */
+    data object OpenAllEvents : HomeAction
+
+    /** Mở chi tiết tin ghép trọ. */
+    data class OpenHousingDetail(val listingId: String) : HomeAction
+
+    /** Bấm "Xem tất cả" mở màn hình ghép trọ. */
+    data object OpenAllHousing : HomeAction
+
+    /** Mở chi tiết sách trong chợ sách giáo trình. */
+    data class OpenBookDetail(val bookId: String) : HomeAction
+
+    /** Bấm "Xem tất cả" mở màn hình chợ sách. */
+    data object OpenAllBooks : HomeAction
+
+    /** Mở chi tiết đồ thất lạc. */
+    data class OpenLostFoundDetail(val itemId: String) : HomeAction
+
+    /** Bấm "Xem tất cả" mở màn hình đồ thất lạc. */
+    data object OpenAllLostFound : HomeAction
 }

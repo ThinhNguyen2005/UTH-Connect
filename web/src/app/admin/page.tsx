@@ -9,10 +9,12 @@ import {
   ShieldCheck,
   Calendar,
   Home,
+  BookOpen,
   Bell,
   ArrowRight,
   UserCheck,
   AlertCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -23,6 +25,7 @@ export default function AdminDashboardPage() {
     verifiedStudents: 0,
     events: 0,
     housing: 0,
+    books: 0,
     notifications: 0,
   });
 
@@ -36,12 +39,14 @@ export default function AdminDashboardPage() {
         { count: evtCount },
         { count: notifCount },
         { count: houseCount },
+        { count: bookCount },
       ] = await Promise.all([
         supabaseBrowserClient.from("profiles").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("profiles").select("*", { count: "exact", head: true }).eq("student_id_verified", true),
         supabaseBrowserClient.from("events").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("notifications").select("*", { count: "exact", head: true }),
         supabaseBrowserClient.from("housing_posts").select("*", { count: "exact", head: true }),
+        supabaseBrowserClient.from("book_listings").select("*", { count: "exact", head: true }),
       ]);
 
       const { count: lecCount } = await supabaseBrowserClient
@@ -58,6 +63,7 @@ export default function AdminDashboardPage() {
         verifiedStudents: verifiedS || 0,
         events: evtCount || 0,
         housing: houseCount || 0,
+        books: bookCount || 0,
         notifications: notifCount || 0,
       });
     }
@@ -81,13 +87,22 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/users"
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition active:scale-[0.98]"
-        >
-          <Users className="w-3.5 h-3.5 stroke-[1.5]" />
-          <span>Quản lý Phân quyền</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/reports"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-slate-700 rounded-lg text-xs font-semibold shadow-subtle hover:bg-slate-50 transition active:scale-[0.98]"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Xuất Báo Cáo</span>
+          </Link>
+          <Link
+            href="/admin/users"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition active:scale-[0.98]"
+          >
+            <Users className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Quản lý Phân quyền</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI Tonal Grid (No borders, high density tabular nums) */}
@@ -134,18 +149,20 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Bento Modules Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {/* Module 1: Phân quyền */}
-        <div className="bg-white rounded-xl p-6 shadow-subtle">
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="w-4 h-4 stroke-[1.5] text-slate-600" />
-            <h3 className="text-sm font-bold text-slate-900">
-              Phân Quyền RBAC & Xác minh
-            </h3>
+        <div className="bg-white rounded-xl p-5 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-4 h-4 stroke-[1.5] text-slate-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Phân Quyền RBAC
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+              Thay đổi vai trò người dùng giữa Sinh viên, Giảng viên và Admin. Phê duyệt mã số sinh viên cấp thẻ.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed mb-4">
-            Thay đổi vai trò người dùng giữa Sinh viên, Giảng viên và Admin. Phê duyệt mã số sinh viên để sinh viên được cấp vé sự kiện.
-          </p>
           <Link
             href="/admin/users"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"
@@ -156,36 +173,62 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Module 2: Kiểm duyệt tin trọ */}
-        <div className="bg-white rounded-xl p-6 shadow-subtle">
-          <div className="flex items-center gap-2 mb-3">
-            <Home className="w-4 h-4 stroke-[1.5] text-slate-600" />
-            <h3 className="text-sm font-bold text-slate-900">
-              Kiểm Duyệt Ghép Trọ
-            </h3>
+        <div className="bg-white rounded-xl p-5 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Home className="w-4 h-4 stroke-[1.5] text-slate-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Kiểm Duyệt Ghép Trọ
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+              Rà soát nội dung bài đăng tìm bạn ở ghép và phòng trọ của sinh viên gần các cơ sở UTH.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed mb-4">
-            Rà soát nội dung bài đăng tìm bạn ở ghép và phòng trọ của sinh viên. Đóng hoặc ẩn bài viết vi phạm tiêu chuẩn cộng đồng.
-          </p>
           <Link
             href="/admin/moderation"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"
           >
-            <span>Quản lý bài đăng</span>
+            <span>Quản lý bài đăng trọ ({stats.housing})</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {/* Module 3: Soạn thảo thông báo trường */}
-        <div className="bg-white rounded-xl p-6 shadow-subtle">
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="w-4 h-4 stroke-[1.5] text-slate-600" />
-            <h3 className="text-sm font-bold text-slate-900">
-              Thông Báo Nhà Trường
-            </h3>
+        {/* Module 3: Chợ sách giáo trình */}
+        <div className="bg-white rounded-xl p-5 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-4 h-4 stroke-[1.5] text-slate-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Chợ Sách Giáo Trình
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+              Giám sát toàn bộ tin mua bán, trao đổi sách giáo trình và tài liệu học tập của sinh viên.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed mb-4">
-            Phát hành các thông báo khẩn cấp, khảo thí, đào tạo và học phí tới toàn thể sinh viên và giảng viên qua app và portal.
-          </p>
+          <Link
+            href="/admin/books"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"
+          >
+            <span>Quản lý chợ sách ({stats.books})</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Module 4: Soạn thảo thông báo trường */}
+        <div className="bg-white rounded-xl p-5 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Bell className="w-4 h-4 stroke-[1.5] text-slate-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Thông Báo Trường
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+              Phát hành các thông báo khẩn cấp, khảo thí, đào tạo và học phí tới sinh viên và giảng viên.
+            </p>
+          </div>
           <Link
             href="/admin/announcements"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 hover:text-blue-600 transition"

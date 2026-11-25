@@ -11,9 +11,10 @@
 
     <!-- 5 tab cấp 1 (presentation/navigation/UthDestination.kt) -->
     <string name="tab_home">Trang chủ</string>
-    <string name="tab_schedule">Thời khóa biểu</string>
+    <string name="tab_schedule">Lịch học</string>
+    <string name="tab_scanner">Quét QR</string>
     <string name="tab_utilities">Tiện ích</string>
-    <string name="tab_profile">Cá nhân</string>
+    <string name="tab_profile">Tôi</string>
     <string name="tab_notifications">Thông báo</string>
 
     <!--
@@ -106,6 +107,17 @@
     <string name="home_section_upcoming">Sự kiện sắp diễn ra</string>
     <string name="home_events_empty_title">Chưa có sự kiện nào</string>
     <string name="home_events_empty_body">Khi CLB của bạn đăng sự kiện lên UTH Connect, danh sách sẽ xuất hiện ở đây.</string>
+    <string name="home_see_all">Xem tất cả</string>
+    <string name="home_event_points">+%1$d ĐRL</string>
+    <string name="home_event_registered">Đã đăng ký</string>
+    <string name="home_event_happening">Đang diễn ra</string>
+    <string name="home_event_upcoming">Sắp diễn ra</string>
+    <string name="home_campus_all">Tất cả</string>
+    <string name="home_campus_1">Cơ sở 1</string>
+    <string name="home_campus_2">Cơ sở 2</string>
+    <string name="home_campus_3">Cơ sở 3</string>
+    <string name="home_event_slots">Còn %1$d/%2$d vé</string>
+    <string name="home_event_unlimited">Không giới hạn vé</string>
 
     <!-- Thời khóa biểu (Phase 2) -->
     <string name="schedule_wip_title">Thời khóa biểu</string>
@@ -431,6 +443,11 @@
     <string name="auth_contact_invalid_email">Email cá nhân không hợp lệ.</string>
     <string name="auth_contact_invalid_address">Địa chỉ không được vượt quá 200 ký tự.</string>
     <string name="auth_contact_saved">Đã lưu thông tin liên hệ thành công.</string>
+    <string name="profile_section_personal">Thông tin cá nhân</string>
+    <string name="profile_section_school">Trường học</string>
+    <string name="profile_section_contact">Địa chỉ &amp; Liên hệ</string>
+    <string name="profile_tickets_desc">Xem vé QR và điểm danh sự kiện</string>
+    <string name="profile_school_info_note">Dữ liệu học tập do nhà trường quản lý</string>
     <string name="auth_save_failed">Không lưu được dữ liệu. Vui lòng thử lại.</string>
     <string name="auth_save">Lưu thay đổi</string>
     <string name="auth_back">Quay lại</string>
@@ -478,7 +495,7 @@
     <string name="scanner_camera_received">Đã đọc mã. Chọn Quét mã khác để tiếp tục.</string>
     <string name="scanner_scan_again">Quét mã khác</string>
     <!-- Lost & Found -->
-    <string name="lostfound_title">Đồ thất lạc (Lost &amp; Found)</string>
+    <string name="lostfound_title">Đồ thất lạc</string>
     <string name="lostfound_search_hint_lost">Tìm đồ thất lạc (ví, thẻ sinh viên...)</string>
     <string name="lostfound_search_hint_found">Tìm đồ nhặt được...</string>
     <string name="lostfound_search_desc">Tìm kiếm</string>
@@ -550,6 +567,21 @@
     <string name="common_loading">Đang xử lý</string>
     <string name="lostfound_msg_post_success">Đăng tin thành công!</string>
     <string name="lostfound_msg_post_failed">Đăng tin thất bại</string>
+    <string name="lostfound_msg_update_success">Đã cập nhật bài đăng!</string>
+    <string name="lostfound_msg_delete_success">Đã xóa bài đăng</string>
+    <string name="lostfound_msg_delete_failed">Không xóa được bài đăng</string>
+    <string name="lostfound_edit_title">Sửa tin đồ thất lạc</string>
+    <string name="lostfound_btn_save_edit">Lưu thay đổi</string>
+    <string name="lostfound_action_edit">Sửa tin</string>
+    <string name="lostfound_action_delete">Xóa tin</string>
+    <string name="lostfound_delete_dialog_title">Xóa tin đồ thất lạc?</string>
+    <string name="lostfound_delete_dialog_body">Bài đăng và ảnh đính kèm sẽ bị xóa vĩnh viễn.</string>
+    <string name="lostfound_filter_only_mine">Tin của tôi</string>
+    <string name="lostfound_filter_hide_resolved">Ẩn tin đã xong</string>
+    <string name="lostfound_reset_filters">Đặt lại bộ lọc</string>
+    <string name="lostfound_copy_phone">Sao chép SĐT</string>
+    <string name="lostfound_phone_copied">Đã sao chép số điện thoại</string>
+    <string name="lostfound_detail_title">Chi tiết tin đăng</string>
     <string name="lostfound_msg_dialer_unavailable">Thiết bị không hỗ trợ ứng dụng gọi điện</string>
     <string name="nav_back">Quay lại</string>
     <string name="lostfound_no_dialer_error">Thiết bị không có ứng dụng gọi điện phù hợp</string>
@@ -621,6 +653,19 @@
     <string name="books_mark_available">Đánh dấu còn bán</string>
     <string name="books_condition_format">Tình trạng: %1$s</string>
     <string name="books_exchange">Trao đổi</string>
+    <string name="books_filter_button">Bộ lọc</string>
+    <string name="books_filter_button_count">Bộ lọc (%1$d)</string>
+    <string name="books_filter_only_mine">Bài của tôi</string>
+    <string name="books_filter_sheet_title">Bộ lọc nâng cao</string>
+    <string name="books_filter_sort_label">Sắp xếp theo</string>
+    <string name="books_filter_apply">Áp dụng</string>
+    <string name="books_remove_photo">Gỡ ảnh</string>
+    <string name="books_photo_placeholder">Chưa chọn ảnh bìa</string>
+    <string name="books_copy_contact">Sao chép</string>
+    <string name="books_contact_copied">Đã sao chép thông tin liên hệ</string>
+    <string name="books_sold_contact_disabled">Sách đã bán</string>
+    <string name="books_clear_search">Xóa tìm kiếm</string>
+    <string name="books_contact_label">Liên hệ: %1$s</string>
     <string name="attendance_open">Danh sách điểm danh</string>
     <string name="attendance_title">Điểm danh sự kiện</string>
     <string name="attendance_summary">Đã đến %1$d/%2$d · Chưa đến %3$d</string>
@@ -679,6 +724,15 @@
     <string name="events_editor_err_order">Giờ kết thúc phải sau giờ bắt đầu</string>
     <string name="events_editor_err_future">Sự kiện mới phải bắt đầu sau đây ít nhất 1 phút</string>
     <string name="events_editor_err_capacity">Sức chứa phải là số nguyên từ 0 trở lên</string>
+    <string name="event_comments_title">Bình luận</string>
+    <string name="event_comments_empty">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</string>
+    <string name="event_comment_placeholder">Viết bình luận của bạn…</string>
+    <string name="event_comment_send">Gửi bình luận</string>
+    <string name="event_discussion_open">Bình luận (%1$d)</string>
+    <string name="event_write_comment">Viết bình luận</string>
+    <string name="event_guest_profile_title">Hồ sơ sinh viên</string>
+    <string name="event_guest_profile_note">Hồ sơ công khai trong cộng đồng sinh viên UTH</string>
+    <string name="event_close">Đóng</string>
     <string name="common_error_invalid_qr">Mã QR không hợp lệ: đây không phải vé của sự kiện này hoặc mã đã bị sửa</string>
     <string name="common_error_qr_expired">Mã QR đã hết hạn — nhờ sinh viên mở lại vé để lấy mã mới</string>
     <string name="common_error_checkin_not_open">Chưa tới giờ điểm danh: chỉ quét được từ 30 phút trước khi bắt đầu đến 30 phút sau khi kết thúc</string>
@@ -951,6 +1005,13 @@
     <string name="housing_status_hidden">Bị ẩn</string>
     <string name="housing_detail_rejected_title">Tin bị từ chối</string>
     <string name="housing_detail_rejected_body">Lý do: %1$s. Hãy xóa tin và đăng lại sau khi sửa.</string>
+    <string name="housing_detail_share">Chia sẻ</string>
+    <string name="housing_detail_share_body">Phòng trọ UTH Connect: %1$s\nGiá thuê: %2$sđ/tháng\nĐịa chỉ: %3$s</string>
+    <string name="housing_detail_copy_address">Sao chép địa chỉ</string>
+    <string name="housing_detail_address_copied">Đã sao chép địa chỉ</string>
+    <string name="housing_detail_open_directions">Mở bản đồ chỉ đường</string>
+    <string name="housing_detail_photo_desc">Ảnh %1$d trên %2$d của %3$s</string>
+    <string name="housing_detail_close_photo">Đóng xem ảnh</string>
     <string name="campuses_maps_unavailable">Không tìm thấy ứng dụng bản đồ trên thiết bị.</string>
     <string name="campuses_call_unavailable">Không tìm thấy ứng dụng gọi điện trên thiết bị.</string>
     <string name="campuses_directions_action">Chỉ đường</string>
@@ -997,4 +1058,19 @@
     <string name="user_notification_show_less">Thu gọn</string>
     <string name="event_checkin_already_at">Vé này đã được điểm danh trước đó lúc %1$s.</string>
     <string name="event_checkin_success">Điểm danh thành công</string>
+
+    <!-- Home Community Sections -->
+    <string name="home_community_housing_title">Tìm trọ &amp; Ở ghép</string>
+    <string name="home_community_housing_subtitle">Phòng trọ gần cơ sở UTH, giá sinh viên</string>
+    <string name="home_community_books_title">Chợ sách giáo trình</string>
+    <string name="home_community_books_subtitle">Mua bán, trao đổi sách cũ nhanh chóng</string>
+    <string name="home_community_lostfound_title">Trạm đồ thất lạc</string>
+    <string name="home_community_lostfound_subtitle">Hỗ trợ tìm kiếm &amp; trao trả tài sản UTH</string>
+    <string name="home_community_see_all">Xem tất cả</string>
+    <string name="home_community_post_housing">Đăng phòng</string>
+    <string name="home_community_post_book">Đăng sách</string>
+    <string name="home_community_post_lostfound">Báo tin</string>
+    <string name="home_community_empty_housing">Chưa có tin trọ mới</string>
+    <string name="home_community_empty_books">Chưa có bài đăng sách mới</string>
+    <string name="home_community_empty_lostfound">Không có tin thất lạc gần đây</string>
 </resources>

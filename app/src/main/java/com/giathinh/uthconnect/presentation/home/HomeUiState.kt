@@ -3,7 +3,14 @@ package com.giathinh.uthconnect.presentation.home
 import androidx.compose.runtime.Immutable
 import com.giathinh.uthconnect.domain.model.Announcement
 import com.giathinh.uthconnect.domain.model.AnnouncementCategory
+import com.giathinh.uthconnect.domain.model.BookListing
+import com.giathinh.uthconnect.domain.model.BookListingStatus
+import com.giathinh.uthconnect.domain.model.Event
+import com.giathinh.uthconnect.domain.model.EventStatus
 import com.giathinh.uthconnect.domain.model.HomeBanner
+import com.giathinh.uthconnect.domain.model.HousingListing
+import com.giathinh.uthconnect.domain.model.HousingListingStatus
+import com.giathinh.uthconnect.domain.model.LostFoundListing
 
 /**
  * Trạng thái hiển thị của tab Trang chủ — `data class` bất biến, mọi tham số có giá trị
@@ -21,10 +28,58 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val banners: List<HomeBanner> = emptyList(),
     val announcements: List<Announcement> = emptyList(),
+    val events: List<Event> = emptyList(),
+    val registeredEventIds: Set<String> = emptySet(),
     /** `null` = chip "Tất cả". */
     val selectedCategory: AnnouncementCategory? = null,
+    /** `null` = "Tất cả cơ sở". */
+    val selectedCampus: String? = null,
+    val housingListings: List<HousingListing> = emptyList(),
+    val bookListings: List<BookListing> = emptyList(),
+    val lostFoundListings: List<LostFoundListing> = emptyList(),
     val failure: HomeFailure? = null,
 ) {
+
+    /** Danh sách sự kiện đã lọc theo SQL status, thời gian và bộ lọc cơ sở/danh mục. */
+    val visibleEvents: List<Event>
+        get() {
+            if (selectedCategory != null && selectedCategory != AnnouncementCategory.YOUTH_UNION) {
+                return emptyList()
+            }
+            val now = System.currentTimeMillis()
+            return events
+                .filter { it.status == EventStatus.PUBLISHED || it.status == EventStatus.HAPPENING }
+                .filter { it.endAt >= now }
+                .filter { selectedCampus.isNullOrBlank() || selectedCampus == "Tất cả" || it.campus == selectedCampus }
+                .sortedBy { it.startAt }
+        }
+
+    /** Danh sách tin ghép trọ đang mở hiển thị trên trang chủ. */
+    val visibleHousingListings: List<HousingListing>
+        get() {
+            if (selectedCategory != null) return emptyList()
+            return housingListings
+                .filter { it.status == HousingListingStatus.OPEN }
+                .take(5)
+        }
+
+    /** Danh sách sách giáo trình còn bán / trao đổi hiển thị trên trang chủ. */
+    val visibleBookListings: List<BookListing>
+        get() {
+            if (selectedCategory != null) return emptyList()
+            return bookListings
+                .filter { it.status == BookListingStatus.AVAILABLE }
+                .take(5)
+        }
+
+    /** Danh sách đồ thất lạc chưa giải quyết hiển thị trên trang chủ. */
+    val visibleLostFoundListings: List<LostFoundListing>
+        get() {
+            if (selectedCategory != null) return emptyList()
+            return lostFoundListings
+                .filter { !it.isResolved }
+                .take(5)
+        }
 
     /** Bảng tin đã áp bộ lọc nhóm — Screen chỉ việc render danh sách này. */
     val visibleAnnouncements: List<Announcement>
@@ -32,9 +87,14 @@ data class HomeUiState(
             ?.let { selected -> announcements.filter { it.category == selected } }
             ?: announcements
 
-    /** Rỗng = đã tải xong, không lỗi và bộ lọc hiện tại không còn thông báo nào. */
+    /** Rỗng = đã tải xong, không lỗi và toàn bộ nội dung đều không có. */
     val isEmpty: Boolean
-        get() = !isLoading && failure == null && visibleAnnouncements.isEmpty()
+        get() = !isLoading && failure == null &&
+            visibleAnnouncements.isEmpty() &&
+            visibleEvents.isEmpty() &&
+            visibleHousingListings.isEmpty() &&
+            visibleBookListings.isEmpty() &&
+            visibleLostFoundListings.isEmpty()
 
     /** Số thông báo chưa đọc — nuôi dot trên chuông và badge "Mới". */
     val unreadCount: Int

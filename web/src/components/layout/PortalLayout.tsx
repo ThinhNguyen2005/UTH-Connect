@@ -42,6 +42,7 @@ export const PortalLayout: React.FC<{ children: React.ReactNode }> = ({
     if (pathname.startsWith("/notifications")) return "Thông báo toàn trường";
     if (pathname.startsWith("/events")) return "Sự kiện & Điểm rèn luyện";
     if (pathname.startsWith("/housing")) return "Ghép trọ & Ký túc xá";
+    if (pathname.startsWith("/books")) return "Chợ sách giáo trình sinh viên";
     if (pathname.startsWith("/campuses")) return "Cơ sở đào tạo & Danh bạ";
     if (pathname.startsWith("/settings/security")) return "Bảo mật & Quản lý phiên";
     return "Cổng Thông Tin Sinh Viên";
