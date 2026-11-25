@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -14,6 +15,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -26,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,7 +46,6 @@ import com.giathinh.uthconnect.presentation.events.EventSourceDestination
 import com.giathinh.uthconnect.presentation.events.EventsDestination
 import com.giathinh.uthconnect.presentation.events.eventsGraph
 import com.giathinh.uthconnect.presentation.home.HomeRoute
-import com.giathinh.uthconnect.presentation.housing.CreateHousingPostDestination
 import com.giathinh.uthconnect.presentation.housing.HousingDestination
 import com.giathinh.uthconnect.presentation.housing.HousingDetailDestination
 import com.giathinh.uthconnect.presentation.housing.MyListingsDestination
@@ -118,8 +120,14 @@ private fun SignedInUthApp(
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedDestination = UthDestination.from(backStackEntry?.destination)
+    val drawsEdgeToEdgeHeader = backStackEntry?.destination?.let { destination ->
+        destination.hasRoute<HousingDetailDestination>() ||
+            destination.hasRoute<BooksDestination>() ||
+            destination.hasRoute<LostFoundDestination>()
+    } == true
 
     Scaffold(
+        contentWindowInsets = if (drawsEdgeToEdgeHeader) WindowInsets(0) else ScaffoldDefaults.contentWindowInsets,
         bottomBar = {
             if (selectedDestination != null && selectedDestination != UthDestination.SCANNER) {
                 UthBottomBar(
@@ -183,9 +191,6 @@ private fun UthNavHost(
                 onOpenAllHousing = {
                     navController.navigate(HousingDestination)
                 },
-                onCreateHousingPost = {
-                    navController.navigate(CreateHousingPostDestination)
-                },
                 onOpenBookDetail = {
                     navController.navigate(BooksDestination)
                 },
@@ -196,9 +201,6 @@ private fun UthNavHost(
                     navController.navigate(LostFoundDestination)
                 },
                 onOpenAllLostFound = {
-                    navController.navigate(LostFoundDestination)
-                },
-                onCreateLostFoundPost = {
                     navController.navigate(LostFoundDestination)
                 },
             )

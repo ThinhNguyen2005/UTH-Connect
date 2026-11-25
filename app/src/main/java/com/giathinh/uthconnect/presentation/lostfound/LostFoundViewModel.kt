@@ -5,28 +5,33 @@ import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.data.repository.SupabaseHttpException
 import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.LostFoundListing
+import com.giathinh.uthconnect.domain.usecase.DeleteLostFoundItemUseCase
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
 import com.giathinh.uthconnect.domain.usecase.ToggleResolveListingUseCase
+import com.giathinh.uthconnect.domain.usecase.UpdateLostFoundItemUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.net.HttpURLConnection
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
 /**
- * ViewModel managing the state and user interactions for the Lost & Found feature.
- * Coordinates listings loading, real-time filtering, item reporting, and status resolution.
+ * ViewModel managing state and user interactions for the Lost & Found feature.
+ * Coordinates listing loading, filtering, creation, editing, deletion, and status resolution.
  */
 @HiltViewModel
 class LostFoundViewModel @Inject constructor(
     private val getListingsUseCase: GetLostFoundListingsUseCase,
     private val reportItemUseCase: ReportLostFoundItemUseCase,
+    private val updateItemUseCase: UpdateLostFoundItemUseCase,
+    private val deleteItemUseCase: DeleteLostFoundItemUseCase,
     private val toggleResolveListingUseCase: ToggleResolveListingUseCase,
 ) : ViewModel() {
 
@@ -40,196 +45,247 @@ class LostFoundViewModel @Inject constructor(
     }
 
     /**
-     * Dispatches user actions to appropriate state reducers and background use cases.
-     *
-     * @param action The user intent or interaction to process.
+     * Dispatches user actions to state reducers and background use cases.
      */
+    @Suppress("CyclomaticComplexMethod")
     fun onAction(action: LostFoundAction) {
         when (action) {
-            is LostFoundAction.SelectKind -> {
-                _uiState.update { it.copy(selectedKind = action.kind) }
+            is LostFoundAction.SelectKind -> _uiState.update { it.copy(selectedKind = action.kind) }
+
+            is LostFoundAction.SelectCategory -> _uiState.update { it.copy(selectedCategory = action.category) }
+
+            is LostFoundAction.UpdateSearchQuery -> _uiState.update { it.copy(searchQuery = action.query) }
+
+            is LostFoundAction.SetOnlyMine -> _uiState.update { it.copy(onlyMine = action.onlyMine) }
+
+            is LostFoundAction.SetShowResolved -> _uiState.update { it.copy(showResolved = action.showResolved) }
+
+            LostFoundAction.ResetFilters -> _uiState.update {
+                it.copy(
+                    selectedCategory = ItemCategory.ALL,
+                    searchQuery = "",
+                    onlyMine = false,
+                    showResolved = true,
+                )
             }
 
-            is LostFoundAction.SelectCategory -> {
-                _uiState.update { it.copy(selectedCategory = action.category) }
+            LostFoundAction.Refresh -> loadListings(isRefresh = true)
+
+            is LostFoundAction.ToggleResolveListing -> toggleResolveListing(action.id)
+
+            LostFoundAction.OpenReportDialog -> _uiState.update {
+                it.copy(
+                    isReportDialogOpen = true,
+                    reportForm = ReportFormState(kind = it.selectedKind),
+                )
             }
 
-            is LostFoundAction.UpdateSearchQuery -> {
-                _uiState.update { it.copy(searchQuery = action.query) }
+            is LostFoundAction.OpenEditDialog -> openEditDialog(action.listing)
+
+            LostFoundAction.CloseReportDialog -> _uiState.update {
+                it.copy(
+                    isReportDialogOpen = false,
+                    reportForm = ReportFormState(),
+                )
             }
 
-            is LostFoundAction.ToggleResolveListing -> {
-                if (!inFlightResolvingIds.add(action.id)) return
-                val currentItem = _uiState.value.listings.find { it.id == action.id }
-                if (currentItem == null) {
-                    inFlightResolvingIds.remove(action.id)
-                    return
-                }
-                val newStatus = !currentItem.isResolved
-                _uiState.update { current ->
-                    current.copy(
-                        listings = current.listings.map { item ->
-                            if (item.id == action.id) {
-                                item.copy(isResolved = newStatus)
-                            } else {
-                                item
-                            }
-                        },
-                    )
-                }
-                viewModelScope.launch {
-                    try {
-                        toggleResolveListingUseCase(action.id, newStatus).onFailure { error ->
-                            _uiState.update { current ->
-                                val userMsg = when {
-                                    error.isAuthenticationError() -> UserMessage.AuthRequired
-                                    error.isForbiddenError() -> UserMessage.Forbidden
-                                    else -> UserMessage.UpdateStatusFailed
-                                }
-                                current.copy(
-                                    userMessage = userMsg,
-                                    listings = current.listings.map { item ->
-                                        if (item.id == action.id) {
-                                            item.copy(isResolved = !newStatus)
-                                        } else {
-                                            item
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    } finally {
-                        inFlightResolvingIds.remove(action.id)
-                    }
-                }
+            is LostFoundAction.RequestDeleteListing -> _uiState.update {
+                it.copy(pendingDeleteListing = action.listing)
             }
 
-            LostFoundAction.OpenReportDialog -> {
-                _uiState.update {
-                    it.copy(
-                        isReportDialogOpen = true,
-                        reportForm = ReportFormState(kind = it.selectedKind),
-                    )
-                }
+            LostFoundAction.CancelDeleteListing -> _uiState.update {
+                it.copy(pendingDeleteListing = null)
             }
 
-            LostFoundAction.CloseReportDialog -> {
-                _uiState.update {
-                    it.copy(
-                        isReportDialogOpen = false,
-                        reportForm = it.reportForm.copy(isProcessingImage = false),
-                    )
-                }
-            }
-
-            is LostFoundAction.UpdateReportTitle -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(title = action.title, titleError = null))
-                }
-            }
-
-            is LostFoundAction.UpdateReportDescription -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(description = action.description, descriptionError = null))
-                }
-            }
-
-            is LostFoundAction.UpdateReportKind -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(kind = action.kind))
-                }
-            }
-
-            is LostFoundAction.UpdateReportCategory -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(category = action.category))
-                }
-            }
-
-            is LostFoundAction.UpdateReportLocation -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(location = action.location, locationError = null))
-                }
-            }
-
-            is LostFoundAction.UpdateReportContactName -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(contactName = action.contactName))
-                }
-            }
-
-            is LostFoundAction.UpdateReportContactPhone -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(contactPhone = action.contactPhone, phoneError = null))
-                }
-            }
-
-            is LostFoundAction.UpdateReportImage -> {
-                _uiState.update {
-                    it.copy(
-                        reportForm = it.reportForm.copy(
-                            imageBytes = action.bytes,
-                            imageMimeType = action.mimeType,
-                            imagePreviewUri = action.previewUri,
-                            isProcessingImage = false,
-                        ),
-                    )
-                }
-            }
-
-            is LostFoundAction.SetReportImageProcessing -> {
-                _uiState.update {
-                    it.copy(reportForm = it.reportForm.copy(isProcessingImage = action.isProcessing))
-                }
-            }
-
-            LostFoundAction.RemoveReportImage -> {
-                _uiState.update {
-                    it.copy(
-                        reportForm = it.reportForm.copy(
-                            imageBytes = null,
-                            imageMimeType = null,
-                            imagePreviewUri = null,
-                            isProcessingImage = false,
-                        ),
-                    )
-                }
-            }
+            LostFoundAction.ConfirmDeleteListing -> confirmDeleteListing()
 
             LostFoundAction.SubmitReport -> submitReport()
 
-            LostFoundAction.DismissMessage -> {
-                _uiState.update { it.copy(userMessage = null) }
-            }
+            LostFoundAction.DismissMessage -> _uiState.update { it.copy(userMessage = null) }
 
-            LostFoundAction.ShowDialerUnavailable -> {
-                _uiState.update { it.copy(userMessage = UserMessage.DialerUnavailable) }
+            LostFoundAction.ShowDialerUnavailable -> _uiState.update {
+                it.copy(userMessage = UserMessage.DialerUnavailable)
             }
 
             LostFoundAction.Retry -> loadListings()
+
+            else -> handleFormFieldAction(action)
         }
     }
 
-    /**
-     * Loads the latest lost and found items from the data source asynchronously.
-     */
-    private fun loadListings() {
+    private fun openEditDialog(listing: LostFoundListing) {
+        _uiState.update {
+            it.copy(
+                isReportDialogOpen = true,
+                reportForm = ReportFormState(
+                    editingListingId = listing.id,
+                    title = listing.title,
+                    description = listing.description,
+                    kind = listing.kind,
+                    category = listing.category,
+                    location = listing.location,
+                    contactName = listing.contactName,
+                    contactPhone = listing.contactPhone,
+                    existingImageUrl = listing.imageUrl,
+                    removeExistingImage = false,
+                ),
+            )
+        }
+    }
+
+    private fun handleFormFieldAction(action: LostFoundAction) {
+        _uiState.update { state ->
+            val updatedForm = when (action) {
+                is LostFoundAction.UpdateReportTitle -> state.reportForm.copy(title = action.title, titleError = null)
+
+                is LostFoundAction.UpdateReportDescription -> state.reportForm.copy(
+                    description = action.description,
+                    descriptionError = null,
+                )
+
+                is LostFoundAction.UpdateReportKind -> state.reportForm.copy(kind = action.kind)
+
+                is LostFoundAction.UpdateReportCategory -> state.reportForm.copy(category = action.category)
+
+                is LostFoundAction.UpdateReportLocation -> state.reportForm.copy(
+                    location = action.location,
+                    locationError = null,
+                )
+
+                is LostFoundAction.UpdateReportContactName -> state.reportForm.copy(contactName = action.contactName)
+
+                is LostFoundAction.UpdateReportContactPhone -> state.reportForm.copy(
+                    contactPhone = action.contactPhone,
+                    phoneError = null,
+                )
+
+                is LostFoundAction.UpdateReportImage -> state.reportForm.copy(
+                    imageBytes = action.bytes,
+                    imageMimeType = action.mimeType,
+                    imagePreviewUri = action.previewUri,
+                    removeExistingImage = false,
+                    isProcessingImage = false,
+                )
+
+                is LostFoundAction.SetReportImageProcessing -> state.reportForm.copy(
+                    isProcessingImage = action.isProcessing,
+                )
+
+                LostFoundAction.RemoveReportImage -> state.reportForm.copy(
+                    imageBytes = null,
+                    imageMimeType = null,
+                    imagePreviewUri = null,
+                    existingImageUrl = null,
+                    removeExistingImage = true,
+                    isProcessingImage = false,
+                )
+
+                else -> state.reportForm
+            }
+            state.copy(reportForm = updatedForm)
+        }
+    }
+
+    private fun loadListings(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, isError = false) }
+            val uid = getListingsUseCase.currentUserId()
+            _uiState.update {
+                if (isRefresh) {
+                    it.copy(isRefreshing = true, currentUserId = uid)
+                } else {
+                    it.copy(isLoading = true, isError = false, currentUserId = uid)
+                }
+            }
             getListingsUseCase().fold(
                 onSuccess = { items ->
-                    _uiState.update { it.copy(isLoading = false, isError = false, listings = items) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            isError = false,
+                            currentUserId = getListingsUseCase.currentUserId(),
+                            listings = items,
+                        )
+                    }
                 },
                 onFailure = {
-                    _uiState.update { it.copy(isLoading = false, isError = true) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            isError = if (isRefresh) it.isError else true,
+                        )
+                    }
                 },
             )
         }
     }
 
-    /**
-     * Validates and submits the current item report form.
-     */
+    private fun toggleResolveListing(id: String) {
+        if (!inFlightResolvingIds.add(id)) return
+        val currentItem = _uiState.value.listings.find { it.id == id }
+        if (currentItem == null) {
+            inFlightResolvingIds.remove(id)
+            return
+        }
+        val newStatus = !currentItem.isResolved
+        _uiState.update { current ->
+            current.copy(
+                listings = current.listings.map { item ->
+                    if (item.id == id) item.copy(isResolved = newStatus) else item
+                },
+            )
+        }
+        viewModelScope.launch {
+            try {
+                toggleResolveListingUseCase(id, newStatus).onFailure { error ->
+                    _uiState.update { current ->
+                        current.copy(
+                            userMessage = error.toMutationUserMessage(UserMessage.UpdateStatusFailed),
+                            listings = current.listings.map { item ->
+                                if (item.id == id) item.copy(isResolved = !newStatus) else item
+                            },
+                        )
+                    }
+                }
+            } finally {
+                inFlightResolvingIds.remove(id)
+            }
+        }
+    }
+
+    private fun confirmDeleteListing() {
+        val target = _uiState.value.pendingDeleteListing ?: return
+        if (target.id in _uiState.value.deletingIds) return
+        _uiState.update {
+            it.copy(
+                pendingDeleteListing = null,
+                deletingIds = it.deletingIds + target.id,
+            )
+        }
+        viewModelScope.launch {
+            deleteItemUseCase(target.id, target.imageUrl).fold(
+                onSuccess = {
+                    _uiState.update { current ->
+                        current.copy(
+                            listings = current.listings.filterNot { it.id == target.id },
+                            deletingIds = current.deletingIds - target.id,
+                            userMessage = UserMessage.DeleteSuccess,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { current ->
+                        current.copy(
+                            deletingIds = current.deletingIds - target.id,
+                            userMessage = error.toMutationUserMessage(UserMessage.DeleteFailed),
+                        )
+                    }
+                },
+            )
+        }
+    }
+
     private fun submitReport() {
         val form = _uiState.value.reportForm
         if (form.isSubmitting || form.isProcessingImage) return
@@ -257,8 +313,17 @@ class LostFoundViewModel @Inject constructor(
             return
         }
 
-        // Mark submitting before scheduling the coroutine so repeated taps cannot enqueue two posts.
+        // Mark submitting before scheduling the coroutine so repeated taps cannot enqueue two requests.
         _uiState.update { it.copy(reportForm = it.reportForm.copy(isSubmitting = true)) }
+        val editingId = form.editingListingId
+        if (editingId == null) {
+            submitCreate(form = form, normalizedPhone = phone)
+        } else {
+            submitUpdate(editingId = editingId, form = form, normalizedPhone = phone)
+        }
+    }
+
+    private fun submitCreate(form: ReportFormState, normalizedPhone: String) {
         viewModelScope.launch {
             val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
             val newListing = LostFoundListing(
@@ -269,9 +334,8 @@ class LostFoundViewModel @Inject constructor(
                 location = form.location.trim(),
                 date = today,
                 contactName = form.contactName.trim(),
-                contactPhone = phone,
+                contactPhone = normalizedPhone,
             )
-
             reportItemUseCase(
                 item = newListing,
                 imageBytes = form.imageBytes,
@@ -291,48 +355,91 @@ class LostFoundViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    val userMsg = when {
-                        error.isAuthenticationError() -> UserMessage.AuthRequired
-                        error.isForbiddenError() -> UserMessage.Forbidden
-                        else -> UserMessage.PostFailed
-                    }
                     _uiState.update {
                         it.copy(
                             reportForm = it.reportForm.copy(isSubmitting = false),
-                            userMessage = userMsg,
+                            userMessage = error.toMutationUserMessage(UserMessage.PostFailed),
                         )
                     }
                 },
             )
         }
     }
-}
 
-/**
- * Traverses the throwable cause hierarchy to find an underlying [SupabaseHttpException] if present.
- */
-private tailrec fun Throwable.findSupabaseHttpException(): SupabaseHttpException? = when (this) {
-    is SupabaseHttpException -> this
-    else -> cause?.findSupabaseHttpException()
-}
-
-/**
- * Checks if the throwable corresponds to an unauthenticated session (HTTP 401).
- */
-private fun Throwable.isAuthenticationError(): Boolean {
-    val httpException = findSupabaseHttpException()
-    if (httpException != null) {
-        return httpException.status == java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+    private fun submitUpdate(editingId: String, form: ReportFormState, normalizedPhone: String) {
+        viewModelScope.launch {
+            val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            val existing = _uiState.value.listings.find { it.id == editingId }
+            val updatedPayload = LostFoundListing(
+                id = editingId,
+                title = form.title.trim(),
+                description = form.description.trim(),
+                kind = form.kind,
+                category = form.category,
+                location = form.location.trim(),
+                date = existing?.date ?: today,
+                contactName = form.contactName.trim(),
+                contactPhone = normalizedPhone,
+                imageUrl = form.existingImageUrl,
+                isResolved = existing?.isResolved ?: false,
+                userId = existing?.userId ?: _uiState.value.currentUserId,
+            )
+            updateItemUseCase(
+                item = updatedPayload,
+                imageBytes = form.imageBytes,
+                imageMimeType = form.imageMimeType,
+                removeExistingImage = form.removeExistingImage,
+            ).fold(
+                onSuccess = { updated ->
+                    _uiState.update { state ->
+                        val updatedList = if (state.listings.any { it.id == updated.id }) {
+                            state.listings.map { if (it.id == updated.id) updated else it }
+                        } else {
+                            listOf(updated) + state.listings
+                        }
+                        state.copy(
+                            listings = updatedList,
+                            selectedKind = updated.kind,
+                            isReportDialogOpen = false,
+                            reportForm = ReportFormState(),
+                            userMessage = UserMessage.UpdateSuccess,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            reportForm = it.reportForm.copy(isSubmitting = false),
+                            userMessage = error.toMutationUserMessage(UserMessage.PostFailed),
+                        )
+                    }
+                },
+            )
+        }
     }
-    return message?.contains("sign-in required", ignoreCase = true) == true ||
-        message?.contains("session expired", ignoreCase = true) == true ||
-        message?.contains("AuthRequired", ignoreCase = true) == true
-}
 
-/**
- * Checks if the throwable corresponds to insufficient access permission (HTTP 403 Forbidden).
- */
-private fun Throwable.isForbiddenError(): Boolean {
-    val httpException = findSupabaseHttpException()
-    return httpException?.status == java.net.HttpURLConnection.HTTP_FORBIDDEN
+    private fun Throwable.toMutationUserMessage(fallback: UserMessage): UserMessage {
+        var cursor: Throwable? = this
+        while (cursor != null) {
+            if (cursor is SupabaseHttpException) {
+                return when (cursor.status) {
+                    HttpURLConnection.HTTP_UNAUTHORIZED -> UserMessage.AuthRequired
+                    HttpURLConnection.HTTP_FORBIDDEN -> UserMessage.Forbidden
+                    else -> fallback
+                }
+            }
+            cursor = cursor.cause
+        }
+        val msg = message.orEmpty()
+        return when {
+            msg.contains("sign-in required", ignoreCase = true) ||
+                msg.contains("session expired", ignoreCase = true) ||
+                msg.contains("AuthRequired", ignoreCase = true) -> UserMessage.AuthRequired
+
+            msg.contains("forbidden", ignoreCase = true) ||
+                msg.contains("permission", ignoreCase = true) -> UserMessage.Forbidden
+
+            else -> fallback
+        }
+    }
 }

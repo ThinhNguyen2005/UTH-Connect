@@ -71,12 +71,10 @@ class HomeViewModel @Inject constructor(
             is HomeAction.OpenEvent,
             is HomeAction.OpenHousingDetail,
             HomeAction.OpenAllHousing,
-            HomeAction.CreateHousingPost,
             is HomeAction.OpenBookDetail,
             HomeAction.OpenAllBooks,
             is HomeAction.OpenLostFoundDetail,
             HomeAction.OpenAllLostFound,
-            HomeAction.CreateLostFoundPost,
             -> Unit
         }
     }

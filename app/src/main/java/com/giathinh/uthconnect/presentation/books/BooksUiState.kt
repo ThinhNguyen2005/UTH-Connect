@@ -25,6 +25,7 @@ data class BooksUiState(
     val maximumPrice: String = "",
     val sort: BooksSort = BooksSort.NEWEST,
     val includeSold: Boolean = false,
+    val onlyMine: Boolean = false,
     val loadFailure: BooksFailure? = null,
     val saveFailure: BooksFailure? = null,
     val lastSavedId: String? = null,
@@ -32,9 +33,19 @@ data class BooksUiState(
     /** Backwards-compatibility property for existing code and tests. */
     val failure: BooksFailure? get() = loadFailure ?: saveFailure
 
+    val activeFilterCount: Int
+        get() = listOf(
+            condition != null,
+            minimumPrice.isNotBlank(),
+            maximumPrice.isNotBlank(),
+            sort != BooksSort.NEWEST,
+            includeSold,
+        ).count { it }
+
     val visibleListings: List<BookListing>
         get() = listings.filter { listing ->
-            (includeSold || listing.status == BookListingStatus.AVAILABLE) &&
+            (!onlyMine || (currentUserUid != null && listing.ownerUid == currentUserUid)) &&
+                (includeSold || listing.status == BookListingStatus.AVAILABLE) &&
                 (
                     filter == BooksFilter.ALL || (filter == BooksFilter.SALE && listing.dealType == BookDealType.SALE) ||
                         (filter == BooksFilter.EXCHANGE && listing.dealType == BookDealType.EXCHANGE)

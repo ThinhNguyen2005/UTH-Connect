@@ -16,6 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
 
+    private var activeUserId: String? = null
     private val mutex = Mutex()
     private val listings = mutableListOf(
         // 4 tin LOST (Thất lạc)
@@ -110,6 +111,12 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
         ),
     )
 
+    override fun currentUserId(): String? = activeUserId
+
+    fun setCurrentUserIdForTest(userId: String?) {
+        activeUserId = userId
+    }
+
     /**
      * Returns an in-memory snapshot of all current listings.
      */
@@ -127,9 +134,38 @@ class InMemoryLostFoundRepository @Inject constructor() : LostFoundRepository {
     ): Result<LostFoundListing> = mutex.withLock {
         val newItem = item.copy(
             id = if (item.id.isBlank()) "LF-${UUID.randomUUID().toString().take(6).uppercase()}" else item.id,
+            userId = item.userId ?: activeUserId,
         )
         listings.add(0, newItem)
         Result.success(newItem)
+    }
+
+    override suspend fun updateItem(
+        item: LostFoundListing,
+        imageBytes: ByteArray?,
+        imageMimeType: String?,
+        removeExistingImage: Boolean,
+    ): Result<LostFoundListing> = mutex.withLock {
+        val index = listings.indexOfFirst { it.id == item.id }
+        if (index == -1) return Result.failure(NoSuchElementException("Listing not found"))
+        val existing = listings[index]
+        val updated = existing.copy(
+            title = item.title,
+            description = item.description,
+            kind = item.kind,
+            category = item.category,
+            location = item.location,
+            contactName = item.contactName,
+            contactPhone = item.contactPhone,
+            imageUrl = if (removeExistingImage) null else (item.imageUrl ?: existing.imageUrl),
+        )
+        listings[index] = updated
+        Result.success(updated)
+    }
+
+    override suspend fun deleteItem(id: String, imageUrl: String?): Result<Unit> = mutex.withLock {
+        listings.removeAll { it.id == id }
+        Result.success(Unit)
     }
 
     /**

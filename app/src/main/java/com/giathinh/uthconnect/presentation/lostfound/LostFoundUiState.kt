@@ -7,7 +7,7 @@ import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 
 /**
- * Validation errors associated with reporting a lost or found item.
+ * Validation errors associated with reporting or editing a lost or found item.
  */
 sealed interface FormValidationError {
     @get:StringRes
@@ -49,6 +49,18 @@ sealed interface UserMessage {
         override val messageRes: Int = R.string.lostfound_msg_post_failed
     }
 
+    data object UpdateSuccess : UserMessage {
+        override val messageRes: Int = R.string.lostfound_msg_update_success
+    }
+
+    data object DeleteSuccess : UserMessage {
+        override val messageRes: Int = R.string.lostfound_msg_delete_success
+    }
+
+    data object DeleteFailed : UserMessage {
+        override val messageRes: Int = R.string.lostfound_msg_delete_failed
+    }
+
     data object AuthRequired : UserMessage {
         override val messageRes: Int = R.string.common_error_auth_required
     }
@@ -67,9 +79,10 @@ sealed interface UserMessage {
 }
 
 /**
- * State representing fields and validation of the report item form.
+ * State representing fields and validation of the report / edit item form.
  */
 data class ReportFormState(
+    val editingListingId: String? = null,
     val title: String = "",
     val description: String = "",
     val kind: ListingKind = ListingKind.LOST,
@@ -80,6 +93,8 @@ data class ReportFormState(
     val imageBytes: ByteArray? = null,
     val imageMimeType: String? = null,
     val imagePreviewUri: String? = null,
+    val existingImageUrl: String? = null,
+    val removeExistingImage: Boolean = false,
     val titleError: FormValidationError? = null,
     val descriptionError: FormValidationError? = null,
     val locationError: FormValidationError? = null,
@@ -94,7 +109,8 @@ data class ReportFormState(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReportFormState) return false
-        return title == other.title &&
+        return editingListingId == other.editingListingId &&
+            title == other.title &&
             description == other.description &&
             kind == other.kind &&
             category == other.category &&
@@ -104,6 +120,8 @@ data class ReportFormState(
             imageBytes.contentEquals(other.imageBytes) &&
             imageMimeType == other.imageMimeType &&
             imagePreviewUri == other.imagePreviewUri &&
+            existingImageUrl == other.existingImageUrl &&
+            removeExistingImage == other.removeExistingImage &&
             titleError == other.titleError &&
             descriptionError == other.descriptionError &&
             locationError == other.locationError &&
@@ -116,7 +134,8 @@ data class ReportFormState(
      * Returns consistent hash code incorporating image byte contents.
      */
     override fun hashCode(): Int {
-        var result = title.hashCode()
+        var result = editingListingId?.hashCode() ?: 0
+        result = 31 * result + title.hashCode()
         result = 31 * result + description.hashCode()
         result = 31 * result + kind.hashCode()
         result = 31 * result + category.hashCode()
@@ -126,6 +145,8 @@ data class ReportFormState(
         result = 31 * result + (imageBytes?.contentHashCode() ?: 0)
         result = 31 * result + (imageMimeType?.hashCode() ?: 0)
         result = 31 * result + (imagePreviewUri?.hashCode() ?: 0)
+        result = 31 * result + (existingImageUrl?.hashCode() ?: 0)
+        result = 31 * result + removeExistingImage.hashCode()
         result = 31 * result + (titleError?.hashCode() ?: 0)
         result = 31 * result + (descriptionError?.hashCode() ?: 0)
         result = 31 * result + (locationError?.hashCode() ?: 0)
@@ -141,30 +162,43 @@ data class ReportFormState(
  */
 data class LostFoundUiState(
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isError: Boolean = false,
+    val currentUserId: String? = null,
     val selectedKind: ListingKind = ListingKind.LOST,
     val selectedCategory: ItemCategory = ItemCategory.ALL,
     val searchQuery: String = "",
+    val onlyMine: Boolean = false,
+    val showResolved: Boolean = true,
     val listings: List<LostFoundListing> = emptyList(),
     val isReportDialogOpen: Boolean = false,
     val reportForm: ReportFormState = ReportFormState(),
+    val pendingDeleteListing: LostFoundListing? = null,
+    val deletingIds: Set<String> = emptySet(),
     val userMessage: UserMessage? = null,
 ) {
     /**
-     * Returns the listing items matching active tab kind, selected category, and search query.
+     * Returns the listing items matching active tab kind, selected category, ownership, resolved toggle, and search.
      */
     val filteredListings: List<LostFoundListing>
         get() = listings.filter { item ->
             val matchKind = item.kind == selectedKind
             val matchCategory = selectedCategory == ItemCategory.ALL || item.category == selectedCategory
+            val matchMine = !onlyMine || (currentUserId != null && item.userId == currentUserId)
+            val matchResolved = showResolved || !item.isResolved
             val matchQuery = searchQuery.isBlank() ||
                 item.title.contains(searchQuery, ignoreCase = true) ||
                 item.description.contains(searchQuery, ignoreCase = true) ||
                 item.location.contains(searchQuery, ignoreCase = true)
-            matchKind && matchCategory && matchQuery
+            matchKind && matchCategory && matchMine && matchResolved && matchQuery
         }
 
     val lostCount: Int get() = listings.count { it.kind == ListingKind.LOST }
     val foundCount: Int get() = listings.count { it.kind == ListingKind.FOUND }
+    val hasActiveFilters: Boolean
+        get() = selectedCategory != ItemCategory.ALL ||
+            searchQuery.isNotBlank() ||
+            onlyMine ||
+            !showResolved
     val isEmpty: Boolean get() = !isLoading && !isError && filteredListings.isEmpty()
 }

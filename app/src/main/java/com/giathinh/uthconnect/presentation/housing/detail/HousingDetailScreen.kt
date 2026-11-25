@@ -3,13 +3,18 @@ package com.giathinh.uthconnect.presentation.housing.detail
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,19 +26,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -42,6 +52,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,26 +62,33 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.giathinh.uthconnect.R
 import com.giathinh.uthconnect.core.designsystem.component.BadgeTone
+import com.giathinh.uthconnect.core.designsystem.component.UthBrandTopBar
 import com.giathinh.uthconnect.core.designsystem.component.UthCard
 import com.giathinh.uthconnect.core.designsystem.component.UthEmptyState
 import com.giathinh.uthconnect.core.designsystem.component.UthPrimaryButton
@@ -100,14 +119,31 @@ fun HousingDetailScreen(
     onAction: (HousingDetailAction) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val listing = uiState.listing
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            HousingDetailHeader(
+            UthBrandTopBar(
                 title = stringResource(R.string.housing_detail_title),
                 onNavigateBack = onNavigateBack,
+                trailingAction = {
+                    if (listing != null) {
+                        IconButton(
+                            onClick = { onAction(HousingDetailAction.ShareListing) },
+                            modifier = Modifier.size(UthDimens.Size.MinTouchTarget),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Share,
+                                contentDescription = stringResource(R.string.housing_detail_share),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    }
+                },
             )
         },
         bottomBar = {
@@ -162,6 +198,7 @@ fun HousingDetailScreen(
                     showRejectionBanner = uiState.showRejectionBanner,
                     isActionLoading = uiState.isActionLoading,
                     onOpenMap = { onAction(HousingDetailAction.OpenMap) },
+                    onCopyAddress = { onAction(HousingDetailAction.CopyAddress) },
                     onMarkFulfilled = { onAction(HousingDetailAction.MarkFulfilled) },
                     onDelete = { onAction(HousingDetailAction.Delete) },
                     modifier = Modifier
@@ -173,85 +210,6 @@ fun HousingDetailScreen(
     }
 }
 
-/**
- * TopBar đồng bộ với trang Ghép trọ & Đăng tin:
- * Nền Navy UTH, họa tiết vòng tròn ambient ring, nút Back, logo UTH và tiêu đề.
- */
-@Composable
-private fun HousingDetailHeader(
-    title: String,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    trailingAction: @Composable (() -> Unit)? = null,
-) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .background(colors.primary)
-            .drawBehind {
-                val ringRadius = size.width * UthDimens.Layout.HomeRingRadiusFraction
-                val ringStroke = size.width * UthDimens.Layout.HomeRingStrokeFraction
-                drawCircle(
-                    color = colors.onPrimary.copy(alpha = UthDimens.Opacity.HomeHeaderRing),
-                    radius = ringRadius,
-                    center = Offset(size.width + ringRadius * UthDimens.Layout.HomeRingOffsetFraction, size.height),
-                    style = Stroke(width = ringStroke),
-                )
-                drawCircle(
-                    color = colors.secondary.copy(alpha = UthDimens.Opacity.HomeHeaderAccentRing),
-                    radius = ringRadius * UthDimens.Layout.HomeAccentRingRadiusFactor,
-                    center = Offset(size.width * UthDimens.Layout.HomeAccentRingCenterFraction, 0f),
-                    style = Stroke(width = ringStroke * UthDimens.Layout.HomeAccentRingStrokeFactor),
-                )
-            }
-            .padding(
-                start = UthDimens.Spacing.Sm,
-                end = UthDimens.Spacing.Lg,
-                top = UthDimens.Spacing.Sm,
-                bottom = UthDimens.Spacing.Sm,
-            ),
-    ) {
-        IconButton(
-            onClick = onNavigateBack,
-            modifier = Modifier.size(UthDimens.Size.Avatar),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.nav_back),
-                tint = colors.onPrimary,
-            )
-        }
-        Spacer(Modifier.width(UthDimens.Spacing.Sm))
-        Box(
-            modifier = Modifier
-                .size(UthDimens.Size.Avatar)
-                .clip(MaterialTheme.shapes.small)
-                .background(colors.onPrimary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.home_logo_abbr),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = colors.primary,
-            )
-        }
-        Spacer(Modifier.width(UthDimens.Spacing.Md))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = colors.onPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        trailingAction?.invoke()
-    }
-}
-
 @Composable
 private fun HousingDetailContent(
     listing: HousingListing,
@@ -259,6 +217,7 @@ private fun HousingDetailContent(
     showRejectionBanner: Boolean,
     isActionLoading: Boolean,
     onOpenMap: () -> Unit,
+    onCopyAddress: () -> Unit,
     onMarkFulfilled: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -278,7 +237,11 @@ private fun HousingDetailContent(
         }
 
         item {
-            PrimaryInfoCard(listing = listing)
+            PrimaryInfoCard(
+                listing = listing,
+                onCopyAddress = onCopyAddress,
+                onOpenMap = onOpenMap,
+            )
         }
 
         item {
@@ -376,6 +339,7 @@ private fun OwnerActionsCard(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = UthTheme.extendedColors.textSecondary,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
         if (listing.status == HousingListingStatus.OPEN) {
@@ -451,6 +415,7 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
     val images = listing.images
     val pageCount = images.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
+    var showLightbox by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -460,7 +425,14 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(UthDimens.Layout.HousingGalleryAspectRatio)
-                .clip(MaterialTheme.shapes.medium),
+                .clip(MaterialTheme.shapes.medium)
+                .then(
+                    if (images.isNotEmpty()) {
+                        Modifier.clickable { showLightbox = true }
+                    } else {
+                        Modifier
+                    },
+                ),
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -468,6 +440,11 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
             ) { page ->
                 GalleryPage(
                     imageUrl = images.getOrNull(page),
+                    contentDescription = if (images.isNotEmpty()) {
+                        stringResource(R.string.housing_detail_photo_desc, page + 1, images.size, listing.title)
+                    } else {
+                        null
+                    },
                     showEmptyLabel = images.isEmpty(),
                     alternateTint = page % 2 == 1,
                 )
@@ -524,14 +501,14 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
                 }
             }
 
-            // Đếm ảnh góc dưới phải
-            if (images.isNotEmpty()) {
+            // Chỉ hiện đếm ảnh khi có từ 2 ảnh trở lên.
+            if (images.size > 1) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(UthDimens.Spacing.Md),
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f),
+                    color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = GALLERY_COUNTER_ALPHA),
                     contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                 ) {
                     Row(
@@ -582,11 +559,81 @@ private fun DetailGallery(listing: HousingListing, modifier: Modifier = Modifier
             }
         }
     }
+
+    if (showLightbox && images.isNotEmpty()) {
+        GalleryLightboxDialog(
+            images = images,
+            title = listing.title,
+            initialPage = pagerState.currentPage,
+            onDismiss = { showLightbox = false },
+        )
+    }
+}
+
+@Composable
+private fun GalleryLightboxDialog(
+    images: List<String>,
+    title: String,
+    initialPage: Int,
+    onDismiss: () -> Unit,
+) {
+    val lightboxPager = rememberPagerState(initialPage = initialPage, pageCount = { images.size })
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        ) {
+            HorizontalPager(
+                state = lightboxPager,
+                modifier = Modifier.fillMaxSize(),
+            ) { page ->
+                AsyncImage(
+                    model = images[page],
+                    contentDescription = stringResource(
+                        R.string.housing_detail_photo_desc,
+                        page + 1,
+                        images.size,
+                        title,
+                    ),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(UthDimens.Spacing.Lg)
+                    .size(UthDimens.Size.MinTouchTarget),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.housing_detail_close_photo),
+                    tint = Color.White,
+                )
+            }
+            if (images.size > 1) {
+                Text(
+                    text = "${lightboxPager.currentPage + 1}/${images.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(UthDimens.Spacing.Xl),
+                )
+            }
+        }
+    }
 }
 
 @Composable
 private fun GalleryPage(
     imageUrl: String?,
+    contentDescription: String?,
     showEmptyLabel: Boolean,
     alternateTint: Boolean,
     modifier: Modifier = Modifier,
@@ -608,7 +655,7 @@ private fun GalleryPage(
     ) {
         AsyncImage(
             model = imageUrl,
-            contentDescription = null,
+            contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
@@ -635,82 +682,83 @@ private fun GalleryPage(
     }
 }
 
-/** Thẻ thông tin chính: tiêu đề, giá lớn + cọc, địa chỉ và ô khoảng cách tới cơ sở. */
+/** Thẻ thông tin chính: tiêu đề, giá lớn + cọc, chip thông số nhanh, địa chỉ + sao chép và hộp chỉ đường. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PrimaryInfoCard(listing: HousingListing, modifier: Modifier = Modifier) {
+private fun PrimaryInfoCard(
+    listing: HousingListing,
+    onCopyAddress: () -> Unit,
+    onOpenMap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val largeText = LocalDensity.current.fontScale >= UthDimens.Layout.LargeTextScale
     UthCard(modifier = modifier.fillMaxWidth()) {
         Text(
             text = listing.title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.housing_detail_rent_label).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = UthTheme.extendedColors.textSecondary,
-                )
-                Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
-                ) {
-                    Text(
-                        text = formatVnd(listing.monthlyRentVnd),
-                        style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = stringResource(R.string.housing_price_unit),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = UthDimens.Spacing.Xxs),
-                    )
-                }
+            val typeLabel = when (listing.type) {
+                HousingListingType.ROOM_FOR_RENT -> stringResource(R.string.housing_type_room_for_rent)
+                HousingListingType.LOOKING_FOR_ROOMMATE -> stringResource(R.string.housing_type_looking_for_roommate)
+                HousingListingType.LOOKING_FOR_ROOM -> stringResource(R.string.housing_type_looking_for_room)
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = stringResource(R.string.housing_detail_deposit_label).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = UthTheme.extendedColors.textSecondary,
+            UthStatusBadge(text = typeLabel, tone = BadgeTone.Info, icon = null)
+            val areaM2 = listing.areaM2
+            if (areaM2 != null && areaM2 > 0) {
+                UthStatusBadge(
+                    text = stringResource(R.string.housing_area_sqm, areaM2),
+                    tone = BadgeTone.Neutral,
+                    icon = null,
                 )
-                Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
-                Text(
-                    text = stringResource(
-                        R.string.housing_detail_deposit_amount,
-                        formatVnd(listing.depositVnd),
-                    ),
-                    style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+            }
+            if (listing.utilitiesIncluded) {
+                UthStatusBadge(
+                    text = stringResource(R.string.housing_utilities_included),
+                    tone = BadgeTone.Success,
+                    icon = null,
                 )
             }
         }
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
+        if (largeText) {
+            Column(verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm)) {
+                RentMetricBlock(monthlyRentVnd = listing.monthlyRentVnd)
+                DepositMetricBlock(depositVnd = listing.depositVnd, alignEnd = false)
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                RentMetricBlock(
+                    monthlyRentVnd = listing.monthlyRentVnd,
+                    modifier = Modifier.weight(1f),
+                )
+                DepositMetricBlock(depositVnd = listing.depositVnd, alignEnd = true)
+            }
+        }
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = DIVIDER_ALPHA))
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
         Row(
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Sm),
         ) {
             Icon(
                 imageVector = Icons.Filled.LocationOn,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(UthDimens.Size.IconInline)
-                    .padding(top = UthDimens.Spacing.Xxs),
+                modifier = Modifier.size(UthDimens.Size.IconInline),
             )
             Text(
                 text = listing.addressLabel,
@@ -718,19 +766,101 @@ private fun PrimaryInfoCard(listing: HousingListing, modifier: Modifier = Modifi
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),
             )
+            TextButton(
+                onClick = onCopyAddress,
+                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Sm),
+                modifier = Modifier.defaultMinSize(minHeight = UthDimens.Size.MinTouchTarget, minWidth = 0.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.housing_detail_copy_address),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
-        ProximityBox(listing = listing)
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Xs))
+        ProximityBox(listing = listing, onOpenMap = onOpenMap)
     }
 }
 
-/** Ô nhấn khoảng cách tới cơ sở — dữ liệu thật từ `distanceToCampusM`. */
 @Composable
-private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier) {
+private fun RentMetricBlock(monthlyRentVnd: Int, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.semantics(mergeDescendants = true) { }) {
+        Text(
+            text = stringResource(R.string.housing_detail_rent_label).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = UthTheme.extendedColors.textSecondary,
+        )
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Xs),
+        ) {
+            Text(
+                text = formatVnd(monthlyRentVnd),
+                style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.housing_price_unit),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = UthDimens.Spacing.Xxs),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DepositMetricBlock(
+    depositVnd: Int,
+    alignEnd: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) { },
+        horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start,
+    ) {
+        Text(
+            text = stringResource(R.string.housing_detail_deposit_label).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = UthTheme.extendedColors.textSecondary,
+        )
+        Spacer(modifier = Modifier.height(UthDimens.Spacing.Xxs))
+        Text(
+            text = stringResource(
+                R.string.housing_detail_deposit_amount,
+                formatVnd(depositVnd),
+            ),
+            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/** Ô nhấn khoảng cách tới cơ sở — bấm 1 chạm mở bản đồ chỉ đường. */
+@Composable
+private fun ProximityBox(
+    listing: HousingListing,
+    onOpenMap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val directionsLabel = stringResource(R.string.housing_detail_open_directions)
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        onClick = onOpenMap,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = directionsLabel
+            },
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = PROXIMITY_CONTAINER_ALPHA),
     ) {
         Row(
             modifier = Modifier.padding(UthDimens.Spacing.Md),
@@ -741,7 +871,7 @@ private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier)
                 modifier = Modifier
                     .size(UthDimens.Size.Avatar)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = PROXIMITY_ICON_BG_ALPHA)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -778,6 +908,12 @@ private fun ProximityBox(listing: HousingListing, modifier: Modifier = Modifier)
                     )
                 }
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(UthDimens.Size.Icon),
+            )
         }
     }
 }
@@ -796,6 +932,7 @@ private fun HostCard(listing: HousingListing, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = UthTheme.extendedColors.textSecondary,
+                modifier = Modifier.semantics { heading() },
             )
             UthStatusBadge(
                 text = stringResource(R.string.housing_detail_host_badge),
@@ -804,7 +941,9 @@ private fun HostCard(listing: HousingListing, modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) { },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
         ) {
@@ -885,7 +1024,9 @@ private fun AmenitiesCard(amenities: List<RoomAmenity>, modifier: Modifier = Mod
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() },
             )
             Text(
                 text = stringResource(R.string.housing_detail_amenities_sub, amenities.size),
@@ -915,7 +1056,7 @@ private fun AmenitiesCard(amenities: List<RoomAmenity>, modifier: Modifier = Mod
 @Composable
 private fun AmenityTile(amenity: RoomAmenity, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) { },
         shape = MaterialTheme.shapes.medium,
         color = UthTheme.extendedColors.surfaceSubtle,
     ) {
@@ -956,6 +1097,7 @@ private fun HousingSectionCard(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Sm))
         Text(
@@ -977,6 +1119,7 @@ private fun MapCard(listing: HousingListing, onOpenMap: () -> Unit, modifier: Mo
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(modifier = Modifier.height(UthDimens.Spacing.Md))
         Box(
@@ -988,7 +1131,7 @@ private fun MapCard(listing: HousingListing, onOpenMap: () -> Unit, modifier: Mo
                     Brush.linearGradient(
                         listOf(
                             UthTheme.extendedColors.surfaceSubtle,
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = MAP_CONTAINER_ALPHA),
                         ),
                     ),
                 )
@@ -1029,7 +1172,7 @@ private fun MapCard(listing: HousingListing, onOpenMap: () -> Unit, modifier: Mo
     }
 }
 
-/** Thanh liên hệ cố định: Gọi điện (nút cong pill) + Nhắn Zalo (primary pill) và cam kết an toàn. */
+/** Thanh liên hệ cố định: Gọi điện (tonal pill) + Nhắn Zalo (primary pill) và cam kết an toàn. */
 @Composable
 private fun DetailBottomBar(
     listing: HousingListing,
@@ -1037,6 +1180,7 @@ private fun DetailBottomBar(
     onZalo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val callEnabled = listing.contactPhone.isNotBlank()
     Surface(
         modifier = modifier.fillMaxWidth(),
         shadowElevation = UthDimens.Elevation.BottomBar,
@@ -1055,66 +1199,72 @@ private fun DetailBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Surface(
+                FilledTonalButton(
                     onClick = onCall,
-                    enabled = listing.contactPhone.isNotBlank(),
+                    enabled = callEnabled,
                     shape = CircleShape,
-                    color = UthTheme.extendedColors.surfaceSubtle,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = UthTheme.extendedColors.surfaceSubtle,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        disabledContainerColor = UthTheme.extendedColors.surfaceSubtle.copy(
+                            alpha = DISABLED_CONTENT_ALPHA,
+                        ),
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = DISABLED_CONTENT_ALPHA,
+                        ),
+                    ),
+                    contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Md),
                     modifier = Modifier
                         .weight(1f)
                         .height(UthDimens.Size.ButtonHeight),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Phone,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(UthDimens.Size.IconInline),
-                        )
-                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                        Text(
-                            text = stringResource(R.string.housing_detail_call_now),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.Phone,
+                        contentDescription = null,
+                        tint = if (callEnabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
+                        },
+                        modifier = Modifier.size(UthDimens.Size.IconInline),
+                    )
+                    Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                    Text(
+                        text = stringResource(R.string.housing_detail_call_now),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
                 // Chủ tin tắt Zalo thì ẩn hẳn nút — không fallback SĐT trái ý chủ tin.
                 if (listing.contactZaloEnabled) {
-                    Surface(
+                    Button(
                         onClick = onZalo,
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Md),
                         modifier = Modifier
                             .weight(1f)
                             .height(UthDimens.Size.ButtonHeight),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_housing_notes),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(UthDimens.Size.IconInline),
-                            )
-                            Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
-                            Text(
-                                text = stringResource(R.string.housing_detail_message_zalo),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(UthDimens.Size.IconInline),
+                        )
+                        Spacer(modifier = Modifier.width(UthDimens.Spacing.Sm))
+                        Text(
+                            text = stringResource(R.string.housing_detail_message_zalo),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
@@ -1154,6 +1304,7 @@ private fun HousingDetailSkeleton(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(UthDimens.Spacing.Lg)
+            .progressSemantics()
             .semantics { contentDescription = loadingLabel },
         verticalArrangement = Arrangement.spacedBy(UthDimens.Spacing.Md),
     ) {
@@ -1325,6 +1476,12 @@ private fun RoomAmenity.iconRes(): Int = when (this) {
 }
 
 private const val METERS_PER_KM = 1000
+private const val DISABLED_CONTENT_ALPHA = 0.38f
+private const val PROXIMITY_CONTAINER_ALPHA = 0.06f
+private const val PROXIMITY_ICON_BG_ALPHA = 0.12f
+private const val DIVIDER_ALPHA = 0.5f
+private const val GALLERY_COUNTER_ALPHA = 0.85f
+private const val MAP_CONTAINER_ALPHA = 0.5f
 
 @Composable
 private fun distanceText(meters: Int): String = if (meters < METERS_PER_KM) {

@@ -153,6 +153,7 @@ internal fun JsonObject.toDomainLostFoundListing(): LostFoundListing = LostFound
     contactPhone = string("contact_phone").orEmpty(),
     imageUrl = string("image_url"),
     isResolved = bool("is_resolved"),
+    userId = string("user_id"),
 )
 
 /**

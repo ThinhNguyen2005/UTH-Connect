@@ -194,6 +194,14 @@ object UthDimens {
 
         /** Khung xem trước bản đồ ở màn chi tiết Ghép trọ (deep-link Chỉ đường, không embed map). */
         val MapPreviewHeight: Dp = 160.dp
+
+        /** Chiều cao ảnh bìa và ảnh giữ chỗ ở Chợ sách giáo trình. */
+        val BookCardImageHeight: Dp = 176.dp
+        val BookPlaceholderHeight: Dp = 112.dp
+        val BookFormImageHeight: Dp = 160.dp
+
+        /** Khoảng đệm đáy danh sách để không bị FAB che mất nút ở thẻ cuối. */
+        val FabBottomClearance: Dp = 88.dp
     }
 
     /**

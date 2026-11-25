@@ -47,9 +47,6 @@ sealed interface HomeAction {
     /** Bấm "Xem tất cả" mở màn hình ghép trọ. */
     data object OpenAllHousing : HomeAction
 
-    /** Bấm nút tạo tin đăng ghép trọ mới. */
-    data object CreateHousingPost : HomeAction
-
     /** Mở chi tiết sách trong chợ sách giáo trình. */
     data class OpenBookDetail(val bookId: String) : HomeAction
 
@@ -61,7 +58,4 @@ sealed interface HomeAction {
 
     /** Bấm "Xem tất cả" mở màn hình đồ thất lạc. */
     data object OpenAllLostFound : HomeAction
-
-    /** Bấm nút đăng tin đồ thất lạc mới. */
-    data object CreateLostFoundPost : HomeAction
 }

@@ -299,6 +299,16 @@ class HomeViewModelTest {
             imageBytes: ByteArray?,
             imageMimeType: String?,
         ): Result<LostFoundListing> = Result.success(item)
+        override suspend fun updateItem(
+            item: LostFoundListing,
+            imageBytes: ByteArray?,
+            imageMimeType: String?,
+            removeExistingImage: Boolean,
+        ): Result<LostFoundListing> = Result.success(item)
+        override suspend fun deleteItem(
+            id: String,
+            imageUrl: String?,
+        ): Result<Unit> = Result.success(Unit)
         override suspend fun toggleResolved(id: String, isResolved: Boolean): Result<Unit> = Result.success(Unit)
     }
 

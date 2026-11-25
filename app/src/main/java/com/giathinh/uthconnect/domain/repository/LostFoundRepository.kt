@@ -7,6 +7,11 @@ import com.giathinh.uthconnect.domain.model.LostFoundListing
  */
 interface LostFoundRepository {
     /**
+     * Returns the signed-in user's ID, or null when browsing anonymously.
+     */
+    fun currentUserId(): String? = null
+
+    /**
      * Retrieves all active and resolved lost and found listings.
      */
     suspend fun getListings(): Result<List<LostFoundListing>>
@@ -19,6 +24,21 @@ interface LostFoundRepository {
         imageBytes: ByteArray? = null,
         imageMimeType: String? = "image/jpeg",
     ): Result<LostFoundListing>
+
+    /**
+     * Updates an existing lost or found item owned by the current user.
+     */
+    suspend fun updateItem(
+        item: LostFoundListing,
+        imageBytes: ByteArray? = null,
+        imageMimeType: String? = "image/jpeg",
+        removeExistingImage: Boolean = false,
+    ): Result<LostFoundListing>
+
+    /**
+     * Deletes a lost or found item owned by the current user.
+     */
+    suspend fun deleteItem(id: String, imageUrl: String? = null): Result<Unit>
 
     /**
      * Toggles whether a listing is marked as resolved/recovered.

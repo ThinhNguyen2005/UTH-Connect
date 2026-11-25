@@ -27,12 +27,10 @@ fun HomeRoute(
     onOpenAllEvents: () -> Unit = {},
     onOpenHousingDetail: (String) -> Unit = {},
     onOpenAllHousing: () -> Unit = {},
-    onCreateHousingPost: () -> Unit = {},
     onOpenBookDetail: (String) -> Unit = {},
     onOpenAllBooks: () -> Unit = {},
     onOpenLostFoundDetail: (String) -> Unit = {},
     onOpenAllLostFound: () -> Unit = {},
-    onCreateLostFoundPost: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -48,12 +46,10 @@ fun HomeRoute(
                 HomeAction.OpenAllEvents -> onOpenAllEvents()
                 is HomeAction.OpenHousingDetail -> onOpenHousingDetail(action.listingId)
                 HomeAction.OpenAllHousing -> onOpenAllHousing()
-                HomeAction.CreateHousingPost -> onCreateHousingPost()
                 is HomeAction.OpenBookDetail -> onOpenBookDetail(action.bookId)
                 HomeAction.OpenAllBooks -> onOpenAllBooks()
                 is HomeAction.OpenLostFoundDetail -> onOpenLostFoundDetail(action.itemId)
                 HomeAction.OpenAllLostFound -> onOpenAllLostFound()
-                HomeAction.CreateLostFoundPost -> onCreateLostFoundPost()
                 else -> viewModel.onAction(action)
             }
         },

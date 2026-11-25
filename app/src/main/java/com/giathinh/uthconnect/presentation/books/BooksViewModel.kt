@@ -40,6 +40,7 @@ class BooksViewModel @Inject constructor(
                     maximumPrice = "",
                     sort = BooksSort.NEWEST,
                     includeSold = false,
+                    onlyMine = false,
                 )
             }
 
@@ -54,6 +55,8 @@ class BooksViewModel @Inject constructor(
             is BooksAction.SetSort -> _uiState.update { it.copy(sort = action.value) }
 
             is BooksAction.IncludeSold -> _uiState.update { it.copy(includeSold = action.value) }
+
+            is BooksAction.SetOnlyMine -> _uiState.update { it.copy(onlyMine = action.value) }
 
             is BooksAction.Save -> save(action.listing)
 

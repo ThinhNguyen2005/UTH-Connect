@@ -13,6 +13,7 @@ sealed interface BooksAction {
     data class SetPriceRange(val minimum: String, val maximum: String) : BooksAction
     data class SetSort(val value: BooksSort) : BooksAction
     data class IncludeSold(val value: Boolean) : BooksAction
+    data class SetOnlyMine(val value: Boolean) : BooksAction
     data class Save(val listing: BookListing) : BooksAction
     data class SetStatus(val listing: BookListing, val status: BookListingStatus) : BooksAction
     data class Delete(val id: String) : BooksAction

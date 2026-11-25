@@ -18,15 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,7 +64,6 @@ fun HomeCommunitySections(
             listings = uiState.visibleHousingListings,
             onOpenListing = { onAction(HomeAction.OpenHousingDetail(it)) },
             onOpenAll = { onAction(HomeAction.OpenAllHousing) },
-            onCreatePost = { onAction(HomeAction.CreateHousingPost) },
         )
 
         HomeBooksSection(
@@ -80,7 +76,6 @@ fun HomeCommunitySections(
             listings = uiState.visibleLostFoundListings,
             onOpenListing = { onAction(HomeAction.OpenLostFoundDetail(it)) },
             onOpenAll = { onAction(HomeAction.OpenAllLostFound) },
-            onCreatePost = { onAction(HomeAction.CreateLostFoundPost) },
         )
     }
 }
@@ -90,7 +85,6 @@ private fun HomeHousingSection(
     listings: List<HousingListing>,
     onOpenListing: (String) -> Unit,
     onOpenAll: () -> Unit,
-    onCreatePost: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -99,8 +93,6 @@ private fun HomeHousingSection(
             title = stringResource(R.string.home_community_housing_title),
             subtitle = stringResource(R.string.home_community_housing_subtitle),
             onSeeAll = onOpenAll,
-            actionLabel = stringResource(R.string.home_community_post_housing),
-            onAction = onCreatePost,
         )
 
         if (listings.isEmpty()) {
@@ -213,8 +205,6 @@ private fun HomeBooksSection(
             title = stringResource(R.string.home_community_books_title),
             subtitle = stringResource(R.string.home_community_books_subtitle),
             onSeeAll = onOpenAll,
-            actionLabel = null,
-            onAction = null,
         )
 
         if (listings.isEmpty()) {
@@ -327,7 +317,6 @@ private fun HomeLostFoundSection(
     listings: List<LostFoundListing>,
     onOpenListing: (String) -> Unit,
     onOpenAll: () -> Unit,
-    onCreatePost: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -336,8 +325,6 @@ private fun HomeLostFoundSection(
             title = stringResource(R.string.home_community_lostfound_title),
             subtitle = stringResource(R.string.home_community_lostfound_subtitle),
             onSeeAll = onOpenAll,
-            actionLabel = stringResource(R.string.home_community_post_lostfound),
-            onAction = onCreatePost,
         )
 
         if (listings.isEmpty()) {
@@ -463,8 +450,6 @@ private fun HomeSectionHeader(
     title: String,
     subtitle: String,
     onSeeAll: () -> Unit,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -522,30 +507,6 @@ private fun HomeSectionHeader(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (actionLabel != null && onAction != null) {
-            Spacer(Modifier.height(UthDimens.Spacing.Sm))
-            OutlinedButton(
-                onClick = onAction,
-                contentPadding = PaddingValues(horizontal = UthDimens.Spacing.Md),
-                shape = CircleShape,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ),
-                modifier = Modifier.defaultMinSize(minHeight = UthDimens.Size.MinTouchTarget, minWidth = 0.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(UthDimens.Size.IconBadge),
-                )
-                Spacer(Modifier.width(UthDimens.Spacing.Xs))
-                Text(
-                    text = actionLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
     }
 }
 

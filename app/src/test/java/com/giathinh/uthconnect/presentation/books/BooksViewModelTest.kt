@@ -174,6 +174,20 @@ class BooksViewModelTest {
         assertTrue(viewModel.uiState.value.mutatingIds.isEmpty())
     }
 
+    @Test
+    fun `setOnlyMine and resetFilters update filter state`() {
+        val viewModel = BooksViewModel(BookListingUseCases(FailingSaveRepository))
+
+        viewModel.onAction(BooksAction.SetOnlyMine(true))
+        viewModel.onAction(BooksAction.SetCondition(BookCondition.NEW))
+        assertTrue(viewModel.uiState.value.onlyMine)
+        assertEquals(1, viewModel.uiState.value.activeFilterCount)
+
+        viewModel.onAction(BooksAction.ResetFilters)
+        assertFalse(viewModel.uiState.value.onlyMine)
+        assertEquals(0, viewModel.uiState.value.activeFilterCount)
+    }
+
     private object FailingSaveRepository : BookListingRepository {
         override fun currentUserId() = "student-1"
         override fun observeListings(): Flow<List<BookListing>> = flowOf(emptyList())

@@ -5,9 +5,11 @@ import com.giathinh.uthconnect.domain.model.ItemCategory
 import com.giathinh.uthconnect.domain.model.ListingKind
 import com.giathinh.uthconnect.domain.model.LostFoundListing
 import com.giathinh.uthconnect.domain.repository.LostFoundRepository
+import com.giathinh.uthconnect.domain.usecase.DeleteLostFoundItemUseCase
 import com.giathinh.uthconnect.domain.usecase.GetLostFoundListingsUseCase
 import com.giathinh.uthconnect.domain.usecase.ReportLostFoundItemUseCase
 import com.giathinh.uthconnect.domain.usecase.ToggleResolveListingUseCase
+import com.giathinh.uthconnect.domain.usecase.UpdateLostFoundItemUseCase
 import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,6 +35,8 @@ class LostFoundViewModelTest {
     ): LostFoundViewModel = LostFoundViewModel(
         getListingsUseCase = GetLostFoundListingsUseCase(repository),
         reportItemUseCase = ReportLostFoundItemUseCase(repository),
+        updateItemUseCase = UpdateLostFoundItemUseCase(repository),
+        deleteItemUseCase = DeleteLostFoundItemUseCase(repository),
         toggleResolveListingUseCase = ToggleResolveListingUseCase(repository),
     )
 
@@ -152,6 +156,21 @@ class LostFoundViewModelTest {
                 imageMimeType: String?,
             ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
 
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(
+                id: String,
+                imageUrl: String?,
+            ): Result<Unit> = delegate.deleteItem(
+                id = id,
+                imageUrl = imageUrl,
+            )
+
             /**
              * Verifies `toggleResolved` behavior.
              */
@@ -197,6 +216,21 @@ class LostFoundViewModelTest {
                 imageMimeType: String?,
             ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
 
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(
+                id: String,
+                imageUrl: String?,
+            ): Result<Unit> = delegate.deleteItem(
+                id = id,
+                imageUrl = imageUrl,
+            )
+
             /**
              * Verifies `toggleResolved` behavior.
              */
@@ -241,6 +275,21 @@ class LostFoundViewModelTest {
                 imageBytes: ByteArray?,
                 imageMimeType: String?,
             ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(
+                id: String,
+                imageUrl: String?,
+            ): Result<Unit> = delegate.deleteItem(
+                id = id,
+                imageUrl = imageUrl,
+            )
 
             /**
              * Verifies `toggleResolved` behavior.
@@ -512,6 +561,21 @@ class LostFoundViewModelTest {
                 return delegate.reportItem(item, imageBytes, imageMimeType)
             }
 
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(
+                id: String,
+                imageUrl: String?,
+            ): Result<Unit> = delegate.deleteItem(
+                id = id,
+                imageUrl = imageUrl,
+            )
+
             /**
              * Verifies `toggleResolved` behavior and invariants.
              */
@@ -565,6 +629,21 @@ class LostFoundViewModelTest {
                 imageMimeType: String?,
             ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
 
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(
+                id: String,
+                imageUrl: String?,
+            ): Result<Unit> = delegate.deleteItem(
+                id = id,
+                imageUrl = imageUrl,
+            )
+
             /**
              * Verifies `toggleResolved` behavior and invariants.
              */
@@ -610,5 +689,176 @@ class LostFoundViewModelTest {
 
         viewModel.onAction(LostFoundAction.DismissMessage)
         assertNull("userMessage sau khi dismiss phải là null", viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `editListing_prefillsFormAndUpdatesListingSuccessfully` behavior and invariants.
+     */
+    @Test
+    fun `editListing_prefillsFormAndUpdatesListingSuccessfully`() {
+        val repository = InMemoryLostFoundRepository().apply {
+            setCurrentUserIdForTest("user-1")
+        }
+        val viewModel = createViewModel(repository)
+        assertEquals("user-1", viewModel.uiState.value.currentUserId)
+
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Bình giữ nhiệt UTH"))
+        viewModel.onAction(LostFoundAction.UpdateReportDescription("Màu xanh navy rơi ở B201"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Phòng B201"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        viewModel.onAction(LostFoundAction.DismissMessage)
+
+        val created = viewModel.uiState.value.listings.first { it.userId == "user-1" }
+        viewModel.onAction(LostFoundAction.OpenEditDialog(created))
+        assertTrue(viewModel.uiState.value.isReportDialogOpen)
+        assertEquals(created.id, viewModel.uiState.value.reportForm.editingListingId)
+        assertEquals("Bình giữ nhiệt UTH", viewModel.uiState.value.reportForm.title)
+
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Bình giữ nhiệt xanh"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Phòng B202"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isReportDialogOpen)
+        assertEquals(UserMessage.UpdateSuccess, state.userMessage)
+        val updated = state.listings.first { it.id == created.id }
+        assertEquals("Bình giữ nhiệt xanh", updated.title)
+        assertEquals("Phòng B202", updated.location)
+    }
+
+    /**
+     * Verifies `deleteListing_confirmRemovesItemAndSetsDeleteSuccess` behavior and invariants.
+     */
+    @Test
+    fun `deleteListing_confirmRemovesItemAndSetsDeleteSuccess`() {
+        val repository = InMemoryLostFoundRepository().apply {
+            setCurrentUserIdForTest("user-1")
+        }
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Thẻ xe bị rơi"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Cổng CS1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        viewModel.onAction(LostFoundAction.DismissMessage)
+
+        val created = viewModel.uiState.value.listings.first { it.userId == "user-1" }
+        val countBeforeDelete = viewModel.uiState.value.listings.size
+
+        viewModel.onAction(LostFoundAction.RequestDeleteListing(created))
+        assertEquals(created, viewModel.uiState.value.pendingDeleteListing)
+
+        viewModel.onAction(LostFoundAction.CancelDeleteListing)
+        assertNull(viewModel.uiState.value.pendingDeleteListing)
+
+        viewModel.onAction(LostFoundAction.RequestDeleteListing(created))
+        viewModel.onAction(LostFoundAction.ConfirmDeleteListing)
+
+        val state = viewModel.uiState.value
+        assertNull(state.pendingDeleteListing)
+        assertTrue(state.deletingIds.isEmpty())
+        assertEquals(countBeforeDelete - 1, state.listings.size)
+        assertFalse(state.listings.any { it.id == created.id })
+        assertEquals(UserMessage.DeleteSuccess, state.userMessage)
+    }
+
+    /**
+     * Verifies `deleteListing_forbiddenOrFailure_keepsItemAndSetsErrorMessage` behavior and invariants.
+     */
+    @Test
+    fun `deleteListing_forbiddenOrFailure_keepsItemAndSetsErrorMessage`() {
+        var deleteResult: Result<Unit> = Result.failure(
+            com.giathinh.uthconnect.data.repository.SupabaseHttpException(
+                java.net.HttpURLConnection.HTTP_FORBIDDEN,
+                "Forbidden",
+            ),
+        )
+        val delegate = InMemoryLostFoundRepository()
+        val repository = object : LostFoundRepository {
+            override suspend fun getListings(): Result<List<LostFoundListing>> = delegate.getListings()
+
+            override suspend fun reportItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+            ): Result<LostFoundListing> = delegate.reportItem(item, imageBytes, imageMimeType)
+
+            override suspend fun updateItem(
+                item: LostFoundListing,
+                imageBytes: ByteArray?,
+                imageMimeType: String?,
+                removeExistingImage: Boolean,
+            ): Result<LostFoundListing> = delegate.updateItem(item, imageBytes, imageMimeType, removeExistingImage)
+
+            override suspend fun deleteItem(id: String, imageUrl: String?): Result<Unit> = deleteResult
+
+            override suspend fun toggleResolved(
+                id: String,
+                isResolved: Boolean,
+            ): Result<Unit> = delegate.toggleResolved(
+                id = id,
+                isResolved = isResolved,
+            )
+        }
+        val viewModel = createViewModel(repository)
+        val target = viewModel.uiState.value.listings.first()
+        val initialCount = viewModel.uiState.value.listings.size
+
+        viewModel.onAction(LostFoundAction.RequestDeleteListing(target))
+        viewModel.onAction(LostFoundAction.ConfirmDeleteListing)
+        assertEquals(initialCount, viewModel.uiState.value.listings.size)
+        assertTrue(viewModel.uiState.value.deletingIds.isEmpty())
+        assertEquals(UserMessage.Forbidden, viewModel.uiState.value.userMessage)
+
+        deleteResult = Result.failure(java.io.IOException("Network unavailable"))
+        viewModel.onAction(LostFoundAction.RequestDeleteListing(target))
+        viewModel.onAction(LostFoundAction.ConfirmDeleteListing)
+        assertEquals(initialCount, viewModel.uiState.value.listings.size)
+        assertTrue(viewModel.uiState.value.deletingIds.isEmpty())
+        assertEquals(UserMessage.DeleteFailed, viewModel.uiState.value.userMessage)
+    }
+
+    /**
+     * Verifies `filters_onlyMine_hideResolved_resetFilters_andRefresh` behavior and invariants.
+     */
+    @Test
+    fun `filters_onlyMine_hideResolved_resetFilters_andRefresh`() {
+        val repository = InMemoryLostFoundRepository().apply {
+            setCurrentUserIdForTest("user-1")
+        }
+        val viewModel = createViewModel(repository)
+
+        viewModel.onAction(LostFoundAction.OpenReportDialog)
+        viewModel.onAction(LostFoundAction.UpdateReportTitle("Sạc dự phòng"))
+        viewModel.onAction(LostFoundAction.UpdateReportLocation("Thư viện CS1"))
+        viewModel.onAction(LostFoundAction.UpdateReportContactPhone("0912345678"))
+        viewModel.onAction(LostFoundAction.SubmitReport)
+        viewModel.onAction(LostFoundAction.DismissMessage)
+
+        val ownedItem = viewModel.uiState.value.listings.first { it.userId == "user-1" }
+
+        viewModel.onAction(LostFoundAction.SetOnlyMine(true))
+        assertTrue(viewModel.uiState.value.filteredListings.isNotEmpty())
+        assertTrue(viewModel.uiState.value.filteredListings.all { it.userId == "user-1" })
+
+        viewModel.onAction(LostFoundAction.ToggleResolveListing(ownedItem.id))
+        viewModel.onAction(LostFoundAction.SetShowResolved(false))
+        assertTrue(viewModel.uiState.value.filteredListings.isEmpty())
+        assertTrue(viewModel.uiState.value.hasActiveFilters)
+
+        viewModel.onAction(LostFoundAction.ResetFilters)
+        val resetState = viewModel.uiState.value
+        assertFalse(resetState.onlyMine)
+        assertTrue(resetState.showResolved)
+        assertEquals(ItemCategory.ALL, resetState.selectedCategory)
+        assertEquals("", resetState.searchQuery)
+        assertFalse(resetState.hasActiveFilters)
+
+        viewModel.onAction(LostFoundAction.Refresh)
+        assertFalse(viewModel.uiState.value.isRefreshing)
+        assertEquals(9, viewModel.uiState.value.listings.size)
     }
 }
