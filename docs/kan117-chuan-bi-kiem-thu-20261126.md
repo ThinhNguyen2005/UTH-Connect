@@ -6,16 +6,24 @@ Trạng thái: chưa thực hiện kiểm thử thủ công. Không có thiết 
 
 - [Android release APK](https://github.com/ThinhNguyen2005/UTH-Connect/actions/runs/45673302459) trên `main` có trạng thái thành công; cần xác minh và tải đúng artifact trước khi cài.
 - [Android CI](https://github.com/ThinhNguyen2005/UTH-Connect/actions/runs/45673302277) trên `main`, commit `5fabecdc97a27b3e71f4e3adc06fe0fb394636aa`, thất bại ở Build Debug APK; Gradle không phân giải được plugin `org.jetbrains.kotlin.android` phiên bản `2.4.21`. Bước unit test bị bỏ qua. Do đó điều kiện CI xanh của task chưa đạt.
-- Mã `origin/main` tại `5fabecdc97a27b3e71f4e3adc06fe0fb394636aa` khai báo ba giá trị `UserRole`: STUDENT, ORGANIZER, ADMIN. Issue yêu cầu bốn role nhưng chưa xác định role thứ tư; cần xác nhận ma trận vai trò và tài khoản thử trước khi kết luận đủ phạm vi.
+- [KAN-115](https://nguyenthinhk52005.atlassian.net/browse/KAN-115) yêu cầu bốn nhóm tài khoản: Sinh viên, Giảng viên, Tổ chức và Admin. Mã `origin/main` tại `5fabecdc97a27b3e71f4e3adc06fe0fb394636aa` khai báo `UserRole`: STUDENT, ORGANIZER, ADMIN. Cần xác nhận cách phân biệt tài khoản Giảng viên trong môi trường thử; không giả định đây là một giá trị enum riêng.
 
 ## Ma trận thực hiện
 
 Với từng role được xác nhận, dùng đúng APK release và ghi phiên bản, thiết bị/API, tài khoản thử không chứa mật khẩu, thời gian, bước thực hiện, kết quả thực tế và ảnh hoặc link bằng chứng. Không ghi Pass khi chưa so với yêu cầu được duyệt.
 
-| Chức năng | Kiểm tra cơ bản | Kết quả |
-| --- | --- | --- |
-| Thời khóa biểu (KAN-31) | Mở, xem dữ liệu và chuyển khoảng thời gian; kiểm tra trạng thái rỗng/lỗi nếu có điều kiện | Chưa thực hiện |
-| Sự kiện (KAN-44/45) | Mở danh sách và chi tiết; kiểm tra thao tác và quyền tương ứng của role | Chưa thực hiện |
-| Chợ sách (KAN-82/84/88) | Mở danh sách và chi tiết; kiểm tra thao tác và quyền tương ứng của role | Chưa thực hiện |
+| Mã | Ca kiểm thử | Sinh viên | Giảng viên | Tổ chức | Admin |
+| --- | --- | --- | --- | --- | --- |
+| TKB-01 | Mở lịch, chọn ngày/tuần, xem card và chi tiết môn/lịch thi | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| TKB-02 | Kiểm tra thông tin môn, chuyển ngày, trạng thái trống và lỗi | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| SK-01 | Xem danh sách, lọc campus, badge và chi tiết sự kiện | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| SK-02 | Đăng ký bằng studentId; đối chiếu quyền theo role | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| SK-03 | Kiểm tra khóa đăng ký khi hết chỗ hoặc trạng thái khác OPEN | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| CS-01 | Đăng bán/trao đổi và tải ảnh với dữ liệu thử | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| CS-02 | Tìm kiếm, lọc, xem chi tiết và liên hệ người bán | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| CS-03 | Sửa, xóa, đổi trạng thái bài của mình; xác minh tài khoản khác bị chặn | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+| CS-04 | Mở lại app, kiểm tra bài còn; kiểm tra loading, rỗng và lỗi mạng | Chưa chạy | Chưa chạy | Chưa chạy | Chưa chạy |
+
+Với mỗi ô, ghi riêng kết quả thực tế, Pass/Fail/Blocked hoặc N/A có lý do và liên kết bằng chứng. Các thao tác xóa trong ca CS-03 chỉ thực hiện trên dữ liệu thử được phép, sau khi xác nhận phạm vi dữ liệu; không xóa tệp trên máy.
 
 Đăng nhập chỉ là điều kiện vào ứng dụng theo issue. Kiểm thử cần dùng dữ liệu và tài khoản thử được phép; các thao tác tạo hoặc sửa dữ liệu cần môi trường thử được xác nhận.
