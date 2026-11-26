@@ -5,6 +5,7 @@ Trạng thái: chưa thực hiện kiểm thử thủ công. Không có thiết 
 ## Điều kiện đầu vào
 
 - [Android release APK](https://github.com/ThinhNguyen2005/UTH-Connect/actions/runs/45673302459) trên `main` có trạng thái thành công. Đã tải artifact `uth-connect-release-apk` (ID 15051426976), giải nén `app-release-signed.apk` và đọc metadata bằng Android `aapt`: package `com.giathinh.uthconnect`, versionName `1.0`, versionCode `1`, min SDK 31, target SDK 36. SHA-256 của APK: `ef40063796d2bdfbdde66fce332fba341b8521f1615309c557a2b4ec49bb7ed1`. Đây là kiểm tra artifact, chưa cài hoặc kiểm thử ứng dụng.
+- `apksigner verify --verbose` xác nhận APK có chữ ký hợp lệ theo sơ đồ v3 và một signer. Việc xác minh chữ ký không chứng minh các ca chức năng đã đạt.
 - [Android CI](https://github.com/ThinhNguyen2005/UTH-Connect/actions/runs/45673302277) trên `main`, commit `5fabecdc97a27b3e71f4e3adc06fe0fb394636aa`, thất bại ở Build Debug APK; Gradle không phân giải được plugin `org.jetbrains.kotlin.android` phiên bản `2.4.21`. Bước unit test bị bỏ qua. Do đó điều kiện CI xanh của task chưa đạt.
 - [KAN-115](https://nguyenthinhk52005.atlassian.net/browse/KAN-115) yêu cầu bốn nhóm tài khoản: Sinh viên, Giảng viên, Tổ chức và Admin. Mã `origin/main` tại `5fabecdc97a27b3e71f4e3adc06fe0fb394636aa` khai báo `UserRole`: STUDENT, ORGANIZER, ADMIN. Cần xác nhận cách phân biệt tài khoản Giảng viên trong môi trường thử; không giả định đây là một giá trị enum riêng.
 
