@@ -2,7 +2,6 @@ package com.giathinh.uthconnect.presentation.scanner
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.SessionRepository
 import com.giathinh.uthconnect.domain.usecase.CheckInResult
 import com.giathinh.uthconnect.domain.usecase.CheckInUseCase
@@ -28,14 +27,14 @@ class ScannerViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             session.session.collect { current ->
-                val allowed = current.profile?.role == UserRole.ORGANIZER
+                val allowed = current.profile?.role?.hasOrganizerCapabilities == true
                 state.update { if (allowed) it.copy(authorized = true) else ScannerUiState() }
             }
         }
     }
 
     fun onAction(action: ScannerAction) {
-        if (session.session.value.profile?.role != UserRole.ORGANIZER) return
+        if (session.session.value.profile?.role?.hasOrganizerCapabilities != true) return
         when (action) {
             is ScannerAction.CameraPermissionChanged -> state.update { it.copy(cameraPermissionGranted = action.granted, cameraError = false) }
 

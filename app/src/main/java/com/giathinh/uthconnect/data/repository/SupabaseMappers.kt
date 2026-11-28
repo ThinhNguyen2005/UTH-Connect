@@ -95,7 +95,8 @@ internal fun JsonObject.toDomainProfile(): StudentProfile {
         currentAddress = string("current_address").orEmpty(),
         role = when (string("role")) {
             "admin" -> UserRole.ADMIN
-            "organizer", "lecturer" -> UserRole.ORGANIZER
+            "organizer" -> UserRole.ORGANIZER
+            "lecturer" -> UserRole.LECTURER
             else -> UserRole.STUDENT
         },
         uthVerified = true,

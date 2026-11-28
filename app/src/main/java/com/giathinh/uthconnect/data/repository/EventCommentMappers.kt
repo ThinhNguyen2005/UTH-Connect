@@ -41,7 +41,8 @@ internal fun JsonObject.toGuestDomainProfile(): StudentProfile {
         currentAddress = "",
         role = when (string("role")) {
             "admin" -> UserRole.ADMIN
-            "organizer", "lecturer" -> UserRole.ORGANIZER
+            "organizer" -> UserRole.ORGANIZER
+            "lecturer" -> UserRole.LECTURER
             else -> UserRole.STUDENT
         },
         uthVerified = bool("student_id_verified"),
