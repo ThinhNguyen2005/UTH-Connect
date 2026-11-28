@@ -27,6 +27,7 @@ class StaticUtilityModuleRepository @Inject constructor() : UtilityModuleReposit
             UtilityModule(UtilityModuleId.LOST_FOUND, DeliveryPhase.PHASE_3, enabled = true),
             UtilityModule(UtilityModuleId.BOOKS, DeliveryPhase.PHASE_3, enabled = true),
             UtilityModule(UtilityModuleId.HOUSING, DeliveryPhase.BACKLOG, enabled = true),
+            UtilityModule(UtilityModuleId.INCIDENTS, DeliveryPhase.PHASE_3, enabled = true),
             UtilityModule(UtilityModuleId.RIDE_SHARE, DeliveryPhase.BACKLOG, enabled = false),
         ),
     )

@@ -17,4 +17,5 @@ sealed interface UserNotificationsAction {
 sealed interface UserNotificationsEvent {
     data object OpenHousing : UserNotificationsEvent
     data object OpenEvents : UserNotificationsEvent
+    data object OpenIncidents : UserNotificationsEvent
 }

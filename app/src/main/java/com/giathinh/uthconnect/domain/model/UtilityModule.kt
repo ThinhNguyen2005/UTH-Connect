@@ -26,6 +26,7 @@ enum class UtilityModuleId {
     HOUSING,
     RIDE_SHARE,
     BOOKS,
+    INCIDENTS,
 }
 
 /**

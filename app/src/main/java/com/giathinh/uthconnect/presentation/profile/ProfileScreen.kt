@@ -231,7 +231,7 @@ private fun ProfileBadges(student: StudentProfile) {
                 modifier = Modifier.testTag("profile_unverified_badge"),
             )
         }
-        if (student.role == UserRole.ORGANIZER) {
+        if (student.role.hasOrganizerCapabilities) {
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = MaterialTheme.shapes.small,

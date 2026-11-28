@@ -95,7 +95,7 @@ fun EventsScreen(
     LaunchedEffect(state.message) {
         if (state.message == "Đã lưu sự kiện") editor = null
     }
-    val isOrganizer = state.role == UserRole.ADMIN || state.role == UserRole.ORGANIZER
+    val isOrganizer = state.role == UserRole.ADMIN || state.role.hasOrganizerCapabilities
     editor?.let { target ->
         EventEditorDialog(
             event = target.event,

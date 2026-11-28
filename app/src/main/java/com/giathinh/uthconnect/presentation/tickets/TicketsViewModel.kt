@@ -3,7 +3,6 @@ package com.giathinh.uthconnect.presentation.tickets
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.giathinh.uthconnect.domain.model.ServerErrorCode
-import com.giathinh.uthconnect.domain.model.UserRole
 import com.giathinh.uthconnect.domain.repository.TicketRepository
 import com.giathinh.uthconnect.domain.usecase.GetProfileUseCase
 import com.giathinh.uthconnect.domain.usecase.GetTicketsUseCase
@@ -38,7 +37,12 @@ class TicketsViewModel @Inject constructor(
             getProfile.observe().collect { profile ->
                 if (profile != null) {
                     currentStudentId = profile.studentId
-                    _uiState.update { it.copy(studentName = profile.displayName, isOrganizer = profile.role == UserRole.ORGANIZER) }
+                    _uiState.update {
+                        it.copy(
+                            studentName = profile.displayName,
+                            isOrganizer = profile.role.hasOrganizerCapabilities,
+                        )
+                    }
                     loadTickets(profile.studentId)
                 } else {
                     qrJob?.cancel()

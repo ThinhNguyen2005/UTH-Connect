@@ -173,6 +173,12 @@ class UserNotificationsViewModel @Inject constructor(
 
                 UserNotificationType.EVENT_REMINDER -> eventChannel.send(UserNotificationsEvent.OpenEvents)
 
+                UserNotificationType.INCIDENT_SUBMITTED,
+                UserNotificationType.INCIDENT_STATUS_UPDATED,
+                UserNotificationType.INCIDENT_RESOLVED,
+                UserNotificationType.INCIDENT_REJECTED,
+                -> eventChannel.send(UserNotificationsEvent.OpenIncidents)
+
                 UserNotificationType.SYSTEM -> Unit
             }
         }

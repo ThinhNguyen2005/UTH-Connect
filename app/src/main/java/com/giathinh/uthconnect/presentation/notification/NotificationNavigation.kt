@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.giathinh.uthconnect.presentation.events.EventSourceDestination
 import com.giathinh.uthconnect.presentation.housing.HousingDetailDestination
+import com.giathinh.uthconnect.presentation.incidents.IncidentsDestination
 import com.giathinh.uthconnect.presentation.navigation.ProfileDestination
 import com.giathinh.uthconnect.presentation.navigation.SettingsDestination
 import kotlinx.serialization.Serializable
@@ -56,5 +57,6 @@ private fun NavHostController.openNotificationSource(type: String, id: String) {
     when (type) {
         "EVENT" -> navigate(EventSourceDestination(id))
         "HOUSING" -> navigate(HousingDetailDestination(listingId = id))
+        "INCIDENT" -> navigate(IncidentsDestination)
     }
 }

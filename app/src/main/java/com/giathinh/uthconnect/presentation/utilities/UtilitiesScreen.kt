@@ -286,6 +286,7 @@ private fun UtilityModuleId.iconRes(): Int = when (this) {
     UtilityModuleId.LOST_FOUND -> R.drawable.ic_utilities_lost_found
     UtilityModuleId.BOOKS -> R.drawable.ic_utilities_books
     UtilityModuleId.HOUSING -> R.drawable.ic_utilities_housing
+    UtilityModuleId.INCIDENTS -> R.drawable.ic_utilities_incidents
     UtilityModuleId.RIDE_SHARE -> R.drawable.ic_utilities_rideshare
 }
 
@@ -296,6 +297,7 @@ private fun UtilityModuleId.titleRes(): Int = when (this) {
     UtilityModuleId.LOST_FOUND -> R.string.module_lost_found_title
     UtilityModuleId.BOOKS -> R.string.module_books_title
     UtilityModuleId.HOUSING -> R.string.module_housing_title
+    UtilityModuleId.INCIDENTS -> R.string.module_incidents_title
     UtilityModuleId.RIDE_SHARE -> R.string.module_rideshare_title
 }
 
@@ -306,6 +308,7 @@ private fun UtilityModuleId.descRes(): Int = when (this) {
     UtilityModuleId.LOST_FOUND -> R.string.module_lost_found_desc
     UtilityModuleId.BOOKS -> R.string.module_books_desc
     UtilityModuleId.HOUSING -> R.string.module_housing_desc
+    UtilityModuleId.INCIDENTS -> R.string.module_incidents_desc
     UtilityModuleId.RIDE_SHARE -> R.string.module_rideshare_desc
 }
 

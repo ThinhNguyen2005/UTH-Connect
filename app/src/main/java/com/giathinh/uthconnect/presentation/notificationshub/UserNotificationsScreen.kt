@@ -240,7 +240,16 @@ private fun NotificationHubCard(item: NotificationItem, onClick: () -> Unit) {
 @Composable
 private fun typeLabel(type: UserNotificationType): String = when (type) {
     UserNotificationType.HOUSING_APPROVED -> stringResource(R.string.user_notification_housing_approved)
+
     UserNotificationType.HOUSING_REJECTED -> stringResource(R.string.user_notification_housing_rejected)
+
     UserNotificationType.EVENT_REMINDER -> stringResource(R.string.user_notification_event_reminder)
+
+    UserNotificationType.INCIDENT_SUBMITTED,
+    UserNotificationType.INCIDENT_STATUS_UPDATED,
+    UserNotificationType.INCIDENT_RESOLVED,
+    UserNotificationType.INCIDENT_REJECTED,
+    -> stringResource(R.string.user_notification_incident_update)
+
     UserNotificationType.SYSTEM -> stringResource(R.string.user_notification_system)
 }

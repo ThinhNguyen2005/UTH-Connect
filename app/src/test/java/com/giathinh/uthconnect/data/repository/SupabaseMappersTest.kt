@@ -48,7 +48,7 @@ class SupabaseMappersTest {
         for ((remote, expected) in listOf(
             "student" to UserRole.STUDENT,
             "organizer" to UserRole.ORGANIZER,
-            "lecturer" to UserRole.ORGANIZER,
+            "lecturer" to UserRole.LECTURER,
             "admin" to UserRole.ADMIN,
         )) {
             val profile = objectFromJson(
@@ -81,6 +81,13 @@ class SupabaseMappersTest {
                 objectFromJson(input).toDomainProfile()
             }
         }
+    }
+
+    @Test fun lecturerRoleIsPreservedForGuestProfiles() {
+        val guest = objectFromJson("""{"display_name":"Lecturer","role":"lecturer"}""")
+            .toGuestDomainProfile()
+        assertEquals(UserRole.LECTURER, guest.role)
+        assertTrue(guest.role.hasOrganizerCapabilities)
     }
 
     /** Verifies ticket mapping includes its embedded event details. */
