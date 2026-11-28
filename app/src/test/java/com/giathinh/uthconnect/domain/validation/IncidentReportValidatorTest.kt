@@ -9,8 +9,12 @@ class IncidentReportValidatorTest {
     private val validator = IncidentReportValidator()
     private val requestId = "d72615aa-9c66-42ba-8153-02dfa832c923"
 
-    private fun validate(room: String, title: String, description: String, images: Int) =
-        validator.validate("CS1", requestId, room, title, description, images)
+    private fun validate(
+        room: String,
+        title: String,
+        description: String,
+        images: Int,
+    ): IncidentValidation = validator.validate("CS1", requestId, room, title, description, images)
 
     @Test fun `normalizes room and accepts boundary lengths and four images`() {
         val result = validate(" h001 ", "a".repeat(5), "b".repeat(10), 4)

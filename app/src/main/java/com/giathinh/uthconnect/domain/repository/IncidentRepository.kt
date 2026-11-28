@@ -7,6 +7,8 @@ import com.giathinh.uthconnect.domain.model.IncidentStatusLog
 import com.giathinh.uthconnect.domain.model.IncidentSummary
 
 interface IncidentRepository {
+    suspend fun uploadIncidentImage(bytes: ByteArray): Result<String>
+
     suspend fun createReport(draft: IncidentDraft): Result<IncidentReport>
 
     suspend fun getMyReports(): Result<List<IncidentReport>>

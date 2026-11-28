@@ -7,6 +7,7 @@ import com.giathinh.uthconnect.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -182,6 +183,26 @@ class UserNotificationsViewModelTest {
 
         assertEquals("read failed", viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.notifications.single().isRead)
+    }
+
+    @Test
+    fun `opening incident notification emits OpenIncidents navigation event`() = runTest {
+        val incidentNotification = notification().copy(
+            id = "notification-incident-1",
+            type = UserNotificationType.INCIDENT_RESOLVED,
+        )
+        val repository = FakeUserNotificationRepository(initial = listOf(incidentNotification))
+        val viewModel = UserNotificationsViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onAction(UserNotificationsAction.Open(incidentNotification))
+        advanceUntilIdle()
+
+        assertEquals(UserNotificationsEvent.OpenIncidents, viewModel.events.first())
+        assertEquals(
+            UserNotificationType.INCIDENT_STATUS_UPDATED,
+            UserNotificationType.fromString("INCIDENT_STATUS_UPDATED"),
+        )
     }
 
     private fun notification() = NotificationItem(

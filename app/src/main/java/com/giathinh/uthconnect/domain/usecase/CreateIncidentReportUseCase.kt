@@ -7,7 +7,9 @@ import com.giathinh.uthconnect.domain.validation.IncidentReportValidator
 import com.giathinh.uthconnect.domain.validation.IncidentValidation
 import javax.inject.Inject
 
-class InvalidIncidentReportException(val validation: IncidentValidation) : IllegalArgumentException("Invalid incident report")
+class InvalidIncidentReportException(
+    val validation: IncidentValidation,
+) : IllegalArgumentException("Invalid incident report")
 
 class CreateIncidentReportUseCase @Inject constructor(
     private val repository: IncidentRepository,

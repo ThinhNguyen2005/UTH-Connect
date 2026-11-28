@@ -1,10 +1,13 @@
 package com.giathinh.uthconnect.data.repository
 
+import com.giathinh.uthconnect.core.util.ImageCompressor
 import com.giathinh.uthconnect.domain.model.IncidentStatus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IncidentMapperTest {
@@ -16,7 +19,8 @@ class IncidentMapperTest {
         "image_paths":["owner/photo.webp"],"is_anonymous_public":true,
         "status":"SUBMITTED","created_at":"2026-11-28T00:00:00Z",
         "updated_at":"2026-11-28T00:00:00Z","row_version":1
-    }""".trimIndent()
+    }
+    """.trimIndent()
 
     @Test fun `maps incident fields and storage paths`() {
         val report = Json.parseToJsonElement(record).jsonObject.toIncidentReport()
@@ -42,5 +46,16 @@ class IncidentMapperTest {
         ).jsonObject.toIncidentSummary()
         assertEquals(2L, summary.confirmationCount)
         assertEquals("H001", summary.roomCode)
+    }
+
+    @Test fun `validates webp header and size bounds for incident upload`() {
+        val validWebp = "RIFF\u0000\u0000\u0000\u0000WEBPvp8 ".encodeToByteArray()
+        assertTrue(isValidWebpImage(validWebp))
+        assertFalse(isValidWebpImage(ByteArray(11)))
+        assertFalse(isValidWebpImage("PNG_NOT_WEBP_HEADER".encodeToByteArray()))
+        val oversized = ByteArray(ImageCompressor.MAX_BYTES + 1).also {
+            validWebp.copyInto(it)
+        }
+        assertFalse(isValidWebpImage(oversized))
     }
 }

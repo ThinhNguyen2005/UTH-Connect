@@ -37,7 +37,12 @@ class TicketsViewModel @Inject constructor(
             getProfile.observe().collect { profile ->
                 if (profile != null) {
                     currentStudentId = profile.studentId
-                    _uiState.update { it.copy(studentName = profile.displayName, isOrganizer = profile.role.hasOrganizerCapabilities) }
+                    _uiState.update {
+                        it.copy(
+                            studentName = profile.displayName,
+                            isOrganizer = profile.role.hasOrganizerCapabilities,
+                        )
+                    }
                     loadTickets(profile.studentId)
                 } else {
                     qrJob?.cancel()

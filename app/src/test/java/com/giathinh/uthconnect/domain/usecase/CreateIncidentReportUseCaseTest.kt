@@ -19,6 +19,8 @@ class CreateIncidentReportUseCaseTest {
         var received: IncidentDraft? = null
         val failure = IllegalStateException("offline")
 
+        override suspend fun uploadIncidentImage(bytes: ByteArray): Result<String> = error("Not called")
+
         override suspend fun createReport(draft: IncidentDraft): Result<IncidentReport> {
             received = draft
             return Result.failure(failure)

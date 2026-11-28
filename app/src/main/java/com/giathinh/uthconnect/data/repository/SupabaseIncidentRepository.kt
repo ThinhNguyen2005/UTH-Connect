@@ -1,5 +1,6 @@
 package com.giathinh.uthconnect.data.repository
 
+import com.giathinh.uthconnect.core.util.ImageCompressor
 import com.giathinh.uthconnect.domain.model.IncidentCategory
 import com.giathinh.uthconnect.domain.model.IncidentDraft
 import com.giathinh.uthconnect.domain.model.IncidentReport
@@ -12,21 +13,44 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val INCIDENT_PAGE_SIZE = 100
+private const val MEDIA_UPLOADS_BUCKET = "media_uploads"
+private const val WEBP_HEADER_MIN_BYTES = 12
+private const val RIFF_MAGIC_END = 4
+private const val WEBP_MAGIC_OFFSET = 8
+private val RIFF_BYTES = "RIFF".encodeToByteArray()
+private val WEBP_BYTES = "WEBP".encodeToByteArray()
 
 @Singleton
 class SupabaseIncidentRepository @Inject constructor(
     private val client: SupabaseRestClient,
 ) : IncidentRepository {
+    override suspend fun uploadIncidentImage(bytes: ByteArray): Result<String> = suspendResult {
+        require(isValidWebpImage(bytes)) { "INCIDENT_INVALID_IMAGE" }
+        val ownerId = uuid(client.userId)
+        val objectKey = "$ownerId/${UUID.randomUUID()}.webp"
+        client.uploadStorageObject(
+            bucket = MEDIA_UPLOADS_BUCKET,
+            path = objectKey,
+            bytes = bytes,
+            contentType = "image/webp",
+        )
+        check(client.userIdOrNull?.let { runCatching { uuid(it) }.getOrNull() } == ownerId) {
+            "Session changed while uploading incident image"
+        }
+        objectKey
+    }
+
     override suspend fun createReport(draft: IncidentDraft): Result<IncidentReport> = suspendResult {
         val ownerId = uuid(client.userId)
         val id = client.rpc(
@@ -56,7 +80,9 @@ class SupabaseIncidentRepository @Inject constructor(
         var id: String? = null
         while (true) {
             val cursor = if (createdAt != null && id != null) {
-                "&or=(created_at.lt.${urlEncode(createdAt)},and(created_at.eq.${urlEncode(createdAt)},id.lt.${urlEncode(id)}))"
+                val encodedTime = urlEncode(createdAt)
+                val encodedId = urlEncode(id)
+                "&or=(created_at.lt.$encodedTime,and(created_at.eq.$encodedTime,id.lt.$encodedId))"
             } else {
                 ""
             }
@@ -184,3 +210,10 @@ internal fun JsonObject.toIncidentSummary(): IncidentSummary = IncidentSummary(
     createdAt = requireNotNull(string("created_at")),
     confirmationCount = getValue("confirmation_count").jsonPrimitive.long,
 )
+
+internal fun isValidWebpImage(bytes: ByteArray): Boolean {
+    if (bytes.size !in WEBP_HEADER_MIN_BYTES..ImageCompressor.MAX_BYTES) return false
+    val isRiff = bytes.copyOfRange(0, RIFF_MAGIC_END).contentEquals(RIFF_BYTES)
+    val isWebp = bytes.copyOfRange(WEBP_MAGIC_OFFSET, WEBP_HEADER_MIN_BYTES).contentEquals(WEBP_BYTES)
+    return isRiff && isWebp
+}

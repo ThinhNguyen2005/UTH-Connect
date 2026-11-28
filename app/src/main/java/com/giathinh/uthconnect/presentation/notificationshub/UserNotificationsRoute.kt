@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun UserNotificationsRoute(
     onOpenHousing: () -> Unit,
     onOpenEvents: () -> Unit,
+    onOpenIncidents: () -> Unit = {},
     viewModel: UserNotificationsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -22,6 +23,7 @@ fun UserNotificationsRoute(
             when (event) {
                 UserNotificationsEvent.OpenHousing -> onOpenHousing()
                 UserNotificationsEvent.OpenEvents -> onOpenEvents()
+                UserNotificationsEvent.OpenIncidents -> onOpenIncidents()
             }
         }
     }
