@@ -190,7 +190,9 @@ begin
     if (p_assigned_to is null and v_unit is null) or char_length(coalesce(v_unit, '')) > 200 then
         raise exception 'INCIDENT_INVALID_ASSIGNMENT' using errcode = '22023';
     end if;
-    if p_assigned_to is not null and not exists (select 1 from public.profiles p where p.id = p_assigned_to) then
+    if p_assigned_to is not null and not exists (
+        select 1 from public.profiles p where p.id = p_assigned_to and p.role::text = 'admin'
+    ) then
         raise exception 'INCIDENT_INVALID_ASSIGNMENT' using errcode = '22023';
     end if;
     update public.incident_reports

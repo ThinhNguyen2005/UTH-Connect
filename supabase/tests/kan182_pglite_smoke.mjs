@@ -20,7 +20,7 @@ await db.exec(`
   create schema storage;
   create table storage.objects (bucket_id text not null, name text not null);
   create table auth.users (id uuid primary key);
-  create table public.profiles (id uuid primary key references auth.users(id));
+  create table public.profiles (id uuid primary key references auth.users(id), role text not null default 'student');
   create table public.notifications (
     id uuid primary key default gen_random_uuid(), recipient_id uuid,
     title text not null, content text not null, type text not null
@@ -34,7 +34,8 @@ await db.exec(`
   grant usage on schema auth to authenticated;
   grant execute on function auth.uid() to authenticated;
   insert into auth.users values ('${alice}'), ('${bob}'), ('${admin}');
-  insert into public.profiles select id from auth.users;
+  insert into public.profiles (id) select id from auth.users;
+  update public.profiles set role = 'admin' where id = '${admin}';
   insert into storage.objects values ('media_uploads', '${bob}/77777777-7777-4777-8777-777777777777.webp');
 `)
 await db.exec(await readFile('supabase/migrations/20261128035312_kan182_incident_reports.sql', 'utf8'))
@@ -110,6 +111,7 @@ await assert.rejects(db.query(transition, [incident, 1, 'CANCELLED', null, null]
 const assign = 'select public.assign_incident_report($1, $2, $3, $4) as version'
 await assert.rejects(db.query(assign, [first, 1, null, 'Tổ điện']), /INCIDENT_FORBIDDEN/)
 await selectAs(admin, 'incident_reports')
+await assert.rejects(db.query(assign, [first, 1, bob, null]), /INCIDENT_INVALID_ASSIGNMENT/)
 assert.equal((await db.query(assign, [first, 1, null, 'Tổ điện'])).rows[0].version, 2)
 await assert.rejects(db.query(assign, [first, 1, null, 'Tổ điện']), /INCIDENT_CONFLICT/)
 await assert.rejects(db.query(assign, [first, 2, null, ' ']), /INCIDENT_INVALID_ASSIGNMENT/)
