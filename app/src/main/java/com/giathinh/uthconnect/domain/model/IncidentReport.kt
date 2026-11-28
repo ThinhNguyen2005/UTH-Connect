@@ -70,3 +70,17 @@ data class IncidentStatusLog(
     val note: String?,
     val createdAt: String,
 )
+
+/** Public feed intentionally excludes the reporter identity and description. */
+data class IncidentSummary(
+    val id: String,
+    val code: String,
+    val campus: String,
+    val roomCode: String,
+    val category: IncidentCategory,
+    val severity: IncidentSeverity,
+    val title: String,
+    val status: IncidentStatus,
+    val createdAt: String,
+    val confirmationCount: Long,
+)

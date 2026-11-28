@@ -12,6 +12,7 @@ import {
   BookOpen,
   Bell,
   FileSpreadsheet,
+  Wrench,
   LogOut,
   ExternalLink,
   Lock,
@@ -51,6 +52,11 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({
       name: "Soạn thảo Thông báo",
       href: "/admin/announcements",
       icon: Bell,
+    },
+    {
+      name: "Báo cáo sự cố",
+      href: "/admin/incidents",
+      icon: Wrench,
     },
     {
       name: "Xuất Báo cáo & Thống kê",

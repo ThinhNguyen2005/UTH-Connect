@@ -5,6 +5,8 @@ import com.giathinh.uthconnect.domain.model.IncidentDraft
 import com.giathinh.uthconnect.domain.model.IncidentReport
 import com.giathinh.uthconnect.domain.model.IncidentSeverity
 import com.giathinh.uthconnect.domain.model.IncidentStatus
+import com.giathinh.uthconnect.domain.model.IncidentStatusLog
+import com.giathinh.uthconnect.domain.model.IncidentSummary
 import com.giathinh.uthconnect.domain.repository.IncidentRepository
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -13,6 +15,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -76,6 +79,70 @@ class SupabaseIncidentRepository @Inject constructor(
         loadReport(id, uuid(client.userId))
     }
 
+    override suspend fun getOpenReports(campus: String?): Result<List<IncidentSummary>> = suspendResult {
+        val ownerId = uuid(client.userId)
+        val rows = client.rpc(
+            "list_open_incidents",
+            buildJsonObject { put("p_campus", campus) },
+            expectedUserId = ownerId,
+        ).jsonArray
+        check(client.userIdOrNull?.let { runCatching { uuid(it) }.getOrNull() } == ownerId) {
+            "Session changed while loading incidents"
+        }
+        rows.map { it.jsonObject.toIncidentSummary() }
+    }
+
+    override suspend fun getStatusHistory(id: String): Result<List<IncidentStatusLog>> = suspendResult {
+        val ownerId = uuid(client.userId)
+        val safeId = urlEncode(uuid(id))
+        val rows = client.table(
+            "incident_status_logs?select=from_status,to_status,note,created_at" +
+                "&incident_id=eq.$safeId&order=created_at.asc,id.asc",
+        ).jsonArray
+        check(client.userIdOrNull?.let { runCatching { uuid(it) }.getOrNull() } == ownerId) {
+            "Session changed while loading incident history"
+        }
+        rows.map { row ->
+            val item = row.jsonObject
+            IncidentStatusLog(
+                fromStatus = item.string("from_status")?.let(IncidentStatus::valueOf),
+                toStatus = IncidentStatus.valueOf(requireNotNull(item.string("to_status"))),
+                note = item.string("note"),
+                createdAt = requireNotNull(item.string("created_at")),
+            )
+        }
+    }
+
+    override suspend fun confirmReport(id: String): Result<Long> = suspendResult {
+        val ownerId = uuid(client.userId)
+        client.rpc(
+            "confirm_incident_report",
+            buildJsonObject { put("p_incident_id", uuid(id)) },
+            expectedUserId = ownerId,
+        ).jsonPrimitive.long
+    }
+
+    override suspend fun transitionReport(
+        id: String,
+        expectedVersion: Int,
+        targetStatus: IncidentStatus,
+        note: String?,
+        duplicateOfId: String?,
+    ): Result<Int> = suspendResult {
+        val ownerId = uuid(client.userId)
+        client.rpc(
+            "transition_incident_report",
+            buildJsonObject {
+                put("p_incident_id", uuid(id))
+                put("p_expected_version", expectedVersion)
+                put("p_target_status", targetStatus.name)
+                put("p_note", note)
+                put("p_duplicate_of_id", duplicateOfId?.let(::uuid))
+            },
+            expectedUserId = ownerId,
+        ).jsonPrimitive.int
+    }
+
     private suspend fun loadReport(id: String, expectedUserId: String): IncidentReport {
         val safeId = urlEncode(uuid(id))
         val row = client.table("incident_reports?select=*&id=eq.$safeId").jsonArray.singleOrNull()?.jsonObject
@@ -103,4 +170,17 @@ internal fun JsonObject.toIncidentReport(): IncidentReport = IncidentReport(
     createdAt = requireNotNull(string("created_at")),
     updatedAt = requireNotNull(string("updated_at")),
     rowVersion = getValue("row_version").jsonPrimitive.long,
+)
+
+internal fun JsonObject.toIncidentSummary(): IncidentSummary = IncidentSummary(
+    id = requireNotNull(string("id")),
+    code = requireNotNull(string("code")),
+    campus = requireNotNull(string("campus")),
+    roomCode = requireNotNull(string("room_code")),
+    category = IncidentCategory.valueOf(requireNotNull(string("category"))),
+    severity = IncidentSeverity.valueOf(requireNotNull(string("severity"))),
+    title = requireNotNull(string("title")),
+    status = IncidentStatus.valueOf(requireNotNull(string("status"))),
+    createdAt = requireNotNull(string("created_at")),
+    confirmationCount = getValue("confirmation_count").jsonPrimitive.long,
 )

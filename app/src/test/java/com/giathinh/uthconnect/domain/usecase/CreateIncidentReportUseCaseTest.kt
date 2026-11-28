@@ -4,6 +4,9 @@ import com.giathinh.uthconnect.domain.model.IncidentCategory
 import com.giathinh.uthconnect.domain.model.IncidentDraft
 import com.giathinh.uthconnect.domain.model.IncidentReport
 import com.giathinh.uthconnect.domain.model.IncidentSeverity
+import com.giathinh.uthconnect.domain.model.IncidentStatus
+import com.giathinh.uthconnect.domain.model.IncidentStatusLog
+import com.giathinh.uthconnect.domain.model.IncidentSummary
 import com.giathinh.uthconnect.domain.repository.IncidentRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -23,6 +26,16 @@ class CreateIncidentReportUseCaseTest {
 
         override suspend fun getMyReports(): Result<List<IncidentReport>> = error("Not called")
         override suspend fun getReport(id: String): Result<IncidentReport> = error("Not called")
+        override suspend fun getOpenReports(campus: String?): Result<List<IncidentSummary>> = error("Not called")
+        override suspend fun getStatusHistory(id: String): Result<List<IncidentStatusLog>> = error("Not called")
+        override suspend fun confirmReport(id: String): Result<Long> = error("Not called")
+        override suspend fun transitionReport(
+            id: String,
+            expectedVersion: Int,
+            targetStatus: IncidentStatus,
+            note: String?,
+            duplicateOfId: String?,
+        ): Result<Int> = error("Not called")
     }
 
     private fun draft() = IncidentDraft(

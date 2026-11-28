@@ -32,4 +32,15 @@ class IncidentMapperTest {
             Json.parseToJsonElement(unknown).jsonObject.toIncidentReport()
         }
     }
+
+    @Test fun `maps open feed without requiring reporter identity`() {
+        val summary = Json.parseToJsonElement(
+            """{"id":"11111111-1111-4111-8111-111111111111","code":"INC-1",
+               "campus":"CS1","room_code":"H001","category":"DOOR_LOCK",
+               "severity":"HIGH","title":"Broken door","status":"SUBMITTED",
+               "created_at":"2026-11-28T00:00:00Z","confirmation_count":2}""",
+        ).jsonObject.toIncidentSummary()
+        assertEquals(2L, summary.confirmationCount)
+        assertEquals("H001", summary.roomCode)
+    }
 }
